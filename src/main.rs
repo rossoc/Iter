@@ -505,6 +505,7 @@ fn dispatch_session(action: &SessionCommand) -> Result<()> {
             branch,
             no_branch,
         } => session_new(task, branch.as_deref(), *no_branch),
+        SessionCommand::Elapse => session_elapse(),
     }
 }
 
@@ -582,6 +583,22 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
     task.status = TaskStatus::Wip;
     Repository::<Task>::update(&db, task_id, &task)?;
 
+    Ok(())
+}
+
+/// Time elapsed on the open record of the task of the tmux session this
+/// process is running in -- the record `start_record` created when the
+/// client attached (see `hook_cmd`).
+fn session_elapse() -> Result<()> {
+    let db = open_db();
+    let (project, task) = current_session_task(&db)?;
+    let task_id = task.id.expect(ID_INVARIANT);
+    let display = format!("{}/{}", project.name, task.name);
+    let record = db
+        .open_record_for_task(task_id)?
+        .ok_or_else(|| IterError::NoOpenRecord(display))?;
+    let now = Local::now().naive_local();
+    println!("{}", minutes_to_hhmm(record.duration_minutes(now)));
     Ok(())
 }
 

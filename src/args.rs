@@ -184,6 +184,9 @@ pub enum SessionCommand {
         #[clap(long = "no-branch")]
         no_branch: bool,
     },
+
+    /// Time spent so far on the open record of the tmux session you're in
+    Elapse,
 }
 
 #[derive(clap::Subcommand, Debug)]
