@@ -175,6 +175,7 @@ fn parse_date_filter(date_filter: Option<&str>, now: chrono::NaiveDateTime) -> R
 
 fn print_detail_report(
     name: &str,
+    description: Option<&str>,
     date: NaiveDate,
     records: &[Record],
     now: chrono::NaiveDateTime,
@@ -182,6 +183,10 @@ fn print_detail_report(
     let total_minutes = merged_total_minutes(records, now, MERGE_GAP_MINUTES);
     let report = DetailReport {
         name: name.to_string(),
+        description: description
+            .map(str::trim)
+            .filter(|d| !d.is_empty())
+            .map(str::to_string),
         date: date.format("%Y-%m-%d").to_string(),
         total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
         total_hhmm: minutes_to_hhmm(total_minutes),
@@ -310,7 +315,13 @@ fn project_info(name: Option<&str>, date_filter: Option<&str>) -> Result<()> {
         .filter(|r| r.start.date() == date)
         .collect();
 
-    print_detail_report(&project.name, date, &records, now);
+    print_detail_report(
+        &project.name,
+        Some(&project.description),
+        date,
+        &records,
+        now,
+    );
     Ok(())
 }
 
@@ -410,7 +421,7 @@ fn task_info(task_ref: Option<&str>, date_filter: Option<&str>) -> Result<()> {
         .filter(|r| r.start.date() == date)
         .collect();
     let display = format!("{}/{}", project.name, task.name);
-    print_detail_report(&display, date, &records, now);
+    print_detail_report(&display, Some(&task.description), date, &records, now);
     Ok(())
 }
 

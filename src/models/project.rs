@@ -18,7 +18,10 @@ pub struct Project {
 
     pub name: String,
 
-    #[serde(default)]
+    /// Free-form markdown notes. Edited below the `---` separator in the
+    /// YAML editor rather than as a field among the others -- see
+    /// `MarkdownBody`.
+    #[serde(skip)]
     pub description: String,
 
     pub base_path: String,
@@ -59,5 +62,15 @@ impl Project {
             auto_branch: true,
             branch_template: default_branch_template(),
         }
+    }
+}
+
+impl crate::models::MarkdownBody for Project {
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn set_description(&mut self, description: String) {
+        self.description = description;
     }
 }

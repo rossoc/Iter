@@ -42,7 +42,10 @@ pub struct Task {
 
     pub name: String,
 
-    #[serde(default)]
+    /// Free-form markdown notes. Edited below the `---` separator in the
+    /// YAML editor rather than as a field among the others -- see
+    /// `MarkdownBody`.
+    #[serde(skip)]
     pub description: String,
 
     /// Issue number in the project's repo, if this task tracks one.
@@ -65,5 +68,15 @@ impl Task {
             github_issue: None,
             status: TaskStatus::Queue,
         }
+    }
+}
+
+impl crate::models::MarkdownBody for Task {
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn set_description(&mut self, description: String) {
+        self.description = description;
     }
 }

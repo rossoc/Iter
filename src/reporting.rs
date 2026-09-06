@@ -138,6 +138,8 @@ pub fn merged_total_minutes(records: &[Record], now: NaiveDateTime, gap_minutes:
 #[derive(Debug, Serialize)]
 pub struct DetailReport {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     pub date: String,
     pub total_hours: f64,
     pub total_hhmm: String,
