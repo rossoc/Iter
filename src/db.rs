@@ -1,24 +1,103 @@
 use crate::error::Result;
 use crate::models::{Project, Session, SessionConfig, Task, TaskStatus};
 use chrono::NaiveDateTime;
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use rusqlite::types::{Value, ValueRef};
+use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
 use std::path::Path;
 
 pub const DB_FILE: &str = "/home/local/.config/programmini/buff/iter.db";
 
 const DATETIME_FMT: &str = "%Y-%m-%d %H:%M:%S";
 
-pub fn dt_to_str(dt: NaiveDateTime) -> String {
+fn dt_to_str(dt: NaiveDateTime) -> String {
     dt.format(DATETIME_FMT).to_string()
 }
 
-pub fn str_to_dt(s: &str) -> NaiveDateTime {
+fn str_to_dt(s: &str) -> NaiveDateTime {
     NaiveDateTime::parse_from_str(s, DATETIME_FMT)
         .unwrap_or_else(|_| panic!("bad datetime in db: {s}"))
 }
 
-/// Generic storage surface, implemented once per entity below (`Project`,
-/// `Task`, `SessionConfig`, `Session`) against the one `Db`/SQLite backend.
+/// How one type is laid out in SQLite: which table it lives in, which
+/// columns it writes, how a row is read back, and how an instance is bound
+/// for writing. The blanket `impl<T: Table> Repository<T> for Db` below
+/// derives every statement (`SELECT`/`INSERT`/`UPDATE`/`DELETE`) from these
+/// four items, so no CRUD SQL is written by hand per table.
+///
+/// Don't implement this by hand -- put `#[derive(Table)]` on the struct.
+/// The derive reads the columns off the struct's own fields, so `COLUMNS`,
+/// the column indices `from_row` reads and the order `values` binds all
+/// come from one place and cannot drift; there is no column list to
+/// maintain alongside the struct at all.
+pub(crate) trait Table: Sized {
+    /// The table this type is stored in.
+    const NAME: &'static str;
+
+    /// The writable columns, in the order `values` binds them. `id` is
+    /// deliberately absent: SQLite assigns it on insert, and it's the key
+    /// (not a payload) on update.
+    const COLUMNS: &'static [&'static str];
+
+    /// Trailing clause for a bare `Repository::list`, e.g. `"ORDER BY name"`.
+    const LIST_TAIL: &'static str = "";
+
+    /// Reads a row shaped `id, {COLUMNS}` -- the shape `select_sql` builds.
+    fn from_row(row: &Row) -> rusqlite::Result<Self>;
+
+    /// This item's column values, in `COLUMNS` order.
+    fn values(&self) -> Vec<Value>;
+}
+
+// ---- statement builders -------------------------------------------------
+//
+// The four statements every table needs, derived from its `Table` items.
+// Kept together (and free functions rather than inline `format!`s) so the
+// generated SQL can be asserted directly in the tests below.
+
+/// `SELECT id, {columns} FROM {table} {tail}`, where `tail` is a caller's
+/// `WHERE`/`ORDER BY` clause. The only place a select list is spelled out.
+fn select_sql<T: Table>(tail: &str) -> String {
+    format!(
+        "SELECT id, {} FROM {} {tail}",
+        T::COLUMNS.join(", "),
+        T::NAME
+    )
+}
+
+/// `INSERT INTO {table} ({columns}) VALUES (?1, ..., ?n)` -- `n` bindings
+/// in `COLUMNS` order, which is the order `Table::values` returns them.
+fn insert_sql<T: Table>() -> String {
+    let placeholders: Vec<String> = (1..=T::COLUMNS.len()).map(|i| format!("?{i}")).collect();
+    format!(
+        "INSERT INTO {} ({}) VALUES ({})",
+        T::NAME,
+        T::COLUMNS.join(", "),
+        placeholders.join(", ")
+    )
+}
+
+/// `UPDATE {table} SET c1 = ?1, ... WHERE id = ?n+1` -- the same bindings
+/// as `insert_sql`, with the row's id appended as the final one.
+fn update_sql<T: Table>() -> String {
+    let assignments: Vec<String> = T::COLUMNS
+        .iter()
+        .enumerate()
+        .map(|(i, column)| format!("{column} = ?{}", i + 1))
+        .collect();
+    format!(
+        "UPDATE {} SET {} WHERE id = ?{}",
+        T::NAME,
+        assignments.join(", "),
+        T::COLUMNS.len() + 1
+    )
+}
+
+fn delete_sql<T: Table>() -> String {
+    format!("DELETE FROM {} WHERE id = ?1", T::NAME)
+}
+
+/// Generic storage surface, available for every [`Table`] via one blanket
+/// implementation against the single `Db`/SQLite backend.
 pub trait Repository<T> {
     fn insert(&self, item: &T) -> Result<i64>;
     fn update(&self, id: i64, item: &T) -> Result<()>;
@@ -119,395 +198,645 @@ impl Db {
             .is_some())
     }
 
-    // ---- finder helpers (not part of the generic CRUD surface) -----------
+    // ---- generic query helpers -------------------------------------------
 
-    pub fn find_project_by_name(&self, name: &str) -> Result<Option<Project>> {
+    /// The single row matching `tail` (a `WHERE ...` clause), if any.
+    fn find_one<T: Table>(&self, tail: &str, params: impl Params) -> Result<Option<T>> {
         Ok(self
             .conn
-            .query_row(
-                "SELECT id, name, description, base_path, github, tmux, auto_branch, branch_template
-                 FROM projects WHERE name = ?1",
-                params![name],
-                Self::row_to_project,
-            )
+            .query_row(&select_sql::<T>(tail), params, T::from_row)
             .optional()?)
     }
 
-    pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, project_id, name, description, github_issue, status
-                 FROM tasks WHERE project_id = ?1 AND name = ?2",
-                params![project_id, task_name],
-                Self::row_to_task,
-            )
-            .optional()?)
-    }
-
-    pub fn tasks_for_project(&self, project_id: i64) -> Result<Vec<Task>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, project_id, name, description, github_issue, status
-             FROM tasks WHERE project_id = ?1 ORDER BY name",
-        )?;
+    /// Every row matching `tail` (a `WHERE`/`ORDER BY` clause).
+    fn find_all<T: Table>(&self, tail: &str, params: impl Params) -> Result<Vec<T>> {
+        let mut stmt = self.conn.prepare(&select_sql::<T>(tail))?;
         let rows = stmt
-            .query_map(params![project_id], Self::row_to_task)?
+            .query_map(params, T::from_row)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
 
+    // ---- finders (lookups the generic CRUD surface doesn't cover) ---------
+
+    pub fn find_project_by_name(&self, name: &str) -> Result<Option<Project>> {
+        self.find_one("WHERE name = ?1", params![name])
+    }
+
+    pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
+        self.find_one(
+            "WHERE project_id = ?1 AND name = ?2",
+            params![project_id, task_name],
+        )
+    }
+
+    pub fn tasks_for_project(&self, project_id: i64) -> Result<Vec<Task>> {
+        self.find_all("WHERE project_id = ?1 ORDER BY name", params![project_id])
+    }
+
     pub fn find_session_config_by_task(&self, task_id: i64) -> Result<Option<SessionConfig>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, task_id, tmux_session_name, github_branch, worktree_path
-                 FROM session_configs WHERE task_id = ?1",
-                params![task_id],
-                Self::row_to_session_config,
-            )
-            .optional()?)
+        self.find_one("WHERE task_id = ?1", params![task_id])
     }
 
     pub fn find_session_config_by_tmux_name(
         &self,
         tmux_name: &str,
     ) -> Result<Option<SessionConfig>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, task_id, tmux_session_name, github_branch, worktree_path
-                 FROM session_configs WHERE tmux_session_name = ?1",
-                params![tmux_name],
-                Self::row_to_session_config,
-            )
-            .optional()?)
+        self.find_one("WHERE tmux_session_name = ?1", params![tmux_name])
     }
 
     pub fn sessions_for_task(&self, task_id: i64) -> Result<Vec<Session>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, task_id, start, end, message FROM sessions WHERE task_id = ?1")?;
-        let rows = stmt
-            .query_map(params![task_id], Self::row_to_session)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+        self.find_all("WHERE task_id = ?1", params![task_id])
     }
 
     /// Every session across every task of `project_id` -- the union a
-    /// project-level report is built from (see `crate::reporting`).
+    /// project-level report is built from (see `crate::reporting`). Phrased
+    /// as a subquery rather than a join so the select list stays the plain
+    /// `Table`-generated one, with no table qualifiers to disambiguate.
     pub fn sessions_for_project(&self, project_id: i64) -> Result<Vec<Session>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT s.id, s.task_id, s.start, s.end, s.message
-             FROM sessions s JOIN tasks t ON t.id = s.task_id
-             WHERE t.project_id = ?1",
-        )?;
-        let rows = stmt
-            .query_map(params![project_id], Self::row_to_session)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+        self.find_all(
+            "WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?1)",
+            params![project_id],
+        )
     }
 
     pub fn open_session_for_task(&self, task_id: i64) -> Result<Option<Session>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, task_id, start, end, message
-                 FROM sessions WHERE task_id = ?1 AND end IS NULL",
-                params![task_id],
-                Self::row_to_session,
-            )
-            .optional()?)
-    }
-
-    // ---- row mapping (signatures are pinned to `rusqlite::Result` by the
-    // callback types `query_row`/`query_map` expect -- converted to our
-    // `Result` at the call sites above instead) ---------------------------
-
-    fn row_to_project(row: &Row) -> rusqlite::Result<Project> {
-        Ok(Project {
-            id: Some(row.get(0)?),
-            name: row.get(1)?,
-            description: row.get(2)?,
-            base_path: row.get(3)?,
-            github: row.get::<_, i64>(4)? != 0,
-            tmux: row.get::<_, i64>(5)? != 0,
-            auto_branch: row.get::<_, i64>(6)? != 0,
-            branch_template: row.get(7)?,
-        })
-    }
-
-    fn row_to_task(row: &Row) -> rusqlite::Result<Task> {
-        let status: String = row.get(5)?;
-        Ok(Task {
-            id: Some(row.get(0)?),
-            project_id: row.get(1)?,
-            name: row.get(2)?,
-            description: row.get(3)?,
-            github_issue: row.get(4)?,
-            status: TaskStatus::parse(&status).unwrap_or(TaskStatus::Queue),
-        })
-    }
-
-    fn row_to_session_config(row: &Row) -> rusqlite::Result<SessionConfig> {
-        Ok(SessionConfig {
-            id: Some(row.get(0)?),
-            task_id: row.get(1)?,
-            tmux_session_name: row.get(2)?,
-            github_branch: row.get(3)?,
-            worktree_path: row.get(4)?,
-        })
-    }
-
-    fn row_to_session(row: &Row) -> rusqlite::Result<Session> {
-        let start: String = row.get(2)?;
-        let end: Option<String> = row.get(3)?;
-        Ok(Session {
-            id: Some(row.get(0)?),
-            task_id: row.get(1)?,
-            start: str_to_dt(&start),
-            end: end.as_deref().map(str_to_dt),
-            message: row.get(4)?,
-        })
+        self.find_one("WHERE task_id = ?1 AND end IS NULL", params![task_id])
     }
 }
 
-impl Repository<Project> for Db {
-    fn insert(&self, item: &Project) -> Result<i64> {
-        self.conn.execute(
-            "INSERT INTO projects (name, description, base_path, github, tmux, auto_branch, branch_template)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                item.name,
-                item.description,
-                item.base_path,
-                item.github as i64,
-                item.tmux as i64,
-                item.auto_branch as i64,
-                item.branch_template
-            ],
-        )?;
+impl<T: Table> Repository<T> for Db {
+    fn insert(&self, item: &T) -> Result<i64> {
+        self.conn
+            .execute(&insert_sql::<T>(), params_from_iter(item.values()))?;
         Ok(self.conn.last_insert_rowid())
     }
 
-    fn update(&self, id: i64, item: &Project) -> Result<()> {
-        self.conn.execute(
-            "UPDATE projects SET name = ?1, description = ?2, base_path = ?3, github = ?4,
-             tmux = ?5, auto_branch = ?6, branch_template = ?7 WHERE id = ?8",
-            params![
-                item.name,
-                item.description,
-                item.base_path,
-                item.github as i64,
-                item.tmux as i64,
-                item.auto_branch as i64,
-                item.branch_template,
-                id
-            ],
-        )?;
+    fn update(&self, id: i64, item: &T) -> Result<()> {
+        let mut values = item.values();
+        values.push(id.into());
+        self.conn
+            .execute(&update_sql::<T>(), params_from_iter(values))?;
         Ok(())
     }
 
     fn delete(&self, id: i64) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM projects WHERE id = ?1", params![id])?;
+        self.conn.execute(&delete_sql::<T>(), params![id])?;
         Ok(())
     }
 
-    fn get(&self, id: i64) -> Result<Option<Project>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, name, description, base_path, github, tmux, auto_branch, branch_template
-                 FROM projects WHERE id = ?1",
-                params![id],
-                Self::row_to_project,
-            )
-            .optional()?)
+    fn get(&self, id: i64) -> Result<Option<T>> {
+        self.find_one("WHERE id = ?1", params![id])
     }
 
-    fn list(&self) -> Result<Vec<Project>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, name, description, base_path, github, tmux, auto_branch, branch_template
-             FROM projects ORDER BY name",
-        )?;
-        let rows = stmt
-            .query_map([], Self::row_to_project)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+    fn list(&self) -> Result<Vec<T>> {
+        self.find_all(T::LIST_TAIL, [])
     }
 }
 
-impl Repository<Task> for Db {
-    fn insert(&self, item: &Task) -> Result<i64> {
-        self.conn.execute(
-            "INSERT INTO tasks (project_id, name, description, github_issue, status)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![
-                item.project_id,
-                item.name,
-                item.description,
-                item.github_issue,
-                item.status.as_str()
-            ],
-        )?;
-        Ok(self.conn.last_insert_rowid())
+/// How one field crosses the SQLite boundary. This is where the per-type
+/// conversions live -- a `bool` stored as 0/1, a `NaiveDateTime` as
+/// formatted text -- so that `#[derive(Table)]` can generate the same two
+/// lines for every field and let inference pick the right conversion.
+pub(crate) trait Column: Sized {
+    /// Reads this field from column `index` of `row`.
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self>;
+
+    /// Binds this field for writing.
+    fn to_sql(&self) -> Value;
+}
+
+impl Column for i64 {
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
+        row.get(index)
     }
 
-    fn update(&self, id: i64, item: &Task) -> Result<()> {
-        self.conn.execute(
-            "UPDATE tasks SET project_id = ?1, name = ?2, description = ?3, github_issue = ?4,
-             status = ?5 WHERE id = ?6",
-            params![
-                item.project_id,
-                item.name,
-                item.description,
-                item.github_issue,
-                item.status.as_str(),
-                id
-            ],
-        )?;
-        Ok(())
-    }
-
-    fn delete(&self, id: i64) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM tasks WHERE id = ?1", params![id])?;
-        Ok(())
-    }
-
-    fn get(&self, id: i64) -> Result<Option<Task>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, project_id, name, description, github_issue, status FROM tasks WHERE id = ?1",
-                params![id],
-                Self::row_to_task,
-            )
-            .optional()?)
-    }
-
-    fn list(&self) -> Result<Vec<Task>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, project_id, name, description, github_issue, status FROM tasks ORDER BY name")?;
-        let rows = stmt
-            .query_map([], Self::row_to_task)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+    fn to_sql(&self) -> Value {
+        Value::Integer(*self)
     }
 }
 
-impl Repository<SessionConfig> for Db {
-    fn insert(&self, item: &SessionConfig) -> Result<i64> {
-        self.conn.execute(
-            "INSERT INTO session_configs (task_id, tmux_session_name, github_branch, worktree_path)
-             VALUES (?1, ?2, ?3, ?4)",
-            params![
-                item.task_id,
-                item.tmux_session_name,
-                item.github_branch,
-                item.worktree_path
-            ],
-        )?;
-        Ok(self.conn.last_insert_rowid())
+impl Column for String {
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
+        row.get(index)
     }
 
-    fn update(&self, id: i64, item: &SessionConfig) -> Result<()> {
-        self.conn.execute(
-            "UPDATE session_configs SET task_id = ?1, tmux_session_name = ?2, github_branch = ?3,
-             worktree_path = ?4 WHERE id = ?5",
-            params![
-                item.task_id,
-                item.tmux_session_name,
-                item.github_branch,
-                item.worktree_path,
-                id
-            ],
-        )?;
-        Ok(())
-    }
-
-    fn delete(&self, id: i64) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM session_configs WHERE id = ?1", params![id])?;
-        Ok(())
-    }
-
-    fn get(&self, id: i64) -> Result<Option<SessionConfig>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, task_id, tmux_session_name, github_branch, worktree_path
-                 FROM session_configs WHERE id = ?1",
-                params![id],
-                Self::row_to_session_config,
-            )
-            .optional()?)
-    }
-
-    fn list(&self) -> Result<Vec<SessionConfig>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, task_id, tmux_session_name, github_branch, worktree_path FROM session_configs",
-        )?;
-        let rows = stmt
-            .query_map([], Self::row_to_session_config)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+    fn to_sql(&self) -> Value {
+        Value::Text(self.clone())
     }
 }
 
-impl Repository<Session> for Db {
-    fn insert(&self, item: &Session) -> Result<i64> {
-        self.conn.execute(
-            "INSERT INTO sessions (task_id, start, end, message) VALUES (?1, ?2, ?3, ?4)",
-            params![
-                item.task_id,
-                dt_to_str(item.start),
-                item.end.map(dt_to_str),
-                item.message
-            ],
-        )?;
-        Ok(self.conn.last_insert_rowid())
+impl Column for bool {
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
+        Ok(row.get::<_, i64>(index)? != 0)
     }
 
-    fn update(&self, id: i64, item: &Session) -> Result<()> {
-        self.conn.execute(
-            "UPDATE sessions SET task_id = ?1, start = ?2, end = ?3, message = ?4 WHERE id = ?5",
-            params![
-                item.task_id,
-                dt_to_str(item.start),
-                item.end.map(dt_to_str),
-                item.message,
-                id
-            ],
-        )?;
-        Ok(())
+    fn to_sql(&self) -> Value {
+        Value::Integer(*self as i64)
+    }
+}
+
+impl Column for NaiveDateTime {
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
+        Ok(str_to_dt(&row.get::<_, String>(index)?))
     }
 
-    fn delete(&self, id: i64) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM sessions WHERE id = ?1", params![id])?;
-        Ok(())
+    fn to_sql(&self) -> Value {
+        Value::Text(dt_to_str(*self))
+    }
+}
+
+impl Column for TaskStatus {
+    /// An unrecognised status falls back to `Queue` rather than failing the
+    /// read, so a row written by a newer build stays loadable.
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
+        Ok(TaskStatus::parse(&row.get::<_, String>(index)?).unwrap_or(TaskStatus::Queue))
     }
 
-    fn get(&self, id: i64) -> Result<Option<Session>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, task_id, start, end, message FROM sessions WHERE id = ?1",
-                params![id],
-                Self::row_to_session,
+    fn to_sql(&self) -> Value {
+        Value::Text(self.as_str().to_string())
+    }
+}
+
+/// A nullable column: SQL `NULL` on one side, `None` on the other. Lets
+/// every optional field reuse its inner type's conversion.
+impl<T: Column> Column for Option<T> {
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
+        match row.get_ref(index)? {
+            ValueRef::Null => Ok(None),
+            _ => T::from_sql(row, index).map(Some),
+        }
+    }
+
+    fn to_sql(&self) -> Value {
+        match self {
+            Some(value) => value.to_sql(),
+            None => Value::Null,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dt(s: &str) -> NaiveDateTime {
+        NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
+            .unwrap_or_else(|e| panic!("bad test fixture datetime '{s}': {e}"))
+    }
+
+    /// A fresh, empty, migrated database held entirely in memory.
+    fn db() -> Db {
+        Db::open(":memory:").expect("in-memory database opens")
+    }
+
+    fn project(name: &str) -> Project {
+        Project {
+            id: None,
+            name: name.to_string(),
+            description: "notes".to_string(),
+            base_path: format!("/tmp/{name}"),
+            github: true,
+            tmux: false,
+            auto_branch: true,
+            branch_template: "fix/{task}".to_string(),
+        }
+    }
+
+    fn insert_project(db: &Db, name: &str) -> i64 {
+        Repository::<Project>::insert(db, &project(name)).expect("project inserts")
+    }
+
+    fn insert_task(db: &Db, project_id: i64, name: &str) -> i64 {
+        let task = Task {
+            id: None,
+            project_id,
+            name: name.to_string(),
+            description: "task notes".to_string(),
+            github_issue: Some(7),
+            status: TaskStatus::Wip,
+        };
+        Repository::<Task>::insert(db, &task).expect("task inserts")
+    }
+
+    #[test]
+    fn generated_statements_match_the_table_declaration() {
+        assert_eq!(
+            select_sql::<Session>("WHERE task_id = ?1"),
+            "SELECT id, task_id, start, end, message FROM sessions WHERE task_id = ?1"
+        );
+        assert_eq!(
+            insert_sql::<Session>(),
+            "INSERT INTO sessions (task_id, start, end, message) VALUES (?1, ?2, ?3, ?4)"
+        );
+        assert_eq!(
+            update_sql::<Session>(),
+            "UPDATE sessions SET task_id = ?1, start = ?2, end = ?3, message = ?4 WHERE id = ?5"
+        );
+        assert_eq!(
+            delete_sql::<Session>(),
+            "DELETE FROM sessions WHERE id = ?1"
+        );
+    }
+
+    /// Every column a struct declares must actually exist in the migrated
+    /// schema. This is the guard that `#[derive(Table)]` needs: because the
+    /// derive takes the columns straight off the struct's fields, adding a
+    /// field silently adds a column, and forgetting the matching change to
+    /// `migrate` would otherwise surface as a runtime "no such column".
+    #[test]
+    fn every_declared_column_exists_in_the_migrated_schema() {
+        let db = db();
+
+        fn columns_of(db: &Db, table: &str) -> Vec<String> {
+            let mut stmt = db
+                .conn
+                .prepare(&format!("PRAGMA table_info({table})"))
+                .expect("table_info prepares");
+            let names = stmt
+                .query_map([], |row| row.get::<_, String>(1))
+                .expect("table_info runs")
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .expect("table_info rows read");
+            assert!(!names.is_empty(), "table `{table}` does not exist");
+            names
+        }
+
+        fn check<T: Table>(db: &Db) {
+            let actual = columns_of(db, T::NAME);
+            assert!(
+                actual.iter().any(|c| c == "id"),
+                "table `{}` has no `id` column, but every row is read as `id` first",
+                T::NAME
+            );
+            for column in T::COLUMNS {
+                assert!(
+                    actual.iter().any(|c| c == column),
+                    "`{}` declares column `{column}`, which the schema doesn't have (got {actual:?})",
+                    T::NAME
+                );
+            }
+        }
+
+        check::<Project>(&db);
+        check::<Task>(&db);
+        check::<SessionConfig>(&db);
+        check::<Session>(&db);
+    }
+
+    /// Every table binds exactly as many values as it declares columns.
+    /// `#[derive(Table)]` makes this true by construction; the test stays
+    /// as the guard for any `Table` impl written by hand, where `COLUMNS`
+    /// and `values` would again be two lists that could disagree.
+    #[test]
+    fn every_table_binds_one_value_per_column() {
+        fn check<T: Table>(item: &T) {
+            assert_eq!(
+                item.values().len(),
+                T::COLUMNS.len(),
+                "{} binds a different number of values than it declares columns",
+                T::NAME
+            );
+        }
+        check(&project("alpha"));
+        check(&Task {
+            id: None,
+            project_id: 1,
+            name: "t".to_string(),
+            description: String::new(),
+            github_issue: None,
+            status: TaskStatus::Queue,
+        });
+        check(&SessionConfig {
+            id: None,
+            task_id: 1,
+            tmux_session_name: None,
+            github_branch: None,
+            worktree_path: None,
+        });
+        check(&Session {
+            id: None,
+            task_id: 1,
+            start: dt("2026-09-01 09:00"),
+            end: None,
+            message: None,
+        });
+    }
+
+    #[test]
+    fn project_round_trips_every_field() {
+        let db = db();
+        let id = insert_project(&db, "alpha");
+        let loaded = Repository::<Project>::get(&db, id)
+            .expect("get succeeds")
+            .expect("the row just inserted exists");
+
+        assert_eq!(loaded.id, Some(id));
+        assert_eq!(loaded.name, "alpha");
+        assert_eq!(loaded.description, "notes");
+        assert_eq!(loaded.base_path, "/tmp/alpha");
+        // The bools matter most: they cross a bool -> INTEGER -> bool round
+        // trip, and `tmux` is deliberately the non-default `false` here.
+        assert!(loaded.github);
+        assert!(!loaded.tmux);
+        assert!(loaded.auto_branch);
+        assert_eq!(loaded.branch_template, "fix/{task}");
+    }
+
+    /// Databases in the wild carry columns this build no longer knows
+    /// about -- `projects.auto_issue`, left behind by a removed feature,
+    /// is one. The generated statements name their columns explicitly, so
+    /// an extra column with a default is simply not written; this pins
+    /// that, since a `SELECT *`/positional binding would break on it.
+    #[test]
+    fn an_unknown_extra_column_does_not_break_writes() {
+        let db = db();
+        db.conn
+            .execute_batch(
+                "DROP TABLE projects;
+                 CREATE TABLE projects (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name            TEXT NOT NULL UNIQUE,
+                    description     TEXT NOT NULL DEFAULT '',
+                    base_path       TEXT NOT NULL,
+                    github          INTEGER NOT NULL DEFAULT 0,
+                    tmux            INTEGER NOT NULL DEFAULT 1,
+                    auto_branch     INTEGER NOT NULL DEFAULT 1,
+                    branch_template TEXT NOT NULL DEFAULT 'feat/{task}',
+                    auto_issue      INTEGER NOT NULL DEFAULT 0
+                 );",
             )
-            .optional()?)
+            .expect("drifted schema is created");
+
+        let id = insert_project(&db, "alpha");
+        Repository::<Project>::update(&db, id, &project("renamed")).expect("update succeeds");
+
+        let loaded = Repository::<Project>::get(&db, id)
+            .expect("get succeeds")
+            .expect("the row exists");
+        assert_eq!(loaded.name, "renamed");
     }
 
-    fn list(&self) -> Result<Vec<Session>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, task_id, start, end, message FROM sessions")?;
-        let rows = stmt
-            .query_map([], Self::row_to_session)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+    #[test]
+    fn project_update_rewrites_every_column() {
+        let db = db();
+        let id = insert_project(&db, "alpha");
+
+        let mut changed = project("renamed");
+        changed.github = false;
+        changed.tmux = true;
+        changed.auto_branch = false;
+        changed.branch_template = "chore/{task}".to_string();
+        Repository::<Project>::update(&db, id, &changed).expect("update succeeds");
+
+        let loaded = Repository::<Project>::get(&db, id)
+            .expect("get succeeds")
+            .expect("the updated row exists");
+        assert_eq!(loaded.name, "renamed");
+        assert!(!loaded.github);
+        assert!(loaded.tmux);
+        assert!(!loaded.auto_branch);
+        assert_eq!(loaded.branch_template, "chore/{task}");
+    }
+
+    #[test]
+    fn project_list_is_ordered_by_name() {
+        let db = db();
+        insert_project(&db, "charlie");
+        insert_project(&db, "alpha");
+        insert_project(&db, "bravo");
+
+        let names: Vec<String> = Repository::<Project>::list(&db)
+            .expect("list succeeds")
+            .into_iter()
+            .map(|p| p.name)
+            .collect();
+        assert_eq!(names, ["alpha", "bravo", "charlie"]);
+    }
+
+    #[test]
+    fn find_project_by_name_matches_and_misses() {
+        let db = db();
+        insert_project(&db, "alpha");
+        assert!(
+            db.find_project_by_name("alpha")
+                .expect("lookup succeeds")
+                .is_some()
+        );
+        assert!(
+            db.find_project_by_name("nope")
+                .expect("lookup succeeds")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn task_round_trips_and_is_found_by_project_and_name() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let task_id = insert_task(&db, project_id, "build it");
+
+        let found = db
+            .find_task(project_id, "build it")
+            .expect("lookup succeeds")
+            .expect("the task just inserted exists");
+        assert_eq!(found.id, Some(task_id));
+        assert_eq!(found.project_id, project_id);
+        assert_eq!(found.description, "task notes");
+        assert_eq!(found.github_issue, Some(7));
+        assert_eq!(found.status, TaskStatus::Wip);
+    }
+
+    #[test]
+    fn task_github_issue_round_trips_as_null_when_absent() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let task = Task {
+            id: None,
+            project_id,
+            name: "no issue".to_string(),
+            description: String::new(),
+            github_issue: None,
+            status: TaskStatus::Queue,
+        };
+        let id = Repository::<Task>::insert(&db, &task).expect("task inserts");
+        let loaded = Repository::<Task>::get(&db, id)
+            .expect("get succeeds")
+            .expect("the row just inserted exists");
+        assert_eq!(loaded.github_issue, None);
+        assert_eq!(loaded.status, TaskStatus::Queue);
+    }
+
+    #[test]
+    fn deleting_a_project_cascades_to_its_tasks() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        insert_task(&db, project_id, "build it");
+
+        Repository::<Project>::delete(&db, project_id).expect("delete succeeds");
+        assert!(
+            db.tasks_for_project(project_id)
+                .expect("lookup succeeds")
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn session_config_round_trips_its_optional_columns() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let task_id = insert_task(&db, project_id, "build it");
+
+        let config = SessionConfig {
+            id: None,
+            task_id,
+            tmux_session_name: Some("alpha/build-it".to_string()),
+            github_branch: None,
+            worktree_path: Some("/tmp/wt".to_string()),
+        };
+        Repository::<SessionConfig>::insert(&db, &config).expect("config inserts");
+
+        let by_task = db
+            .find_session_config_by_task(task_id)
+            .expect("lookup succeeds")
+            .expect("the config just inserted exists");
+        assert_eq!(by_task.tmux_session_name.as_deref(), Some("alpha/build-it"));
+        assert_eq!(by_task.github_branch, None);
+        assert_eq!(by_task.worktree_path.as_deref(), Some("/tmp/wt"));
+
+        let by_name = db
+            .find_session_config_by_tmux_name("alpha/build-it")
+            .expect("lookup succeeds")
+            .expect("the config is findable by its tmux name");
+        assert_eq!(by_name.id, by_task.id);
+    }
+
+    #[test]
+    fn open_session_is_the_one_without_an_end() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let task_id = insert_task(&db, project_id, "build it");
+
+        let closed = Session {
+            id: None,
+            task_id,
+            start: dt("2026-09-01 09:00"),
+            end: Some(dt("2026-09-01 10:00")),
+            message: Some("did a thing".to_string()),
+        };
+        let open = Session {
+            id: None,
+            task_id,
+            start: dt("2026-09-01 11:00"),
+            end: None,
+            message: None,
+        };
+        Repository::<Session>::insert(&db, &closed).expect("closed session inserts");
+        let open_id = Repository::<Session>::insert(&db, &open).expect("open session inserts");
+
+        let found = db
+            .open_session_for_task(task_id)
+            .expect("lookup succeeds")
+            .expect("there is an open session");
+        assert_eq!(found.id, Some(open_id));
+        assert!(found.is_ongoing());
+        assert_eq!(found.start, dt("2026-09-01 11:00"));
+    }
+
+    #[test]
+    fn closing_a_session_persists_its_end_and_message() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let task_id = insert_task(&db, project_id, "build it");
+
+        let session = Session {
+            id: None,
+            task_id,
+            start: dt("2026-09-01 09:00"),
+            end: None,
+            message: None,
+        };
+        let id = Repository::<Session>::insert(&db, &session).expect("session inserts");
+
+        let mut closed = session;
+        closed.end = Some(dt("2026-09-01 10:30"));
+        closed.message = Some("wrapped up".to_string());
+        Repository::<Session>::update(&db, id, &closed).expect("update succeeds");
+
+        let loaded = Repository::<Session>::get(&db, id)
+            .expect("get succeeds")
+            .expect("the updated row exists");
+        assert_eq!(loaded.end, Some(dt("2026-09-01 10:30")));
+        assert_eq!(loaded.message.as_deref(), Some("wrapped up"));
+        assert!(
+            db.open_session_for_task(task_id)
+                .expect("lookup succeeds")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn sessions_for_project_unions_every_task() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let one = insert_task(&db, project_id, "one");
+        let two = insert_task(&db, project_id, "two");
+
+        // A second project's session must not leak into the union.
+        let other_project = insert_project(&db, "beta");
+        let other_task = insert_task(&db, other_project, "elsewhere");
+
+        for task_id in [one, two, other_task] {
+            let session = Session {
+                id: None,
+                task_id,
+                start: dt("2026-09-01 09:00"),
+                end: Some(dt("2026-09-01 10:00")),
+                message: None,
+            };
+            Repository::<Session>::insert(&db, &session).expect("session inserts");
+        }
+
+        let mut task_ids: Vec<i64> = db
+            .sessions_for_project(project_id)
+            .expect("lookup succeeds")
+            .into_iter()
+            .map(|s| s.task_id)
+            .collect();
+        task_ids.sort_unstable();
+        assert_eq!(task_ids, [one, two]);
+
+        assert_eq!(db.sessions_for_task(one).expect("lookup succeeds").len(), 1);
+    }
+
+    #[test]
+    fn a_fresh_database_migrates_without_legacy_tables() {
+        let db = db();
+        assert!(db.table_exists("projects").expect("check succeeds"));
+        assert!(db.table_exists("tasks").expect("check succeeds"));
+        assert!(db.table_exists("session_configs").expect("check succeeds"));
+        assert!(db.table_exists("sessions").expect("check succeeds"));
+        assert!(!db.table_exists("records").expect("check succeeds"));
+    }
+
+    #[test]
+    fn legacy_tables_are_renamed_in_the_right_order() {
+        // The pre-rename schema: `sessions` held what is now
+        // `session_configs`, and `records` held what are now `sessions`.
+        let db = db();
+        db.conn
+            .execute_batch(
+                "DROP TABLE sessions;
+                 DROP TABLE session_configs;
+                 CREATE TABLE sessions (id INTEGER PRIMARY KEY, task_id INTEGER);
+                 CREATE TABLE records (id INTEGER PRIMARY KEY, task_id INTEGER);",
+            )
+            .expect("legacy schema is created");
+
+        db.migrate().expect("migration succeeds");
+
+        assert!(db.table_exists("session_configs").expect("check succeeds"));
+        assert!(db.table_exists("sessions").expect("check succeeds"));
+        assert!(!db.table_exists("records").expect("check succeeds"));
     }
 }

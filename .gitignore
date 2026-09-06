@@ -1,0 +1,5 @@
+# Build output
+/target/
+
+# Worktrees `iter session new` creates for a project's tasks
+/.iter-worktrees/

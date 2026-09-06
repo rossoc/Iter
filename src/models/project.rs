@@ -1,3 +1,4 @@
+use iter_macros::Table;
 use serde::{Deserialize, Serialize};
 
 fn default_true() -> bool {
@@ -11,7 +12,8 @@ fn default_branch_template() -> String {
 /// A project: a base directory of work, optionally backed by a git repo,
 /// with its own tasks. `id` is `None` for a not-yet-created project (the
 /// blank template opened in the YAML editor); it's filled in once inserted.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Table)]
+#[table(name = "projects", order_by = "name")]
 pub struct Project {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<i64>,

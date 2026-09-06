@@ -1,3 +1,4 @@
+use iter_macros::Table;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -10,7 +11,7 @@ pub enum TaskStatus {
 }
 
 impl TaskStatus {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             TaskStatus::Queue => "queue",
             TaskStatus::Wip => "wip",
@@ -32,7 +33,8 @@ impl TaskStatus {
 /// editor's view -- it's set by the caller from the `--project` flag (on
 /// creation) or looked up from the existing row (on edit), never typed by
 /// hand -- so it's skipped on both serialize and deserialize.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Table)]
+#[table(name = "tasks", order_by = "name")]
 pub struct Task {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<i64>,

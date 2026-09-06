@@ -4,6 +4,7 @@ mod error;
 mod git;
 mod github;
 mod models;
+mod process;
 mod reporting;
 mod scaffold;
 mod tmux;
@@ -19,7 +20,7 @@ use error::{IterError, Result};
 use models::{Project, Session, SessionConfig, Task, TaskStatus};
 use reporting::{
     DetailReport, MERGE_GAP_MINUTES, TaskEntry, WeekdayReport, concat_messages,
-    format_detail_report, merged_total_minutes, minutes_to_hhmm, round_to_half_hour,
+    format_detail_report, merged_total_minutes, minutes_to_hhmm, on_date, round_to_half_hour,
     weekday_averages,
 };
 use std::process::ExitCode;
@@ -181,7 +182,7 @@ fn parse_date_filter(date_filter: Option<&str>, now: chrono::NaiveDateTime) -> R
 
 fn print_detail_report(
     name: &str,
-    description: Option<&str>,
+    description: &str,
     date: NaiveDate,
     sessions: &[Session],
     now: chrono::NaiveDateTime,
@@ -190,8 +191,7 @@ fn print_detail_report(
     let total_minutes = merged_total_minutes(sessions, now, MERGE_GAP_MINUTES);
     let report = DetailReport {
         name: name.to_string(),
-        description: description
-            .map(str::trim)
+        description: Some(description.trim())
             .filter(|d| !d.is_empty())
             .map(str::to_string),
         date: date.format("%Y-%m-%d").to_string(),
@@ -314,80 +314,67 @@ fn new_cmd(path: &str) -> Result<()> {
     Ok(())
 }
 
-/// Validates a saved clone-editor result's `name`/`base_path` and resolves
-/// the latter to an absolute path -- shared by both clone flows, each of
-/// which then turns it into an actual, populated directory its own way
-/// (copying a template's files vs. running `git clone`) before inserting
-/// the row.
-fn resolve_cloned_base_path(project: &Project) -> Result<String> {
+/// `iter clone <source>`: clones an existing local project as a template
+/// when `source` names one, and otherwise treats `source` as a git remote
+/// URL / local repo path and clones that.
+fn clone_cmd(source: &str) -> Result<()> {
+    let db = open_db();
+    match db.find_project_by_name(source)? {
+        // Pre-fill from the source project -- including its name,
+        // deliberately, so the user has to change it before saving --
+        // leaving `base_path` blank for them to fill in. The source's
+        // tasks and sessions are never touched: they live in the DB,
+        // keyed to the source's own id.
+        Some(source_project) => {
+            let mut template = source_project.clone();
+            template.id = None;
+            template.base_path = String::new();
+            let files_from = source_project.base_path.clone();
+            clone_into(&db, &template, &source_project.name, |dest| {
+                std::fs::create_dir_all(dest)?;
+                scaffold::copy_dir_excluding_git(
+                    std::path::Path::new(&files_from),
+                    std::path::Path::new(dest),
+                )
+            })
+        }
+        // `git clone` creates the destination directory itself.
+        None => {
+            let mut template = Project::template();
+            template.github = true;
+            clone_into(&db, &template, source, |dest| git::clone_repo(source, dest))
+        }
+    }
+}
+
+/// The shared body of both clone flows: open `template` in the editor,
+/// validate the saved result and resolve its `base_path` to an absolute
+/// path, let `populate` turn that path into an actual, populated directory
+/// (copying a template project's files vs. running `git clone`), then
+/// insert the row. `source_label` only names the origin in the message.
+fn clone_into(
+    db: &Db,
+    template: &Project,
+    source_label: &str,
+    populate: impl FnOnce(&str) -> Result<()>,
+) -> Result<()> {
+    let Some(mut project) = yaml_edit::edit_in_nvim(template)? else {
+        println!("no changes -- project not created");
+        return Ok(());
+    };
     if project.name.trim().is_empty() {
         return Err(IterError::EmptyProjectName);
     }
     if project.base_path.trim().is_empty() {
         return Err(IterError::EmptyBasePath);
     }
-    scaffold::absolute_path(&project.base_path)
-}
-
-fn clone_cmd(source: &str) -> Result<()> {
-    let db = open_db();
-    match db.find_project_by_name(source)? {
-        Some(source_project) => clone_from_project(&db, &source_project),
-        None => clone_from_repo(&db, source),
-    }
-}
-
-/// Clones an existing local project as a template: pre-fills the new
-/// project's fields -- including its name, deliberately, so the user has
-/// to change it before saving -- from `source`, leaving `base_path` blank
-/// for them to fill in. On save, that path is created and `source`'s files
-/// (minus `.git`) are copied into it; `source`'s tasks and sessions are
-/// never touched, since they live in the DB, keyed to `source`'s own id.
-fn clone_from_project(db: &Db, source: &Project) -> Result<()> {
-    let mut template = source.clone();
-    template.id = None;
-    template.base_path = String::new();
-
-    let Some(mut project) = yaml_edit::edit_in_nvim(&template)? else {
-        println!("no changes -- project not created");
-        return Ok(());
-    };
-    let base_path = resolve_cloned_base_path(&project)?;
-    std::fs::create_dir_all(&base_path)?;
-    scaffold::copy_dir_excluding_git(
-        std::path::Path::new(&source.base_path),
-        std::path::Path::new(&base_path),
-    )?;
+    let base_path = scaffold::absolute_path(&project.base_path)?;
+    populate(&base_path)?;
 
     project.base_path = base_path;
     Repository::<Project>::insert(db, &project)?;
     println!(
-        "created project '{}' (cloned from '{}')",
-        project.name, source.name
-    );
-    Ok(())
-}
-
-/// Clones `source` as a git repo (like `git clone`) -- used when `source`
-/// isn't the name of an existing local project, so it's taken to be a
-/// remote URL or a local repo path instead. The destination is the
-/// `base_path` the user fills into the (otherwise blank) template; `git
-/// clone` creates that directory itself.
-fn clone_from_repo(db: &Db, source: &str) -> Result<()> {
-    let mut template = Project::template();
-    template.github = true;
-
-    let Some(mut project) = yaml_edit::edit_in_nvim(&template)? else {
-        println!("no changes -- project not created");
-        return Ok(());
-    };
-    let base_path = resolve_cloned_base_path(&project)?;
-    git::clone_repo(source, &base_path)?;
-
-    project.base_path = base_path;
-    Repository::<Project>::insert(db, &project)?;
-    println!(
-        "created project '{}' (cloned from '{source}')",
+        "created project '{}' (cloned from '{source_label}')",
         project.name
     );
     Ok(())
@@ -431,7 +418,8 @@ fn project_delete(name: Option<&str>) -> Result<()> {
 
     let mut session_configs = Vec::new();
     for task in db.tasks_for_project(project_id)? {
-        if let Some(session_config) = db.find_session_config_by_task(task.id.expect(ID_INVARIANT))?
+        if let Some(session_config) =
+            db.find_session_config_by_task(task.id.expect(ID_INVARIANT))?
         {
             session_configs.push(session_config);
         }
@@ -457,11 +445,7 @@ fn project_delete(name: Option<&str>) -> Result<()> {
 fn project_task_entries(db: &Db, project_id: i64, date: NaiveDate) -> Result<Vec<TaskEntry>> {
     let mut entries = Vec::new();
     for task in db.tasks_for_project(project_id)? {
-        let sessions: Vec<Session> = db
-            .sessions_for_task(task.id.expect(ID_INVARIANT))?
-            .into_iter()
-            .filter(|r| r.start.date() == date)
-            .collect();
+        let sessions = on_date(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, date);
         if sessions.is_empty() {
             continue;
         }
@@ -483,17 +467,13 @@ fn project_info(name: Option<&str>, date_filter: Option<&str>) -> Result<()> {
 
     // The union of every task's sessions that day -- this is what makes
     // working two of the project's tasks in parallel not double-count.
-    let sessions: Vec<Session> = db
-        .sessions_for_project(project_id)?
-        .into_iter()
-        .filter(|r| r.start.date() == date)
-        .collect();
+    let sessions = on_date(db.sessions_for_project(project_id)?, date);
 
     let tasks = project_task_entries(&db, project_id, date)?;
 
     print_detail_report(
         &project.name,
-        Some(&project.description),
+        &project.description,
         date,
         &sessions,
         now,
@@ -598,20 +578,9 @@ fn task_info(task_ref: Option<&str>, date_filter: Option<&str>) -> Result<()> {
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
     let now = Local::now().naive_local();
     let date = parse_date_filter(date_filter, now)?;
-    let sessions: Vec<Session> = db
-        .sessions_for_task(task.id.expect(ID_INVARIANT))?
-        .into_iter()
-        .filter(|r| r.start.date() == date)
-        .collect();
+    let sessions = on_date(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, date);
     let display = format!("{}/{}", project.name, task.name);
-    print_detail_report(
-        &display,
-        Some(&task.description),
-        date,
-        &sessions,
-        now,
-        None,
-    );
+    print_detail_report(&display, &task.description, date, &sessions, now, None);
     Ok(())
 }
 

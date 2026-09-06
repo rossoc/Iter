@@ -1,5 +1,6 @@
-use crate::error::{IterError, Result};
+use crate::error::Result;
 use crate::models::MarkdownBody;
+use crate::process;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -67,19 +68,13 @@ pub fn edit_in_nvim<T: Serialize + DeserializeOwned + MarkdownBody>(
     ));
     std::fs::write(&path, &original)?;
 
-    let status = std::process::Command::new("nvim")
-        .arg(&path)
-        .status()
-        .map_err(|source| IterError::Spawn {
-            tool: "nvim",
-            source,
-        })?;
+    let saved = process::run_status("nvim", None, &[&path])?;
 
     let edited = std::fs::read_to_string(&path);
     let _ = std::fs::remove_file(&path);
     let edited = edited?;
 
-    if !status.success() {
+    if !saved {
         return Ok(None);
     }
 

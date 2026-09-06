@@ -10,9 +10,22 @@ pub const MERGE_GAP_MINUTES: i64 = 17;
 
 #[derive(Debug, Serialize)]
 pub struct WeekdayAverage {
-    pub weekday: String,
+    pub weekday: &'static str,
     pub average_hours: f64,
 }
+
+/// The seven weekdays in report order (Monday first), each with the label
+/// it's reported under -- one table, so the ordering and the names can't
+/// drift apart the way a separate list and `match` could.
+const WEEKDAYS: [(Weekday, &str); 7] = [
+    (Weekday::Mon, "Monday"),
+    (Weekday::Tue, "Tuesday"),
+    (Weekday::Wed, "Wednesday"),
+    (Weekday::Thu, "Thursday"),
+    (Weekday::Fri, "Friday"),
+    (Weekday::Sat, "Saturday"),
+    (Weekday::Sun, "Sunday"),
+];
 
 /// For each weekday Monday..Sunday (always all seven, zero-filled when
 /// there's no data), the average hours logged on that weekday: total
@@ -31,19 +44,9 @@ pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<Weekday
         dates_by_weekday.entry(wd).or_default().insert(date);
     }
 
-    let order = [
-        Weekday::Mon,
-        Weekday::Tue,
-        Weekday::Wed,
-        Weekday::Thu,
-        Weekday::Fri,
-        Weekday::Sat,
-        Weekday::Sun,
-    ];
-
-    order
+    WEEKDAYS
         .iter()
-        .map(|&wd| {
+        .map(|&(wd, weekday)| {
             let total_minutes = *minutes_by_weekday.get(&wd).unwrap_or(&0);
             let distinct_days = dates_by_weekday.get(&wd).map(|s| s.len()).unwrap_or(0);
             let average_hours = if distinct_days == 0 {
@@ -52,24 +55,20 @@ pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<Weekday
                 (total_minutes as f64 / 60.0) / distinct_days as f64
             };
             WeekdayAverage {
-                weekday: weekday_name(wd),
+                weekday,
                 average_hours,
             }
         })
         .collect()
 }
 
-fn weekday_name(wd: Weekday) -> String {
-    match wd {
-        Weekday::Mon => "Monday",
-        Weekday::Tue => "Tuesday",
-        Weekday::Wed => "Wednesday",
-        Weekday::Thu => "Thursday",
-        Weekday::Fri => "Friday",
-        Weekday::Sat => "Saturday",
-        Weekday::Sun => "Sunday",
-    }
-    .to_string()
+/// The subset of `sessions` that started on `date` -- the day filter every
+/// `info` report applies before summing.
+pub fn on_date(sessions: Vec<Session>, date: NaiveDate) -> Vec<Session> {
+    sessions
+        .into_iter()
+        .filter(|s| s.start.date() == date)
+        .collect()
 }
 
 pub fn minutes_to_hhmm(total_minutes: i64) -> String {

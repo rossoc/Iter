@@ -1,51 +1,30 @@
-use crate::error::{IterError, Result};
-use std::process::Command;
+use crate::error::Result;
+use crate::process;
 
 /// Creates a new detached tmux session named `name`, starting in `cwd`.
 pub fn create_session(name: &str, cwd: &str) -> Result<()> {
-    let status = Command::new("tmux")
-        .args(["new-session", "-d", "-s", name, "-c", cwd])
-        .status()
-        .map_err(|source| IterError::Spawn {
-            tool: "tmux",
-            source,
-        })?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(IterError::CommandFailed(format!(
-            "tmux new-session -s {name} failed"
-        )))
-    }
+    process::run("tmux", None, &["new-session", "-d", "-s", name, "-c", cwd])
 }
 
 /// Kills a tmux session if it's running. Not an error if it's already gone.
 pub fn kill_session(name: &str) {
-    let _ = Command::new("tmux")
-        .args(["kill-session", "-t", name])
-        .status();
+    let _ = process::run("tmux", None, &["kill-session", "-t", name]);
 }
 
 pub fn session_exists(name: &str) -> bool {
-    Command::new("tmux")
-        .args(["has-session", "-t", name])
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    process::succeeds("tmux", &["has-session", "-t", name])
 }
 
 /// The tmux session name of the pane this process is running in, if any
 /// (i.e. we're inside a tmux client). Used by `iter t`.
 pub fn current_session_name() -> Option<String> {
-    let output = Command::new("tmux")
-        .args(["display-message", "-p", "#S"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
+    let name = process::output("tmux", None, &["display-message", "-p", "#S"]).ok()?;
+    let name = name.trim();
+    if name.is_empty() {
+        None
+    } else {
+        Some(name.to_string())
     }
-    let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if name.is_empty() { None } else { Some(name) }
 }
 
 /// The three hook events `iter` cares about. `client-attached` starts a
@@ -60,27 +39,11 @@ const HOOK_EVENTS: [&str; 3] = ["client-attached", "client-detached", "session-c
 /// hook <event> <session>`. Safe to call every time a session is created.
 pub fn ensure_hooks_installed(iter_bin: &str) -> Result<()> {
     for event in HOOK_EVENTS {
-        install_hook(event, iter_bin)?;
+        // `#{hook_session_name}` is populated for every hook, giving us the
+        // session the event fired on without needing per-session hook wiring.
+        let action =
+            format!("run-shell '{iter_bin} internal hook {event} \"#{{hook_session_name}}\"'");
+        process::run("tmux", None, &["set-hook", "-g", event, &action])?;
     }
     Ok(())
-}
-
-fn install_hook(event: &str, iter_bin: &str) -> Result<()> {
-    // `#{hook_session_name}` is populated for every hook, giving us the
-    // session the event fired on without needing per-session hook wiring.
-    let action = format!("run-shell '{iter_bin} internal hook {event} \"#{{hook_session_name}}\"'");
-    let status = Command::new("tmux")
-        .args(["set-hook", "-g", event, &action])
-        .status()
-        .map_err(|source| IterError::Spawn {
-            tool: "tmux",
-            source,
-        })?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(IterError::CommandFailed(format!(
-            "failed to install the {event} tmux hook"
-        )))
-    }
 }

@@ -1,0 +1,13 @@
+[package]
+name = "iter-macros"
+version = "0.1.0"
+edition = "2024"
+description = "Derive macro for Iter's `Table` trait: maps a struct to its SQLite table."
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+syn = "2.0.119"

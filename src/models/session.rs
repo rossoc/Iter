@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use iter_macros::Table;
 
 /// One stretch of work on a task: a start time, an optional end (`None`
 /// means still open/ongoing), and an optional note. Started/stopped by
@@ -8,7 +9,8 @@ use chrono::NaiveDateTime;
 /// just the union of every task's sessions that day, independent of how
 /// many tmux sessions came and went (see
 /// `crate::reporting::merged_total_minutes`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Table)]
+#[table(name = "sessions")]
 pub struct Session {
     pub id: Option<i64>,
     pub task_id: i64,
