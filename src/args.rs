@@ -37,6 +37,8 @@ pub enum Command {
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
 
+        /// The comment body
+        #[clap(short = 'm', long = "message")]
         message: String,
     },
 

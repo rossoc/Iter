@@ -46,7 +46,7 @@ iter session start myproj/mytask
 iter session stop myproj/mytask -m "note about what got done"
 
 # GitHub
-iter comment myproj/mytask "progress note"   # posts to the task's linked issue via `gh`
+iter comment myproj/mytask -m "progress note"   # posts to the task's linked issue via `gh`
 
 # tmux status
 iter t                              # prints <project>/<task> for the tmux session you're in
