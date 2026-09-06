@@ -33,7 +33,7 @@ pub enum Command {
 
     /// Post a message as a comment on a task's linked GitHub issue
     Comment {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
 
@@ -42,7 +42,7 @@ pub enum Command {
         message: String,
     },
 
-    /// Print <project>/<task> for the tmux session you're currently in
+    /// Print `<project>/<task>` for the tmux session you're currently in
     T,
 
     /// Commands invoked by tmux hooks -- not meant to be run by hand
@@ -103,21 +103,21 @@ pub enum TaskCommand {
 
     /// Edit an existing task in nvim; saving & quitting updates it
     Edit {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
     },
 
     /// Delete a task (and its session-config and sessions)
     Delete {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
     },
 
     /// Name, description, and time spent on a day (default: today)
     Info {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
 
@@ -138,14 +138,14 @@ pub enum TaskCommand {
     /// Mark a task done: closes any open session, tears down its
     /// session-config (tmux session + worktree), and deletes that row
     Done {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
     },
 
     /// Average hours per weekday spent on a task
     Weekday {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
     },
@@ -155,7 +155,7 @@ pub enum TaskCommand {
 pub enum SessionCommand {
     /// Set up a session for a task: creates a git worktree/branch (unless
     /// the project has no github or auto_branch is off) and, if the
-    /// project has tmux enabled, a tmux session named <project>/<task>
+    /// project has tmux enabled, a tmux session named `<project>/<task>`
     New {
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: String,
@@ -172,14 +172,14 @@ pub enum SessionCommand {
     /// Manually start a session for a task (for tmux-less projects, or when
     /// the tmux hooks aren't in play)
     Start {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
     },
 
     /// Manually end the open session for a task
     Stop {
-        /// <project>/<task> (default: the task of the tmux session you're in)
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
 

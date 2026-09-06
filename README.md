@@ -76,9 +76,9 @@ session is created at all -- use `iter session start`/`iter session stop`
 to track work on it manually instead.
 
 `iter task done` closes any open session, kills the tmux session (if any),
-removes the worktree (if any), and deletes the session-config -- the
-task's past sessions aren't touched, since they're keyed by task, not
-session-config.
+removes the worktree (if any), deletes its branch (if any), and deletes the
+session-config -- the task's past sessions aren't touched, since they're
+keyed by task, not session-config.
 
 ## Storage
 

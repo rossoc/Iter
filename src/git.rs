@@ -72,6 +72,29 @@ pub fn remove_worktree(base_path: &str, worktree_path: &str) -> Result<()> {
     }
 }
 
+/// Deletes a branch created by `create_worktree`. `-D` (not `-d`), like
+/// `remove_worktree`'s `--force`: the task is done and we don't want
+/// unmerged commits to block cleanup. Must run after the branch's worktree
+/// (if any) has already been removed -- git refuses to delete a branch
+/// that's still checked out in one.
+pub fn delete_branch(base_path: &str, branch: &str) -> Result<()> {
+    let status = Command::new("git")
+        .args(["branch", "-D", branch])
+        .current_dir(base_path)
+        .status()
+        .map_err(|source| IterError::Spawn {
+            tool: "git",
+            source,
+        })?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(IterError::CommandFailed(format!(
+            "git branch -D {branch} failed"
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

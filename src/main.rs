@@ -231,15 +231,23 @@ fn close_open_session(db: &Db, task_id: i64, message: Option<&str>) -> Result<()
     Ok(())
 }
 
-/// Tears down a task's session-config: kills its tmux session (if any),
-/// removes its worktree (if any), and deletes the session-config row.
-/// Called from `task done`, `task delete` and `project delete`.
+/// Tears down a task's session-config: removes its worktree (if any),
+/// deletes its branch (if any), deletes the session-config row, and finally
+/// kills its tmux session (if any). Called from `task done`, `task delete`
+/// and `project delete`.
+///
+/// The tmux kill comes last, and deliberately isn't the thing anything else
+/// here depends on: if this is run from inside that same tmux session,
+/// `kill-session` takes down every pane in it -- including this one -- so
+/// nothing after that call is guaranteed to run.
 fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionConfig) {
-    if let Some(name) = &session_config.tmux_session_name {
-        tmux::kill_session(name);
-    }
     if let Some(worktree) = &session_config.worktree_path
         && let Err(e) = git::remove_worktree(&project.base_path, worktree)
+    {
+        eprintln!("warning: {e}");
+    }
+    if let Some(branch) = &session_config.github_branch
+        && let Err(e) = git::delete_branch(&project.base_path, branch)
     {
         eprintln!("warning: {e}");
     }
@@ -247,6 +255,9 @@ fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionC
         && let Err(e) = Repository::<SessionConfig>::delete(db, id)
     {
         eprintln!("warning: failed to delete session-config row: {e}");
+    }
+    if let Some(name) = &session_config.tmux_session_name {
+        tmux::kill_session(name);
     }
 }
 
@@ -295,14 +306,25 @@ fn project_edit(name: Option<&str>) -> Result<()> {
 fn project_delete(name: Option<&str>) -> Result<()> {
     let db = open_db();
     let project = resolve_project_or_current(&db, name)?;
-    for task in db.tasks_for_project(project.id.expect(ID_INVARIANT))? {
-        if let Some(session_config) =
-            db.find_session_config_by_task(task.id.expect(ID_INVARIANT))?
+    let project_id = project.id.expect(ID_INVARIANT);
+
+    let mut session_configs = Vec::new();
+    for task in db.tasks_for_project(project_id)? {
+        if let Some(session_config) = db.find_session_config_by_task(task.id.expect(ID_INVARIANT))?
         {
-            teardown_session_config(&db, &project, &session_config);
+            session_configs.push(session_config);
         }
     }
-    Repository::<Project>::delete(&db, project.id.expect(ID_INVARIANT))?;
+
+    // Delete the project (cascades to its tasks and their session-configs)
+    // before tearing down tmux/worktrees: if we're running inside one of
+    // those tmux sessions, `kill-session` in the teardown takes down this
+    // pane too, so anything after that point may never run.
+    Repository::<Project>::delete(&db, project_id)?;
+
+    for session_config in &session_configs {
+        teardown_session_config(&db, &project, session_config);
+    }
     println!("deleted project '{}'", project.name);
     Ok(())
 }
@@ -433,11 +455,19 @@ fn task_edit(task_ref: Option<&str>) -> Result<()> {
 fn task_delete(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
+    let task_id = task.id.expect(ID_INVARIANT);
     let display = format!("{}/{}", project.name, task.name);
-    if let Some(session_config) = db.find_session_config_by_task(task.id.expect(ID_INVARIANT))? {
+    let session_config = db.find_session_config_by_task(task_id)?;
+
+    // Delete the task row (cascades to its session-config) before tearing
+    // down tmux/the worktree: if we're running inside the task's own tmux
+    // session, `kill-session` in the teardown takes down this pane too, so
+    // anything after that point may never run.
+    Repository::<Task>::delete(&db, task_id)?;
+
+    if let Some(session_config) = session_config {
         teardown_session_config(&db, &project, &session_config);
     }
-    Repository::<Task>::delete(&db, task.id.expect(ID_INVARIANT))?;
     println!("deleted task '{display}'");
     Ok(())
 }
@@ -496,12 +526,17 @@ fn task_done(task_ref: Option<&str>) -> Result<()> {
 
     close_open_session(&db, task_id, None)?;
 
+    // Persist the status change before tearing down the session-config: if
+    // we're running inside the task's own tmux session, `kill-session` below
+    // takes down every pane in it -- including this one -- so anything after
+    // that point may never run.
+    task.status = TaskStatus::Done;
+    Repository::<Task>::update(&db, task_id, &task)?;
+
     if let Some(session_config) = db.find_session_config_by_task(task_id)? {
         teardown_session_config(&db, &project, &session_config);
     }
 
-    task.status = TaskStatus::Done;
-    Repository::<Task>::update(&db, task_id, &task)?;
     println!("task '{display}' marked done");
     Ok(())
 }
