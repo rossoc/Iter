@@ -2,11 +2,13 @@
 name = "Iter"
 version = "0.1.0"
 edition = "2024"
-description = "A command-line time tracker: log begin/end sessions by name and report elapsed time, totals, and weekday averages."
+description = "A command-line time tracker for projects and tasks, with tmux session and GitHub issue integration."
 
 [dependencies]
 chrono = "0.4.37"
 clap = { version = "4.5.45", features = ["derive"] }
 clap_complete = { version = "4.6.9", features = ["unstable-dynamic"] }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_yaml = "0.9.34"
+thiserror = "2.0.20"

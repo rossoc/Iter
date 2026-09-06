@@ -1,9 +1,8 @@
-use crate::session_name_completer;
+use crate::{project_completer, task_completer};
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
 
-/// A simple CLI for time-tracking named tasks: begin, end, info, elapsed,
-/// list, and session-reporting commands.
+/// A project/task/session/record time tracker, with tmux + GitHub integration.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct Args {
@@ -13,52 +12,183 @@ pub struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum Command {
-    /// Begin a task with a name
-    Begin {
-        #[arg(add = ArgValueCompleter::new(session_name_completer))]
-        value: String,
+    /// Manage projects
+    Project {
+        #[clap(subcommand)]
+        action: ProjectCommand,
     },
 
-    /// End a task with a name
-    End {
-        #[arg(add = ArgValueCompleter::new(session_name_completer))]
-        value: String,
-
-        /// Optional note stored alongside the end event
-        #[clap(short = 'm', long = "message")]
-        message: Option<String>,
+    /// Manage tasks
+    Task {
+        #[clap(subcommand)]
+        action: TaskCommand,
     },
 
-    /// Total time and messages for one session name on one day (default: today)
+    /// Start a session (tmux + git worktree/branch) for a task
+    Session {
+        #[clap(subcommand)]
+        action: SessionCommand,
+    },
+
+    /// Post a message as a comment on a task's linked GitHub issue
+    Comment {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        message: String,
+    },
+
+    /// Print <project>/<task> for the tmux session you're currently in
+    T,
+
+    /// Commands invoked by tmux hooks -- not meant to be run by hand
+    #[clap(hide = true)]
+    Internal {
+        #[clap(subcommand)]
+        action: InternalCommand,
+    },
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum ProjectCommand {
+    /// Open a blank project in nvim; saving & quitting creates it
+    New,
+
+    /// Edit an existing project in nvim; saving & quitting updates it
+    Edit {
+        /// Default: the project of the tmux session you're in
+        #[arg(add = ArgValueCompleter::new(project_completer))]
+        name: Option<String>,
+    },
+
+    /// Delete a project (and its tasks, sessions and records)
+    Delete {
+        /// Default: the project of the tmux session you're in
+        #[arg(add = ArgValueCompleter::new(project_completer))]
+        name: Option<String>,
+    },
+
+    /// Name, description, and time spent (union of all its tasks) on a day
     Info {
-        #[arg(add = ArgValueCompleter::new(session_name_completer))]
-        value: String,
+        /// Default: the project of the tmux session you're in
+        #[arg(add = ArgValueCompleter::new(project_completer))]
+        name: Option<String>,
 
         #[clap(long)]
         date: Option<String>,
     },
 
-    /// Time elapsed since a task's last begin
-    Elapsed {
-        #[arg(add = ArgValueCompleter::new(session_name_completer))]
-        value: String,
+    /// List every project
+    List,
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum TaskCommand {
+    /// Open a new task in nvim (optionally pre-filled from a GitHub issue);
+    /// saving & quitting creates it
+    New {
+        /// Project the task belongs to (default: the project of the tmux
+        /// session you're in)
+        #[clap(long, add = ArgValueCompleter::new(project_completer))]
+        project: Option<String>,
+
+        /// Pre-fill name/description/github_issue from this issue number
+        #[clap(long)]
+        issue: Option<i64>,
     },
 
-    /// List the distinct session names that have been logged
-    List,
+    /// Edit an existing task in nvim; saving & quitting updates it
+    Edit {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+    },
 
-    /// Report on logged sessions, in YAML
-    Session {
-        #[clap(subcommand)]
-        action: SessionCommand,
+    /// Delete a task (and its session and records)
+    Delete {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+    },
+
+    /// Name, description, and time spent on a day (default: today)
+    Info {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        #[clap(long)]
+        date: Option<String>,
+    },
+
+    /// List tasks, optionally filtered by project and/or status
+    List {
+        #[clap(long, add = ArgValueCompleter::new(project_completer))]
+        project: Option<String>,
+
+        /// queue, wip, or done
+        #[clap(long)]
+        status: Option<String>,
+    },
+
+    /// Mark a task done: closes any open record, tears down its session
+    /// (tmux session + worktree), and deletes the session row
+    Done {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+    },
+
+    /// Manually start a record for a task (for tmux-less projects, or when
+    /// a session's hooks aren't in play)
+    Start {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+    },
+
+    /// Manually end the open record for a task
+    Stop {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// Note stored alongside the closed record
+        #[clap(short = 'm', long = "message")]
+        message: Option<String>,
+    },
+
+    /// Average hours per weekday spent on a task
+    Weekday {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
     },
 }
 
 #[derive(clap::Subcommand, Debug)]
 pub enum SessionCommand {
-    /// Average hours per weekday for one name
-    Weekday {
-        #[arg(add = ArgValueCompleter::new(session_name_completer))]
-        value: String,
+    /// Start a session for a task: creates a git worktree/branch (unless
+    /// the project has no github or auto_branch is off) and, if the
+    /// project has tmux enabled, a tmux session named <project>/<task>
+    New {
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: String,
+
+        /// Override the branch name (default: the project's branch_template)
+        #[clap(short = 'b', long = "branch")]
+        branch: Option<String>,
+
+        /// Skip branch/worktree creation entirely
+        #[clap(long = "no-branch")]
+        no_branch: bool,
     },
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum InternalCommand {
+    /// Called by a tmux hook: event is client-attached / client-detached /
+    /// session-closed, tmux_session is the tmux session name (#{hook_session_name})
+    Hook { event: String, tmux_session: String },
 }
