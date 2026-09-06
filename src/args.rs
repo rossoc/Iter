@@ -2,7 +2,7 @@ use crate::{project_completer, task_completer};
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
 
-/// A project/task/session/record time tracker, with tmux + GitHub integration.
+/// A project/task/session time tracker, with tmux + GitHub integration.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct Args {
@@ -24,7 +24,8 @@ pub enum Command {
         action: TaskCommand,
     },
 
-    /// Start a session (tmux + git worktree/branch) for a task
+    /// Set up and track a task's session (tmux + git worktree/branch, and
+    /// time spent)
     Session {
         #[clap(subcommand)]
         action: SessionCommand,
@@ -62,7 +63,7 @@ pub enum ProjectCommand {
         name: Option<String>,
     },
 
-    /// Delete a project (and its tasks, sessions and records)
+    /// Delete a project (and its tasks, session-configs and sessions)
     Delete {
         /// Default: the project of the tmux session you're in
         #[arg(add = ArgValueCompleter::new(project_completer))]
@@ -105,7 +106,7 @@ pub enum TaskCommand {
         task: Option<String>,
     },
 
-    /// Delete a task (and its session and records)
+    /// Delete a task (and its session-config and sessions)
     Delete {
         /// <project>/<task> (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
@@ -132,31 +133,12 @@ pub enum TaskCommand {
         status: Option<String>,
     },
 
-    /// Mark a task done: closes any open record, tears down its session
-    /// (tmux session + worktree), and deletes the session row
+    /// Mark a task done: closes any open session, tears down its
+    /// session-config (tmux session + worktree), and deletes that row
     Done {
         /// <project>/<task> (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
-    },
-
-    /// Manually start a record for a task (for tmux-less projects, or when
-    /// a session's hooks aren't in play)
-    Start {
-        /// <project>/<task> (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-    },
-
-    /// Manually end the open record for a task
-    Stop {
-        /// <project>/<task> (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-
-        /// Note stored alongside the closed record
-        #[clap(short = 'm', long = "message")]
-        message: Option<String>,
     },
 
     /// Average hours per weekday spent on a task
@@ -169,7 +151,7 @@ pub enum TaskCommand {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum SessionCommand {
-    /// Start a session for a task: creates a git worktree/branch (unless
+    /// Set up a session for a task: creates a git worktree/branch (unless
     /// the project has no github or auto_branch is off) and, if the
     /// project has tmux enabled, a tmux session named <project>/<task>
     New {
@@ -185,7 +167,27 @@ pub enum SessionCommand {
         no_branch: bool,
     },
 
-    /// Time spent so far on the open record of the tmux session you're in
+    /// Manually start a session for a task (for tmux-less projects, or when
+    /// the tmux hooks aren't in play)
+    Start {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+    },
+
+    /// Manually end the open session for a task
+    Stop {
+        /// <project>/<task> (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// Note stored alongside the closed session
+        #[clap(short = 'm', long = "message")]
+        message: Option<String>,
+    },
+
+    /// Time spent so far on the currently open session of the task of the
+    /// tmux session you're in
     Elapse,
 }
 

@@ -6,14 +6,17 @@ tmux + GitHub integration.
 - A **project** is a base directory of work (optionally a git/GitHub repo).
 - A **task** is a unit of work under a project, with a status
   (`queue` / `wip` / `done`) and, optionally, a linked GitHub issue.
-- Starting a **session** on a task spins up a tmux session (named
-  `<project>/<task>`) and, if the project is git-backed, a dedicated git
-  worktree + branch for it -- so working two tasks of the same project at
-  once never means one stomps on the other's checkout.
-- Every stretch of work is a **record**: a start/end pair (plus an optional
-  note) against the *task*. Records are what get reported on, not
-  sessions -- so if you work two tasks of the same project in parallel,
-  `project info` reports the union of their time, not double the time.
+- `iter session new` on a task creates a **session-config**: a tmux session
+  (named `<project>/<task>`) and, if the project is git-backed, a dedicated
+  git worktree + branch for it -- so working two tasks of the same project
+  at once never means one stomps on the other's checkout.
+- Every stretch of work is a **session**: a start/end pair (plus an optional
+  note) against the *task*, started/stopped via `iter session
+  start`/`iter session stop` (manually) or by attaching/detaching from the
+  tmux session (automatically). Sessions are what get reported on, not
+  session-configs -- so if you work two tasks of the same project in
+  parallel, `project info` reports the union of their time, not double the
+  time.
 
 ## Usage
 
@@ -31,15 +34,16 @@ iter task edit myproj/mytask
 iter task delete myproj/mytask
 iter task info myproj/mytask [--date d]
 iter task list [--project myproj] [--status wip]
-iter task done myproj/mytask        # closes any open record, tears down its session, marks done
+iter task done myproj/mytask        # closes any open session, tears down its session-config, marks done
 iter task weekday myproj/mytask     # average hours per weekday
 
-# sessions (tmux + git worktree/branch)
+# sessions (tmux + git worktree/branch, and time tracking)
 iter session new myproj/mytask [-b custom-branch] [--no-branch]
+iter session elapse                  # time spent so far in the tmux session you're in
 
-# manual record tracking (for tmux-disabled projects, or outside a session)
-iter task start myproj/mytask
-iter task stop myproj/mytask -m "note about what got done"
+# manual time tracking (for tmux-disabled projects, or outside a session)
+iter session start myproj/mytask
+iter session stop myproj/mytask -m "note about what got done"
 
 # GitHub
 iter comment myproj/mytask "progress note"   # posts to the task's linked issue via `gh`
@@ -64,15 +68,17 @@ wherever's convenient.
    hooks (idempotent, installed once): `client-attached`, `client-detached`,
    `session-closed`.
 
-Attaching to that tmux session starts a record for the task; detaching (or
-the session/client going away for any reason -- including the terminal
-being killed outright, not just a clean detach) ends it. If a project has
-`tmux: false`, no tmux session is created at all -- use `iter task
-start`/`iter task stop` to track work on it manually instead.
+Attaching to that tmux session starts a session for the task; detaching (or
+the client going away for any reason -- including the terminal being
+killed outright, not just a clean detach) ends it. `iter session elapse`
+reports time on that open session. If a project has `tmux: false`, no tmux
+session is created at all -- use `iter session start`/`iter session stop`
+to track work on it manually instead.
 
-`iter task done` closes any open record, kills the tmux session (if any),
-removes the worktree (if any), and deletes the session -- the task's past
-records aren't touched, since they're keyed by task, not session.
+`iter task done` closes any open session, kills the tmux session (if any),
+removes the worktree (if any), and deletes the session-config -- the
+task's past sessions aren't touched, since they're keyed by task, not
+session-config.
 
 ## Storage
 

@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::{Project, Record, Session, Task, TaskStatus};
+use crate::models::{Project, Session, SessionConfig, Task, TaskStatus};
 use chrono::NaiveDateTime;
 use rusqlite::{Connection, OptionalExtension, Row, params};
 use std::path::Path;
@@ -18,7 +18,7 @@ pub fn str_to_dt(s: &str) -> NaiveDateTime {
 }
 
 /// Generic storage surface, implemented once per entity below (`Project`,
-/// `Task`, `Session`, `Record`) against the one `Db`/SQLite backend.
+/// `Task`, `SessionConfig`, `Session`) against the one `Db`/SQLite backend.
 pub trait Repository<T> {
     fn insert(&self, item: &T) -> Result<i64>;
     fn update(&self, id: i64, item: &T) -> Result<()>;
@@ -48,6 +48,7 @@ impl Db {
     }
 
     fn migrate(&self) -> Result<()> {
+        self.rename_legacy_tables()?;
         self.conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS projects (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,14 +69,14 @@ impl Db {
                 status       TEXT NOT NULL DEFAULT 'queue' CHECK (status IN ('queue', 'wip', 'done')),
                 UNIQUE (project_id, name)
              );
-             CREATE TABLE IF NOT EXISTS sessions (
+             CREATE TABLE IF NOT EXISTS session_configs (
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_id           INTEGER NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
                 tmux_session_name TEXT,
                 github_branch     TEXT,
                 worktree_path     TEXT
              );
-             CREATE TABLE IF NOT EXISTS records (
+             CREATE TABLE IF NOT EXISTS sessions (
                 id      INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
                 start   TEXT NOT NULL,
@@ -84,6 +85,38 @@ impl Db {
              );",
         )?;
         Ok(())
+    }
+
+    /// One-time rename from the pre-rename schema (`Session`/`Record`
+    /// structs, backed by tables `sessions`/`records`) to the current one
+    /// (`SessionConfig`/`Session`, backed by tables `session_configs`/
+    /// `sessions`). Each rename is guarded on its target name not already
+    /// existing, so this is a no-op once applied, and a no-op on a fresh
+    /// database that never had the old tables to begin with. Order matters:
+    /// the old `sessions` table is renamed out of the way first, freeing
+    /// that name for the old `records` table to take.
+    fn rename_legacy_tables(&self) -> Result<()> {
+        if self.table_exists("sessions")? && !self.table_exists("session_configs")? {
+            self.conn
+                .execute_batch("ALTER TABLE sessions RENAME TO session_configs;")?;
+        }
+        if self.table_exists("records")? && !self.table_exists("sessions")? {
+            self.conn
+                .execute_batch("ALTER TABLE records RENAME TO sessions;")?;
+        }
+        Ok(())
+    }
+
+    fn table_exists(&self, name: &str) -> Result<bool> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                params![name],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some())
     }
 
     // ---- finder helpers (not part of the generic CRUD surface) -----------
@@ -123,62 +156,65 @@ impl Db {
         Ok(rows)
     }
 
-    pub fn find_session_by_task(&self, task_id: i64) -> Result<Option<Session>> {
+    pub fn find_session_config_by_task(&self, task_id: i64) -> Result<Option<SessionConfig>> {
         Ok(self
             .conn
             .query_row(
                 "SELECT id, task_id, tmux_session_name, github_branch, worktree_path
-                 FROM sessions WHERE task_id = ?1",
+                 FROM session_configs WHERE task_id = ?1",
                 params![task_id],
-                Self::row_to_session,
+                Self::row_to_session_config,
             )
             .optional()?)
     }
 
-    pub fn find_session_by_tmux_name(&self, tmux_name: &str) -> Result<Option<Session>> {
+    pub fn find_session_config_by_tmux_name(
+        &self,
+        tmux_name: &str,
+    ) -> Result<Option<SessionConfig>> {
         Ok(self
             .conn
             .query_row(
                 "SELECT id, task_id, tmux_session_name, github_branch, worktree_path
-                 FROM sessions WHERE tmux_session_name = ?1",
+                 FROM session_configs WHERE tmux_session_name = ?1",
                 params![tmux_name],
-                Self::row_to_session,
+                Self::row_to_session_config,
             )
             .optional()?)
     }
 
-    pub fn records_for_task(&self, task_id: i64) -> Result<Vec<Record>> {
+    pub fn sessions_for_task(&self, task_id: i64) -> Result<Vec<Session>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, task_id, start, end, message FROM records WHERE task_id = ?1")?;
+            .prepare("SELECT id, task_id, start, end, message FROM sessions WHERE task_id = ?1")?;
         let rows = stmt
-            .query_map(params![task_id], Self::row_to_record)?
+            .query_map(params![task_id], Self::row_to_session)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
 
-    /// Every record across every task of `project_id` -- the union a
+    /// Every session across every task of `project_id` -- the union a
     /// project-level report is built from (see `crate::reporting`).
-    pub fn records_for_project(&self, project_id: i64) -> Result<Vec<Record>> {
+    pub fn sessions_for_project(&self, project_id: i64) -> Result<Vec<Session>> {
         let mut stmt = self.conn.prepare(
-            "SELECT r.id, r.task_id, r.start, r.end, r.message
-             FROM records r JOIN tasks t ON t.id = r.task_id
+            "SELECT s.id, s.task_id, s.start, s.end, s.message
+             FROM sessions s JOIN tasks t ON t.id = s.task_id
              WHERE t.project_id = ?1",
         )?;
         let rows = stmt
-            .query_map(params![project_id], Self::row_to_record)?
+            .query_map(params![project_id], Self::row_to_session)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
 
-    pub fn open_record_for_task(&self, task_id: i64) -> Result<Option<Record>> {
+    pub fn open_session_for_task(&self, task_id: i64) -> Result<Option<Session>> {
         Ok(self
             .conn
             .query_row(
                 "SELECT id, task_id, start, end, message
-                 FROM records WHERE task_id = ?1 AND end IS NULL",
+                 FROM sessions WHERE task_id = ?1 AND end IS NULL",
                 params![task_id],
-                Self::row_to_record,
+                Self::row_to_session,
             )
             .optional()?)
     }
@@ -212,8 +248,8 @@ impl Db {
         })
     }
 
-    fn row_to_session(row: &Row) -> rusqlite::Result<Session> {
-        Ok(Session {
+    fn row_to_session_config(row: &Row) -> rusqlite::Result<SessionConfig> {
+        Ok(SessionConfig {
             id: Some(row.get(0)?),
             task_id: row.get(1)?,
             tmux_session_name: row.get(2)?,
@@ -222,10 +258,10 @@ impl Db {
         })
     }
 
-    fn row_to_record(row: &Row) -> rusqlite::Result<Record> {
+    fn row_to_session(row: &Row) -> rusqlite::Result<Session> {
         let start: String = row.get(2)?;
         let end: Option<String> = row.get(3)?;
-        Ok(Record {
+        Ok(Session {
             id: Some(row.get(0)?),
             task_id: row.get(1)?,
             start: str_to_dt(&start),
@@ -361,10 +397,10 @@ impl Repository<Task> for Db {
     }
 }
 
-impl Repository<Session> for Db {
-    fn insert(&self, item: &Session) -> Result<i64> {
+impl Repository<SessionConfig> for Db {
+    fn insert(&self, item: &SessionConfig) -> Result<i64> {
         self.conn.execute(
-            "INSERT INTO sessions (task_id, tmux_session_name, github_branch, worktree_path)
+            "INSERT INTO session_configs (task_id, tmux_session_name, github_branch, worktree_path)
              VALUES (?1, ?2, ?3, ?4)",
             params![
                 item.task_id,
@@ -376,15 +412,72 @@ impl Repository<Session> for Db {
         Ok(self.conn.last_insert_rowid())
     }
 
-    fn update(&self, id: i64, item: &Session) -> Result<()> {
+    fn update(&self, id: i64, item: &SessionConfig) -> Result<()> {
         self.conn.execute(
-            "UPDATE sessions SET task_id = ?1, tmux_session_name = ?2, github_branch = ?3,
+            "UPDATE session_configs SET task_id = ?1, tmux_session_name = ?2, github_branch = ?3,
              worktree_path = ?4 WHERE id = ?5",
             params![
                 item.task_id,
                 item.tmux_session_name,
                 item.github_branch,
                 item.worktree_path,
+                id
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn delete(&self, id: i64) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM session_configs WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    fn get(&self, id: i64) -> Result<Option<SessionConfig>> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT id, task_id, tmux_session_name, github_branch, worktree_path
+                 FROM session_configs WHERE id = ?1",
+                params![id],
+                Self::row_to_session_config,
+            )
+            .optional()?)
+    }
+
+    fn list(&self) -> Result<Vec<SessionConfig>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, task_id, tmux_session_name, github_branch, worktree_path FROM session_configs",
+        )?;
+        let rows = stmt
+            .query_map([], Self::row_to_session_config)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+}
+
+impl Repository<Session> for Db {
+    fn insert(&self, item: &Session) -> Result<i64> {
+        self.conn.execute(
+            "INSERT INTO sessions (task_id, start, end, message) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                item.task_id,
+                dt_to_str(item.start),
+                item.end.map(dt_to_str),
+                item.message
+            ],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    fn update(&self, id: i64, item: &Session) -> Result<()> {
+        self.conn.execute(
+            "UPDATE sessions SET task_id = ?1, start = ?2, end = ?3, message = ?4 WHERE id = ?5",
+            params![
+                item.task_id,
+                dt_to_str(item.start),
+                item.end.map(dt_to_str),
+                item.message,
                 id
             ],
         )?;
@@ -401,8 +494,7 @@ impl Repository<Session> for Db {
         Ok(self
             .conn
             .query_row(
-                "SELECT id, task_id, tmux_session_name, github_branch, worktree_path
-                 FROM sessions WHERE id = ?1",
+                "SELECT id, task_id, start, end, message FROM sessions WHERE id = ?1",
                 params![id],
                 Self::row_to_session,
             )
@@ -410,67 +502,11 @@ impl Repository<Session> for Db {
     }
 
     fn list(&self) -> Result<Vec<Session>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, task_id, tmux_session_name, github_branch, worktree_path FROM sessions",
-        )?;
-        let rows = stmt
-            .query_map([], Self::row_to_session)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
-    }
-}
-
-impl Repository<Record> for Db {
-    fn insert(&self, item: &Record) -> Result<i64> {
-        self.conn.execute(
-            "INSERT INTO records (task_id, start, end, message) VALUES (?1, ?2, ?3, ?4)",
-            params![
-                item.task_id,
-                dt_to_str(item.start),
-                item.end.map(dt_to_str),
-                item.message
-            ],
-        )?;
-        Ok(self.conn.last_insert_rowid())
-    }
-
-    fn update(&self, id: i64, item: &Record) -> Result<()> {
-        self.conn.execute(
-            "UPDATE records SET task_id = ?1, start = ?2, end = ?3, message = ?4 WHERE id = ?5",
-            params![
-                item.task_id,
-                dt_to_str(item.start),
-                item.end.map(dt_to_str),
-                item.message,
-                id
-            ],
-        )?;
-        Ok(())
-    }
-
-    fn delete(&self, id: i64) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM records WHERE id = ?1", params![id])?;
-        Ok(())
-    }
-
-    fn get(&self, id: i64) -> Result<Option<Record>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT id, task_id, start, end, message FROM records WHERE id = ?1",
-                params![id],
-                Self::row_to_record,
-            )
-            .optional()?)
-    }
-
-    fn list(&self) -> Result<Vec<Record>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, task_id, start, end, message FROM records")?;
+            .prepare("SELECT id, task_id, start, end, message FROM sessions")?;
         let rows = stmt
-            .query_map([], Self::row_to_record)?
+            .query_map([], Self::row_to_session)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }

@@ -74,8 +74,8 @@ pub enum IterError {
     #[error("project for this task no longer exists")]
     OrphanTaskProject,
 
-    #[error("no open record for '{0}' -- attach to its tmux session to start one")]
-    NoOpenRecord(String),
+    #[error("no open session for '{0}' -- run `iter session start` or attach to its tmux session")]
+    NoOpenSession(String),
 }
 
 pub type Result<T> = std::result::Result<T, IterError>;

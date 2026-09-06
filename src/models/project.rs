@@ -33,9 +33,10 @@ pub struct Project {
 
     /// Whether the tmux integration (session creation + hooks) is active
     /// for this project. When `false`, `iter session new` still tracks a
-    /// session row (and worktree/branch, if `github`) but doesn't spawn an
-    /// actual tmux session -- records are started/stopped manually via
-    /// `iter task start`/`iter task stop` instead of tmux attach/detach.
+    /// session-config row (and worktree/branch, if `github`) but doesn't
+    /// spawn an actual tmux session -- sessions are started/stopped
+    /// manually via `iter session start`/`iter session stop` instead of
+    /// tmux attach/detach.
     #[serde(default = "default_true")]
     pub tmux: bool,
 

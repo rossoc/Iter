@@ -15,7 +15,7 @@ use clap_complete::engine::CompletionCandidate;
 use clap_complete::env::CompleteEnv;
 use db::{Db, Repository};
 use error::{IterError, Result};
-use models::{Project, Record, Session, Task, TaskStatus};
+use models::{Project, Session, SessionConfig, Task, TaskStatus};
 use reporting::{
     DetailReport, MERGE_GAP_MINUTES, WeekdayReport, concat_messages, format_detail_report,
     merged_total_minutes, minutes_to_hhmm, round_to_half_hour, weekday_averages,
@@ -136,10 +136,11 @@ fn resolve_task(db: &Db, task_ref: &str) -> Result<(Project, Task)> {
 /// running inside -- the same lookup `iter t` prints.
 fn current_session_task(db: &Db) -> Result<(Project, Task)> {
     let name = tmux::current_session_name().ok_or(IterError::NotInTmux)?;
-    let session = db
-        .find_session_by_tmux_name(&name)?
+    let session_config = db
+        .find_session_config_by_tmux_name(&name)?
         .ok_or_else(|| IterError::UntrackedTmuxSession(name.clone()))?;
-    let task = Repository::<Task>::get(db, session.task_id)?.ok_or(IterError::OrphanSessionTask)?;
+    let task =
+        Repository::<Task>::get(db, session_config.task_id)?.ok_or(IterError::OrphanSessionTask)?;
     let project =
         Repository::<Project>::get(db, task.project_id)?.ok_or(IterError::OrphanTaskProject)?;
     Ok((project, task))
@@ -177,10 +178,10 @@ fn print_detail_report(
     name: &str,
     description: Option<&str>,
     date: NaiveDate,
-    records: &[Record],
+    sessions: &[Session],
     now: chrono::NaiveDateTime,
 ) {
-    let total_minutes = merged_total_minutes(records, now, MERGE_GAP_MINUTES);
+    let total_minutes = merged_total_minutes(sessions, now, MERGE_GAP_MINUTES);
     let report = DetailReport {
         name: name.to_string(),
         description: description
@@ -190,59 +191,59 @@ fn print_detail_report(
         date: date.format("%Y-%m-%d").to_string(),
         total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
         total_hhmm: minutes_to_hhmm(total_minutes),
-        messages: concat_messages(records),
+        messages: concat_messages(sessions),
     };
     print!("{}", format_detail_report(&report));
 }
 
-// ---- records: shared by manual start/stop and tmux hooks -----------------
+// ---- sessions: shared by manual start/stop and tmux hooks -----------------
 
-fn start_record(db: &Db, task_id: i64) -> Result<()> {
-    if db.open_record_for_task(task_id)?.is_some() {
-        return Ok(()); // already has an open record; don't double-start
+fn start_session(db: &Db, task_id: i64) -> Result<()> {
+    if db.open_session_for_task(task_id)?.is_some() {
+        return Ok(()); // already has an open session; don't double-start
     }
-    let record = Record {
+    let session = Session {
         id: None,
         task_id,
         start: Local::now().naive_local(),
         end: None,
         message: None,
     };
-    Repository::<Record>::insert(db, &record)?;
+    Repository::<Session>::insert(db, &session)?;
     Ok(())
 }
 
-fn close_open_record(db: &Db, task_id: i64, message: Option<&str>) -> Result<()> {
-    if let Some(mut open) = db.open_record_for_task(task_id)? {
+fn close_open_session(db: &Db, task_id: i64, message: Option<&str>) -> Result<()> {
+    if let Some(mut open) = db.open_session_for_task(task_id)? {
         debug_assert!(
             open.is_ongoing(),
-            "open_record_for_task returned a closed record"
+            "open_session_for_task returned a closed session"
         );
         open.end = Some(Local::now().naive_local());
         if let Some(m) = message {
             open.message = Some(m.to_string());
         }
-        Repository::<Record>::update(db, open.id.expect(ID_INVARIANT), &open)?;
+        Repository::<Session>::update(db, open.id.expect(ID_INVARIANT), &open)?;
     }
     Ok(())
 }
 
-/// Tears down a task's session: kills its tmux session (if any), removes
-/// its worktree (if any), and deletes the session row. Called from
-/// `task done`, `task delete` and `project delete`.
-fn teardown_session(db: &Db, project: &Project, session: &Session) {
-    if let Some(name) = &session.tmux_session_name {
+/// Tears down a task's session-config: kills its tmux session (if any),
+/// removes its worktree (if any), and deletes the session-config row.
+/// Called from `task done`, `task delete` and `project delete`.
+fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionConfig) {
+    if let Some(name) = &session_config.tmux_session_name {
         tmux::kill_session(name);
     }
-    if let Some(worktree) = &session.worktree_path
+    if let Some(worktree) = &session_config.worktree_path
         && let Err(e) = git::remove_worktree(&project.base_path, worktree)
     {
         eprintln!("warning: {e}");
     }
-    if let Some(id) = session.id
-        && let Err(e) = Repository::<Session>::delete(db, id)
+    if let Some(id) = session_config.id
+        && let Err(e) = Repository::<SessionConfig>::delete(db, id)
     {
-        eprintln!("warning: failed to delete session row: {e}");
+        eprintln!("warning: failed to delete session-config row: {e}");
     }
 }
 
@@ -292,8 +293,10 @@ fn project_delete(name: Option<&str>) -> Result<()> {
     let db = open_db();
     let project = resolve_project_or_current(&db, name)?;
     for task in db.tasks_for_project(project.id.expect(ID_INVARIANT))? {
-        if let Some(session) = db.find_session_by_task(task.id.expect(ID_INVARIANT))? {
-            teardown_session(&db, &project, &session);
+        if let Some(session_config) =
+            db.find_session_config_by_task(task.id.expect(ID_INVARIANT))?
+        {
+            teardown_session_config(&db, &project, &session_config);
         }
     }
     Repository::<Project>::delete(&db, project.id.expect(ID_INVARIANT))?;
@@ -307,10 +310,10 @@ fn project_info(name: Option<&str>, date_filter: Option<&str>) -> Result<()> {
     let now = Local::now().naive_local();
     let date = parse_date_filter(date_filter, now)?;
 
-    // The union of every task's records that day -- this is what makes
+    // The union of every task's sessions that day -- this is what makes
     // working two of the project's tasks in parallel not double-count.
-    let records: Vec<Record> = db
-        .records_for_project(project.id.expect(ID_INVARIANT))?
+    let sessions: Vec<Session> = db
+        .sessions_for_project(project.id.expect(ID_INVARIANT))?
         .into_iter()
         .filter(|r| r.start.date() == date)
         .collect();
@@ -319,7 +322,7 @@ fn project_info(name: Option<&str>, date_filter: Option<&str>) -> Result<()> {
         &project.name,
         Some(&project.description),
         date,
-        &records,
+        &sessions,
         now,
     );
     Ok(())
@@ -345,8 +348,6 @@ fn dispatch_task(action: &TaskCommand) -> Result<()> {
         TaskCommand::Info { task, date } => task_info(task.as_deref(), date.as_deref()),
         TaskCommand::List { project, status } => task_list(project.as_deref(), status.as_deref()),
         TaskCommand::Done { task } => task_done(task.as_deref()),
-        TaskCommand::Start { task } => task_start(task.as_deref()),
-        TaskCommand::Stop { task, message } => task_stop(task.as_deref(), message.as_deref()),
         TaskCommand::Weekday { task } => task_weekday(task.as_deref()),
     }
 }
@@ -402,8 +403,8 @@ fn task_delete(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
     let display = format!("{}/{}", project.name, task.name);
-    if let Some(session) = db.find_session_by_task(task.id.expect(ID_INVARIANT))? {
-        teardown_session(&db, &project, &session);
+    if let Some(session_config) = db.find_session_config_by_task(task.id.expect(ID_INVARIANT))? {
+        teardown_session_config(&db, &project, &session_config);
     }
     Repository::<Task>::delete(&db, task.id.expect(ID_INVARIANT))?;
     println!("deleted task '{display}'");
@@ -415,13 +416,13 @@ fn task_info(task_ref: Option<&str>, date_filter: Option<&str>) -> Result<()> {
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
     let now = Local::now().naive_local();
     let date = parse_date_filter(date_filter, now)?;
-    let records: Vec<Record> = db
-        .records_for_task(task.id.expect(ID_INVARIANT))?
+    let sessions: Vec<Session> = db
+        .sessions_for_task(task.id.expect(ID_INVARIANT))?
         .into_iter()
         .filter(|r| r.start.date() == date)
         .collect();
     let display = format!("{}/{}", project.name, task.name);
-    print_detail_report(&display, Some(&task.description), date, &records, now);
+    print_detail_report(&display, Some(&task.description), date, &sessions, now);
     Ok(())
 }
 
@@ -455,10 +456,10 @@ fn task_done(task_ref: Option<&str>) -> Result<()> {
     let task_id = task.id.expect(ID_INVARIANT);
     let display = format!("{}/{}", project.name, task.name);
 
-    close_open_record(&db, task_id, None)?;
+    close_open_session(&db, task_id, None)?;
 
-    if let Some(session) = db.find_session_by_task(task_id)? {
-        teardown_session(&db, &project, &session);
+    if let Some(session_config) = db.find_session_config_by_task(task_id)? {
+        teardown_session_config(&db, &project, &session_config);
     }
 
     task.status = TaskStatus::Done;
@@ -467,30 +468,14 @@ fn task_done(task_ref: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-fn task_start(task_ref: Option<&str>) -> Result<()> {
-    let db = open_db();
-    let (project, task) = resolve_task_or_current(&db, task_ref)?;
-    start_record(&db, task.id.expect(ID_INVARIANT))?;
-    println!("started a record for '{}/{}'", project.name, task.name);
-    Ok(())
-}
-
-fn task_stop(task_ref: Option<&str>, message: Option<&str>) -> Result<()> {
-    let db = open_db();
-    let (project, task) = resolve_task_or_current(&db, task_ref)?;
-    close_open_record(&db, task.id.expect(ID_INVARIANT), message)?;
-    println!("stopped the record for '{}/{}'", project.name, task.name);
-    Ok(())
-}
-
 fn task_weekday(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
     let now = Local::now().naive_local();
-    let records = db.records_for_task(task.id.expect(ID_INVARIANT))?;
+    let sessions = db.sessions_for_task(task.id.expect(ID_INVARIANT))?;
     let report = WeekdayReport {
         name: format!("{}/{}", project.name, task.name),
-        weekdays: weekday_averages(&records, now),
+        weekdays: weekday_averages(&sessions, now),
     };
     print!("{}", serde_yaml::to_string(&report)?);
     Ok(())
@@ -505,6 +490,8 @@ fn dispatch_session(action: &SessionCommand) -> Result<()> {
             branch,
             no_branch,
         } => session_new(task, branch.as_deref(), *no_branch),
+        SessionCommand::Start { task } => session_start(task.as_deref()),
+        SessionCommand::Stop { task, message } => session_stop(task.as_deref(), message.as_deref()),
         SessionCommand::Elapse => session_elapse(),
     }
 }
@@ -514,7 +501,7 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
     let (project, mut task) = resolve_task(&db, task_ref)?;
     let task_id = task.id.expect(ID_INVARIANT);
 
-    if db.find_session_by_task(task_id)?.is_some() {
+    if db.find_session_config_by_task(task_id)?.is_some() {
         return Err(IterError::SessionAlreadyExists(task_ref.to_string()));
     }
 
@@ -566,19 +553,19 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
         Some(tmux_session_name)
     } else {
         println!(
-            "session started for '{task_ref}' at {cwd} (tmux disabled for this project -- use `iter task start`/`iter task stop`)"
+            "session started for '{task_ref}' at {cwd} (tmux disabled for this project -- use `iter session start`/`iter session stop`)"
         );
         None
     };
 
-    let session = Session {
+    let session_config = SessionConfig {
         id: None,
         task_id,
         tmux_session_name: final_tmux_name,
         github_branch,
         worktree_path,
     };
-    Repository::<Session>::insert(&db, &session)?;
+    Repository::<SessionConfig>::insert(&db, &session_config)?;
 
     task.status = TaskStatus::Wip;
     Repository::<Task>::update(&db, task_id, &task)?;
@@ -586,19 +573,35 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
     Ok(())
 }
 
-/// Time elapsed on the open record of the task of the tmux session this
-/// process is running in -- the record `start_record` created when the
+fn session_start(task_ref: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let (project, task) = resolve_task_or_current(&db, task_ref)?;
+    start_session(&db, task.id.expect(ID_INVARIANT))?;
+    println!("started a session for '{}/{}'", project.name, task.name);
+    Ok(())
+}
+
+fn session_stop(task_ref: Option<&str>, message: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let (project, task) = resolve_task_or_current(&db, task_ref)?;
+    close_open_session(&db, task.id.expect(ID_INVARIANT), message)?;
+    println!("stopped the session for '{}/{}'", project.name, task.name);
+    Ok(())
+}
+
+/// Time elapsed on the open session of the task of the tmux session this
+/// process is running in -- the session `start_session` created when the
 /// client attached (see `hook_cmd`).
 fn session_elapse() -> Result<()> {
     let db = open_db();
     let (project, task) = current_session_task(&db)?;
     let task_id = task.id.expect(ID_INVARIANT);
     let display = format!("{}/{}", project.name, task.name);
-    let record = db
-        .open_record_for_task(task_id)?
-        .ok_or_else(|| IterError::NoOpenRecord(display))?;
+    let session = db
+        .open_session_for_task(task_id)?
+        .ok_or_else(|| IterError::NoOpenSession(display))?;
     let now = Local::now().naive_local();
-    println!("{}", minutes_to_hhmm(record.duration_minutes(now)));
+    println!("{}", minutes_to_hhmm(session.duration_minutes(now)));
     Ok(())
 }
 
@@ -627,12 +630,14 @@ fn t_cmd() -> Result<()> {
 
 fn hook_cmd(event: &str, tmux_session: &str) -> Result<()> {
     let db = open_db();
-    let Some(session) = db.find_session_by_tmux_name(tmux_session)? else {
+    let Some(session_config) = db.find_session_config_by_tmux_name(tmux_session)? else {
         return Ok(()); // not one of ours -- ignore
     };
     match event {
-        "client-attached" => start_record(&db, session.task_id),
-        "client-detached" | "session-closed" => close_open_record(&db, session.task_id, None),
+        "client-attached" => start_session(&db, session_config.task_id),
+        "client-detached" | "session-closed" => {
+            close_open_session(&db, session_config.task_id, None)
+        }
         _ => Ok(()),
     }
 }

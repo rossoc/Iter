@@ -1,11 +1,11 @@
 mod project;
-mod record;
 mod session;
+mod session_config;
 mod task;
 
 pub use project::Project;
-pub use record::Record;
 pub use session::Session;
+pub use session_config::SessionConfig;
 pub use task::{Task, TaskStatus};
 
 /// A type edited via `yaml_edit::edit_in_nvim` that carries a free-form

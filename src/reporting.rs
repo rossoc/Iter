@@ -1,4 +1,4 @@
-use crate::models::Record;
+use crate::models::Session;
 use chrono::{Datelike, NaiveDate, NaiveDateTime, Weekday};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -16,15 +16,15 @@ pub struct WeekdayAverage {
 
 /// For each weekday Monday..Sunday (always all seven, zero-filled when
 /// there's no data), the average hours logged on that weekday: total
-/// minutes across `records` that fall on that weekday, divided by the
-/// number of distinct calendar dates in `records` that fall on it. A
-/// record is attributed to its `start` date's weekday. Callers filter
-/// `records` to one task (or one project) beforehand.
-pub fn weekday_averages(records: &[Record], now: NaiveDateTime) -> Vec<WeekdayAverage> {
+/// minutes across `sessions` that fall on that weekday, divided by the
+/// number of distinct calendar dates in `sessions` that fall on it. A
+/// session is attributed to its `start` date's weekday. Callers filter
+/// `sessions` to one task (or one project) beforehand.
+pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<WeekdayAverage> {
     let mut minutes_by_weekday: HashMap<Weekday, i64> = HashMap::new();
     let mut dates_by_weekday: HashMap<Weekday, HashSet<NaiveDate>> = HashMap::new();
 
-    for r in records {
+    for r in sessions {
         let date = r.start.date();
         let wd = date.weekday();
         *minutes_by_weekday.entry(wd).or_insert(0) += r.duration_minutes(now);
@@ -80,10 +80,10 @@ pub fn round_to_half_hour(hours: f64) -> f64 {
     (hours * 2.0).round() / 2.0
 }
 
-/// Formats the messages recorded on `records`' closing `end` events as a
+/// Formats the messages recorded on `sessions`' closing `end` events as a
 /// bulleted, copy-paste-ready list.
-pub fn concat_messages(records: &[Record]) -> Option<String> {
-    let messages: Vec<String> = records
+pub fn concat_messages(sessions: &[Session]) -> Option<String> {
+    let messages: Vec<String> = sessions
         .iter()
         .filter_map(|r| r.message.as_deref())
         .map(|m| format!("- {}", m.trim_start_matches('-').trim_start()))
@@ -95,14 +95,14 @@ pub fn concat_messages(records: &[Record]) -> Option<String> {
     }
 }
 
-/// Total minutes covered by `records`, merging any two chronologically
-/// adjacent records (by start time) whose gap is under `gap_minutes` into
+/// Total minutes covered by `sessions`, merging any two chronologically
+/// adjacent sessions (by start time) whose gap is under `gap_minutes` into
 /// one continuous span. This is what makes a project-level report correct
 /// even when two of its tasks were worked on in parallel: feed it the union
-/// of every task's records for the day and overlapping/near spans collapse
+/// of every task's sessions for the day and overlapping/near spans collapse
 /// into one, instead of being double-counted.
-pub fn merged_total_minutes(records: &[Record], now: NaiveDateTime, gap_minutes: i64) -> i64 {
-    let mut spans: Vec<(NaiveDateTime, NaiveDateTime)> = records
+pub fn merged_total_minutes(sessions: &[Session], now: NaiveDateTime, gap_minutes: i64) -> i64 {
+    let mut spans: Vec<(NaiveDateTime, NaiveDateTime)> = sessions
         .iter()
         .map(|r| (r.start, r.end.unwrap_or(now)))
         .collect();
@@ -132,7 +132,7 @@ pub fn merged_total_minutes(records: &[Record], now: NaiveDateTime, gap_minutes:
 
 // ---- YAML output shapes -----------------------------------------------
 
-/// A day's worth of records (for one task, or unioned across one project):
+/// A day's worth of sessions (for one task, or unioned across one project):
 /// total time spent and every message recorded, summed/concatenated across
 /// every start/end pair that day.
 #[derive(Debug, Serialize)]
@@ -189,8 +189,8 @@ mod tests {
             .unwrap_or_else(|e| panic!("bad test fixture datetime '{s}': {e}"))
     }
 
-    fn rec(task_id: i64, start: &str, end: Option<&str>, message: Option<&str>) -> Record {
-        Record {
+    fn sess(task_id: i64, start: &str, end: Option<&str>, message: Option<&str>) -> Session {
+        Session {
             id: None,
             task_id,
             start: dt(start),
@@ -201,8 +201,8 @@ mod tests {
 
     #[test]
     fn is_ongoing_reflects_whether_end_is_set() {
-        let open = rec(1, "2026-09-04 09:00", None, None);
-        let closed = rec(1, "2026-09-04 09:00", Some("2026-09-04 09:00"), None);
+        let open = sess(1, "2026-09-04 09:00", None, None);
+        let closed = sess(1, "2026-09-04 09:00", Some("2026-09-04 09:00"), None);
         assert!(open.is_ongoing());
         assert!(!closed.is_ongoing());
     }
@@ -237,15 +237,15 @@ mod tests {
 
     #[test]
     fn concat_messages_joins_present_messages_and_skips_none() {
-        let records = vec![
-            rec(
+        let sessions = vec![
+            sess(
                 1,
                 "2026-09-01 09:00",
                 Some("2026-09-01 10:00"),
                 Some("first"),
             ),
-            rec(1, "2026-09-01 11:00", Some("2026-09-01 12:00"), None),
-            rec(
+            sess(1, "2026-09-01 11:00", Some("2026-09-01 12:00"), None),
+            sess(
                 1,
                 "2026-09-01 13:00",
                 Some("2026-09-01 14:00"),
@@ -253,27 +253,27 @@ mod tests {
             ),
         ];
         assert_eq!(
-            concat_messages(&records),
+            concat_messages(&sessions),
             Some("- first\n- second".to_string())
         );
     }
 
     #[test]
-    fn concat_messages_is_none_when_no_record_has_one() {
-        let records = vec![rec(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None)];
-        assert_eq!(concat_messages(&records), None);
+    fn concat_messages_is_none_when_no_session_has_one() {
+        let sessions = vec![sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None)];
+        assert_eq!(concat_messages(&sessions), None);
     }
 
     #[test]
     fn concat_messages_does_not_double_an_existing_leading_dash() {
-        let records = vec![rec(
+        let sessions = vec![sess(
             1,
             "2026-09-01 09:00",
             Some("2026-09-01 10:00"),
             Some("- already bulleted"),
         )];
         assert_eq!(
-            concat_messages(&records),
+            concat_messages(&sessions),
             Some("- already bulleted".to_string())
         );
     }
@@ -282,68 +282,68 @@ mod tests {
     fn merged_total_bridges_gaps_under_threshold() {
         // 09:00-10:00, gap of 10 min, 10:10-11:00 -> merged span 09:00-11:00 = 120 min,
         // not the 60+50=110 min the two durations alone would sum to.
-        let records = vec![
-            rec(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-            rec(1, "2026-09-01 10:10", Some("2026-09-01 11:00"), None),
+        let sessions = vec![
+            sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
+            sess(1, "2026-09-01 10:10", Some("2026-09-01 11:00"), None),
         ];
-        assert_eq!(merged_total_minutes(&records, now(), 17), 120);
+        assert_eq!(merged_total_minutes(&sessions, now(), 17), 120);
     }
 
     #[test]
     fn merged_total_keeps_gaps_at_or_above_threshold_separate() {
         // Gap is exactly 17 min -> "closer than 17" is false, so the two
-        // records are NOT merged; the gap itself isn't counted.
-        let records = vec![
-            rec(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-            rec(1, "2026-09-01 10:17", Some("2026-09-01 11:00"), None),
+        // sessions are NOT merged; the gap itself isn't counted.
+        let sessions = vec![
+            sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
+            sess(1, "2026-09-01 10:17", Some("2026-09-01 11:00"), None),
         ];
-        assert_eq!(merged_total_minutes(&records, now(), 17), 60 + 43);
+        assert_eq!(merged_total_minutes(&sessions, now(), 17), 60 + 43);
     }
 
     #[test]
-    fn merged_total_chains_across_more_than_two_records() {
-        let records = vec![
-            rec(1, "2026-09-01 09:00", Some("2026-09-01 09:30"), None),
-            rec(1, "2026-09-01 09:35", Some("2026-09-01 10:00"), None),
-            rec(1, "2026-09-01 10:10", Some("2026-09-01 10:40"), None),
+    fn merged_total_chains_across_more_than_two_sessions() {
+        let sessions = vec![
+            sess(1, "2026-09-01 09:00", Some("2026-09-01 09:30"), None),
+            sess(1, "2026-09-01 09:35", Some("2026-09-01 10:00"), None),
+            sess(1, "2026-09-01 10:10", Some("2026-09-01 10:40"), None),
         ];
         // All gaps (5 min, 10 min) are under 17 -> one 09:00-10:40 span = 100 min.
-        assert_eq!(merged_total_minutes(&records, now(), 17), 100);
+        assert_eq!(merged_total_minutes(&sessions, now(), 17), 100);
     }
 
     #[test]
-    fn merged_total_extends_into_an_ongoing_record() {
-        let records = vec![
-            rec(1, "2026-09-04 09:00", Some("2026-09-04 10:00"), None),
-            rec(1, "2026-09-04 10:05", None, None),
+    fn merged_total_extends_into_an_ongoing_session() {
+        let sessions = vec![
+            sess(1, "2026-09-04 09:00", Some("2026-09-04 10:00"), None),
+            sess(1, "2026-09-04 10:05", None, None),
         ];
-        // now() is 2026-09-04 12:00 -> ongoing record runs 10:05-12:00, merged
+        // now() is 2026-09-04 12:00 -> ongoing session runs 10:05-12:00, merged
         // with the prior 09:00-10:00 (5 min gap) into 09:00-12:00 = 180 min.
-        assert_eq!(merged_total_minutes(&records, now(), 17), 180);
+        assert_eq!(merged_total_minutes(&sessions, now(), 17), 180);
     }
 
     #[test]
     fn merged_total_unions_across_different_tasks_without_double_counting() {
-        // The scenario that motivated keying records by task: two different
+        // The scenario that motivated keying sessions by task: two different
         // tasks (of the same project) worked in parallel, overlapping
         // 09:00-10:00 and 09:30-10:30 -> union is 09:00-10:30 = 90 min, not
         // the 120 min the two durations would sum to if counted separately.
-        let records = vec![
-            rec(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-            rec(2, "2026-09-01 09:30", Some("2026-09-01 10:30"), None),
+        let sessions = vec![
+            sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
+            sess(2, "2026-09-01 09:30", Some("2026-09-01 10:30"), None),
         ];
-        assert_eq!(merged_total_minutes(&records, now(), 17), 90);
+        assert_eq!(merged_total_minutes(&sessions, now(), 17), 90);
     }
 
     #[test]
     fn weekday_averages_basic() {
         // Monday 2026-08-31 and Monday 2026-09-07, Wednesday 2026-09-02.
-        let records = vec![
-            rec(1, "2026-08-31 09:00", Some("2026-08-31 11:00"), None),
-            rec(1, "2026-09-07 09:00", Some("2026-09-07 13:00"), None),
-            rec(1, "2026-09-02 09:00", Some("2026-09-02 12:00"), None),
+        let sessions = vec![
+            sess(1, "2026-08-31 09:00", Some("2026-08-31 11:00"), None),
+            sess(1, "2026-09-07 09:00", Some("2026-09-07 13:00"), None),
+            sess(1, "2026-09-02 09:00", Some("2026-09-02 12:00"), None),
         ];
-        let averages = weekday_averages(&records, now());
+        let averages = weekday_averages(&sessions, now());
         assert_eq!(averages.len(), 7);
         assert_eq!(averages[0].weekday, "Monday");
         assert_eq!(averages[0].average_hours, 3.0); // (2 + 4) / 2 distinct Mondays
