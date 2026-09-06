@@ -95,6 +95,26 @@ pub fn delete_branch(base_path: &str, branch: &str) -> Result<()> {
     }
 }
 
+/// Clones `source` into `dest`, exactly like `git clone <source> <dest>` --
+/// `source` can be a GitHub (or any remote) URL or a local path to another
+/// repo. `dest` must not already exist (or must be empty); `git` creates it.
+pub fn clone_repo(source: &str, dest: &str) -> Result<()> {
+    let status = Command::new("git")
+        .args(["clone", source, dest])
+        .status()
+        .map_err(|source| IterError::Spawn {
+            tool: "git",
+            source,
+        })?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(IterError::CommandFailed(format!(
+            "git clone {source} {dest} failed"
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

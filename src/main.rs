@@ -5,6 +5,7 @@ mod git;
 mod github;
 mod models;
 mod reporting;
+mod scaffold;
 mod tmux;
 mod yaml_edit;
 
@@ -41,6 +42,9 @@ fn main() -> ExitCode {
     let args = Args::parse();
 
     let result = match &args.command {
+        Command::Init => init_cmd(),
+        Command::New { path } => new_cmd(path),
+        Command::Clone { source } => clone_cmd(source),
         Command::Project { action } => dispatch_project(action),
         Command::Task { action } => dispatch_task(action),
         Command::Session { action } => dispatch_session(action),
@@ -261,6 +265,134 @@ fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionC
     }
 }
 
+// ---- init / new / clone ---------------------------------------------------
+
+/// Opens `template` in nvim; if saved (and named), inserts it as a new
+/// project and returns `true`. Returns `false` (having printed a
+/// "no changes" message) if the user quit without saving -- the shared
+/// tail of `project new`, `iter init`, and `iter new`.
+fn create_project_interactively(template: Project) -> Result<bool> {
+    match yaml_edit::edit_in_nvim(&template)? {
+        Some(project) => {
+            if project.name.trim().is_empty() {
+                return Err(IterError::EmptyProjectName);
+            }
+            let db = open_db();
+            Repository::<Project>::insert(&db, &project)?;
+            println!("created project '{}'", project.name);
+            Ok(true)
+        }
+        None => {
+            println!("no changes -- project not created");
+            Ok(false)
+        }
+    }
+}
+
+fn init_cmd() -> Result<()> {
+    let base_path = scaffold::absolute_path(".")?;
+    let mut template = Project::template();
+    template.github = git::is_git_repo(&base_path);
+    template.base_path = base_path;
+    create_project_interactively(template)?;
+    Ok(())
+}
+
+fn new_cmd(path: &str) -> Result<()> {
+    let base_path = scaffold::absolute_path(path)?;
+    std::fs::create_dir_all(&base_path)?;
+
+    let mut template = Project::template();
+    template.name = scaffold::dir_name(&base_path);
+    template.github = git::is_git_repo(&base_path);
+    template.base_path = base_path.clone();
+
+    // If the user quits without saving, don't leave an empty folder behind.
+    if !create_project_interactively(template)? {
+        scaffold::remove_dir_if_empty(&base_path);
+    }
+    Ok(())
+}
+
+/// Validates a saved clone-editor result's `name`/`base_path` and resolves
+/// the latter to an absolute path -- shared by both clone flows, each of
+/// which then turns it into an actual, populated directory its own way
+/// (copying a template's files vs. running `git clone`) before inserting
+/// the row.
+fn resolve_cloned_base_path(project: &Project) -> Result<String> {
+    if project.name.trim().is_empty() {
+        return Err(IterError::EmptyProjectName);
+    }
+    if project.base_path.trim().is_empty() {
+        return Err(IterError::EmptyBasePath);
+    }
+    scaffold::absolute_path(&project.base_path)
+}
+
+fn clone_cmd(source: &str) -> Result<()> {
+    let db = open_db();
+    match db.find_project_by_name(source)? {
+        Some(source_project) => clone_from_project(&db, &source_project),
+        None => clone_from_repo(&db, source),
+    }
+}
+
+/// Clones an existing local project as a template: pre-fills the new
+/// project's fields -- including its name, deliberately, so the user has
+/// to change it before saving -- from `source`, leaving `base_path` blank
+/// for them to fill in. On save, that path is created and `source`'s files
+/// (minus `.git`) are copied into it; `source`'s tasks and sessions are
+/// never touched, since they live in the DB, keyed to `source`'s own id.
+fn clone_from_project(db: &Db, source: &Project) -> Result<()> {
+    let mut template = source.clone();
+    template.id = None;
+    template.base_path = String::new();
+
+    let Some(mut project) = yaml_edit::edit_in_nvim(&template)? else {
+        println!("no changes -- project not created");
+        return Ok(());
+    };
+    let base_path = resolve_cloned_base_path(&project)?;
+    std::fs::create_dir_all(&base_path)?;
+    scaffold::copy_dir_excluding_git(
+        std::path::Path::new(&source.base_path),
+        std::path::Path::new(&base_path),
+    )?;
+
+    project.base_path = base_path;
+    Repository::<Project>::insert(db, &project)?;
+    println!(
+        "created project '{}' (cloned from '{}')",
+        project.name, source.name
+    );
+    Ok(())
+}
+
+/// Clones `source` as a git repo (like `git clone`) -- used when `source`
+/// isn't the name of an existing local project, so it's taken to be a
+/// remote URL or a local repo path instead. The destination is the
+/// `base_path` the user fills into the (otherwise blank) template; `git
+/// clone` creates that directory itself.
+fn clone_from_repo(db: &Db, source: &str) -> Result<()> {
+    let mut template = Project::template();
+    template.github = true;
+
+    let Some(mut project) = yaml_edit::edit_in_nvim(&template)? else {
+        println!("no changes -- project not created");
+        return Ok(());
+    };
+    let base_path = resolve_cloned_base_path(&project)?;
+    git::clone_repo(source, &base_path)?;
+
+    project.base_path = base_path;
+    Repository::<Project>::insert(db, &project)?;
+    println!(
+        "created project '{}' (cloned from '{source}')",
+        project.name
+    );
+    Ok(())
+}
+
 // ---- project ---------------------------------------------------------
 
 fn dispatch_project(action: &ProjectCommand) -> Result<()> {
@@ -274,18 +406,7 @@ fn dispatch_project(action: &ProjectCommand) -> Result<()> {
 }
 
 fn project_new() -> Result<()> {
-    let template = Project::template();
-    match yaml_edit::edit_in_nvim(&template)? {
-        Some(project) => {
-            if project.name.trim().is_empty() {
-                return Err(IterError::EmptyProjectName);
-            }
-            let db = open_db();
-            Repository::<Project>::insert(&db, &project)?;
-            println!("created project '{}'", project.name);
-        }
-        None => println!("no changes -- project not created"),
-    }
+    create_project_interactively(Project::template())?;
     Ok(())
 }
 

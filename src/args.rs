@@ -12,6 +12,24 @@ pub struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum Command {
+    /// Create a project from the current directory (cwd becomes base_path)
+    Init,
+
+    /// Create a project from scratch in a new folder
+    New {
+        /// Directory to create; becomes the project's base_path
+        path: String,
+    },
+
+    /// Create a project from a template project (copies its fields) or a
+    /// git/GitHub repo (like `git clone`)
+    Clone {
+        /// An existing project's name, or a git remote URL / local repo
+        /// path if no such project exists
+        #[arg(add = ArgValueCompleter::new(project_completer))]
+        source: String,
+    },
+
     /// Manage projects
     Project {
         #[clap(subcommand)]

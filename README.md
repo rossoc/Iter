@@ -21,6 +21,12 @@ tmux + GitHub integration.
 ## Usage
 
 ```sh
+# creating projects
+iter init                           # cwd becomes base_path; opens in nvim to name it
+iter new some/path                  # creates the folder; base_path=that path, opened in nvim
+iter clone myproj-template new-app  # copies myproj-template's fields + files (not .git/tasks/sessions)
+iter clone git@github.com:me/repo   # or a git/GitHub URL (or local repo path) if no such project exists
+
 # projects
 iter project new                    # opens a blank project in nvim; save & quit to create it
 iter project edit myproj            # same, pre-filled with the existing project
@@ -54,6 +60,34 @@ iter t                              # prints <project>/<task> for the tmux sessi
 
 `project`/`task info` and `weekday` print YAML, so you can pipe them
 wherever's convenient.
+
+## How a project gets created
+
+Three ways to get from nothing to a registered project, all ending the same
+way: base_path is filled in, then nvim opens for you to name it (and set
+anything else) before it's saved to the database.
+
+- `iter init` -- for a folder you're already in: base_path is the current
+  directory. Nothing is created on disk.
+- `iter new <path>` -- for starting completely fresh: `<path>` is created
+  (like `mkdir -p`) and becomes base_path. If you quit nvim without saving,
+  the folder is removed again (only if it's still empty).
+- `iter clone <source>` -- for templating off something that already
+  exists:
+  - If `<source>` is the name of an existing project, its fields (including
+    its name -- you'll need to change that before saving) are pre-filled
+    into the editor, and on save its files are copied into the new
+    base_path you typed in, `.git` excluded. The source project's tasks and
+    sessions are never touched.
+  - Otherwise `<source>` is treated as a git remote URL or a local repo
+    path, and cloned into the base_path you typed in via a plain `git
+    clone <source> <base_path>` -- exactly like running `git clone`
+    yourself.
+
+`github`/`tmux`/`auto_branch`/`branch_template` all default the same as
+`project new` for `init`/`new` (`github` pre-set to `true` if the resulting
+directory already looks like a git repo), and are carried over as-is from
+the source project for a local `clone`.
 
 ## How a session works
 

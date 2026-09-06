@@ -47,6 +47,9 @@ pub enum IterError {
     #[error("task name cannot be empty")]
     EmptyTaskName,
 
+    #[error("base_path cannot be empty")]
+    EmptyBasePath,
+
     #[error("'{0}' already has a session")]
     SessionAlreadyExists(String),
 
