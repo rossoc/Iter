@@ -145,23 +145,57 @@ pub struct DetailReport {
     pub total_hhmm: String,
     #[serde(skip)]
     pub messages: Option<String>,
+    /// `Some` only for a project-level report: one entry per task that had
+    /// a session on `date`. Its presence is what tells
+    /// `format_detail_report` to render the per-task `tasks:` breakdown
+    /// instead of the flat `messages:` field -- a task-level report always
+    /// passes `None` and keeps the flat field.
+    #[serde(skip)]
+    pub tasks: Option<Vec<TaskEntry>>,
 }
 
-/// Renders `report` as YAML, appending `messages` by hand right after the
-/// `messages:` key instead of letting serde_yaml serialize it as a normal
-/// string. A plain scalar gets wrapped in single quotes (and any `'` inside
-/// doubled to `''`) the moment it starts with `-` or contains a `'` —
-/// exactly what a typed note tends to do — which breaks copy-pasting a
-/// message straight back out of the terminal.
+/// One task's line in a project report's `tasks:` breakdown: its name,
+/// status, and that day's messages (already bulleted by `concat_messages`).
+#[derive(Debug)]
+pub struct TaskEntry {
+    pub name: String,
+    pub status: String,
+    pub messages: Option<String>,
+}
+
+/// Renders `report` as YAML, appending `messages` (or, for a project
+/// report, `tasks`) by hand right after serde_yaml's output instead of
+/// letting it serialize the bulleted text as a normal string. A plain
+/// scalar gets wrapped in single quotes (and any `'` inside doubled to
+/// `''`) the moment it starts with `-` or contains a `'` — exactly what a
+/// typed note tends to do — which breaks copy-pasting a message straight
+/// back out of the terminal.
 pub fn format_detail_report(report: &DetailReport) -> String {
     let mut out = serde_yaml::to_string(report).expect("yaml serialization failed");
-    match &report.messages {
-        Some(m) => {
-            out.push_str("messages:\n");
-            out.push_str(m);
-            out.push('\n');
+    match &report.tasks {
+        None => match &report.messages {
+            Some(m) => {
+                out.push_str("messages:\n");
+                out.push_str(m);
+                out.push('\n');
+            }
+            None => out.push_str("messages: null\n"),
+        },
+        Some(tasks) if tasks.is_empty() => out.push_str("tasks: []\n"),
+        Some(tasks) => {
+            out.push_str("tasks:\n");
+            for t in tasks {
+                out.push_str(&format!("- {}: {}\n", t.name, t.status));
+                if let Some(m) = &t.messages {
+                    out.push_str("  messages:\n");
+                    for line in m.lines() {
+                        out.push_str("  ");
+                        out.push_str(line);
+                        out.push('\n');
+                    }
+                }
+            }
         }
-        _ => out.push_str("messages: null\n"),
     }
     out
 }
@@ -350,6 +384,56 @@ mod tests {
         assert_eq!(averages[2].weekday, "Wednesday");
         assert_eq!(averages[2].average_hours, 3.0); // 3 / 1
         assert_eq!(averages[1].average_hours, 0.0); // Tuesday, no data
+    }
+
+    fn base_report(tasks: Option<Vec<TaskEntry>>) -> DetailReport {
+        DetailReport {
+            name: "proj".to_string(),
+            description: None,
+            date: "2026-09-04".to_string(),
+            total_hours: 1.5,
+            total_hhmm: "01:30".to_string(),
+            messages: Some("- flat message".to_string()),
+            tasks,
+        }
+    }
+
+    #[test]
+    fn format_detail_report_renders_flat_messages_when_tasks_is_none() {
+        let out = format_detail_report(&base_report(None));
+        assert!(out.contains("messages:\n- flat message\n"));
+        assert!(!out.contains("tasks:"));
+    }
+
+    #[test]
+    fn format_detail_report_renders_empty_tasks_as_empty_list() {
+        let out = format_detail_report(&base_report(Some(Vec::new())));
+        assert!(out.contains("tasks: []\n"));
+        assert!(!out.contains("messages:"));
+    }
+
+    #[test]
+    fn format_detail_report_renders_per_task_breakdown_and_drops_flat_messages() {
+        let tasks = vec![
+            TaskEntry {
+                name: "task1".to_string(),
+                status: "wip".to_string(),
+                messages: Some("- message1\n- message2".to_string()),
+            },
+            TaskEntry {
+                name: "task2".to_string(),
+                status: "done".to_string(),
+                messages: None,
+            },
+        ];
+        let out = format_detail_report(&base_report(Some(tasks)));
+        assert!(!out.contains("messages: null"));
+        assert!(!out.contains("- flat message"));
+        assert_eq!(
+            out,
+            "name: proj\ndate: 2026-09-04\ntotal_hours: 1.5\ntotal_hhmm: 01:30\n\
+             tasks:\n- task1: wip\n  messages:\n  - message1\n  - message2\n- task2: done\n"
+        );
     }
 
     #[test]

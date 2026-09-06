@@ -17,8 +17,9 @@ use db::{Db, Repository};
 use error::{IterError, Result};
 use models::{Project, Session, SessionConfig, Task, TaskStatus};
 use reporting::{
-    DetailReport, MERGE_GAP_MINUTES, WeekdayReport, concat_messages, format_detail_report,
-    merged_total_minutes, minutes_to_hhmm, round_to_half_hour, weekday_averages,
+    DetailReport, MERGE_GAP_MINUTES, TaskEntry, WeekdayReport, concat_messages,
+    format_detail_report, merged_total_minutes, minutes_to_hhmm, round_to_half_hour,
+    weekday_averages,
 };
 use std::process::ExitCode;
 
@@ -180,6 +181,7 @@ fn print_detail_report(
     date: NaiveDate,
     sessions: &[Session],
     now: chrono::NaiveDateTime,
+    tasks: Option<Vec<TaskEntry>>,
 ) {
     let total_minutes = merged_total_minutes(sessions, now, MERGE_GAP_MINUTES);
     let report = DetailReport {
@@ -192,6 +194,7 @@ fn print_detail_report(
         total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
         total_hhmm: minutes_to_hhmm(total_minutes),
         messages: concat_messages(sessions),
+        tasks,
     };
     print!("{}", format_detail_report(&report));
 }
@@ -304,19 +307,46 @@ fn project_delete(name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// One `TaskEntry` per task of `project_id` that had a session on `date` --
+/// the `tasks:` breakdown in a project's `info` report. Tasks untouched
+/// that day are left out; a task's `messages` covers only that day's
+/// sessions, same as the report's own date filter.
+fn project_task_entries(db: &Db, project_id: i64, date: NaiveDate) -> Result<Vec<TaskEntry>> {
+    let mut entries = Vec::new();
+    for task in db.tasks_for_project(project_id)? {
+        let sessions: Vec<Session> = db
+            .sessions_for_task(task.id.expect(ID_INVARIANT))?
+            .into_iter()
+            .filter(|r| r.start.date() == date)
+            .collect();
+        if sessions.is_empty() {
+            continue;
+        }
+        entries.push(TaskEntry {
+            name: task.name,
+            status: task.status.as_str().to_string(),
+            messages: concat_messages(&sessions),
+        });
+    }
+    Ok(entries)
+}
+
 fn project_info(name: Option<&str>, date_filter: Option<&str>) -> Result<()> {
     let db = open_db();
     let project = resolve_project_or_current(&db, name)?;
+    let project_id = project.id.expect(ID_INVARIANT);
     let now = Local::now().naive_local();
     let date = parse_date_filter(date_filter, now)?;
 
     // The union of every task's sessions that day -- this is what makes
     // working two of the project's tasks in parallel not double-count.
     let sessions: Vec<Session> = db
-        .sessions_for_project(project.id.expect(ID_INVARIANT))?
+        .sessions_for_project(project_id)?
         .into_iter()
         .filter(|r| r.start.date() == date)
         .collect();
+
+    let tasks = project_task_entries(&db, project_id, date)?;
 
     print_detail_report(
         &project.name,
@@ -324,6 +354,7 @@ fn project_info(name: Option<&str>, date_filter: Option<&str>) -> Result<()> {
         date,
         &sessions,
         now,
+        Some(tasks),
     );
     Ok(())
 }
@@ -422,7 +453,14 @@ fn task_info(task_ref: Option<&str>, date_filter: Option<&str>) -> Result<()> {
         .filter(|r| r.start.date() == date)
         .collect();
     let display = format!("{}/{}", project.name, task.name);
-    print_detail_report(&display, Some(&task.description), date, &sessions, now);
+    print_detail_report(
+        &display,
+        Some(&task.description),
+        date,
+        &sessions,
+        now,
+        None,
+    );
     Ok(())
 }
 
