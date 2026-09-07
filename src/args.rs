@@ -94,16 +94,17 @@ pub enum Command {
         action: OrganizationCommand,
     },
 
-    /// Manage projects
+    /// Manage projects; with no subcommand, lists every project by name
     Project {
         #[clap(subcommand)]
-        action: ProjectCommand,
+        action: Option<ProjectCommand>,
     },
 
-    /// Manage tasks
+    /// Manage tasks; with no subcommand, lists every unfinished (queue or
+    /// wip) task
     Task {
         #[clap(subcommand)]
-        action: TaskCommand,
+        action: Option<TaskCommand>,
     },
 
     /// Set up and track a task's session (tmux + git worktree/branch, and
@@ -291,7 +292,8 @@ pub enum SessionCommand {
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: String,
 
-        /// Override the branch name (default: the project's branch_template)
+        /// Override the branch name (default: the task's branch_prefix
+        /// followed by its slugified name)
         #[clap(short = 'b', long = "branch")]
         branch: Option<String>,
 
