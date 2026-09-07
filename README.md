@@ -166,16 +166,39 @@ every task created before the field existed) falls back to the project's
 2. If the project has `tmux: true`, creates a tmux session named
    `<project>/<task>`, `cd`'d into that worktree (or the project's
    `base_path` if there's no worktree), installs three global tmux hooks
-   (idempotent, installed once) -- `client-attached`, `client-detached`,
-   `session-closed` -- and attaches you to it (switching the current
-   client, if you're already inside tmux).
+   (idempotent, installed once) -- `client-session-changed`,
+   `client-detached`, `session-closed` -- and attaches you to it (switching
+   the current client, if you're already inside tmux).
 
-Attaching to that tmux session starts a session for the task; detaching (or
-the client going away for any reason -- including the terminal being
-killed outright, not just a clean detach) ends it. `iter session elapse`
-reports time on that open session. If a project has `tmux: false`, no tmux
-session is created at all -- use `iter session start`/`iter session stop`
-to track work on it manually instead.
+Entering that tmux session starts a session for the task, and leaving it
+ends one. `client-session-changed` covers both halves of the common case:
+it fires on a plain attach and on `switch-client`, so moving from one task
+straight to another stops the first and starts the second. `client-detached`
+catches the client going away for any reason -- including the terminal
+being killed outright, not just a clean detach -- and `session-closed` is
+the backstop for the tmux session being destroyed while still attached.
+`iter session elapse` reports time on the open session. If a project has
+`tmux: false`, no tmux session is created at all -- use `iter session
+start`/`iter session stop` to track work on it manually instead.
+
+Each hook is told which session it fired for by a format variable, and
+which variable is correct **differs per event** -- `#{session_name}` for
+the client hooks, `#{hook_session_name}` for `session-closed`, where
+`#{session_name}` would name a different session entirely. Getting it wrong
+is silent: the hook still runs, it just names no session `iter` knows and
+does nothing. `tmux::HOOKS` has the measurements, and there are tests
+pinning each one.
+
+**Detach messages.** Before detaching, anything can leave a note in the
+tmux session option `@iter_detach_message`; the `client-detached` hook
+takes it off again and stores it on the session it closes, the same as
+`iter session stop -m`. That's what a `tmux.conf` binding like this hangs
+off:
+
+```tmux
+# prompt for a message in a popup, stash it, then detach
+bind D run-shell "~/bin/detach_with_message.sh '#{client_name}'"
+```
 
 `iter task done` closes any open session, kills the tmux session (if any),
 removes the worktree (if any), deletes its branch (if any), and deletes the
