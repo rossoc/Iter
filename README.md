@@ -5,7 +5,8 @@ tmux + GitHub integration.
 
 - A **project** is a base directory of work (optionally a git/GitHub repo).
 - A **task** is a unit of work under a project, with a status
-  (`queue` / `wip` / `done`) and, optionally, a linked GitHub issue.
+  (`queue` / `wip` / `done`), a `branch_prefix` for the branch its session
+  gets, and, optionally, a linked GitHub issue.
 - `iter session new` on a task creates a **session-config**: a tmux session
   (named `<project>/<task>`) and, if the project is git-backed, a dedicated
   git worktree + branch for it -- so working two tasks of the same project
@@ -33,6 +34,7 @@ iter project edit myproj            # same, pre-filled with the existing project
 iter project delete myproj
 iter project info myproj [--date d] # name, description, time spent that day (union of all its tasks)
 iter project list
+iter project                        # same as `project list`
 
 # tasks
 iter task new --project myproj [--issue 42]   # opens a blank (or issue-prefilled) task in nvim
@@ -40,6 +42,7 @@ iter task edit myproj/mytask
 iter task delete myproj/mytask
 iter task info myproj/mytask [--date d]
 iter task list [--project myproj] [--status wip]
+iter task                           # every unfinished task (queue + wip), across all projects
 iter task done myproj/mytask        # closes any open session, tears down its session-config, marks done
 iter task weekday myproj/mytask     # average hours per weekday
 
@@ -84,6 +87,17 @@ anything else) before it's saved to the database.
     clone <source> <base_path>` -- exactly like running `git clone`
     yourself.
 
+## Branch names
+
+A project's `branch_template` (default `feat/{task}`) is only a *default*:
+its fixed part is copied into each new task's own `branch_prefix` field
+when the task is created, so it's sitting right there in the editor to
+change per task. `iter session new` branches from that prefix plus the
+task's slugified name -- `hotfix/` + `Fix Login Bug` gives
+`hotfix/fix-login-bug`. A task whose `branch_prefix` is empty (including
+every task created before the field existed) falls back to the project's
+`branch_template`.
+
 `github`/`tmux`/`auto_branch`/`branch_template` all default the same as
 `project new` for `init`/`new` (`github` pre-set to `true` if the resulting
 directory already looks like a git repo), and are carried over as-is from
@@ -94,13 +108,15 @@ the source project for a local `clone`.
 `iter session new <project>/<task>`:
 1. If the project has `github: true` and `auto_branch: true` (and
    `--no-branch` wasn't passed), creates a new git worktree at
-   `<base_path>/.iter-worktrees/<task-slug>` on a new branch (default
-   `feat/<task-slug>`, override with `-b/--branch`).
-2. If the project has `tmux: true`, creates a detached tmux session named
+   `<base_path>/.iter-worktrees/<task-slug>` on a new branch named
+   `<the task's branch_prefix><task-slug>` (override the whole name with
+   `-b/--branch`).
+2. If the project has `tmux: true`, creates a tmux session named
    `<project>/<task>`, `cd`'d into that worktree (or the project's
-   `base_path` if there's no worktree), and installs three global tmux
-   hooks (idempotent, installed once): `client-attached`, `client-detached`,
-   `session-closed`.
+   `base_path` if there's no worktree), installs three global tmux hooks
+   (idempotent, installed once) -- `client-attached`, `client-detached`,
+   `session-closed` -- and attaches you to it (switching the current
+   client, if you're already inside tmux).
 
 Attaching to that tmux session starts a session for the task; detaching (or
 the client going away for any reason -- including the terminal being

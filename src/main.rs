@@ -46,8 +46,8 @@ fn main() -> ExitCode {
         Command::Init => init_cmd(),
         Command::New { path } => new_cmd(path),
         Command::Clone { source } => clone_cmd(source),
-        Command::Project { action } => dispatch_project(action),
-        Command::Task { action } => dispatch_task(action),
+        Command::Project { action } => dispatch_project(action.as_ref()),
+        Command::Task { action } => dispatch_task(action.as_ref()),
         Command::Session { action } => dispatch_session(action),
         Command::Comment { task, message } => comment_cmd(task.as_deref(), message),
         Command::T => t_cmd(),
@@ -382,13 +382,16 @@ fn clone_into(
 
 // ---- project ---------------------------------------------------------
 
-fn dispatch_project(action: &ProjectCommand) -> Result<()> {
+/// `iter project` with no subcommand is `iter project list` -- the listing
+/// is what you want often enough that it's the bare command's meaning.
+fn dispatch_project(action: Option<&ProjectCommand>) -> Result<()> {
     match action {
-        ProjectCommand::New => project_new(),
-        ProjectCommand::Edit { name } => project_edit(name.as_deref()),
-        ProjectCommand::Delete { name } => project_delete(name.as_deref()),
-        ProjectCommand::Info { name, date } => project_info(name.as_deref(), date.as_deref()),
-        ProjectCommand::List => project_list(),
+        None => project_list(),
+        Some(ProjectCommand::New) => project_new(),
+        Some(ProjectCommand::Edit { name }) => project_edit(name.as_deref()),
+        Some(ProjectCommand::Delete { name }) => project_delete(name.as_deref()),
+        Some(ProjectCommand::Info { name, date }) => project_info(name.as_deref(), date.as_deref()),
+        Some(ProjectCommand::List) => project_list(),
     }
 }
 
@@ -494,15 +497,27 @@ fn project_list() -> Result<()> {
 
 // ---- task --------------------------------------------------------------
 
-fn dispatch_task(action: &TaskCommand) -> Result<()> {
+/// `iter task` with no subcommand lists the unfinished work: every task
+/// still `queue` or `wip`, across every project. `task list` is the same
+/// listing with the filters spelled out.
+fn dispatch_task(action: Option<&TaskCommand>) -> Result<()> {
     match action {
-        TaskCommand::New { project, issue } => task_new(project.as_deref(), *issue),
-        TaskCommand::Edit { task } => task_edit(task.as_deref()),
-        TaskCommand::Delete { task } => task_delete(task.as_deref()),
-        TaskCommand::Info { task, date } => task_info(task.as_deref(), date.as_deref()),
-        TaskCommand::List { project, status } => task_list(project.as_deref(), status.as_deref()),
-        TaskCommand::Done { task } => task_done(task.as_deref()),
-        TaskCommand::Weekday { task } => task_weekday(task.as_deref()),
+        None => task_list(None, &[TaskStatus::Queue, TaskStatus::Wip]),
+        Some(TaskCommand::New { project, issue }) => task_new(project.as_deref(), *issue),
+        Some(TaskCommand::Edit { task }) => task_edit(task.as_deref()),
+        Some(TaskCommand::Delete { task }) => task_delete(task.as_deref()),
+        Some(TaskCommand::Info { task, date }) => task_info(task.as_deref(), date.as_deref()),
+        Some(TaskCommand::List { project, status }) => {
+            let statuses = match status {
+                Some(s) => vec![
+                    TaskStatus::parse(s).ok_or_else(|| IterError::InvalidStatus(s.to_string()))?,
+                ],
+                None => Vec::new(),
+            };
+            task_list(project.as_deref(), &statuses)
+        }
+        Some(TaskCommand::Done { task }) => task_done(task.as_deref()),
+        Some(TaskCommand::Weekday { task }) => task_weekday(task.as_deref()),
     }
 }
 
@@ -511,7 +526,7 @@ fn task_new(project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
     let project = resolve_project_or_current(&db, project_name)?;
     let project_id = project.id.expect(ID_INVARIANT);
 
-    let mut template = Task::template(project_id);
+    let mut template = Task::template(project_id, git::branch_prefix(&project.branch_template));
     if let Some(issue_number) = issue {
         if !project.github {
             return Err(IterError::GithubDisabled(project.name.clone()));
@@ -584,11 +599,11 @@ fn task_info(task_ref: Option<&str>, date_filter: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-fn task_list(project_filter: Option<&str>, status_filter: Option<&str>) -> Result<()> {
+/// Prints `<project>/<task>` for every task matching both filters, as a
+/// YAML list. An empty `statuses` means every status, the same way `None`
+/// for `project_filter` means every project.
+fn task_list(project_filter: Option<&str>, statuses: &[TaskStatus]) -> Result<()> {
     let db = open_db();
-    let status = status_filter
-        .map(|s| TaskStatus::parse(s).ok_or_else(|| IterError::InvalidStatus(s.to_string())))
-        .transpose()?;
 
     let projects: Vec<Project> = Repository::<Project>::list(&db)?
         .into_iter()
@@ -599,7 +614,7 @@ fn task_list(project_filter: Option<&str>, status_filter: Option<&str>) -> Resul
     for p in projects {
         let tasks = db.tasks_for_project(p.id.expect(ID_INVARIANT))?;
         for t in tasks {
-            if status.map(|s| s == t.status).unwrap_or(true) {
+            if statuses.is_empty() || statuses.contains(&t.status) {
                 names.push(format!("{}/{}", p.name, t.name));
             }
         }
@@ -689,9 +704,17 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
     let mut worktree_path = None;
 
     if project.github && project.auto_branch && !no_branch {
+        // The task's own prefix is what it was created (and possibly
+        // edited) with; an empty one -- a task from before the field
+        // existed, or one the user blanked -- falls back to whatever the
+        // project's template says now.
+        let prefix = match task.branch_prefix.trim() {
+            "" => git::branch_prefix(&project.branch_template),
+            prefix => prefix.to_string(),
+        };
         let branch = branch_override
             .map(|b| b.to_string())
-            .unwrap_or_else(|| git::branch_name(&project.branch_template, &task.name));
+            .unwrap_or_else(|| git::branch_name(&prefix, &task.name));
         let slug = git::slugify(&task.name);
         let path = std::path::Path::new(&project.base_path)
             .join(".iter-worktrees")
@@ -710,9 +733,7 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
         tmux::create_session(&tmux_session_name, cwd)?;
         let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
         tmux::ensure_hooks_installed(&iter_bin)?;
-        println!(
-            "session '{tmux_session_name}' started (attach with: tmux attach -t '{tmux_session_name}')"
-        );
+        println!("session '{tmux_session_name}' started");
         Some(tmux_session_name)
     } else {
         println!(
@@ -732,6 +753,17 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
 
     task.status = TaskStatus::Wip;
     Repository::<Task>::update(&db, task_id, &task)?;
+
+    // Attaching last, and only once every row is written: it hands the
+    // terminal over to tmux until the user detaches, and the
+    // `client-attached` hook that fires on the way in looks the
+    // session-config up by tmux name -- so the row has to be there first.
+    if let Some(name) = &session_config.tmux_session_name
+        && let Err(e) = tmux::attach_session(name)
+    {
+        eprintln!("warning: couldn't attach to '{name}': {e}");
+        eprintln!("the session is set up -- attach with: tmux attach -t '{name}'");
+    }
 
     Ok(())
 }

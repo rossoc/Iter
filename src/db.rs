@@ -140,12 +140,13 @@ impl Db {
                 branch_template TEXT NOT NULL DEFAULT 'feat/{task}'
              );
              CREATE TABLE IF NOT EXISTS tasks (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id   INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-                name         TEXT NOT NULL,
-                description  TEXT NOT NULL DEFAULT '',
-                github_issue INTEGER,
-                status       TEXT NOT NULL DEFAULT 'queue' CHECK (status IN ('queue', 'wip', 'done')),
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                name          TEXT NOT NULL,
+                description   TEXT NOT NULL DEFAULT '',
+                github_issue  INTEGER,
+                status        TEXT NOT NULL DEFAULT 'queue' CHECK (status IN ('queue', 'wip', 'done')),
+                branch_prefix TEXT NOT NULL DEFAULT '',
                 UNIQUE (project_id, name)
              );
              CREATE TABLE IF NOT EXISTS session_configs (
@@ -163,7 +164,31 @@ impl Db {
                 message TEXT
              );",
         )?;
+        self.add_missing_columns()?;
         Ok(())
+    }
+
+    /// Columns added to a table after it was first created. `CREATE TABLE
+    /// IF NOT EXISTS` above is a no-op on a database that already has the
+    /// table, so a new field needs its own `ALTER TABLE` for the databases
+    /// already in the wild; each one is guarded on the column not being
+    /// there yet, making this a no-op on a fresh database too.
+    fn add_missing_columns(&self) -> Result<()> {
+        const ADDED: [(&str, &str, &str); 1] =
+            [("tasks", "branch_prefix", "TEXT NOT NULL DEFAULT ''")];
+        for (table, column, decl) in ADDED {
+            if !self.column_exists(table, column)? {
+                self.conn
+                    .execute_batch(&format!("ALTER TABLE {table} ADD COLUMN {column} {decl};"))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn column_exists(&self, table: &str, column: &str) -> Result<bool> {
+        let mut stmt = self.conn.prepare(&format!("PRAGMA table_info({table})"))?;
+        let mut names = stmt.query_map([], |row| row.get::<_, String>(1))?;
+        Ok(names.any(|name| name.is_ok_and(|name| name == column)))
     }
 
     /// One-time rename from the pre-rename schema (`Session`/`Record`
@@ -415,6 +440,7 @@ mod tests {
             description: "task notes".to_string(),
             github_issue: Some(7),
             status: TaskStatus::Wip,
+            branch_prefix: "fix/".to_string(),
         };
         Repository::<Task>::insert(db, &task).expect("task inserts")
     }
@@ -506,6 +532,7 @@ mod tests {
             description: String::new(),
             github_issue: None,
             status: TaskStatus::Queue,
+            branch_prefix: String::new(),
         });
         check(&SessionConfig {
             id: None,
@@ -577,6 +604,37 @@ mod tests {
         assert_eq!(loaded.name, "renamed");
     }
 
+    /// The mirror of `an_unknown_extra_column_does_not_break_writes`: a
+    /// database created before `branch_prefix` existed is *missing* a
+    /// column the struct declares, which no amount of explicit naming
+    /// survives -- `migrate` has to add it.
+    #[test]
+    fn a_pre_existing_tasks_table_gains_the_branch_prefix_column() {
+        let db = db();
+        db.conn
+            .execute_batch(
+                "DROP TABLE tasks;
+                 CREATE TABLE tasks (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id   INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                    name         TEXT NOT NULL,
+                    description  TEXT NOT NULL DEFAULT '',
+                    github_issue INTEGER,
+                    status       TEXT NOT NULL DEFAULT 'queue',
+                    UNIQUE (project_id, name)
+                 );",
+            )
+            .expect("the old schema is created");
+        db.migrate().expect("migrating adds the column");
+
+        let project_id = insert_project(&db, "alpha");
+        let id = insert_task(&db, project_id, "build it");
+        let loaded = Repository::<Task>::get(&db, id)
+            .expect("get succeeds")
+            .expect("the row just inserted exists");
+        assert_eq!(loaded.branch_prefix, "fix/");
+    }
+
     #[test]
     fn project_update_rewrites_every_column() {
         let db = db();
@@ -645,6 +703,7 @@ mod tests {
         assert_eq!(found.description, "task notes");
         assert_eq!(found.github_issue, Some(7));
         assert_eq!(found.status, TaskStatus::Wip);
+        assert_eq!(found.branch_prefix, "fix/");
     }
 
     #[test]
@@ -658,6 +717,7 @@ mod tests {
             description: String::new(),
             github_issue: None,
             status: TaskStatus::Queue,
+            branch_prefix: String::new(),
         };
         let id = Repository::<Task>::insert(&db, &task).expect("task inserts");
         let loaded = Repository::<Task>::get(&db, id)

@@ -11,6 +11,25 @@ pub fn kill_session(name: &str) {
     let _ = process::run("tmux", None, &["kill-session", "-t", name]);
 }
 
+/// Whether this process is itself running inside a tmux client -- which
+/// decides how `attach_session` gets the user there: a client can't attach
+/// to a second session from within one, it switches to it instead.
+fn inside_tmux() -> bool {
+    std::env::var_os("TMUX").is_some()
+}
+
+/// Puts the user in the session named `name`: attaching (this blocks,
+/// handing the terminal to tmux until the user detaches) or, when we're
+/// already inside tmux, switching the current client over to it.
+pub fn attach_session(name: &str) -> Result<()> {
+    let verb = if inside_tmux() {
+        "switch-client"
+    } else {
+        "attach-session"
+    };
+    process::run("tmux", None, &[verb, "-t", name])
+}
+
 pub fn session_exists(name: &str) -> bool {
     process::succeeds("tmux", &["has-session", "-t", name])
 }
