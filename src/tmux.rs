@@ -86,15 +86,54 @@ const HOOKS: [(&str, &str); 3] = [
     ("session-closed", "\"#{hook_session_name}\""),
 ];
 
-/// Idempotently installs the global tmux hooks that drive `iter internal
-/// hook <event> <session> [previous]`. Safe to call every time a session is
-/// created.
+/// Installs the global tmux hooks that drive `iter internal hook <event>
+/// <session> [previous]`, for any event that doesn't already have a working
+/// one. Safe to call every time a session is created.
+///
+/// "Already working" is deliberately not "already ours": a hook wired up in
+/// `tmux.conf` is left exactly as it is. That's the difference between a
+/// path baked in here -- `current_exe`, i.e. whichever build last ran
+/// `session new`, which can be a debug binary in a worktree that later gets
+/// deleted -- and a stable one the user chose. Installing over it every time
+/// would quietly re-point the hooks at a binary that may not outlive the
+/// afternoon.
 pub fn ensure_hooks_installed(iter_bin: &str) -> Result<()> {
     for (event, args) in HOOKS {
+        if hook_is_current(event, args) {
+            continue;
+        }
         let action = hook_action(iter_bin, event, args);
         process::run("tmux", None, &["set-hook", "-g", event, &action])?;
     }
     Ok(())
+}
+
+/// Whether `event`'s installed hook already passes exactly the format
+/// variables `args` calls for.
+///
+/// That comparison, rather than a string match on the whole action, is what
+/// lets a `tmux.conf` hook -- different path, different quoting, same
+/// variables -- count as current, while a hook from an older `iter` (which
+/// passed `#{hook_session_name}` to every event, and so did nothing) does
+/// not and gets replaced.
+fn hook_is_current(event: &str, args: &str) -> bool {
+    let Ok(existing) = process::output("tmux", None, &["show-options", "-gv", event]) else {
+        return false; // no tmux, or no such option: install ours
+    };
+    !existing.trim().is_empty() && format_variables(&existing) == format_variables(args)
+}
+
+/// The `#{...}` variables in a hook body, in order and without the quoting
+/// around them, which differs between what we write and what a `tmux.conf`
+/// does.
+fn format_variables(action: &str) -> Vec<&str> {
+    action
+        .match_indices("#{")
+        .filter_map(|(start, _)| {
+            let rest = &action[start..];
+            rest.find('}').map(|end| &rest[..=end])
+        })
+        .collect()
 }
 
 /// The `set-hook` body for one entry of [`HOOKS`]. Split out so the format
@@ -177,6 +216,41 @@ mod tests {
     fn client_session_changed_is_also_told_the_session_being_left() {
         let action = action_for("client-session-changed");
         assert!(action.contains("\"#{client_last_session}\""), "{action}");
+    }
+
+    /// A `tmux.conf` hook naming a stable path and quoting the variables
+    /// its own way is still current -- that's what keeps `session new` from
+    /// re-pointing it at whichever build happened to run.
+    #[test]
+    fn a_conf_written_hook_counts_as_current() {
+        let (_, args) = HOOKS
+            .iter()
+            .find(|(name, _)| *name == "client-session-changed")
+            .expect("the hook is installed");
+        let from_conf = "run-shell \"~/bin/iter internal hook client-session-changed \
+                         '#{session_name}' '#{client_last_session}'\"";
+        assert_eq!(format_variables(from_conf), format_variables(args));
+    }
+
+    /// ...whereas the hook an older `iter` left behind does not, so it gets
+    /// replaced rather than kept forever.
+    #[test]
+    fn a_stale_hook_from_an_older_iter_is_not_current() {
+        let (_, args) = HOOKS
+            .iter()
+            .find(|(name, _)| *name == "client-detached")
+            .expect("the hook is installed");
+        let stale = "run-shell '/old/iter internal hook client-detached \"#{hook_session_name}\"'";
+        assert_ne!(format_variables(stale), format_variables(args));
+    }
+
+    #[test]
+    fn format_variables_reads_them_in_order_without_quoting() {
+        assert_eq!(
+            format_variables("a '#{session_name}' b \"#{client_last_session}\" c"),
+            vec!["#{session_name}", "#{client_last_session}"]
+        );
+        assert_eq!(format_variables("run-shell 'echo hi'"), Vec::<&str>::new());
     }
 
     #[test]
