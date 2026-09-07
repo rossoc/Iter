@@ -26,10 +26,20 @@ pub fn slugify(name: &str) -> String {
     out.trim_end_matches('-').to_string()
 }
 
-/// Fills a project's `branch_template` (e.g. `"feat/{task}"`) in with a
-/// slugified task name.
-pub fn branch_name(template: &str, task_name: &str) -> String {
-    template.replace("{task}", &slugify(task_name))
+/// The fixed part of a project's `branch_template` (e.g. `"feat/"` out of
+/// `"feat/{task}"`) -- what a task carries as its own, editable
+/// `branch_prefix`. A template with no `{task}` placeholder is a prefix
+/// already, and is returned whole.
+pub fn branch_prefix(template: &str) -> String {
+    match template.split_once("{task}") {
+        Some((prefix, _)) => prefix.to_string(),
+        None => template.to_string(),
+    }
+}
+
+/// A task's branch name: its `branch_prefix` followed by its slugified name.
+pub fn branch_name(prefix: &str, task_name: &str) -> String {
+    format!("{prefix}{}", slugify(task_name))
 }
 
 /// Creates a new worktree at `worktree_path`, on a new branch `branch`,
@@ -83,15 +93,29 @@ mod tests {
     }
 
     #[test]
-    fn branch_name_substitutes_task_placeholder() {
-        assert_eq!(
-            branch_name("feat/{task}", "Fix Login Bug"),
-            "feat/fix-login-bug"
-        );
+    fn branch_prefix_is_the_template_up_to_the_placeholder() {
+        assert_eq!(branch_prefix("feat/{task}"), "feat/");
+        assert_eq!(branch_prefix("{task}"), "");
+    }
+
+    /// A template with no `{task}` at all is already just a prefix.
+    #[test]
+    fn branch_prefix_of_a_placeholderless_template_is_the_whole_thing() {
+        assert_eq!(branch_prefix("wip/"), "wip/");
     }
 
     #[test]
-    fn branch_name_respects_a_custom_template() {
-        assert_eq!(branch_name("fix/{task}", "Login Bug"), "fix/login-bug");
+    fn branch_name_appends_the_slug_to_the_prefix() {
+        assert_eq!(branch_name("feat/", "Fix Login Bug"), "feat/fix-login-bug");
+    }
+
+    #[test]
+    fn branch_name_respects_a_custom_prefix() {
+        assert_eq!(branch_name("fix/", "Login Bug"), "fix/login-bug");
+    }
+
+    #[test]
+    fn branch_name_with_an_empty_prefix_is_the_bare_slug() {
+        assert_eq!(branch_name("", "Login Bug"), "login-bug");
     }
 }

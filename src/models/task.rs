@@ -56,12 +56,24 @@ pub struct Task {
 
     #[serde(default)]
     pub status: TaskStatus,
+
+    /// What `iter session new` puts in front of this task's slugified name
+    /// to get its branch, e.g. `"feat/"`. Pre-filled from the project's
+    /// `branch_template` when the task is created, and editable from then
+    /// on -- which is the point of it living on the task rather than being
+    /// read off the project at session time. Empty means "whatever the
+    /// project's template says now", so a task created before this field
+    /// existed still branches the project's way.
+    #[serde(default)]
+    pub branch_prefix: String,
 }
 
 impl Task {
     /// A blank (or issue-prefilled) template for `iter task new` to open in
-    /// the YAML editor.
-    pub fn template(project_id: i64) -> Self {
+    /// the YAML editor. `branch_prefix` comes from the owning project's
+    /// `branch_template`, so the default is the project's rule and the
+    /// editor is where it gets overridden.
+    pub fn template(project_id: i64, branch_prefix: String) -> Self {
         Task {
             id: None,
             project_id,
@@ -69,6 +81,7 @@ impl Task {
             description: String::new(),
             github_issue: None,
             status: TaskStatus::Queue,
+            branch_prefix,
         }
     }
 }
@@ -80,5 +93,39 @@ impl crate::models::MarkdownBody for Task {
 
     fn set_description(&mut self, description: String) {
         self.description = description;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `branch_prefix` has to reach the YAML editor as an ordinary field --
+    /// that's the whole point of it living on the task -- unlike
+    /// `project_id`/`description`, which are deliberately kept out of it.
+    #[test]
+    fn a_new_task_carries_its_branch_prefix_into_the_editor() {
+        let template = Task::template(3, "hotfix/".to_string());
+        let yaml = serde_yaml::to_string(&template).expect("a task serializes");
+        assert!(
+            yaml.contains("branch_prefix: hotfix/"),
+            "branch_prefix missing from the editor template:\n{yaml}"
+        );
+        assert!(!yaml.contains("project_id"));
+    }
+
+    #[test]
+    fn an_edited_prefix_parses_back_out() {
+        let task: Task = serde_yaml::from_str("name: t\nbranch_prefix: chore/\n")
+            .expect("front matter parses back into a task");
+        assert_eq!(task.branch_prefix, "chore/");
+    }
+
+    /// Front matter written before the field existed still loads, blank --
+    /// which `iter session new` reads as "use the project's template".
+    #[test]
+    fn a_missing_prefix_defaults_to_blank() {
+        let task: Task = serde_yaml::from_str("name: t\n").expect("front matter parses");
+        assert_eq!(task.branch_prefix, "");
     }
 }
