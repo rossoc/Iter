@@ -19,6 +19,16 @@ impl TaskStatus {
         }
     }
 
+    /// The status spelled out, for a report heading where the bare
+    /// `wip`/`queue` shorthand next to a task name reads as jargon.
+    pub fn label(self) -> &'static str {
+        match self {
+            TaskStatus::Queue => "queued",
+            TaskStatus::Wip => "work in progress",
+            TaskStatus::Done => "done",
+        }
+    }
+
     pub fn parse(s: &str) -> Option<Self> {
         match s {
             "queue" => Some(TaskStatus::Queue),

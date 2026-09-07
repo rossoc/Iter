@@ -37,7 +37,7 @@ iter init -o acme                   # ...and start from organization `acme`'s de
 iter organization new               # opens a blank organization in nvim; save & quit to create it
 iter organization edit acme
 iter organization delete acme       # deletes only the grouping; its projects are kept
-iter organization info acme         # every project in it, with each project's tasks and status
+iter organization info acme         # what the whole organization spent that day, per project and per task
 iter organization list
 
 # projects
@@ -46,6 +46,10 @@ iter project edit myproj [-o acme]  # same, pre-filled; -o moves it into that or
 iter project delete myproj
 iter project info myproj [--date d] # name, description, time spent that day (union of all its tasks)
 iter project list
+
+# every info command takes --format/-f and the same period flags
+iter task info myproj/mytask -f yaml    # YAML instead of the default markdown report
+iter org info acme --from 2026-09-01    # an interval (up to today) instead of a single day
 
 # tasks
 iter task new --project myproj [--issue 42]   # opens a blank (or issue-prefilled) task in nvim
@@ -71,28 +75,97 @@ iter comment myproj/mytask -m "progress note"   # posts to the task's linked iss
 iter t                              # prints <project>/<task> for the tmux session you're in
 ```
 
-`project`/`task info` and `weekday` print YAML, so you can pipe them
-wherever's convenient.
+## Reports
+
+`organization info`, `project info` and `task info` are the same report at
+three depths -- organization to project to task to session -- and all three
+take the same two knobs.
+
+**Which days.** Either `--date <YYYY-MM-DD>` for a single day (the default,
+today), or `--from`/`--to` for an interval; one formulation or the other,
+never both. Each end of the interval is optional: `--from` alone runs up to
+today, `--to` alone reaches back over every session there is.
+
+**How it's printed.** `--format`/`-f` is `text` (the default) or `yaml`.
+
+`text` is markdown: a YAML front matter block of the settings and totals, a
+`---` divider, then the description and the breakdown -- the same shape the
+nvim editor opens a project or task in, so a report reads like the thing it
+reports on.
+
+```sh
+$ iter organization info acme --date 2026-09-07
+name: acme
+date: 2026-09-07
+total_hours: 4.5
+total_hhmm: 04:25
+settings:
+  github: false
+  tmux: true
+  auto_branch: true
+  branch_template: feat/{task}
+---
+# acme
+
+2026-09-07 -- 04:25 (4.5 h)
+
+Everything 4BC works on.
+
+| Project | Time  |
+|---------|-------|
+| Iter    | 04:25 |
+
+## Iter
+
+04:25 (4.5 h)
+
+The time tracker itself.
+
+| Task  | Status           | Time  |
+|-------|------------------|-------|
+| Doc   | work in progress | 03:45 |
+| fixes | queued           | 00:40 |
+
+### Doc -- work in progress
+
+03:45 (4.0 h)
+
+Write the README section on formats.
+
+- wrote the format docs
+- shipped it
+
+| Start | End   | Duration | Message               |
+|-------|-------|----------|-----------------------|
+| 09:00 | 11:15 | 02:15    | wrote the format docs |
+| 13:00 | 14:30 | 01:30    | shipped it            |
+```
+
+`project info` is that same document one level down (`# project`,
+`## task`), and `task info` one level down again -- just the task, its
+description and its session table.
+
+An open session shows no `End` and is marked `(ongoing)`; its duration runs
+to now. Over an interval every session table grows a `Date` column.
+
+`-f yaml` prints the identical data as plain YAML -- the front matter fields
+flat at the top, then the same tree nested under `projects:` / `tasks:` /
+`sessions:` -- for piping somewhere else. (`weekday` prints YAML too, and
+has no `--format` of its own.)
+
+A project or task with no session in the period is left out of the report
+entirely; `organization list` / `project list` / `task list` are the place
+for a plain roster of what exists.
+
+**Totals are unions, not sums.** A project's time is the union of its tasks'
+sessions and an organization's is the union of its projects', so working two
+things in parallel -- or hopping between them -- is counted once. That's why
+a parent's total can be less than its children's totals added up.
 
 ## Organizations
 
 An organization holds two things: the list of projects that belong to it,
 and the defaults those projects start from.
-
-```sh
-$ iter organization info acme
-name: acme
-description: Everything 4BC works on.
-projects:
-- Distiller
-    - RNN: queue
-- Iter
-    - Doc: wip
-    - fixes: queue
-```
-
-That report is a roster, not a time sheet -- no dates, hours or messages.
-`project info` and `task info` remain the place for those.
 
 **Defaults flow downstream, once.** `--organization` on `iter init`/`new`/
 `project new` seeds the blank template with the organization's `github`,

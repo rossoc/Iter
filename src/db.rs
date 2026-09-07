@@ -302,17 +302,6 @@ impl Db {
         self.find_all("WHERE task_id = ?1", params![task_id])
     }
 
-    /// Every session across every task of `project_id` -- the union a
-    /// project-level report is built from (see `crate::reporting`). Phrased
-    /// as a subquery rather than a join so the select list stays the plain
-    /// `Table`-generated one, with no table qualifiers to disambiguate.
-    pub fn sessions_for_project(&self, project_id: i64) -> Result<Vec<Session>> {
-        self.find_all(
-            "WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?1)",
-            params![project_id],
-        )
-    }
-
     pub fn open_session_for_task(&self, task_id: i64) -> Result<Option<Session>> {
         self.find_one("WHERE task_id = ?1 AND end IS NULL", params![task_id])
     }
@@ -846,8 +835,11 @@ mod tests {
         );
     }
 
+    /// The union a project-level report sums is built by walking
+    /// `tasks_for_project` and asking `sessions_for_task` for each -- so
+    /// what has to hold is that neither leaks across a project boundary.
     #[test]
-    fn sessions_for_project_unions_every_task() {
+    fn a_projects_sessions_are_its_own_tasks_and_no_others() {
         let db = db();
         let project_id = insert_project(&db, "alpha");
         let one = insert_task(&db, project_id, "one");
@@ -869,9 +861,13 @@ mod tests {
         }
 
         let mut task_ids: Vec<i64> = db
-            .sessions_for_project(project_id)
+            .tasks_for_project(project_id)
             .expect("lookup succeeds")
             .into_iter()
+            .flat_map(|t| {
+                db.sessions_for_task(t.id.expect("an inserted task has an id"))
+                    .expect("lookup succeeds")
+            })
             .map(|s| s.task_id)
             .collect();
         task_ids.sort_unstable();

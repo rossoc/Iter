@@ -2,6 +2,42 @@ use crate::{organization_completer, project_completer, task_completer};
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
 
+/// How an `info` report is printed.
+#[derive(clap::ValueEnum, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Format {
+    /// A readable markdown report: YAML front matter, a `---` divider, then
+    /// the description and a breakdown of the period's sessions
+    #[default]
+    Text,
+    /// The same report as plain YAML, for piping somewhere else
+    Yaml,
+}
+
+/// The period an `info` report covers, and how it's printed.
+///
+/// Two mutually exclusive ways to say which days: `--date` for a single one
+/// (the default, today), or `--from`/`--to` for an interval. Either bound of
+/// the interval may be left off -- `--from` alone runs up to today, `--to`
+/// alone reaches back over every session there is.
+#[derive(clap::Args, Debug)]
+pub struct ReportOpts {
+    /// A single day to report on, YYYY-MM-DD (default: today)
+    #[clap(long, conflicts_with_all = ["from", "to"])]
+    pub date: Option<String>,
+
+    /// First day of an interval, YYYY-MM-DD (default: no lower bound)
+    #[clap(long)]
+    pub from: Option<String>,
+
+    /// Last day of an interval, YYYY-MM-DD (default: today)
+    #[clap(long)]
+    pub to: Option<String>,
+
+    /// Output format
+    #[clap(long, short = 'f', value_enum, default_value_t = Format::Text)]
+    pub format: Format,
+}
+
 /// A project/task/session time tracker, with tmux + GitHub integration.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -131,14 +167,15 @@ pub enum ProjectCommand {
         name: Option<String>,
     },
 
-    /// Name, description, and time spent (union of all its tasks) on a day
+    /// Name, description, and time spent (union of all its tasks) over a
+    /// day or an interval, broken down per task
     Info {
         /// Default: the project of the tmux session you're in
         #[arg(add = ArgValueCompleter::new(project_completer))]
         name: Option<String>,
 
-        #[clap(long)]
-        date: Option<String>,
+        #[clap(flatten)]
+        report: ReportOpts,
     },
 
     /// List every project
@@ -164,12 +201,15 @@ pub enum OrganizationCommand {
         name: Option<String>,
     },
 
-    /// Every project in the organization, with each project's tasks and
-    /// their status
+    /// Time spent across the organization over a day or an interval, broken
+    /// down per project and per task
     Info {
         /// Default: the organization of the tmux session's project
         #[arg(add = ArgValueCompleter::new(organization_completer))]
         name: Option<String>,
+
+        #[clap(flatten)]
+        report: ReportOpts,
     },
 
     /// List every organization
@@ -205,14 +245,15 @@ pub enum TaskCommand {
         task: Option<String>,
     },
 
-    /// Name, description, and time spent on a day (default: today)
+    /// Name, description, and every session on a day or over an interval
+    /// (default: today)
     Info {
         /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
 
-        #[clap(long)]
-        date: Option<String>,
+        #[clap(flatten)]
+        report: ReportOpts,
     },
 
     /// List tasks, optionally filtered by project and/or status

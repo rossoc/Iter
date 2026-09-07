@@ -11,8 +11,8 @@ mod tmux;
 mod yaml_edit;
 
 use args::{
-    Args, Command, InternalCommand, OrganizationCommand, ProjectCommand, SessionCommand,
-    TaskCommand,
+    Args, Command, InternalCommand, OrganizationCommand, ProjectCommand, ReportOpts,
+    SessionCommand, TaskCommand,
 };
 use chrono::{Local, NaiveDate};
 use clap::{CommandFactory, Parser};
@@ -22,9 +22,10 @@ use db::{Db, Repository};
 use error::{IterError, Result};
 use models::{Organization, Project, Session, SessionConfig, Task, TaskStatus};
 use reporting::{
-    DetailReport, MERGE_GAP_MINUTES, OrganizationReport, ProjectSummary, TaskEntry, TaskSummary,
-    WeekdayReport, concat_messages, format_detail_report, format_organization_report,
-    merged_total_minutes, minutes_to_hhmm, on_date, round_to_half_hour, weekday_averages,
+    DateRange, Header, MERGE_GAP_MINUTES, OrganizationInfo, ProjectInfo, ProjectReport, TaskInfo,
+    TaskReport, WeekdayReport, in_range, merged_total_minutes, minutes_to_hhmm,
+    render_organization_info, render_project_info, render_task_info, round_to_half_hour,
+    session_rows, settings_of, weekday_averages,
 };
 use std::process::ExitCode;
 
@@ -216,35 +217,73 @@ fn resolve_organization_or_current(db: &Db, name: Option<&str>) -> Result<Organi
     Repository::<Organization>::get(db, id)?.ok_or(IterError::OrphanProjectOrganization)
 }
 
-fn parse_date_filter(date_filter: Option<&str>, now: chrono::NaiveDateTime) -> Result<NaiveDate> {
-    match date_filter {
-        Some(d) => NaiveDate::parse_from_str(d, "%Y-%m-%d")
-            .map_err(|_| IterError::InvalidDate(d.to_string())),
-        None => Ok(now.date()),
-    }
+fn parse_day(value: &str) -> Result<NaiveDate> {
+    NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map_err(|_| IterError::InvalidDate(value.to_string()))
 }
 
-fn print_detail_report(
-    name: &str,
-    description: &str,
-    date: NaiveDate,
-    sessions: &[Session],
-    now: chrono::NaiveDateTime,
-    tasks: Option<Vec<TaskEntry>>,
-) {
-    let total_minutes = merged_total_minutes(sessions, now, MERGE_GAP_MINUTES);
-    let report = DetailReport {
-        name: name.to_string(),
-        description: Some(description.trim())
-            .filter(|d| !d.is_empty())
-            .map(str::to_string),
-        date: date.format("%Y-%m-%d").to_string(),
-        total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
-        total_hhmm: minutes_to_hhmm(total_minutes),
-        messages: concat_messages(sessions),
-        tasks,
+/// The days an `info` report covers. `--date` (or nothing at all) is a
+/// single day; `--from`/`--to` is an interval, with `--to` defaulting to
+/// today and `--from` to no lower bound at all. clap already rejects mixing
+/// the two formulations, so only one branch can apply.
+fn resolve_range(opts: &ReportOpts, now: chrono::NaiveDateTime) -> Result<DateRange> {
+    if opts.from.is_none() && opts.to.is_none() {
+        return Ok(DateRange::day(match &opts.date {
+            Some(date) => parse_day(date)?,
+            None => now.date(),
+        }));
+    }
+    let from = opts.from.as_deref().map(parse_day).transpose()?;
+    let to = match &opts.to {
+        Some(date) => parse_day(date)?,
+        None => now.date(),
     };
-    print!("{}", format_detail_report(&report));
+    if let Some(from) = from {
+        if from > to {
+            return Err(IterError::InvalidDateRange {
+                from: from.to_string(),
+                to: to.to_string(),
+            });
+        }
+    }
+    Ok(DateRange { from, to })
+}
+
+/// One `TaskReport` per task of `project_id` that had a session in `range`
+/// -- the per-task breakdown a project (or organization) report is built
+/// from. Tasks untouched in the period are left out; a task's sessions
+/// cover only the period, same as the report's own filter. Also hands back
+/// the union of every session it looked at, so the caller can total the
+/// project without asking the database twice.
+fn task_reports(
+    db: &Db,
+    project_id: i64,
+    range: DateRange,
+    now: chrono::NaiveDateTime,
+) -> Result<(Vec<TaskReport>, Vec<Session>)> {
+    let dated = range.single_day().is_none();
+    let mut reports = Vec::new();
+    let mut all = Vec::new();
+    for task in db.tasks_for_project(project_id)? {
+        let sessions = in_range(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, range);
+        if sessions.is_empty() {
+            continue;
+        }
+        let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
+        reports.push(TaskReport {
+            name: task.name,
+            status: task.status.as_str().to_string(),
+            status_label: task.status.label().to_string(),
+            total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
+            total_hhmm: minutes_to_hhmm(total_minutes),
+            description: Some(task.description.trim())
+                .filter(|d| !d.is_empty())
+                .map(str::to_string),
+            sessions: session_rows(&sessions, now, dated),
+        });
+        all.extend(sessions);
+    }
+    Ok((reports, all))
 }
 
 // ---- sessions: shared by manual start/stop and tmux hooks -----------------
@@ -454,7 +493,7 @@ fn dispatch_organization(action: &OrganizationCommand) -> Result<()> {
         OrganizationCommand::New => organization_new(),
         OrganizationCommand::Edit { name } => organization_edit(name.as_deref()),
         OrganizationCommand::Delete { name } => organization_delete(name.as_deref()),
-        OrganizationCommand::Info { name } => organization_info(name.as_deref()),
+        OrganizationCommand::Info { name, report } => organization_info(name.as_deref(), report),
         OrganizationCommand::List => organization_list(),
     }
 }
@@ -513,38 +552,53 @@ fn organization_delete(name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// The organization's roster: every project in it, and every one of those
-/// projects' tasks with its status. No dates, times or messages -- see
-/// `project info` / `task info` for those.
-fn organization_info(name: Option<&str>) -> Result<()> {
+/// The organization's report for a period: every project that was worked
+/// on in it, each project's tasks, and every session behind those -- hours,
+/// statuses and messages all the way down. A project (or task) with no
+/// session in the period is left out; `organization list` / `task list` are
+/// the place for the full roster.
+fn organization_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = open_db();
     let organization = resolve_organization_or_current(&db, name)?;
     let organization_id = organization.id.expect(ID_INVARIANT);
+    let now = Local::now().naive_local();
+    let range = resolve_range(opts, now)?;
 
     let mut projects = Vec::new();
+    let mut all_sessions = Vec::new();
     for project in db.projects_for_organization(organization_id)? {
-        let tasks = db
-            .tasks_for_project(project.id.expect(ID_INVARIANT))?
-            .into_iter()
-            .map(|task| TaskSummary {
-                name: task.name,
-                status: task.status.as_str().to_string(),
-            })
-            .collect();
-        projects.push(ProjectSummary {
+        let (tasks, sessions) =
+            task_reports(&db, project.id.expect(ID_INVARIANT), range, now)?;
+        if tasks.is_empty() {
+            continue;
+        }
+        let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
+        projects.push(ProjectReport {
             name: project.name,
+            total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
+            total_hhmm: minutes_to_hhmm(total_minutes),
+            description: Some(project.description.trim())
+                .filter(|d| !d.is_empty())
+                .map(str::to_string),
             tasks,
         });
+        all_sessions.extend(sessions);
     }
 
-    let report = OrganizationReport {
-        name: organization.name,
-        description: Some(organization.description.trim())
-            .filter(|d| !d.is_empty())
-            .map(str::to_string),
+    // The union across every project, so an hour spent switching between
+    // two of them isn't counted twice at the organization level either.
+    let total_minutes = merged_total_minutes(&all_sessions, now, MERGE_GAP_MINUTES);
+    let info = OrganizationInfo {
+        header: Header::new(
+            organization.name.clone(),
+            &organization.description,
+            settings_of(&organization)?,
+            range,
+            total_minutes,
+        ),
         projects,
     };
-    print!("{}", format_organization_report(&report));
+    print!("{}", render_organization_info(&info, opts.format)?);
     Ok(())
 }
 
@@ -567,7 +621,7 @@ fn dispatch_project(action: &ProjectCommand) -> Result<()> {
             project_edit(name.as_deref(), organization.as_deref())
         }
         ProjectCommand::Delete { name } => project_delete(name.as_deref()),
-        ProjectCommand::Info { name, date } => project_info(name.as_deref(), date.as_deref()),
+        ProjectCommand::Info { name, report } => project_info(name.as_deref(), report),
         ProjectCommand::List => project_list(),
     }
 }
@@ -627,47 +681,30 @@ fn project_delete(name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// One `TaskEntry` per task of `project_id` that had a session on `date` --
-/// the `tasks:` breakdown in a project's `info` report. Tasks untouched
-/// that day are left out; a task's `messages` covers only that day's
-/// sessions, same as the report's own date filter.
-fn project_task_entries(db: &Db, project_id: i64, date: NaiveDate) -> Result<Vec<TaskEntry>> {
-    let mut entries = Vec::new();
-    for task in db.tasks_for_project(project_id)? {
-        let sessions = on_date(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, date);
-        if sessions.is_empty() {
-            continue;
-        }
-        entries.push(TaskEntry {
-            name: task.name,
-            status: task.status.as_str().to_string(),
-            messages: concat_messages(&sessions),
-        });
-    }
-    Ok(entries)
-}
-
-fn project_info(name: Option<&str>, date_filter: Option<&str>) -> Result<()> {
+fn project_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = open_db();
     let project = resolve_project_or_current(&db, name)?;
     let project_id = project.id.expect(ID_INVARIANT);
     let now = Local::now().naive_local();
-    let date = parse_date_filter(date_filter, now)?;
+    let range = resolve_range(opts, now)?;
 
-    // The union of every task's sessions that day -- this is what makes
-    // working two of the project's tasks in parallel not double-count.
-    let sessions = on_date(db.sessions_for_project(project_id)?, date);
+    // The union of every task's sessions in the period -- this is what
+    // makes working two of the project's tasks in parallel not
+    // double-count.
+    let (tasks, sessions) = task_reports(&db, project_id, range, now)?;
+    let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
 
-    let tasks = project_task_entries(&db, project_id, date)?;
-
-    print_detail_report(
-        &project.name,
-        &project.description,
-        date,
-        &sessions,
-        now,
-        Some(tasks),
-    );
+    let info = ProjectInfo {
+        header: Header::new(
+            project.name.clone(),
+            &project.description,
+            settings_of(&project)?,
+            range,
+            total_minutes,
+        ),
+        tasks,
+    };
+    print!("{}", render_project_info(&info, opts.format)?);
     Ok(())
 }
 
@@ -688,7 +725,7 @@ fn dispatch_task(action: &TaskCommand) -> Result<()> {
         TaskCommand::New { project, issue } => task_new(project.as_deref(), *issue),
         TaskCommand::Edit { task } => task_edit(task.as_deref()),
         TaskCommand::Delete { task } => task_delete(task.as_deref()),
-        TaskCommand::Info { task, date } => task_info(task.as_deref(), date.as_deref()),
+        TaskCommand::Info { task, report } => task_info(task.as_deref(), report),
         TaskCommand::List { project, status } => task_list(project.as_deref(), status.as_deref()),
         TaskCommand::Done { task } => task_done(task.as_deref()),
         TaskCommand::Weekday { task } => task_weekday(task.as_deref()),
@@ -762,14 +799,25 @@ fn task_delete(task_ref: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-fn task_info(task_ref: Option<&str>, date_filter: Option<&str>) -> Result<()> {
+fn task_info(task_ref: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
     let now = Local::now().naive_local();
-    let date = parse_date_filter(date_filter, now)?;
-    let sessions = on_date(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, date);
-    let display = format!("{}/{}", project.name, task.name);
-    print_detail_report(&display, &task.description, date, &sessions, now, None);
+    let range = resolve_range(opts, now)?;
+    let sessions = in_range(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, range);
+    let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
+
+    let info = TaskInfo {
+        header: Header::new(
+            format!("{}/{}", project.name, task.name),
+            &task.description,
+            settings_of(&task)?,
+            range,
+            total_minutes,
+        ),
+        sessions: session_rows(&sessions, now, range.single_day().is_none()),
+    };
+    print!("{}", render_task_info(&info, opts.format)?);
     Ok(())
 }
 

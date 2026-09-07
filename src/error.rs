@@ -38,8 +38,11 @@ pub enum IterError {
     #[error("expected <project>/<task>, got '{0}'")]
     InvalidTaskRef(String),
 
-    #[error("invalid --date value '{0}', expected YYYY-MM-DD")]
+    #[error("invalid date value '{0}', expected YYYY-MM-DD")]
     InvalidDate(String),
+
+    #[error("--from {from} is after --to {to}")]
+    InvalidDateRange { from: String, to: String },
 
     #[error("invalid status '{0}', expected queue, wip, or done")]
     InvalidStatus(String),
