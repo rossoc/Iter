@@ -10,18 +10,21 @@ mod scaffold;
 mod tmux;
 mod yaml_edit;
 
-use args::{Args, Command, InternalCommand, ProjectCommand, SessionCommand, TaskCommand};
+use args::{
+    Args, Command, InternalCommand, OrganizationCommand, ProjectCommand, SessionCommand,
+    TaskCommand,
+};
 use chrono::{Local, NaiveDate};
 use clap::{CommandFactory, Parser};
 use clap_complete::engine::CompletionCandidate;
 use clap_complete::env::CompleteEnv;
 use db::{Db, Repository};
 use error::{IterError, Result};
-use models::{Project, Session, SessionConfig, Task, TaskStatus};
+use models::{Organization, Project, Session, SessionConfig, Task, TaskStatus};
 use reporting::{
-    DetailReport, MERGE_GAP_MINUTES, TaskEntry, WeekdayReport, concat_messages,
-    format_detail_report, merged_total_minutes, minutes_to_hhmm, on_date, round_to_half_hour,
-    weekday_averages,
+    DetailReport, MERGE_GAP_MINUTES, OrganizationReport, ProjectSummary, TaskEntry, TaskSummary,
+    WeekdayReport, concat_messages, format_detail_report, format_organization_report,
+    merged_total_minutes, minutes_to_hhmm, on_date, round_to_half_hour, weekday_averages,
 };
 use std::process::ExitCode;
 
@@ -43,9 +46,13 @@ fn main() -> ExitCode {
     let args = Args::parse();
 
     let result = match &args.command {
-        Command::Init => init_cmd(),
-        Command::New { path } => new_cmd(path),
-        Command::Clone { source } => clone_cmd(source),
+        Command::Init { organization } => init_cmd(organization.as_deref()),
+        Command::New { path, organization } => new_cmd(path, organization.as_deref()),
+        Command::Clone {
+            source,
+            organization,
+        } => clone_cmd(source, organization.as_deref()),
+        Command::Organization { action } => dispatch_organization(action),
         Command::Project { action } => dispatch_project(action),
         Command::Task { action } => dispatch_task(action),
         Command::Session { action } => dispatch_session(action),
@@ -88,6 +95,23 @@ pub(crate) fn project_completer(current: &std::ffi::OsStr) -> Vec<CompletionCand
     projects
         .into_iter()
         .map(|p| p.name)
+        .filter(|n| n.starts_with(current))
+        .map(CompletionCandidate::new)
+        .collect()
+}
+
+/// Dynamic completer for arguments naming an organization.
+pub(crate) fn organization_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+    let Some(current) = current.to_str() else {
+        return Vec::new();
+    };
+    let db = open_db();
+    let Ok(organizations) = Repository::<Organization>::list(&db) else {
+        return Vec::new();
+    };
+    organizations
+        .into_iter()
+        .map(|o| o.name)
         .filter(|n| n.starts_with(current))
         .map(CompletionCandidate::new)
         .collect()
@@ -170,6 +194,26 @@ fn resolve_project_or_current(db: &Db, name: Option<&str>) -> Result<Project> {
             .ok_or_else(|| IterError::ProjectNotFound(n.to_string())),
         None => current_session_task(db).map(|(project, _)| project),
     }
+}
+
+fn resolve_organization(db: &Db, name: &str) -> Result<Organization> {
+    db.find_organization_by_name(name)?
+        .ok_or_else(|| IterError::OrganizationNotFound(name.to_string()))
+}
+
+/// Resolves an explicit organization name, or -- when none is given -- the
+/// organization of the tmux session's project. Erroring when that project
+/// belongs to none is deliberate: there's no sensible "current"
+/// organization to fall back to, and membership is optional by design.
+fn resolve_organization_or_current(db: &Db, name: Option<&str>) -> Result<Organization> {
+    if let Some(name) = name {
+        return resolve_organization(db, name);
+    }
+    let project = current_session_task(db)?.0;
+    let id = project
+        .organization_id
+        .ok_or_else(|| IterError::ProjectHasNoOrganization(project.name.clone()))?;
+    Repository::<Organization>::get(db, id)?.ok_or(IterError::OrphanProjectOrganization)
 }
 
 fn parse_date_filter(date_filter: Option<&str>, now: chrono::NaiveDateTime) -> Result<NaiveDate> {
@@ -271,14 +315,15 @@ fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionC
 /// project and returns `true`. Returns `false` (having printed a
 /// "no changes" message) if the user quit without saving -- the shared
 /// tail of `project new`, `iter init`, and `iter new`.
-fn create_project_interactively(template: Project) -> Result<bool> {
+fn create_project_interactively(db: &Db, template: Project) -> Result<bool> {
+    let organization_id = template.organization_id;
     match yaml_edit::edit_in_nvim(&template)? {
-        Some(project) => {
+        Some(mut project) => {
             if project.name.trim().is_empty() {
                 return Err(IterError::EmptyProjectName);
             }
-            let db = open_db();
-            Repository::<Project>::insert(&db, &project)?;
+            project.organization_id = organization_id; // never carried through the YAML
+            Repository::<Project>::insert(db, &project)?;
             println!("created project '{}'", project.name);
             Ok(true)
         }
@@ -289,26 +334,41 @@ fn create_project_interactively(template: Project) -> Result<bool> {
     }
 }
 
-fn init_cmd() -> Result<()> {
-    let base_path = scaffold::absolute_path(".")?;
+/// A blank project template, seeded with `organization`'s defaults when one
+/// was named. With none, the project keeps `Project::template`'s own
+/// defaults -- belonging to an organization is optional throughout.
+fn new_project_template(db: &Db, organization: Option<&str>) -> Result<Project> {
     let mut template = Project::template();
+    if let Some(name) = organization {
+        template.inherit_from(&resolve_organization(db, name)?);
+    }
+    Ok(template)
+}
+
+fn init_cmd(organization: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let base_path = scaffold::absolute_path(".")?;
+    let mut template = new_project_template(&db, organization)?;
+    // Detected from disk, so it wins over an inherited default: an
+    // organization saying "github" can't make a non-repo into one.
     template.github = git::is_git_repo(&base_path);
     template.base_path = base_path;
-    create_project_interactively(template)?;
+    create_project_interactively(&db, template)?;
     Ok(())
 }
 
-fn new_cmd(path: &str) -> Result<()> {
+fn new_cmd(path: &str, organization: Option<&str>) -> Result<()> {
+    let db = open_db();
     let base_path = scaffold::absolute_path(path)?;
     std::fs::create_dir_all(&base_path)?;
 
-    let mut template = Project::template();
+    let mut template = new_project_template(&db, organization)?;
     template.name = scaffold::dir_name(&base_path);
     template.github = git::is_git_repo(&base_path);
     template.base_path = base_path.clone();
 
     // If the user quits without saving, don't leave an empty folder behind.
-    if !create_project_interactively(template)? {
+    if !create_project_interactively(&db, template)? {
         scaffold::remove_dir_if_empty(&base_path);
     }
     Ok(())
@@ -317,7 +377,7 @@ fn new_cmd(path: &str) -> Result<()> {
 /// `iter clone <source>`: clones an existing local project as a template
 /// when `source` names one, and otherwise treats `source` as a git remote
 /// URL / local repo path and clones that.
-fn clone_cmd(source: &str) -> Result<()> {
+fn clone_cmd(source: &str, organization: Option<&str>) -> Result<()> {
     let db = open_db();
     match db.find_project_by_name(source)? {
         // Pre-fill from the source project -- including its name,
@@ -329,6 +389,12 @@ fn clone_cmd(source: &str) -> Result<()> {
             let mut template = source_project.clone();
             template.id = None;
             template.base_path = String::new();
+            // Cloning a project means keeping *its* settings, so an
+            // `--organization` here only changes which organization the
+            // copy belongs to -- it doesn't re-seed the defaults.
+            if let Some(name) = organization {
+                template.organization_id = resolve_organization(&db, name)?.id;
+            }
             let files_from = source_project.base_path.clone();
             clone_into(&db, &template, &source_project.name, |dest| {
                 std::fs::create_dir_all(dest)?;
@@ -340,8 +406,8 @@ fn clone_cmd(source: &str) -> Result<()> {
         }
         // `git clone` creates the destination directory itself.
         None => {
-            let mut template = Project::template();
-            template.github = true;
+            let mut template = new_project_template(&db, organization)?;
+            template.github = true; // it is a repo, by construction
             clone_into(&db, &template, source, |dest| git::clone_repo(source, dest))
         }
     }
@@ -362,6 +428,7 @@ fn clone_into(
         println!("no changes -- project not created");
         return Ok(());
     };
+    project.organization_id = template.organization_id; // never carried through the YAML
     if project.name.trim().is_empty() {
         return Err(IterError::EmptyProjectName);
     }
@@ -380,29 +447,151 @@ fn clone_into(
     Ok(())
 }
 
+// ---- organization ----------------------------------------------------
+
+fn dispatch_organization(action: &OrganizationCommand) -> Result<()> {
+    match action {
+        OrganizationCommand::New => organization_new(),
+        OrganizationCommand::Edit { name } => organization_edit(name.as_deref()),
+        OrganizationCommand::Delete { name } => organization_delete(name.as_deref()),
+        OrganizationCommand::Info { name } => organization_info(name.as_deref()),
+        OrganizationCommand::List => organization_list(),
+    }
+}
+
+fn organization_new() -> Result<()> {
+    let db = open_db();
+    match yaml_edit::edit_in_nvim(&Organization::template())? {
+        Some(organization) => {
+            if organization.name.trim().is_empty() {
+                return Err(IterError::EmptyOrganizationName);
+            }
+            Repository::<Organization>::insert(&db, &organization)?;
+            println!("created organization '{}'", organization.name);
+        }
+        None => println!("no changes -- organization not created"),
+    }
+    Ok(())
+}
+
+fn organization_edit(name: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let existing = resolve_organization_or_current(&db, name)?;
+    let id = existing.id.expect(ID_INVARIANT);
+    match yaml_edit::edit_in_nvim(&existing)? {
+        Some(organization) => {
+            Repository::<Organization>::update(&db, id, &organization)?;
+            println!("updated organization '{}'", organization.name);
+        }
+        None => println!("no changes -- organization not updated"),
+    }
+    Ok(())
+}
+
+/// Deletes the organization row only. Its projects survive -- the schema's
+/// `ON DELETE SET NULL` just clears their `organization_id`, leaving them in
+/// the state any project without an organization is already in.
+fn organization_delete(name: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let organization = resolve_organization_or_current(&db, name)?;
+    let id = organization.id.expect(ID_INVARIANT);
+    let kept = db.projects_for_organization(id)?.len();
+
+    Repository::<Organization>::delete(&db, id)?;
+
+    match kept {
+        0 => println!("deleted organization '{}'", organization.name),
+        1 => println!(
+            "deleted organization '{}' -- 1 project kept, now without an organization",
+            organization.name
+        ),
+        n => println!(
+            "deleted organization '{}' -- {n} projects kept, now without an organization",
+            organization.name
+        ),
+    }
+    Ok(())
+}
+
+/// The organization's roster: every project in it, and every one of those
+/// projects' tasks with its status. No dates, times or messages -- see
+/// `project info` / `task info` for those.
+fn organization_info(name: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let organization = resolve_organization_or_current(&db, name)?;
+    let organization_id = organization.id.expect(ID_INVARIANT);
+
+    let mut projects = Vec::new();
+    for project in db.projects_for_organization(organization_id)? {
+        let tasks = db
+            .tasks_for_project(project.id.expect(ID_INVARIANT))?
+            .into_iter()
+            .map(|task| TaskSummary {
+                name: task.name,
+                status: task.status.as_str().to_string(),
+            })
+            .collect();
+        projects.push(ProjectSummary {
+            name: project.name,
+            tasks,
+        });
+    }
+
+    let report = OrganizationReport {
+        name: organization.name,
+        description: Some(organization.description.trim())
+            .filter(|d| !d.is_empty())
+            .map(str::to_string),
+        projects,
+    };
+    print!("{}", format_organization_report(&report));
+    Ok(())
+}
+
+fn organization_list() -> Result<()> {
+    let db = open_db();
+    let names: Vec<String> = Repository::<Organization>::list(&db)?
+        .into_iter()
+        .map(|o| o.name)
+        .collect();
+    print!("{}", serde_yaml::to_string(&names)?);
+    Ok(())
+}
+
 // ---- project ---------------------------------------------------------
 
 fn dispatch_project(action: &ProjectCommand) -> Result<()> {
     match action {
-        ProjectCommand::New => project_new(),
-        ProjectCommand::Edit { name } => project_edit(name.as_deref()),
+        ProjectCommand::New { organization } => project_new(organization.as_deref()),
+        ProjectCommand::Edit { name, organization } => {
+            project_edit(name.as_deref(), organization.as_deref())
+        }
         ProjectCommand::Delete { name } => project_delete(name.as_deref()),
         ProjectCommand::Info { name, date } => project_info(name.as_deref(), date.as_deref()),
         ProjectCommand::List => project_list(),
     }
 }
 
-fn project_new() -> Result<()> {
-    create_project_interactively(Project::template())?;
+fn project_new(organization: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let template = new_project_template(&db, organization)?;
+    create_project_interactively(&db, template)?;
     Ok(())
 }
 
-fn project_edit(name: Option<&str>) -> Result<()> {
+fn project_edit(name: Option<&str>, organization: Option<&str>) -> Result<()> {
     let db = open_db();
     let existing = resolve_project_or_current(&db, name)?;
     let id = existing.id.expect(ID_INVARIANT);
+    // `--organization` moves the project; without it, membership (or the
+    // lack of it) is carried through untouched.
+    let organization_id = match organization {
+        Some(name) => resolve_organization(&db, name)?.id,
+        None => existing.organization_id,
+    };
     match yaml_edit::edit_in_nvim(&existing)? {
-        Some(project) => {
+        Some(mut project) => {
+            project.organization_id = organization_id;
             Repository::<Project>::update(&db, id, &project)?;
             println!("updated project '{}'", project.name);
         }

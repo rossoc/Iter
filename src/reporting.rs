@@ -199,6 +199,63 @@ pub fn format_detail_report(report: &DetailReport) -> String {
     out
 }
 
+/// One task's line in an organization report: just its name and status.
+#[derive(Debug)]
+pub struct TaskSummary {
+    pub name: String,
+    pub status: String,
+}
+
+/// One project's block in an organization report: the project's name and
+/// every one of its tasks.
+#[derive(Debug)]
+pub struct ProjectSummary {
+    pub name: String,
+    pub tasks: Vec<TaskSummary>,
+}
+
+/// An organization at a glance: every project in it, and the status of each
+/// of those projects' tasks. Deliberately carries no times and no messages
+/// -- it's a roster of what exists and where it stands, not a time sheet;
+/// `project info` and `task info` remain the place for a day's hours.
+#[derive(Debug, Serialize)]
+pub struct OrganizationReport {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Rendered by hand after serde_yaml's output, like `DetailReport`'s
+    /// `tasks`: the nested project/task tree isn't a YAML shape.
+    #[serde(skip)]
+    pub projects: Vec<ProjectSummary>,
+}
+
+/// Renders `report` as its header followed by the project/task tree:
+///
+/// ```text
+/// projects:
+/// - a-project
+///     - a-task: wip
+/// ```
+///
+/// The header goes through serde_yaml (so a multi-line description is
+/// quoted correctly); the tree is written by hand, since its indentation
+/// isn't valid YAML nesting.
+pub fn format_organization_report(report: &OrganizationReport) -> String {
+    let mut out = serde_yaml::to_string(report).expect("yaml serialization failed");
+    if report.projects.is_empty() {
+        out.push_str("projects: []\n");
+        return out;
+    }
+    out.push_str("projects:\n");
+    for project in &report.projects {
+        out.push_str(&format!("- {}\n", project.name));
+        for task in &project.tasks {
+            out.push_str(&format!("    - {}: {}\n", task.name, task.status));
+        }
+    }
+    out
+}
+
 #[derive(Debug, Serialize)]
 pub struct WeekdayReport {
     pub name: String,
@@ -433,6 +490,63 @@ mod tests {
             "name: proj\ndate: 2026-09-04\ntotal_hours: 1.5\ntotal_hhmm: 01:30\n\
              tasks:\n- task1: wip\n  messages:\n  - message1\n  - message2\n- task2: done\n"
         );
+    }
+
+    fn summary(name: &str, tasks: &[(&str, &str)]) -> ProjectSummary {
+        ProjectSummary {
+            name: name.to_string(),
+            tasks: tasks
+                .iter()
+                .map(|(name, status)| TaskSummary {
+                    name: name.to_string(),
+                    status: status.to_string(),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn organization_report_nests_tasks_under_their_project() {
+        let report = OrganizationReport {
+            name: "acme".to_string(),
+            description: None,
+            projects: vec![
+                summary("alpha", &[("one", "wip"), ("two", "done")]),
+                summary("beta", &[("three", "queue")]),
+            ],
+        };
+        assert_eq!(
+            format_organization_report(&report),
+            "name: acme\n\
+             projects:\n\
+             - alpha\n\
+             \x20   - one: wip\n\
+             \x20   - two: done\n\
+             - beta\n\
+             \x20   - three: queue\n"
+        );
+    }
+
+    #[test]
+    fn organization_report_lists_a_project_with_no_tasks() {
+        let report = OrganizationReport {
+            name: "acme".to_string(),
+            description: None,
+            projects: vec![summary("empty", &[])],
+        };
+        assert!(format_organization_report(&report).ends_with("projects:\n- empty\n"));
+    }
+
+    #[test]
+    fn organization_report_with_no_projects_is_an_empty_list() {
+        let report = OrganizationReport {
+            name: "acme".to_string(),
+            description: Some("notes".to_string()),
+            projects: Vec::new(),
+        };
+        let out = format_organization_report(&report);
+        assert!(out.contains("description: notes\n"), "{out}");
+        assert!(out.ends_with("projects: []\n"), "{out}");
     }
 
     #[test]

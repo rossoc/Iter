@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::{Project, Session, SessionConfig, Task, TaskStatus};
+use crate::models::{Organization, Project, Session, SessionConfig, Task, TaskStatus};
 use chrono::NaiveDateTime;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
@@ -129,8 +129,18 @@ impl Db {
     fn migrate(&self) -> Result<()> {
         self.rename_legacy_tables()?;
         self.conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS projects (
+            "CREATE TABLE IF NOT EXISTS organizations (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                name            TEXT NOT NULL UNIQUE,
+                description     TEXT NOT NULL DEFAULT '',
+                github          INTEGER NOT NULL DEFAULT 0,
+                tmux            INTEGER NOT NULL DEFAULT 1,
+                auto_branch     INTEGER NOT NULL DEFAULT 1,
+                branch_template TEXT NOT NULL DEFAULT 'feat/{task}'
+             );
+             CREATE TABLE IF NOT EXISTS projects (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
                 name            TEXT NOT NULL UNIQUE,
                 description     TEXT NOT NULL DEFAULT '',
                 base_path       TEXT NOT NULL,
@@ -163,7 +173,37 @@ impl Db {
                 message TEXT
              );",
         )?;
+        self.add_organization_id_to_projects()?;
         Ok(())
+    }
+
+    /// `projects.organization_id` post-dates the original schema, so a
+    /// database created before organizations existed still has a `projects`
+    /// table without it -- and `CREATE TABLE IF NOT EXISTS` above leaves
+    /// that table exactly as it found it. Adding the column is a no-op once
+    /// applied, and on a freshly created database that already has it.
+    ///
+    /// `ON DELETE SET NULL`, not `CASCADE`: an organization is a grouping,
+    /// so deleting one must not take its projects -- and every task and
+    /// session under them -- down with it. They simply stop belonging to
+    /// one, which is a state every project is already allowed to be in.
+    fn add_organization_id_to_projects(&self) -> Result<()> {
+        if self.column_exists("projects", "organization_id")? {
+            return Ok(());
+        }
+        self.conn.execute_batch(
+            "ALTER TABLE projects ADD COLUMN organization_id INTEGER
+             REFERENCES organizations(id) ON DELETE SET NULL;",
+        )?;
+        Ok(())
+    }
+
+    fn column_exists(&self, table: &str, column: &str) -> Result<bool> {
+        let mut stmt = self.conn.prepare(&format!("PRAGMA table_info({table})"))?;
+        let names = stmt
+            .query_map([], |row| row.get::<_, String>(1))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(names.iter().any(|name| name == column))
     }
 
     /// One-time rename from the pre-rename schema (`Session`/`Record`
@@ -221,6 +261,19 @@ impl Db {
 
     pub fn find_project_by_name(&self, name: &str) -> Result<Option<Project>> {
         self.find_one("WHERE name = ?1", params![name])
+    }
+
+    pub fn find_organization_by_name(&self, name: &str) -> Result<Option<Organization>> {
+        self.find_one("WHERE name = ?1", params![name])
+    }
+
+    /// Every project belonging to `organization_id`, in name order -- the
+    /// roster an organization report walks.
+    pub fn projects_for_organization(&self, organization_id: i64) -> Result<Vec<Project>> {
+        self.find_all(
+            "WHERE organization_id = ?1 ORDER BY name",
+            params![organization_id],
+        )
     }
 
     pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
@@ -393,6 +446,7 @@ mod tests {
     fn project(name: &str) -> Project {
         Project {
             id: None,
+            organization_id: None,
             name: name.to_string(),
             description: "notes".to_string(),
             base_path: format!("/tmp/{name}"),
@@ -439,6 +493,20 @@ mod tests {
         );
     }
 
+    #[test]
+    fn organization_statements_carry_the_downstream_defaults() {
+        assert_eq!(
+            insert_sql::<Organization>(),
+            "INSERT INTO organizations (name, description, github, tmux, auto_branch, \
+             branch_template) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+        );
+        assert_eq!(
+            select_sql::<Organization>("WHERE name = ?1"),
+            "SELECT id, name, description, github, tmux, auto_branch, branch_template \
+             FROM organizations WHERE name = ?1"
+        );
+    }
+
     /// Every column a struct declares must actually exist in the migrated
     /// schema. This is the guard that `#[derive(Table)]` needs: because the
     /// derive takes the columns straight off the struct's fields, adding a
@@ -478,6 +546,7 @@ mod tests {
             }
         }
 
+        check::<Organization>(&db);
         check::<Project>(&db);
         check::<Task>(&db);
         check::<SessionConfig>(&db);
@@ -499,6 +568,7 @@ mod tests {
             );
         }
         check(&project("alpha"));
+        check(&Organization::template());
         check(&Task {
             id: None,
             project_id: 1,
@@ -556,6 +626,7 @@ mod tests {
                 "DROP TABLE projects;
                  CREATE TABLE projects (
                     id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
                     name            TEXT NOT NULL UNIQUE,
                     description     TEXT NOT NULL DEFAULT '',
                     base_path       TEXT NOT NULL,
@@ -807,6 +878,129 @@ mod tests {
         assert_eq!(task_ids, [one, two]);
 
         assert_eq!(db.sessions_for_task(one).expect("lookup succeeds").len(), 1);
+    }
+
+    fn insert_organization(db: &Db, name: &str) -> i64 {
+        let mut organization = Organization::template();
+        organization.name = name.to_string();
+        organization.github = true;
+        organization.tmux = false;
+        organization.branch_template = "chore/{task}".to_string();
+        Repository::<Organization>::insert(db, &organization).expect("organization inserts")
+    }
+
+    #[test]
+    fn organization_round_trips_its_downstream_defaults() {
+        let db = db();
+        let id = insert_organization(&db, "acme");
+        let loaded = Repository::<Organization>::get(&db, id)
+            .expect("get succeeds")
+            .expect("the row just inserted exists");
+        assert_eq!(loaded.name, "acme");
+        assert!(loaded.github);
+        assert!(!loaded.tmux);
+        assert!(loaded.auto_branch);
+        assert_eq!(loaded.branch_template, "chore/{task}");
+    }
+
+    #[test]
+    fn a_project_may_belong_to_an_organization_or_to_none() {
+        let db = db();
+        let organization = insert_organization(&db, "acme");
+
+        let mut member = project("member");
+        member.organization_id = Some(organization);
+        let member_id = Repository::<Project>::insert(&db, &member).expect("project inserts");
+        let loner_id = insert_project(&db, "loner");
+
+        assert_eq!(
+            Repository::<Project>::get(&db, member_id)
+                .expect("get succeeds")
+                .expect("row exists")
+                .organization_id,
+            Some(organization)
+        );
+        assert_eq!(
+            Repository::<Project>::get(&db, loner_id)
+                .expect("get succeeds")
+                .expect("row exists")
+                .organization_id,
+            None,
+            "a project without an organization must round-trip as NULL"
+        );
+
+        let roster: Vec<String> = db
+            .projects_for_organization(organization)
+            .expect("roster loads")
+            .into_iter()
+            .map(|p| p.name)
+            .collect();
+        assert_eq!(roster, ["member"], "only members are in the roster");
+    }
+
+    /// The guarantee that makes organizations safe to delete: the projects
+    /// (and so every task and session under them) survive, merely stopping
+    /// being members.
+    #[test]
+    fn deleting_an_organization_keeps_its_projects() {
+        let db = db();
+        let organization = insert_organization(&db, "acme");
+        let mut member = project("member");
+        member.organization_id = Some(organization);
+        let project_id = Repository::<Project>::insert(&db, &member).expect("project inserts");
+        let task_id = insert_task(&db, project_id, "build it");
+
+        Repository::<Organization>::delete(&db, organization).expect("delete succeeds");
+
+        let loaded = Repository::<Project>::get(&db, project_id)
+            .expect("get succeeds")
+            .expect("the project outlives its organization");
+        assert_eq!(loaded.organization_id, None);
+        assert_eq!(
+            db.tasks_for_project(project_id)
+                .expect("tasks load")
+                .first()
+                .map(|t| t.id),
+            Some(Some(task_id)),
+            "the project's tasks must survive too"
+        );
+    }
+
+    /// A database written before organizations existed has a `projects`
+    /// table with no `organization_id`, and `CREATE TABLE IF NOT EXISTS`
+    /// won't add it -- so `migrate` has to.
+    #[test]
+    fn an_older_database_gains_the_organization_column() {
+        let db = db();
+        db.conn
+            .execute_batch(
+                "DROP TABLE projects;
+                 CREATE TABLE projects (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name            TEXT NOT NULL UNIQUE,
+                    description     TEXT NOT NULL DEFAULT '',
+                    base_path       TEXT NOT NULL,
+                    github          INTEGER NOT NULL DEFAULT 0,
+                    tmux            INTEGER NOT NULL DEFAULT 1,
+                    auto_branch     INTEGER NOT NULL DEFAULT 1,
+                    branch_template TEXT NOT NULL DEFAULT 'feat/{task}'
+                 );",
+            )
+            .expect("pre-organization schema is created");
+        assert!(!db.column_exists("projects", "organization_id").unwrap());
+
+        db.migrate().expect("migration succeeds");
+
+        assert!(db.column_exists("projects", "organization_id").unwrap());
+        // ...and the column is usable, defaulting to "no organization".
+        let id = insert_project(&db, "legacy");
+        assert_eq!(
+            Repository::<Project>::get(&db, id)
+                .expect("get succeeds")
+                .expect("row exists")
+                .organization_id,
+            None
+        );
     }
 
     #[test]

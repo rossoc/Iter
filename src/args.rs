@@ -1,4 +1,4 @@
-use crate::{project_completer, task_completer};
+use crate::{organization_completer, project_completer, task_completer};
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
 
@@ -13,12 +13,26 @@ pub struct Args {
 #[derive(clap::Subcommand, Debug)]
 pub enum Command {
     /// Create a project from the current directory (cwd becomes base_path)
-    Init,
+    Init {
+        /// Organization to put the project in; its settings become the
+        /// project's starting defaults (optional -- a project need not
+        /// belong to one)
+        #[clap(long = "organization", short = 'o',
+               add = ArgValueCompleter::new(organization_completer))]
+        organization: Option<String>,
+    },
 
     /// Create a project from scratch in a new folder
     New {
         /// Directory to create; becomes the project's base_path
         path: String,
+
+        /// Organization to put the project in; its settings become the
+        /// project's starting defaults (optional -- a project need not
+        /// belong to one)
+        #[clap(long = "organization", short = 'o',
+               add = ArgValueCompleter::new(organization_completer))]
+        organization: Option<String>,
     },
 
     /// Create a project from a template project (copies its fields) or a
@@ -28,6 +42,20 @@ pub enum Command {
         /// path if no such project exists
         #[arg(add = ArgValueCompleter::new(project_completer))]
         source: String,
+
+        /// Organization to put the project in; its settings become the
+        /// project's starting defaults (optional -- a project need not
+        /// belong to one)
+        #[clap(long = "organization", short = 'o',
+               add = ArgValueCompleter::new(organization_completer))]
+        organization: Option<String>,
+    },
+
+    /// Manage organizations: groups of projects that share defaults
+    #[clap(visible_alias = "org")]
+    Organization {
+        #[clap(subcommand)]
+        action: OrganizationCommand,
     },
 
     /// Manage projects
@@ -74,13 +102,26 @@ pub enum Command {
 #[derive(clap::Subcommand, Debug)]
 pub enum ProjectCommand {
     /// Open a blank project in nvim; saving & quitting creates it
-    New,
+    New {
+        /// Organization to put the project in; its settings become the
+        /// project's starting defaults (optional -- a project need not
+        /// belong to one)
+        #[clap(long = "organization", short = 'o',
+               add = ArgValueCompleter::new(organization_completer))]
+        organization: Option<String>,
+    },
 
     /// Edit an existing project in nvim; saving & quitting updates it
     Edit {
         /// Default: the project of the tmux session you're in
         #[arg(add = ArgValueCompleter::new(project_completer))]
         name: Option<String>,
+
+        /// Move the project into this organization (its current
+        /// organization, if any, is kept when this isn't given)
+        #[clap(long = "organization", short = 'o',
+               add = ArgValueCompleter::new(organization_completer))]
+        organization: Option<String>,
     },
 
     /// Delete a project (and its tasks, session-configs and sessions)
@@ -101,6 +142,37 @@ pub enum ProjectCommand {
     },
 
     /// List every project
+    List,
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum OrganizationCommand {
+    /// Open a blank organization in nvim; saving & quitting creates it
+    New,
+
+    /// Edit an existing organization in nvim; saving & quitting updates it
+    Edit {
+        /// Default: the organization of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(organization_completer))]
+        name: Option<String>,
+    },
+
+    /// Delete an organization; its projects are kept, no longer in one
+    Delete {
+        /// Default: the organization of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(organization_completer))]
+        name: Option<String>,
+    },
+
+    /// Every project in the organization, with each project's tasks and
+    /// their status
+    Info {
+        /// Default: the organization of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(organization_completer))]
+        name: Option<String>,
+    },
+
+    /// List every organization
     List,
 }
 

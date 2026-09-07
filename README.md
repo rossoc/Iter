@@ -3,6 +3,11 @@
 A CLI for tracking time across **projects** and **tasks**, with optional
 tmux + GitHub integration.
 
+- An **organization** is a group of projects that share defaults. It has no
+  base_path of its own -- it isn't a place on disk, just a roster and the
+  settings (`github`, `tmux`, `auto_branch`, `branch_template`) that new
+  projects in it start from. Belonging to one is optional: a project without
+  an organization behaves exactly as it always has.
 - A **project** is a base directory of work (optionally a git/GitHub repo).
 - A **task** is a unit of work under a project, with a status
   (`queue` / `wip` / `done`) and, optionally, a linked GitHub issue.
@@ -21,15 +26,23 @@ tmux + GitHub integration.
 ## Usage
 
 ```sh
-# creating projects
+# creating projects  (--organization/-o is optional on all of these)
 iter init                           # cwd becomes base_path; opens in nvim to name it
 iter new some/path                  # creates the folder; base_path=that path, opened in nvim
 iter clone myproj-template new-app  # copies myproj-template's fields + files (not .git/tasks/sessions)
 iter clone git@github.com:me/repo   # or a git/GitHub URL (or local repo path) if no such project exists
+iter init -o acme                   # ...and start from organization `acme`'s defaults
+
+# organizations  (alias: `iter org`)
+iter organization new               # opens a blank organization in nvim; save & quit to create it
+iter organization edit acme
+iter organization delete acme       # deletes only the grouping; its projects are kept
+iter organization info acme         # every project in it, with each project's tasks and status
+iter organization list
 
 # projects
-iter project new                    # opens a blank project in nvim; save & quit to create it
-iter project edit myproj            # same, pre-filled with the existing project
+iter project new [-o acme]          # opens a blank project in nvim; save & quit to create it
+iter project edit myproj [-o acme]  # same, pre-filled; -o moves it into that organization
 iter project delete myproj
 iter project info myproj [--date d] # name, description, time spent that day (union of all its tasks)
 iter project list
@@ -60,6 +73,45 @@ iter t                              # prints <project>/<task> for the tmux sessi
 
 `project`/`task info` and `weekday` print YAML, so you can pipe them
 wherever's convenient.
+
+## Organizations
+
+An organization holds two things: the list of projects that belong to it,
+and the defaults those projects start from.
+
+```sh
+$ iter organization info acme
+name: acme
+description: Everything 4BC works on.
+projects:
+- Distiller
+    - RNN: queue
+- Iter
+    - Doc: wip
+    - fixes: queue
+```
+
+That report is a roster, not a time sheet -- no dates, hours or messages.
+`project info` and `task info` remain the place for those.
+
+**Defaults flow downstream, once.** `--organization` on `iter init`/`new`/
+`project new` seeds the blank template with the organization's `github`,
+`tmux`, `auto_branch` and `branch_template` before nvim opens, so you can
+still change any of them before saving. They're a starting point, not a
+constraint: editing the organization later doesn't reach back into projects
+already created. Two exceptions, both because a fact beats a default:
+`init`/`new` set `github` from whether the directory really is a git repo,
+and `clone`ing a repo forces it true.
+
+`iter clone <existing-project>` is the odd one out: cloning a project means
+keeping *that project's* settings, so `-o` there only sets which
+organization the copy belongs to.
+
+**Membership is optional and reversible.** Projects created before
+organizations existed simply have none, and keep working unchanged; `iter
+project edit myproj -o acme` moves one in. Deleting an organization deletes
+only the grouping -- every project, task and session survives, and the
+projects go back to belonging to none.
 
 ## How a project gets created
 

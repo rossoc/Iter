@@ -26,6 +26,9 @@ pub enum IterError {
     #[error("{0}")]
     CommandFailed(String),
 
+    #[error("no such organization '{0}'")]
+    OrganizationNotFound(String),
+
     #[error("no such project '{0}'")]
     ProjectNotFound(String),
 
@@ -40,6 +43,9 @@ pub enum IterError {
 
     #[error("invalid status '{0}', expected queue, wip, or done")]
     InvalidStatus(String),
+
+    #[error("organization name cannot be empty")]
+    EmptyOrganizationName,
 
     #[error("project name cannot be empty")]
     EmptyProjectName,
@@ -76,6 +82,12 @@ pub enum IterError {
 
     #[error("project for this task no longer exists")]
     OrphanTaskProject,
+
+    #[error("organization for this project no longer exists")]
+    OrphanProjectOrganization,
+
+    #[error("project '{0}' doesn't belong to an organization")]
+    ProjectHasNoOrganization(String),
 
     #[error("no open session for '{0}' -- run `iter session start` or attach to its tmux session")]
     NoOpenSession(String),

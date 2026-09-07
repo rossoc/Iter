@@ -1,13 +1,6 @@
+use crate::models::{Organization, default_branch_template, default_true};
 use iter_macros::Table;
 use serde::{Deserialize, Serialize};
-
-fn default_true() -> bool {
-    true
-}
-
-fn default_branch_template() -> String {
-    "feat/{task}".to_string()
-}
 
 /// A project: a base directory of work, optionally backed by a git repo,
 /// with its own tasks. `id` is `None` for a not-yet-created project (the
@@ -17,6 +10,16 @@ fn default_branch_template() -> String {
 pub struct Project {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<i64>,
+
+    /// The organization this project belongs to, or `None` -- membership is
+    /// optional, and a project without one behaves exactly as it did before
+    /// organizations existed, falling back to its own stored settings.
+    ///
+    /// Not part of the YAML editor's view: it's set from `--organization`
+    /// and otherwise carried through untouched, the same way a task's
+    /// `project_id` is.
+    #[serde(skip)]
+    pub organization_id: Option<i64>,
 
     pub name: String,
 
@@ -57,6 +60,7 @@ impl Project {
     pub fn template() -> Self {
         Project {
             id: None,
+            organization_id: None,
             name: String::new(),
             description: String::new(),
             base_path: String::new(),
@@ -65,6 +69,18 @@ impl Project {
             auto_branch: true,
             branch_template: default_branch_template(),
         }
+    }
+
+    /// Seeds this template with `organization`'s downstream defaults and
+    /// makes it a member. Only meaningful on a *blank* template: cloning an
+    /// existing project keeps that project's own settings, and sets nothing
+    /// here but the membership.
+    pub fn inherit_from(&mut self, organization: &Organization) {
+        self.organization_id = organization.id;
+        self.github = organization.github;
+        self.tmux = organization.tmux;
+        self.auto_branch = organization.auto_branch;
+        self.branch_template = organization.branch_template.clone();
     }
 }
 
