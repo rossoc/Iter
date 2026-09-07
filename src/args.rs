@@ -328,7 +328,14 @@ pub enum SessionCommand {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum InternalCommand {
-    /// Called by a tmux hook: event is client-attached / client-detached /
-    /// session-closed, tmux_session is the tmux session name (#{hook_session_name})
-    Hook { event: String, tmux_session: String },
+    /// Called by a tmux hook. `event` is client-session-changed /
+    /// client-detached / session-closed; `tmux_session` is the session it
+    /// fired for, and `previous` -- only sent for client-session-changed --
+    /// is the session the client just left. See `tmux::HOOKS` for which
+    /// format variable names the session on which event.
+    Hook {
+        event: String,
+        tmux_session: String,
+        previous: Option<String>,
+    },
 }

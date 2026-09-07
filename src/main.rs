@@ -63,7 +63,8 @@ fn main() -> ExitCode {
             InternalCommand::Hook {
                 event,
                 tmux_session,
-            } => hook_cmd(event, tmux_session),
+                previous,
+            } => hook_cmd(event, tmux_session, previous.as_deref()),
         },
     };
 
@@ -1060,16 +1061,46 @@ fn t_cmd() -> Result<()> {
     Ok(())
 }
 
-fn hook_cmd(event: &str, tmux_session: &str) -> Result<()> {
-    let db = open_db();
+/// Starts the session of whatever task `tmux_session` belongs to. A name
+/// `iter` doesn't know is not an error: these hooks are global, so they
+/// fire for every tmux session on the server, not just ours.
+fn start_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
+    match db.find_session_config_by_tmux_name(tmux_session)? {
+        Some(session_config) => start_session(db, session_config.task_id),
+        None => Ok(()),
+    }
+}
+
+/// Closes the open session of whatever task `tmux_session` belongs to,
+/// carrying over a message left in the tmux option by whatever detached
+/// (see `tmux::DETACH_MESSAGE_OPTION`) so a note typed on the way out lands
+/// on the session it belongs to.
+fn stop_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     let Some(session_config) = db.find_session_config_by_tmux_name(tmux_session)? else {
         return Ok(()); // not one of ours -- ignore
     };
+    let message = tmux::take_detach_message(tmux_session);
+    close_open_session(db, session_config.task_id, message.as_deref())
+}
+
+fn hook_cmd(event: &str, tmux_session: &str, previous: Option<&str>) -> Result<()> {
+    let db = open_db();
     match event {
-        "client-attached" => start_session(&db, session_config.task_id),
-        "client-detached" | "session-closed" => {
-            close_open_session(&db, session_config.task_id, None)
+        // Fires on a plain attach and on `switch-client` alike. The session
+        // being left is closed before the one being entered opens, so
+        // hopping between two tasks doesn't leave both of them running --
+        // `previous` is empty on a first attach, and equal to
+        // `tmux_session` on a switch that stays put.
+        "client-session-changed" => {
+            if let Some(previous) = previous.filter(|p| !p.is_empty() && *p != tmux_session) {
+                stop_for_tmux_session(&db, previous)?;
+            }
+            start_for_tmux_session(&db, tmux_session)
         }
+        // Kept for a server still running a hook an older `iter` installed;
+        // `ensure_hooks_installed` no longer sets this one.
+        "client-attached" => start_for_tmux_session(&db, tmux_session),
+        "client-detached" | "session-closed" => stop_for_tmux_session(&db, tmux_session),
         _ => Ok(()),
     }
 }
