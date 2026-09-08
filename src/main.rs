@@ -3,12 +3,12 @@ mod db;
 mod error;
 mod git;
 mod github;
+mod md_edit;
 mod models;
 mod process;
 mod reporting;
 mod scaffold;
 mod tmux;
-mod yaml_edit;
 
 use args::{
     Args, Command, InternalCommand, OrganizationCommand, ProjectCommand, ReportOpts,
@@ -373,7 +373,7 @@ fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionC
 /// tail of `project new`, `iter init`, and `iter new`.
 fn create_project_interactively(db: &Db, template: Project) -> Result<bool> {
     let organization_id = template.organization_id;
-    match yaml_edit::edit_in_nvim(&template)? {
+    match md_edit::edit_in_nvim(&template)? {
         Some(mut project) => {
             if project.name.trim().is_empty() {
                 return Err(IterError::EmptyProjectName);
@@ -480,7 +480,7 @@ fn clone_into(
     source_label: &str,
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
-    let Some(mut project) = yaml_edit::edit_in_nvim(template)? else {
+    let Some(mut project) = md_edit::edit_in_nvim(template)? else {
         println!("no changes -- project not created");
         return Ok(());
     };
@@ -517,7 +517,7 @@ fn dispatch_organization(action: &OrganizationCommand) -> Result<()> {
 
 fn organization_new() -> Result<()> {
     let db = open_db();
-    match yaml_edit::edit_in_nvim(&Organization::template())? {
+    match md_edit::edit_in_nvim(&Organization::template())? {
         Some(organization) => {
             if organization.name.trim().is_empty() {
                 return Err(IterError::EmptyOrganizationName);
@@ -534,7 +534,7 @@ fn organization_edit(name: Option<&str>) -> Result<()> {
     let db = open_db();
     let existing = resolve_organization_or_current(&db, name)?;
     let id = existing.id.expect(ID_INVARIANT);
-    match yaml_edit::edit_in_nvim(&existing)? {
+    match md_edit::edit_in_nvim(&existing)? {
         Some(organization) => {
             Repository::<Organization>::update(&db, id, &organization)?;
             println!("updated organization '{}'", organization.name);
@@ -662,7 +662,7 @@ fn project_edit(name: Option<&str>, organization: Option<&str>) -> Result<()> {
         Some(name) => resolve_organization(&db, name)?.id,
         None => existing.organization_id,
     };
-    match yaml_edit::edit_in_nvim(&existing)? {
+    match md_edit::edit_in_nvim(&existing)? {
         Some(mut project) => {
             project.organization_id = organization_id;
             Repository::<Project>::update(&db, id, &project)?;
@@ -779,7 +779,7 @@ fn task_new(project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
         template.github_issue = Some(issue_number);
     }
 
-    match yaml_edit::edit_in_nvim(&template)? {
+    match md_edit::edit_in_nvim(&template)? {
         Some(mut task) => {
             if task.name.trim().is_empty() {
                 return Err(IterError::EmptyTaskName);
@@ -799,7 +799,7 @@ fn task_edit(task_ref: Option<&str>) -> Result<()> {
     let id = existing.id.expect(ID_INVARIANT);
     let project_id = existing.project_id;
     let display = format!("{}/{}", project.name, existing.name);
-    match yaml_edit::edit_in_nvim(&existing)? {
+    match md_edit::edit_in_nvim(&existing)? {
         Some(mut task) => {
             task.project_id = project_id;
             Repository::<Task>::update(&db, id, &task)?;

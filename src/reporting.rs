@@ -172,7 +172,7 @@ pub fn merged_total_minutes(sessions: &[Session], now: NaiveDateTime, gap_minute
 
 /// A model's own YAML fields minus the two every report already prints for
 /// itself (`id`, `name`) -- i.e. its settings, in declaration order, for
-/// the front matter block above a text report's `---` divider. Taken
+/// the front matter block at the top of a text report. Taken
 /// straight off `Serialize` so a field added to `Project`/`Task`/
 /// `Organization` shows up here without a second list to keep in sync.
 pub fn settings_of<T: Serialize>(item: &T) -> Result<Mapping> {
@@ -400,15 +400,16 @@ pub fn render_organization_info(info: &OrganizationInfo, format: Format) -> Resu
     document(&info.header, md)
 }
 
-/// A text report: the header's scalars as YAML front matter, a `---`
-/// divider, then the markdown body -- the same shape `yaml_edit` opens a
+/// A text report: the header's scalars as fenced YAML front matter, then
+/// the markdown body -- the same shape `md_edit` opens a
 /// project/task/organization in, so a report reads like the thing it
-/// reports on.
+/// reports on
 fn document(header: &Header, md: Md) -> Result<String> {
     let mut front = header.clone();
-    front.description = None; // it's the body below the divider instead
-    let mut out = serde_yaml::to_string(&front)?;
-    out.push_str("---\n");
+    front.description = None; // it's the body below the front matter instead
+    let mut out = String::from("---\n");
+    out.push_str(&serde_yaml::to_string(&front)?);
+    out.push_str("---\n\n");
     out.push_str(&md.out);
     Ok(out)
 }
@@ -931,13 +932,14 @@ mod tests {
         };
         assert_eq!(
             render_task_info(&info, Format::Text).unwrap(),
-            "name: proj/task\n\
+            "---\n\
+             name: proj/task\n\
              date: 2026-09-04\n\
              total_hours: 2.0\n\
              total_hhmm: 02:00\n\
              settings:\n  status: wip\n\
              ---\n\
-             # proj/task\n\
+             \n# proj/task\n\
              \n2026-09-04 -- 02:00 (2.0 h)\n\
              \nTask notes.\n\
              \n| Start | End   | Duration | Message        |\n\
@@ -959,7 +961,8 @@ mod tests {
             sessions: Vec::new(),
         };
         let out = render_task_info(&info, Format::Text).unwrap();
-        let (front, body) = out.split_once("\n---\n").expect("a divider");
+        let front = out.strip_prefix("---\n").expect("front matter");
+        let (front, body) = front.split_once("\n---\n").expect("a closing divider");
         assert!(!front.contains("Task notes."), "{front}");
         assert!(body.contains("Task notes."), "{body}");
         // Nothing logged that day, so there's no table to print.

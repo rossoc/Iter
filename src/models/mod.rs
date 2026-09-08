@@ -22,11 +22,10 @@ pub(crate) fn default_branch_template() -> String {
     "feat/{task}".to_string()
 }
 
-/// A type edited via `yaml_edit::edit_in_nvim` that carries a free-form
+/// A type edited via `md_edit::edit_in_nvim` that carries a free-form
 /// markdown `description`. The field is `#[serde(skip)]`ed on the type
-/// itself and instead placed below a `---` line, after every other field,
-/// so it's written and read back as plain markdown rather than a
-/// quoted/escaped YAML string.
+/// itself and instead placed below the YAML front matter's closing `---`,
+/// as the markdown body
 pub trait MarkdownBody {
     fn description(&self) -> &str;
     fn set_description(&mut self, description: String);
