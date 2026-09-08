@@ -275,6 +275,26 @@ pub enum TaskCommand {
         task: Option<String>,
     },
 
+    /// Bring the project's GitHub issues down as tasks: an issue nothing
+    /// tracks becomes a new task, and a tracked one hands its open/closed
+    /// state to the task's status
+    Pull {
+        /// Project to pull into (default: the project of the tmux session
+        /// you're in)
+        #[arg(add = ArgValueCompleter::new(project_completer))]
+        project: Option<String>,
+    },
+
+    /// Send the project's tasks up to GitHub: a task tracking no issue gets
+    /// one opened for it, and a tracked issue is closed or reopened to
+    /// match its task's status
+    Push {
+        /// Project to push (default: the project of the tmux session you're
+        /// in)
+        #[arg(add = ArgValueCompleter::new(project_completer))]
+        project: Option<String>,
+    },
+
     /// Average hours per weekday spent on a task
     Weekday {
         /// `<project>/<task>` (default: the task of the tmux session you're in)

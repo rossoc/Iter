@@ -62,6 +62,8 @@ iter task list [--project myproj] [--status wip]
 iter task                           # every unfinished task (queue + wip), across all projects
 iter task done myproj/mytask        # closes any open session, tears down its session-config, marks done
 iter task weekday myproj/mytask     # average hours per weekday
+iter task pull myproj               # issues -> tasks (and issue state -> task status)
+iter task push myproj               # tasks -> issues (and task status -> issue state)
 
 # sessions (tmux + git worktree/branch, and time tracking)
 iter session new myproj/mytask [-b custom-branch] [--no-branch]
@@ -166,6 +168,61 @@ for a plain roster of what exists.
 sessions and an organization's is the union of its projects', so working two
 things in parallel -- or hopping between them -- is counted once. That's why
 a parent's total can be less than its children's totals added up.
+
+## Tasks and GitHub issues
+
+A task's `github_issue` is the number of the issue it tracks in its
+project's repo. `iter task new --issue 42` links one by hand, one task at a
+time; `iter task pull` / `iter task push` do it for a whole project at once.
+Both need the project to have `github: true` and its `base_path` to really
+be a repo -- like `iter comment`, they run `gh` from `base_path`, so `gh`
+infers the repo from its git remote and `iter` never stores an "owner/repo"
+string itself.
+
+**Only three things cross.** The issue number, the title/body of an issue
+that becomes a new task, and open-vs-closed. Everything else -- a task's
+time, its `branch_prefix`, its sessions -- is local, and everything on the
+issue but its state -- labels, assignees, comments -- is GitHub's.
+
+**Each side owns one end.** `iter task pull` can create a *task* but never
+touches an issue; `iter task push` can create or close/reopen an *issue* but
+never changes a task's status. So running one after the other settles,
+rather than the two of them arguing over the same task.
+
+```sh
+iter task pull myproj    # for each issue in the repo, open and closed alike
+```
+
+- An issue nothing tracks becomes a new task: the issue's title as its name,
+  its body as its description, `branch_prefix` from the project's
+  `branch_template`, and its number stored.
+- An issue a task already tracks hands over its state: **closed** marks the
+  task `done`, and **reopened** sends a `done` task back to `queue` -- which
+  is the status `iter session new` takes, so a reopened issue can be picked
+  up again. An open issue leaves a `queue`/`wip` task where it is: both
+  read as "open" to GitHub, and the local one says more.
+- An issue whose title matches a task that tracks *no* issue links the two
+  rather than creating a second task by that name -- the same work, entered
+  on both sides separately. If that same-named task already tracks a
+  different issue, the issue is reported and skipped instead.
+
+```sh
+iter task push myproj    # for each task in the project
+```
+
+- A task tracking no issue gets one opened, titled with its name and bodied
+  with its description, and the new number is stored on the task.
+- A task that tracks an issue has that issue closed or reopened to match:
+  `done` closes it, `queue` and `wip` both leave it (or put it back) open.
+  A `done` task's brand-new issue is opened and then closed, since there's
+  no way to create a closed one.
+- A task naming an issue the repo hasn't got -- deleted, transferred, or a
+  pull request -- is reported and skipped: opening a second issue would only
+  orphan the link it already has.
+
+Pushing never rewrites an existing issue's title or body. A description is
+working notes that grow as the work does, and an issue is something other
+people edit; `iter comment` is the way to say something on one.
 
 ## Organizations
 
@@ -297,10 +354,10 @@ kept its log.
 - `tmux` -- for session support (skippable per-project via `tmux: false`).
 - `git` -- for worktree/branch support (skippable per-project via
   `github: false`, or per-session via `--no-branch`).
-- `gh` (GitHub CLI, already authenticated) -- for `--issue` task creation
-  and `iter comment`. Both run from the project's `base_path`, so `gh`
-  infers the repo from its git remote -- `iter` never stores an
-  "owner/repo" string itself.
+- `gh` (GitHub CLI, already authenticated) -- for `--issue` task creation,
+  `iter task pull`/`iter task push` and `iter comment`. All of them run from
+  the project's `base_path`, so `gh` infers the repo from its git remote --
+  `iter` never stores an "owner/repo" string itself.
 
 ## Shell completion
 
@@ -309,8 +366,8 @@ source <(COMPLETE=zsh iter)
 ```
 
 gets you tab-completion on project names (`project edit/delete/info`,
-`task new --project`) and `<project>/<task>` pairs (everywhere a task is
-expected).
+`task new --project`, `task pull`/`task push`) and `<project>/<task>` pairs
+(everywhere a task is expected).
 
 ## Building
 

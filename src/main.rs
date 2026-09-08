@@ -8,6 +8,7 @@ mod models;
 mod process;
 mod reporting;
 mod scaffold;
+mod sync;
 mod tmux;
 
 use args::{
@@ -759,6 +760,8 @@ fn dispatch_task(action: Option<&TaskCommand>) -> Result<()> {
             task_list(project.as_deref(), &statuses)
         }
         Some(TaskCommand::Done { task }) => task_done(task.as_deref()),
+        Some(TaskCommand::Pull { project }) => task_pull(project.as_deref()),
+        Some(TaskCommand::Push { project }) => task_push(project.as_deref()),
         Some(TaskCommand::Weekday { task }) => task_weekday(task.as_deref()),
     }
 }
@@ -773,10 +776,15 @@ fn task_new(project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
         if !project.github {
             return Err(IterError::GithubDisabled(project.name.clone()));
         }
-        let info = github::fetch_issue(&project.base_path, issue_number)?;
-        template.name = info.title;
-        template.description = info.body;
-        template.github_issue = Some(issue_number);
+        let issue = github::fetch_issue(&project.base_path, issue_number)?;
+        template.name = issue.title;
+        template.description = issue.body;
+        template.github_issue = Some(issue.number);
+        // A task opened from an issue that's already closed starts `done`,
+        // the same as one `iter task pull` brings down -- so the very next
+        // `push` doesn't reopen the issue to match a status that was only
+        // ever the template's default.
+        template.status = github::status_for_issue_state(template.status, issue.state);
     }
 
     match md_edit::edit_in_nvim(&template)? {
@@ -896,6 +904,187 @@ fn task_done(task_ref: Option<&str>) -> Result<()> {
     }
 
     println!("task '{display}' marked done");
+    Ok(())
+}
+
+/// The project a `task pull`/`task push` runs against: resolved the usual
+/// way, then held to the two things `gh` needs of it -- the project has to
+/// be marked `github`, and `base_path` has to really be a repo, since that
+/// is the only way `gh` learns which repo it's talking about.
+fn github_project(db: &Db, name: Option<&str>) -> Result<Project> {
+    let project = resolve_project_or_current(db, name)?;
+    if !project.github {
+        return Err(IterError::GithubDisabled(project.name));
+    }
+    if !git::is_git_repo(&project.base_path) {
+        return Err(IterError::NotAGitRepo {
+            name: project.name,
+            path: project.base_path,
+        });
+    }
+    Ok(project)
+}
+
+/// Sets a task's issue link and status -- in the database, and in the copy
+/// in hand. Both, because a pull plans each issue against the tasks it's
+/// holding, so a row it has already written has to read back as written.
+fn relink_task(db: &Db, task: &mut Task, issue: i64, status: TaskStatus) -> Result<()> {
+    task.github_issue = Some(issue);
+    task.status = status;
+    Repository::<Task>::update(db, task.id.expect(ID_INVARIANT), task)
+}
+
+/// `iter task pull <project>` -- every issue in the project's repo brought
+/// down: one nothing tracks becomes a task, and one already tracked hands
+/// its open/closed state to the task's status (including reopened ->
+/// `queue`, which is what lets `iter session new` pick the work up again).
+///
+/// Issues are the only input; no task is created, renamed or deleted for
+/// want of one, so a task with no issue at all is simply not this command's
+/// business -- `iter task push` is.
+fn task_pull(project_name: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let project = github_project(&db, project_name)?;
+    let project_id = project.id.expect(ID_INVARIANT);
+    let branch_prefix = git::branch_prefix(&project.branch_template);
+
+    let issues = github::list_issues(&project.base_path)?;
+    // Read once, then kept current as the pull goes: each issue is planned
+    // against what the ones before it did, so two issues sharing a title
+    // read as the clash they are rather than colliding on the name index.
+    let mut tasks = db.tasks_for_project(project_id)?;
+
+    let (mut created, mut updated) = (0, 0);
+    for issue in &issues {
+        match sync::plan_pull(&tasks, issue) {
+            sync::Pull::Create { status } => {
+                let mut task = Task {
+                    id: None,
+                    project_id,
+                    name: issue.title.clone(),
+                    description: issue.body.clone(),
+                    github_issue: Some(issue.number),
+                    status,
+                    branch_prefix: branch_prefix.clone(),
+                };
+                task.id = Some(Repository::<Task>::insert(&db, &task)?);
+                println!(
+                    "created task '{}/{}' from issue #{} ({})",
+                    project.name,
+                    task.name,
+                    issue.number,
+                    status.as_str()
+                );
+                tasks.push(task);
+                created += 1;
+            }
+            sync::Pull::Restatus { task, status } => {
+                relink_task(&db, &mut tasks[task], issue.number, status)?;
+                println!(
+                    "task '{}/{}' is now {} (issue #{})",
+                    project.name,
+                    tasks[task].name,
+                    status.as_str(),
+                    issue.number
+                );
+                updated += 1;
+            }
+            sync::Pull::Adopt { task, status } => {
+                relink_task(&db, &mut tasks[task], issue.number, status)?;
+                println!(
+                    "linked task '{}/{}' to issue #{} ({})",
+                    project.name,
+                    tasks[task].name,
+                    issue.number,
+                    status.as_str()
+                );
+                updated += 1;
+            }
+            sync::Pull::Unchanged => {}
+            sync::Pull::Conflict { task } => eprintln!(
+                "warning: issue #{} skipped -- task '{}/{}' has the same name but tracks issue #{}",
+                issue.number,
+                project.name,
+                tasks[task].name,
+                tasks[task]
+                    .github_issue
+                    .expect("a conflicting task is a linked one")
+            ),
+        }
+    }
+
+    println!(
+        "pulled {} issue(s) from '{}': {created} created, {updated} updated",
+        issues.len(),
+        project.name
+    );
+    Ok(())
+}
+
+/// `iter task push <project>` -- every task sent up: one tracking no issue
+/// gets one opened for it (and the number written back, so it's tracked
+/// from then on), and one already tracking an issue has that issue closed
+/// or reopened to match its status.
+///
+/// Only the open/closed state is pushed, never the title or body: a task's
+/// description is working notes that grow as the work goes, and overwriting
+/// an issue -- which other people may have edited -- with them isn't
+/// something a status sync should do behind your back. `iter comment` is
+/// the way to say something on the issue.
+fn task_push(project_name: Option<&str>) -> Result<()> {
+    let db = open_db();
+    let project = github_project(&db, project_name)?;
+    let mut tasks = db.tasks_for_project(project.id.expect(ID_INVARIANT))?;
+
+    // One listing, then a decision per task -- rather than asking `gh` for
+    // the state of each task's issue one at a time.
+    let issues = github::list_issues(&project.base_path)?;
+
+    let (mut opened, mut restated) = (0, 0);
+    for task in &mut tasks {
+        let display = format!("{}/{}", project.name, task.name);
+        let status = task.status;
+        match sync::plan_push(task, &issues) {
+            sync::Push::Create { state } => {
+                let number =
+                    github::create_issue(&project.base_path, &task.name, &task.description)?;
+                // Written back before the issue is closed below: if that
+                // second call fails, the task still knows its issue, and
+                // running `push` again finishes the job rather than opening
+                // a second issue for the same task.
+                relink_task(&db, task, number, status)?;
+                opened += 1;
+                println!("opened issue #{number} for '{display}'");
+                if state == github::IssueState::Closed {
+                    github::set_issue_state(&project.base_path, number, state)?;
+                    println!("closed issue #{number} -- '{display}' is done");
+                }
+            }
+            sync::Push::Restate { number, state } => {
+                github::set_issue_state(&project.base_path, number, state)?;
+                restated += 1;
+                match state {
+                    github::IssueState::Closed => {
+                        println!("closed issue #{number} -- '{display}' is done")
+                    }
+                    github::IssueState::Open => println!(
+                        "reopened issue #{number} -- '{display}' is {}",
+                        status.as_str()
+                    ),
+                }
+            }
+            sync::Push::Unchanged => {}
+            sync::Push::Missing { number } => {
+                eprintln!("warning: '{display}' skipped -- issue #{number} isn't in this repo")
+            }
+        }
+    }
+
+    println!(
+        "pushed {} task(s) to '{}': {opened} issue(s) opened, {restated} closed/reopened",
+        tasks.len(),
+        project.name
+    );
     Ok(())
 }
 
