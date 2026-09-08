@@ -5,7 +5,8 @@ tmux + GitHub integration.
 
 - An **organization** is a group of projects that share defaults. It has no
   base_path of its own -- it isn't a place on disk, just a roster and the
-  settings (`github`, `tmux`, `auto_branch`, `branch_template`) that new
+  settings (`github`, `tmux`, `auto_branch`, `branch_template`,
+  `github_project`) that new
   projects in it start from. Belonging to one is optional: a project without
   an organization behaves exactly as it always has.
 - A **project** is a base directory of work (optionally a git/GitHub repo).
@@ -64,6 +65,7 @@ iter task done myproj/mytask        # closes any open session, tears down its se
 iter task weekday myproj/mytask     # average hours per weekday
 iter task pull myproj               # issues -> tasks (and issue state -> task status)
 iter task push myproj               # tasks -> issues (and task status -> issue state)
+iter task push myproj --task mytask --body   # ...just that task, description included
 
 # sessions (tmux + git worktree/branch, and time tracking)
 iter session new myproj/mytask [-b custom-branch] [--no-branch]
@@ -179,15 +181,20 @@ be a repo -- like `iter comment`, they run `gh` from `base_path`, so `gh`
 infers the repo from its git remote and `iter` never stores an "owner/repo"
 string itself.
 
-**Only three things cross.** The issue number, the title/body of an issue
-that becomes a new task, and open-vs-closed. Everything else -- a task's
-time, its `branch_prefix`, its sessions -- is local, and everything on the
-issue but its state -- labels, assignees, comments -- is GitHub's.
-
 **Each side owns one end.** `iter task pull` can create a *task* but never
 touches an issue; `iter task push` can create or close/reopen an *issue* but
 never changes a task's status. So running one after the other settles,
-rather than the two of them arguing over the same task.
+rather than the two of them arguing over the same task. Descriptions are the
+one thing that can cross either way, and only when `--body` says so.
+
+Both take the same two narrowing flags:
+
+- `--task <name>` -- just that one task, rather than every task in the
+  project. On a pull that's the single issue it tracks, so a pull scoped
+  this way can only update that task; on a push it's the one task sent up.
+- `--body` -- also copy the description across, in whatever direction you
+  ran. Without it, descriptions only ever fill in a task or an issue being
+  *created*.
 
 ```sh
 iter task pull myproj    # for each issue in the repo, open and closed alike
@@ -205,6 +212,8 @@ iter task pull myproj    # for each issue in the repo, open and closed alike
   rather than creating a second task by that name -- the same work, entered
   on both sides separately. If that same-named task already tracks a
   different issue, the issue is reported and skipped instead.
+- With `--body`, a tracked task's description is overwritten with the
+  issue's body when the two differ.
 
 ```sh
 iter task push myproj    # for each task in the project
@@ -219,10 +228,59 @@ iter task push myproj    # for each task in the project
 - A task naming an issue the repo hasn't got -- deleted, transferred, or a
   pull request -- is reported and skipped: opening a second issue would only
   orphan the link it already has.
+- With `--body`, a tracked issue's body is overwritten with the task's
+  description when the two differ.
 
-Pushing never rewrites an existing issue's title or body. A description is
-working notes that grow as the work does, and an issue is something other
-people edit; `iter comment` is the way to say something on one.
+Titles are never rewritten in either direction. The issue *number* is the
+identity, so renaming a task or retitling an issue changes nothing about
+which is which.
+
+### Signing off
+
+Whenever a push closes an issue -- a `done` task's brand-new one, or one
+going open -> closed -- you are added to that issue's assignees first, so a
+closed issue always says who called it done. It's `--add-assignee`, so
+anyone already assigned stays, and nothing is ever unassigned, including
+when an issue is reopened. Nothing is assigned on an issue that stays open.
+
+Assigning needs push access to the repo. If it fails, the push says so and
+closes the issue anyway -- keeping a task and its issue in agreement matters
+more than the signature.
+
+### Filing new issues under a GitHub Project
+
+A project's `github_project` is the title of a GitHub Project (the board --
+nothing to do with an `iter` project) that newly opened issues are filed
+under. Blank, the default, files them nowhere.
+
+```sh
+iter project edit myproj
+```
+```yaml
+---
+name: myproj
+base_path: /home/me/code/myproj
+github: true
+github_project: Roadmap
+---
+```
+
+Like the other GitHub settings it can be defaulted per organization: set
+`github_project` on the organization and every project created in it starts
+from that (see [Organizations](#organizations) -- editing the organization
+later doesn't reach back into projects already created).
+
+The name is handed straight to `gh issue create --project` and never checked
+here. `gh` resolves the title against the repo owner's boards and refuses to
+create the issue if there's no such board, so a name that doesn't resolve
+costs you a failed push rather than issues filed in the wrong place -- and
+nothing is created in the meantime. It only applies to issues `push`
+*creates*; an issue that already exists is never moved between boards.
+
+Reaching Projects at all needs a token that can: `gh auth refresh -s project`
+on a classic login, or the Projects permission granted explicitly on a
+fine-grained token. Without it `gh` reports `Resource not accessible by
+personal access token` and the push fails.
 
 ## Organizations
 
@@ -231,7 +289,8 @@ and the defaults those projects start from.
 
 **Defaults flow downstream, once.** `--organization` on `iter init`/`new`/
 `project new` seeds the blank template with the organization's `github`,
-`tmux`, `auto_branch` and `branch_template` before nvim opens, so you can
+`tmux`, `auto_branch`, `branch_template` and `github_project` before nvim
+opens, so you can
 still change any of them before saving. They're a starting point, not a
 constraint: editing the organization later doesn't reach back into projects
 already created. Two exceptions, both because a fact beats a default:
@@ -271,7 +330,7 @@ anything else) before it's saved to the database.
     clone <source> <base_path>` -- exactly like running `git clone`
     yourself.
 
-`github`/`tmux`/`auto_branch`/`branch_template` all default the same as
+`github`/`tmux`/`auto_branch`/`branch_template`/`github_project` all default the same as
 `project new` for `init`/`new` (`github` pre-set to `true` if the resulting
 directory already looks like a git repo), and are carried over as-is from
 the source project for a local `clone`.
@@ -357,7 +416,8 @@ kept its log.
 - `gh` (GitHub CLI, already authenticated) -- for `--issue` task creation,
   `iter task pull`/`iter task push` and `iter comment`. All of them run from
   the project's `base_path`, so `gh` infers the repo from its git remote --
-  `iter` never stores an "owner/repo" string itself.
+  `iter` never stores an "owner/repo" string itself. Filing issues under a
+  `github_project` additionally needs a token with Projects access.
 
 ## Shell completion
 

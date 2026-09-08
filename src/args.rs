@@ -1,4 +1,7 @@
-use crate::{organization_completer, project_completer, queued_task_completer, task_completer};
+use crate::{
+    organization_completer, project_completer, queued_task_completer, task_completer,
+    task_name_completer,
+};
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
 
@@ -283,6 +286,15 @@ pub enum TaskCommand {
         /// you're in)
         #[arg(add = ArgValueCompleter::new(project_completer))]
         project: Option<String>,
+
+        /// Pull only this one task, by name, from the issue it tracks
+        /// (default: every issue in the repo)
+        #[clap(long, add = ArgValueCompleter::new(task_name_completer))]
+        task: Option<String>,
+
+        /// Also overwrite each task's description with its issue's body
+        #[clap(long)]
+        body: bool,
     },
 
     /// Send the project's tasks up to GitHub: a task tracking no issue gets
@@ -293,6 +305,15 @@ pub enum TaskCommand {
         /// in)
         #[arg(add = ArgValueCompleter::new(project_completer))]
         project: Option<String>,
+
+        /// Push only this one task, by name (default: every task in the
+        /// project)
+        #[clap(long, add = ArgValueCompleter::new(task_name_completer))]
+        task: Option<String>,
+
+        /// Also overwrite each issue's body with its task's description
+        #[clap(long)]
+        body: bool,
     },
 
     /// Average hours per weekday spent on a task

@@ -98,18 +98,53 @@ pub fn list_issues(repo_path: &str) -> Result<Vec<Issue>> {
 /// Opens a new issue and returns its number. A new issue is always open,
 /// whatever the task that asked for it is at -- the caller closes it after
 /// if it has to.
-pub fn create_issue(repo_path: &str, title: &str, body: &str) -> Result<i64> {
-    let output = process::output(
-        "gh",
-        Some(repo_path),
-        &["issue", "create", "--title", title, "--body", body],
-    )?;
+///
+/// `project` is the title of a GitHub Project to file the issue under, or
+/// empty for none. It's handed to `gh` unchecked: `gh` resolves the title
+/// itself and refuses to create the issue if there's no such board, so a
+/// name that doesn't resolve costs a failed call rather than an issue filed
+/// nowhere. (Resolving one at all needs a token with the Projects
+/// permission -- `gh auth refresh -s project` on a classic login.)
+pub fn create_issue(repo_path: &str, title: &str, body: &str, project: &str) -> Result<i64> {
+    let mut args = vec!["issue", "create", "--title", title, "--body", body];
+    if !project.is_empty() {
+        args.extend(["--project", project]);
+    }
+    let output = process::output("gh", Some(repo_path), &args)?;
     issue_number_from_url(&output).ok_or_else(|| {
         IterError::CommandFailed(format!(
             "gh issue create printed no issue URL: {}",
             output.trim()
         ))
     })
+}
+
+/// Replaces an issue's body with `body`. Only ever called for `--body`,
+/// which is what makes overwriting what's on GitHub something you asked
+/// for rather than something a status sync did on its own.
+pub fn set_issue_body(repo_path: &str, number: i64, body: &str) -> Result<()> {
+    process::run(
+        "gh",
+        Some(repo_path),
+        &["issue", "edit", &number.to_string(), "--body", body],
+    )
+}
+
+/// Adds the authenticated user to an issue's assignees, leaving whoever is
+/// already there in place -- `--add-assignee`, not `--assignee`. Signing an
+/// issue "done at least by me", not claiming it alone.
+pub fn assign_self(repo_path: &str, number: i64) -> Result<()> {
+    process::run(
+        "gh",
+        Some(repo_path),
+        &[
+            "issue",
+            "edit",
+            &number.to_string(),
+            "--add-assignee",
+            "@me",
+        ],
+    )
 }
 
 /// Closes or reopens an issue, to match the status of the task tracking it.
