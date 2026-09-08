@@ -91,13 +91,14 @@ today, `--to` alone reaches back over every session there is.
 
 **How it's printed.** `--format`/`-f` is `text` (the default) or `yaml`.
 
-`text` is markdown: a YAML front matter block of the settings and totals, a
-`---` divider, then the description and the breakdown -- the same shape the
+`text` is markdown: a YAML front matter block of the settings and totals,
+then the description and the breakdown as the body -- the same shape the
 nvim editor opens a project or task in, so a report reads like the thing it
-reports on.
+reports on (and, saved to a `.md` file, is highlighted and linted as one).
 
 ```sh
 $ iter organization info acme --date 2026-09-07
+---
 name: acme
 date: 2026-09-07
 total_hours: 4.5
@@ -108,6 +109,7 @@ settings:
   auto_branch: true
   branch_template: feat/{task}
 ---
+
 # acme
 
 2026-09-07 -- 04:25 (4.5 h)
@@ -286,9 +288,12 @@ kept its log.
 
 ## Requirements
 
-- `nvim` -- used to fill in a new/edited project or task as YAML. Opening
-  it without saving (or saving something that doesn't parse) aborts the
-  create/edit.
+- `nvim` -- used to fill in a new/edited organization, project or task. It
+  opens a temporary `.md` file: the fields as YAML front matter at the top,
+  the description as the markdown body below it -- so the editor highlights
+  and lints it the way it would any other markdown file with front matter.
+  Quitting without saving (or saving something that doesn't parse) aborts
+  the create/edit.
 - `tmux` -- for session support (skippable per-project via `tmux: false`).
 - `git` -- for worktree/branch support (skippable per-project via
   `github: false`, or per-session via `--no-branch`).

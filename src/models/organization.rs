@@ -20,8 +20,8 @@ pub struct Organization {
 
     pub name: String,
 
-    /// Free-form markdown notes. Edited below the `---` separator in the
-    /// YAML editor rather than as a field among the others -- see
+    /// Free-form markdown notes. Edited as the markdown body below the
+    /// YAML front matter rather than as a field among the others -- see
     /// `MarkdownBody`.
     #[serde(skip)]
     pub description: String,
@@ -44,7 +44,7 @@ pub struct Organization {
 }
 
 impl Organization {
-    /// A blank template for `iter organization new` to open in the YAML
+    /// A blank template for `iter organization new` to open in the
     /// editor. Its defaults are the same ones a project falls back to when
     /// it belongs to no organization at all.
     pub fn template() -> Self {

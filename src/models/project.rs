@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// A project: a base directory of work, optionally backed by a git repo,
 /// with its own tasks. `id` is `None` for a not-yet-created project (the
-/// blank template opened in the YAML editor); it's filled in once inserted.
+/// blank template opened in the editor); it's filled in once inserted.
 #[derive(Debug, Clone, Serialize, Deserialize, Table)]
 #[table(name = "projects", order_by = "name")]
 pub struct Project {
@@ -15,7 +15,7 @@ pub struct Project {
     /// optional, and a project without one behaves exactly as it did before
     /// organizations existed, falling back to its own stored settings.
     ///
-    /// Not part of the YAML editor's view: it's set from `--organization`
+    /// Not part of the editor's view: it's set from `--organization`
     /// and otherwise carried through untouched, the same way a task's
     /// `project_id` is.
     #[serde(skip)]
@@ -23,8 +23,8 @@ pub struct Project {
 
     pub name: String,
 
-    /// Free-form markdown notes. Edited below the `---` separator in the
-    /// YAML editor rather than as a field among the others -- see
+    /// Free-form markdown notes. Edited as the markdown body below the
+    /// YAML front matter rather than as a field among the others -- see
     /// `MarkdownBody`.
     #[serde(skip)]
     pub description: String,
@@ -56,7 +56,7 @@ pub struct Project {
 }
 
 impl Project {
-    /// A blank template for `iter project new` to open in the YAML editor.
+    /// A blank template for `iter project new` to open in the editor.
     pub fn template() -> Self {
         Project {
             id: None,
