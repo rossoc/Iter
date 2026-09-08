@@ -42,6 +42,10 @@ pub struct Organization {
     /// Default `branch_template` for projects created in this organization.
     #[serde(default = "default_branch_template")]
     pub branch_template: String,
+
+    /// Default `github_project` for projects created in this organization.
+    #[serde(default)]
+    pub github_project: String,
 }
 
 impl Organization {
@@ -57,6 +61,7 @@ impl Organization {
             tmux: defaults.tmux,
             auto_branch: defaults.auto_branch,
             branch_template: defaults.branch_template.clone(),
+            github_project: defaults.github_project.clone(),
         }
     }
 }

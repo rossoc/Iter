@@ -54,6 +54,20 @@ pub struct Project {
     /// Branch name template; `{task}` is replaced with the slugified task name.
     #[serde(default = "default_branch_template")]
     pub branch_template: String,
+
+    /// The GitHub Project (the board, not an `iter` project) that
+    /// `iter task push` files a newly opened issue under, by its title --
+    /// what `gh issue create --project` takes. Empty means "don't file it
+    /// anywhere", which is what every project starts as.
+    ///
+    /// Only ever passed to `gh`, never checked here: `gh` resolves the
+    /// title against the repo owner's projects and refuses to create the
+    /// issue if there's no such board, so a wrong name costs a failed push
+    /// rather than an issue filed in the wrong place. Note that reaching
+    /// projects at all needs a token with the Projects permission
+    /// (`gh auth refresh -s project` on a classic login).
+    #[serde(default)]
+    pub github_project: String,
 }
 
 impl Project {
@@ -72,6 +86,7 @@ impl Project {
             tmux: defaults.tmux,
             auto_branch: defaults.auto_branch,
             branch_template: defaults.branch_template.clone(),
+            github_project: defaults.github_project.clone(),
         }
     }
 
@@ -87,6 +102,7 @@ impl Project {
         self.tmux = organization.tmux;
         self.auto_branch = organization.auto_branch;
         self.branch_template = organization.branch_template.clone();
+        self.github_project = organization.github_project.clone();
     }
 }
 

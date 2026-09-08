@@ -163,6 +163,30 @@ pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandida
     task_completer_where(current, |_| true)
 }
 
+/// Dynamic completer for `task pull/push --task`, which takes a bare task
+/// name rather than a `<project>/<task>` pair -- the project is already the
+/// positional argument. Completion can't see that positional, so this
+/// offers every task name there is and leaves narrowing to what you type.
+pub(crate) fn task_name_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+    let Some(current) = current.to_str() else {
+        return Vec::new();
+    };
+    let db = open_db();
+    let Ok(projects) = Repository::<Project>::list(&db) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = projects
+        .into_iter()
+        .filter_map(|p| db.tasks_for_project(p.id.expect(ID_INVARIANT)).ok())
+        .flatten()
+        .map(|t| t.name)
+        .filter(|name| name.starts_with(current))
+        .collect();
+    names.sort();
+    names.dedup();
+    names.into_iter().map(CompletionCandidate::new).collect()
+}
+
 /// Dynamic completer for `session new`, which is only ever a sensible thing
 /// to run on a task that hasn't been started: it refuses a task that already
 /// has a session-config, and flips the one it does start to `wip`.
@@ -770,8 +794,16 @@ fn dispatch_task(action: Option<&TaskCommand>) -> Result<()> {
             task_list(project.as_deref(), &statuses)
         }
         Some(TaskCommand::Done { task }) => task_done(task.as_deref()),
-        Some(TaskCommand::Pull { project }) => task_pull(project.as_deref()),
-        Some(TaskCommand::Push { project }) => task_push(project.as_deref()),
+        Some(TaskCommand::Pull {
+            project,
+            task,
+            body,
+        }) => task_pull(project.as_deref(), task.as_deref(), *body),
+        Some(TaskCommand::Push {
+            project,
+            task,
+            body,
+        }) => task_push(project.as_deref(), task.as_deref(), *body),
         Some(TaskCommand::Weekday { task }) => task_weekday(task.as_deref()),
     }
 }
@@ -939,30 +971,78 @@ fn github_project(db: &Db, name: Option<&str>) -> Result<Project> {
     Ok(project)
 }
 
-/// Sets a task's issue link and status -- in the database, and in the copy
-/// in hand. Both, because a pull plans each issue against the tasks it's
-/// holding, so a row it has already written has to read back as written.
-fn relink_task(db: &Db, task: &mut Task, issue: i64, status: TaskStatus) -> Result<()> {
+/// Sets a task's issue link, status and description -- in the database, and
+/// in the copy in hand. Both, because a pull plans each issue against the
+/// tasks it's holding, so a row it has already written has to read back as
+/// written. `status`/`description` are `None` when this issue says nothing
+/// about them, which is what makes one write serve all three changes.
+fn relink_task(
+    db: &Db,
+    task: &mut Task,
+    issue: i64,
+    status: Option<TaskStatus>,
+    description: Option<&str>,
+) -> Result<()> {
     task.github_issue = Some(issue);
-    task.status = status;
+    if let Some(status) = status {
+        task.status = status;
+    }
+    if let Some(description) = description {
+        task.description = description.to_string();
+    }
     Repository::<Task>::update(db, task.id.expect(ID_INVARIANT), task)
+}
+
+/// One named task of `project`, or the same "no such task" error a
+/// `<project>/<task>` ref would have raised.
+fn find_task_or_err(db: &Db, project: &Project, project_id: i64, name: &str) -> Result<Task> {
+    db.find_task(project_id, name)?
+        .ok_or_else(|| IterError::TaskNotFound {
+            project: project.name.clone(),
+            task: name.to_string(),
+        })
+}
+
+/// The issues a pull works from: every issue in the repo, or -- when
+/// `--task` narrows it to one task -- just the issue that task tracks.
+/// Scoped that way a pull can only ever update that one task, since every
+/// other plan `plan_pull` makes needs an issue no task has claimed.
+///
+/// A `--task` that tracks no issue is an error rather than a no-op: there
+/// is no other issue such a pull could have meant.
+fn issues_to_pull(
+    db: &Db,
+    project: &Project,
+    project_id: i64,
+    task_name: Option<&str>,
+) -> Result<Vec<github::Issue>> {
+    let Some(task_name) = task_name else {
+        return github::list_issues(&project.base_path);
+    };
+    let task = find_task_or_err(db, project, project_id, task_name)?;
+    let number = task
+        .github_issue
+        .ok_or_else(|| IterError::NoLinkedIssue(format!("{}/{}", project.name, task.name)))?;
+    Ok(vec![github::fetch_issue(&project.base_path, number)?])
 }
 
 /// `iter task pull <project>` -- every issue in the project's repo brought
 /// down: one nothing tracks becomes a task, and one already tracked hands
 /// its open/closed state to the task's status (including reopened ->
 /// `queue`, which is what lets `iter session new` pick the work up again).
+/// `--task` narrows it to the one issue that task tracks, and `--body`
+/// additionally overwrites descriptions with issue bodies.
 ///
 /// Issues are the only input; no task is created, renamed or deleted for
 /// want of one, so a task with no issue at all is simply not this command's
 /// business -- `iter task push` is.
-fn task_pull(project_name: Option<&str>) -> Result<()> {
+fn task_pull(project_name: Option<&str>, task_name: Option<&str>, body: bool) -> Result<()> {
     let db = open_db();
     let project = github_project(&db, project_name)?;
     let project_id = project.id.expect(ID_INVARIANT);
     let branch_prefix = git::branch_prefix(&project.branch_template);
 
-    let issues = github::list_issues(&project.base_path)?;
+    let issues = issues_to_pull(&db, &project, project_id, task_name)?;
     // Read once, then kept current as the pull goes: each issue is planned
     // against what the ones before it did, so two issues sharing a title
     // read as the clash they are rather than colliding on the name index.
@@ -970,7 +1050,7 @@ fn task_pull(project_name: Option<&str>) -> Result<()> {
 
     let (mut created, mut updated) = (0, 0);
     for issue in &issues {
-        match sync::plan_pull(&tasks, issue) {
+        match sync::plan_pull(&tasks, issue, body) {
             sync::Pull::Create { status } => {
                 let mut task = Task {
                     id: None,
@@ -992,25 +1072,25 @@ fn task_pull(project_name: Option<&str>) -> Result<()> {
                 tasks.push(task);
                 created += 1;
             }
-            sync::Pull::Restatus { task, status } => {
-                relink_task(&db, &mut tasks[task], issue.number, status)?;
+            sync::Pull::Update {
+                task,
+                link,
+                status,
+                description,
+            } => {
+                relink_task(
+                    &db,
+                    &mut tasks[task],
+                    issue.number,
+                    status,
+                    description.then_some(issue.body.as_str()),
+                )?;
                 println!(
-                    "task '{}/{}' is now {} (issue #{})",
-                    project.name,
-                    tasks[task].name,
-                    status.as_str(),
-                    issue.number
-                );
-                updated += 1;
-            }
-            sync::Pull::Adopt { task, status } => {
-                relink_task(&db, &mut tasks[task], issue.number, status)?;
-                println!(
-                    "linked task '{}/{}' to issue #{} ({})",
+                    "task '{}/{}' <- issue #{}: {}",
                     project.name,
                     tasks[task].name,
                     issue.number,
-                    status.as_str()
+                    pull_changes(link, status, description)
                 );
                 updated += 1;
             }
@@ -1035,57 +1115,107 @@ fn task_pull(project_name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// The tail of a pull's per-task line, naming what actually changed. One
+/// pull can link a task, restatus it and rewrite its description all at
+/// once, so the line says which of the three it did.
+fn pull_changes(link: bool, status: Option<TaskStatus>, description: bool) -> String {
+    let mut changes = Vec::new();
+    if link {
+        changes.push("linked".to_string());
+    }
+    if let Some(status) = status {
+        changes.push(format!("now {}", status.as_str()));
+    }
+    if description {
+        changes.push("description updated".to_string());
+    }
+    changes.join(", ")
+}
+
 /// `iter task push <project>` -- every task sent up: one tracking no issue
 /// gets one opened for it (and the number written back, so it's tracked
 /// from then on), and one already tracking an issue has that issue closed
-/// or reopened to match its status.
+/// or reopened to match its status. `--task` narrows it to one task, and
+/// `--body` additionally overwrites issue bodies with task descriptions.
 ///
-/// Only the open/closed state is pushed, never the title or body: a task's
-/// description is working notes that grow as the work goes, and overwriting
-/// an issue -- which other people may have edited -- with them isn't
-/// something a status sync should do behind your back. `iter comment` is
-/// the way to say something on the issue.
-fn task_push(project_name: Option<&str>) -> Result<()> {
+/// Whenever a push closes an issue -- a `done` task's brand-new one, or one
+/// going open -> closed -- the pusher is added to its assignees first,
+/// signing it as done at least by them. `--add-assignee` adds, so whoever
+/// is already assigned stays, and nothing is ever unassigned -- including
+/// when an issue is reopened.
+fn task_push(project_name: Option<&str>, task_name: Option<&str>, body: bool) -> Result<()> {
     let db = open_db();
     let project = github_project(&db, project_name)?;
-    let mut tasks = db.tasks_for_project(project.id.expect(ID_INVARIANT))?;
+    let project_id = project.id.expect(ID_INVARIANT);
+
+    let mut tasks = match task_name {
+        Some(name) => vec![find_task_or_err(&db, &project, project_id, name)?],
+        None => db.tasks_for_project(project_id)?,
+    };
 
     // One listing, then a decision per task -- rather than asking `gh` for
     // the state of each task's issue one at a time.
     let issues = github::list_issues(&project.base_path)?;
 
-    let (mut opened, mut restated) = (0, 0);
+    let (mut opened, mut edited) = (0, 0);
     for task in &mut tasks {
         let display = format!("{}/{}", project.name, task.name);
-        let status = task.status;
-        match sync::plan_push(task, &issues) {
+        let plan = sync::plan_push(task, &issues, body);
+        // Read off the plan before it's taken apart: closing an issue is
+        // what signs it, whether that's a new issue or an existing one.
+        let signs = plan.closes();
+        match plan {
             sync::Push::Create { state } => {
-                let number =
-                    github::create_issue(&project.base_path, &task.name, &task.description)?;
+                let number = github::create_issue(
+                    &project.base_path,
+                    &task.name,
+                    &task.description,
+                    &project.github_project,
+                )?;
                 // Written back before the issue is closed below: if that
                 // second call fails, the task still knows its issue, and
                 // running `push` again finishes the job rather than opening
                 // a second issue for the same task.
-                relink_task(&db, task, number, status)?;
+                relink_task(&db, task, number, None, None)?;
                 opened += 1;
-                println!("opened issue #{number} for '{display}'");
-                if state == github::IssueState::Closed {
-                    github::set_issue_state(&project.base_path, number, state)?;
-                    println!("closed issue #{number} -- '{display}' is done");
-                }
-            }
-            sync::Push::Restate { number, state } => {
-                github::set_issue_state(&project.base_path, number, state)?;
-                restated += 1;
-                match state {
-                    github::IssueState::Closed => {
-                        println!("closed issue #{number} -- '{display}' is done")
-                    }
-                    github::IssueState::Open => println!(
-                        "reopened issue #{number} -- '{display}' is {}",
-                        status.as_str()
+                match project.github_project.is_empty() {
+                    true => println!("opened issue #{number} for '{display}'"),
+                    false => println!(
+                        "opened issue #{number} for '{display}', on project '{}'",
+                        project.github_project
                     ),
                 }
+                if state == github::IssueState::Closed {
+                    sign_and_close(&project, number, &display, signs)?;
+                }
+            }
+            sync::Push::Update {
+                number,
+                state,
+                body,
+            } => {
+                if body {
+                    github::set_issue_body(&project.base_path, number, &task.description)?;
+                    println!("issue #{number} <- '{display}': body updated");
+                }
+                match state {
+                    Some(github::IssueState::Closed) => {
+                        sign_and_close(&project, number, &display, signs)?
+                    }
+                    Some(github::IssueState::Open) => {
+                        github::set_issue_state(
+                            &project.base_path,
+                            number,
+                            github::IssueState::Open,
+                        )?;
+                        println!(
+                            "reopened issue #{number} -- '{display}' is {}",
+                            task.status.as_str()
+                        );
+                    }
+                    None => {}
+                }
+                edited += 1;
             }
             sync::Push::Unchanged => {}
             sync::Push::Missing { number } => {
@@ -1095,10 +1225,27 @@ fn task_push(project_name: Option<&str>) -> Result<()> {
     }
 
     println!(
-        "pushed {} task(s) to '{}': {opened} issue(s) opened, {restated} closed/reopened",
+        "pushed {} task(s) to '{}': {opened} issue(s) opened, {edited} edited",
         tasks.len(),
         project.name
     );
+    Ok(())
+}
+
+/// Signs an issue as done by the pusher and closes it -- in that order, so
+/// a run cut short leaves a signed open issue rather than a closed one
+/// nobody is named on.
+///
+/// A failure to assign is reported but doesn't stop the close: assigning
+/// needs write access to the repo, and losing the state sync -- the part
+/// that keeps a task and its issue agreeing -- over a signature would be
+/// the worse trade.
+fn sign_and_close(project: &Project, number: i64, display: &str, sign: bool) -> Result<()> {
+    if sign && let Err(e) = github::assign_self(&project.base_path, number) {
+        eprintln!("warning: couldn't assign yourself to issue #{number}: {e}");
+    }
+    github::set_issue_state(&project.base_path, number, github::IssueState::Closed)?;
+    println!("closed issue #{number} -- '{display}' is done");
     Ok(())
 }
 

@@ -50,6 +50,12 @@ pub struct ProjectDefaults {
     pub tmux: bool,
     pub auto_branch: bool,
     pub branch_template: String,
+
+    /// The GitHub Project board new issues get filed under, by title.
+    /// Empty -- the default -- files them nowhere. Worth setting here for
+    /// anyone whose boards are named the same across repos; anyone whose
+    /// aren't sets it per project (or on the organization) instead.
+    pub github_project: String,
 }
 
 impl Default for ProjectDefaults {
@@ -62,6 +68,7 @@ impl Default for ProjectDefaults {
             tmux: default_true(),
             auto_branch: default_true(),
             branch_template: default_branch_template(),
+            github_project: String::new(),
         }
     }
 }
@@ -259,6 +266,21 @@ mod tests {
         // Untouched by the block that set the two above.
         assert!(config.project.tmux);
         assert!(config.project.auto_branch);
+        assert_eq!(config.project.github_project, "");
+    }
+
+    /// `github_project` defaults to "file it nowhere", and travels into a
+    /// new project the same way the rest of the block does.
+    #[test]
+    fn a_github_project_board_can_be_defaulted() {
+        let config = from_yaml("project:\n  github_project: Roadmap\n");
+        assert_eq!(config.project.github_project, "Roadmap");
+        let project = crate::models::Project::template(&config.project);
+        assert_eq!(project.github_project, "Roadmap");
+        assert_eq!(
+            crate::models::Project::template(&ProjectDefaults::default()).github_project,
+            ""
+        );
     }
 
     #[test]
