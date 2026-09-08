@@ -23,15 +23,6 @@ pub fn dir_name(path: &str) -> String {
         .unwrap_or_default()
 }
 
-/// Removes `path` if -- and only if -- it's an empty directory. Used to
-/// clean up the folder `iter new` creates up front when the user then
-/// aborts the edit without saving, without risking deleting anything real.
-pub fn remove_dir_if_empty(path: &str) {
-    if std::fs::read_dir(path).is_ok_and(|mut entries| entries.next().is_none()) {
-        let _ = std::fs::remove_dir(path);
-    }
-}
-
 /// Recursively copies `src`'s contents into `dst` (`dst` must already
 /// exist), skipping any `.git` entry at any depth. Used by `iter clone` to
 /// seed a new project's `base_path` from another project's, as a template,

@@ -34,6 +34,35 @@ pub fn session_exists(name: &str) -> bool {
     process::succeeds("tmux", &["has-session", "-t", name])
 }
 
+/// Whether any client is still attached to `session`.
+///
+/// One tmux session can have several clients on it -- a second terminal, or
+/// someone pairing -- and each of them detaches separately. Without this,
+/// the first detach closes the task's session while another client is still
+/// working in it, and every minute after that goes unrecorded.
+///
+/// This is only usable from a hook because of *when* the hook runs.
+/// Measured on tmux 3.6: by the time `client-detached` fires, the client
+/// that left is already off the list, so what this counts is exactly the
+/// clients that remain. (`#{client_name}`, which would be the obvious way
+/// to name the one leaving, is no help -- on `client-detached` it names a
+/// *surviving* client, the same kind of trap [`HOOKS`] documents for
+/// `#{hook_session_name}`.)
+///
+/// Any failure is a `false` -- no tmux, or a session that's already gone,
+/// which is exactly the `session-closed` case -- so the caller closes the
+/// session, which is what it did before this existed.
+pub fn any_client_attached(session: &str) -> bool {
+    let Ok(clients) = process::output(
+        "tmux",
+        None,
+        &["list-clients", "-t", session, "-F", "#{client_name}"],
+    ) else {
+        return false;
+    };
+    clients.lines().any(|name| !name.trim().is_empty())
+}
+
 /// The tmux session name of the pane this process is running in, if any
 /// (i.e. we're inside a tmux client). Used by `iter t`.
 pub fn current_session_name() -> Option<String> {
@@ -75,6 +104,10 @@ pub const DETACH_MESSAGE_OPTION: &str = "@iter_detach_message";
 /// session: it fires on a plain attach *and* on `switch-client`, so hopping
 /// between two tasks inside tmux is seen. `client-attached` fires only on
 /// the former, and would leave the task you switched away from running.
+///
+/// Which client fired the hook is deliberately *not* passed: `#{client_name}`
+/// doesn't name the one that left (see [`any_client_attached`], which is
+/// how "the last client out" is told from "one of several" instead).
 const HOOKS: [(&str, &str); 3] = [
     (
         "client-session-changed",
@@ -259,5 +292,15 @@ mod tests {
             action_for("client-detached"),
             "run-shell '/usr/bin/iter internal hook client-detached \"#{session_name}\"'"
         );
+    }
+
+    /// `#{client_name}` names a client that is still attached, not the one
+    /// the hook fired for, so passing it would read as "somebody else is
+    /// still here" on the very detach that should close the session.
+    #[test]
+    fn no_hook_passes_a_client_name() {
+        for (event, _) in HOOKS {
+            assert!(!action_for(event).contains("client_name"), "{event}");
+        }
     }
 }

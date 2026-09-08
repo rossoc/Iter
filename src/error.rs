@@ -33,6 +33,16 @@ pub enum IterError {
         source: serde_yaml::Error,
     },
 
+    #[error(
+        "couldn't read the edited buffer at {path}: {source}\n\
+         your edits are still there -- fix the front matter and re-run"
+    )]
+    InvalidBuffer {
+        path: String,
+        #[source]
+        source: serde_yaml::Error,
+    },
+
     #[error("failed to run `{tool}`: {source}")]
     Spawn {
         tool: &'static str,

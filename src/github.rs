@@ -58,8 +58,9 @@ const ISSUE_FIELDS: &str = "number,title,body,state";
 
 /// The most issues `list_issues` brings back in one go. `gh` defaults to 30,
 /// which would silently truncate a real backlog; this is high enough that
-/// the cap isn't the thing you hit first.
-const ISSUE_LIMIT: &str = "1000";
+/// the cap isn't the thing you hit first -- and [`list_issues`] says so
+/// when it is.
+const ISSUE_LIMIT: usize = 1000;
 
 /// Fetches an issue via the `gh` CLI, run from `repo_path` so `gh` infers
 /// the repo from its git remote -- `iter` never stores or parses an
@@ -77,6 +78,7 @@ pub fn fetch_issue(repo_path: &str, number: i64) -> Result<Issue> {
 /// only the open ones would leave a task no way to learn its issue was
 /// closed. `gh issue list` excludes pull requests of its own accord.
 pub fn list_issues(repo_path: &str) -> Result<Vec<Issue>> {
+    let limit = ISSUE_LIMIT.to_string();
     let json = process::output(
         "gh",
         Some(repo_path),
@@ -86,12 +88,22 @@ pub fn list_issues(repo_path: &str) -> Result<Vec<Issue>> {
             "--state",
             "all",
             "--limit",
-            ISSUE_LIMIT,
+            &limit,
             "--json",
             ISSUE_FIELDS,
         ],
     )?;
     let raw: Vec<RawIssue> = parse_json("issue list", &json)?;
+    // `gh` lists newest first, so a repo past the cap loses its *oldest*
+    // issues -- and a task linked to one of those reads as "issue #N isn't
+    // in this repo", which is what a deleted issue looks like too. Better
+    // to say the list was cut short than to let the two be the same thing.
+    if raw.len() >= ISSUE_LIMIT {
+        eprintln!(
+            "warning: only the {ISSUE_LIMIT} most recent issues were read -- \
+             anything older is invisible to this run"
+        );
+    }
     Ok(raw.into_iter().map(Issue::from).collect())
 }
 

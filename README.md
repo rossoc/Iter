@@ -30,7 +30,7 @@ tmux + GitHub integration.
 ```sh
 # creating projects  (--organization/-o is optional on all of these)
 iter init                           # cwd becomes base_path; opens in nvim to name it
-iter new some/path                  # creates the folder; base_path=that path, opened in nvim
+iter new some/path                  # base_path=that path, opened in nvim; the folder is made on save
 iter clone myproj-template new-app  # copies myproj-template's fields + files (not .git/tasks/sessions)
 iter clone git@github.com:me/repo   # or a git/GitHub URL (or local repo path) if no such project exists
 iter init -o acme                   # ...and start from organization `acme`'s defaults
@@ -313,11 +313,19 @@ Three ways to get from nothing to a registered project, all ending the same
 way: base_path is filled in, then nvim opens for you to name it (and set
 anything else) before it's saved to the database.
 
+A project always ends up with a non-empty, absolute base_path: blank it in
+the editor and nothing is created, and a relative one you type there is
+resolved against the directory you ran the command from -- a project whose
+base_path is relative would mean a different folder from everywhere `iter`
+is run later.
+
 - `iter init` -- for a folder you're already in: base_path is the current
   directory. Nothing is created on disk.
-- `iter new <path>` -- for starting completely fresh: `<path>` is created
-  (like `mkdir -p`) and becomes base_path. If you quit nvim without saving,
-  the folder is removed again (only if it's still empty).
+- `iter new <path>` -- for starting completely fresh: `<path>` becomes
+  base_path and is created (like `mkdir -p`) when you save. Nothing is
+  created before that, so quitting nvim without saving leaves no folder
+  behind -- and if you change base_path while editing, it's the path you
+  changed it to that gets created.
 - `iter clone <source>` -- for templating off something that already
   exists:
   - If `<source>` is the name of an existing project, its fields (including
@@ -368,6 +376,14 @@ straight to another stops the first and starts the second. `client-detached`
 catches the client going away for any reason -- including the terminal
 being killed outright, not just a clean detach -- and `session-closed` is
 the backstop for the tmux session being destroyed while still attached.
+
+A tmux session can have more than one client on it (a second terminal, or
+someone pairing), and each of them detaches separately, so only the *last*
+one out stops the clock: a detach that leaves somebody else attached
+changes nothing. If you drive the detach from your own `tmux.conf` hook
+rather than the ones `iter` installs -- calling `iter session stop`
+directly, say -- that's an explicit stop and it stops the session whoever
+else is attached.
 `iter session elapse` reports time on the open session. If a project has
 `tmux: false`, no tmux session is created at all -- use `iter session
 start`/`iter session stop` to track work on it manually instead.

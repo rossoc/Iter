@@ -37,9 +37,26 @@ pub fn branch_prefix(template: &str) -> String {
     }
 }
 
-/// A task's branch name: its `branch_prefix` followed by its slugified name.
-pub fn branch_name(prefix: &str, task_name: &str) -> String {
-    format!("{prefix}{}", slugify(task_name))
+/// The slug a task's branch *and* its worktree directory are both named
+/// from -- one slug for both, so a name made unique for one is unique for
+/// the other too.
+///
+/// A name that slugifies to nothing (no ASCII letters or digits in it at
+/// all -- a task pulled from a non-Latin issue title, say) falls back to
+/// the task's id. The empty slug is not a cosmetic problem: it makes the
+/// branch a bare prefix, which git refuses, and the worktree path the
+/// `.iter-worktrees` directory itself.
+pub fn task_slug(name: &str, task_id: i64) -> String {
+    match slugify(name).as_str() {
+        "" => format!("task-{task_id}"),
+        slug => slug.to_string(),
+    }
+}
+
+/// A task's branch name: its `branch_prefix` followed by the slug from
+/// [`task_slug`].
+pub fn branch_name(prefix: &str, slug: &str) -> String {
+    format!("{prefix}{slug}")
 }
 
 /// Creates a new worktree at `worktree_path`, on a new branch `branch`,
@@ -106,16 +123,32 @@ mod tests {
 
     #[test]
     fn branch_name_appends_the_slug_to_the_prefix() {
-        assert_eq!(branch_name("feat/", "Fix Login Bug"), "feat/fix-login-bug");
+        assert_eq!(
+            branch_name("feat/", &task_slug("Fix Login Bug", 1)),
+            "feat/fix-login-bug"
+        );
     }
 
     #[test]
     fn branch_name_respects_a_custom_prefix() {
-        assert_eq!(branch_name("fix/", "Login Bug"), "fix/login-bug");
+        assert_eq!(
+            branch_name("fix/", &task_slug("Login Bug", 1)),
+            "fix/login-bug"
+        );
     }
 
     #[test]
     fn branch_name_with_an_empty_prefix_is_the_bare_slug() {
-        assert_eq!(branch_name("", "Login Bug"), "login-bug");
+        assert_eq!(branch_name("", &task_slug("Login Bug", 1)), "login-bug");
+    }
+
+    /// Without the fallback this is the empty string, which makes `feat/`
+    /// (git rejects it) and a worktree path that is the container
+    /// directory -- both of them silent until `git worktree add` fails.
+    #[test]
+    fn a_name_with_nothing_sluggable_in_it_falls_back_to_the_task_id() {
+        assert_eq!(task_slug("設計を見直す", 42), "task-42");
+        assert_eq!(task_slug("!!! ---", 7), "task-7");
+        assert_eq!(task_slug("", 3), "task-3");
     }
 }

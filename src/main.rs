@@ -378,8 +378,17 @@ fn close_open_session(db: &Db, task_id: i64, message: Option<&str>) -> Result<()
 /// The tmux kill comes last, and deliberately isn't the thing anything else
 /// here depends on: if this is run from inside that same tmux session,
 /// `kill-session` takes down every pane in it -- including this one -- so
-/// nothing after that call is guaranteed to run.
-fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionConfig) {
+/// nothing after that call is guaranteed to run. Which is why the kill
+/// isn't done here at all: the tmux session that still needs killing is
+/// *returned*, so a caller tearing down several of them can do the killing
+/// after its loop rather than have the first one end the process halfway
+/// through.
+#[must_use = "the tmux session still needs killing"]
+fn teardown_session_config<'a>(
+    db: &Db,
+    project: &Project,
+    session_config: &'a SessionConfig,
+) -> Option<&'a str> {
     if let Some(worktree) = &session_config.worktree_path
         && let Err(e) = git::remove_worktree(&project.base_path, worktree)
     {
@@ -395,34 +404,55 @@ fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionC
     {
         eprintln!("warning: failed to delete session-config row: {e}");
     }
-    if let Some(name) = &session_config.tmux_session_name {
-        tmux::kill_session(name);
-    }
+    session_config.tmux_session_name.as_deref()
 }
 
 // ---- init / new / clone ---------------------------------------------------
 
-/// Opens `template` in nvim; if saved (and named), inserts it as a new
-/// project and returns `true`. Returns `false` (having printed a
-/// "no changes" message) if the user quit without saving -- the shared
-/// tail of `project new`, `iter init`, and `iter new`.
-fn create_project_interactively(db: &Db, template: Project) -> Result<bool> {
-    let organization_id = template.organization_id;
-    match md_edit::edit_in_editor(&template)? {
-        Some(mut project) => {
-            if project.name.trim().is_empty() {
-                return Err(IterError::EmptyProjectName);
-            }
-            project.organization_id = organization_id; // never carried through the YAML
-            Repository::<Project>::insert(db, &project)?;
-            println!("created project '{}'", project.name);
-            Ok(true)
-        }
-        None => {
-            println!("no changes -- project not created");
-            Ok(false)
-        }
+/// The one way a project is created: opens `template` in the editor,
+/// validates what comes back, lets `populate` turn the `base_path` it names
+/// into an actual directory (creating it, copying another project's files
+/// into it, running `git clone`), and only then inserts the row -- so a
+/// project never names a directory that was never made, and a directory is
+/// never made for a `base_path` the user changed in the buffer.
+///
+/// `cloned_from` only names the origin in the message. Returns `false`,
+/// having said so, if the user quit without saving. Shared by `iter init`,
+/// `iter new`, `iter clone` and `iter project new`, which is what keeps the
+/// validation below from being four slightly different validations.
+fn create_project_interactively(
+    db: &Db,
+    template: &Project,
+    cloned_from: Option<&str>,
+    populate: impl FnOnce(&str) -> Result<()>,
+) -> Result<bool> {
+    let Some(mut project) = md_edit::edit_in_editor(template)? else {
+        println!("no changes -- project not created");
+        return Ok(false);
+    };
+    project.organization_id = template.organization_id; // never carried through the YAML
+    if project.name.trim().is_empty() {
+        return Err(IterError::EmptyProjectName);
     }
+    if project.base_path.trim().is_empty() {
+        return Err(IterError::EmptyBasePath);
+    }
+    // Absolutised here, once, for every path a project can arrive by. A
+    // relative `base_path` names a different directory from every place
+    // `iter` is later run -- a different worktree to create, a different
+    // repo to ask whether it's one -- and an empty one, rejected above,
+    // reads as the current directory throughout.
+    project.base_path = scaffold::absolute_path(project.base_path.trim())?;
+    populate(&project.base_path)?;
+    Repository::<Project>::insert(db, &project)?;
+    match cloned_from {
+        Some(source) => println!(
+            "created project '{}' (cloned from '{source}')",
+            project.name
+        ),
+        None => println!("created project '{}'", project.name),
+    }
+    Ok(true)
 }
 
 /// A blank project template, seeded with `organization`'s defaults when one
@@ -444,24 +474,27 @@ fn init_cmd(organization: Option<&str>) -> Result<()> {
     // organization saying "github" can't make a non-repo into one.
     template.github = git::is_git_repo(&base_path);
     template.base_path = base_path;
-    create_project_interactively(&db, template)?;
+    create_project_interactively(&db, &template, None, |_| Ok(()))?;
     Ok(())
 }
 
 fn new_cmd(path: &str, organization: Option<&str>) -> Result<()> {
     let db = open_db();
     let base_path = scaffold::absolute_path(path)?;
-    std::fs::create_dir_all(&base_path)?;
 
     let mut template = new_project_template(&db, organization)?;
     template.name = scaffold::dir_name(&base_path);
     template.github = git::is_git_repo(&base_path);
-    template.base_path = base_path.clone();
+    template.base_path = base_path;
 
-    // If the user quits without saving, don't leave an empty folder behind.
-    if !create_project_interactively(&db, template)? {
-        scaffold::remove_dir_if_empty(&base_path);
-    }
+    // The directory is made from what comes *back* from the editor, not
+    // from the argument: edit `base_path` in the buffer and it's the edited
+    // one that gets created. Nothing exists before the edit, so quitting
+    // without saving leaves nothing behind to clean up either.
+    create_project_interactively(&db, &template, None, |dest| {
+        std::fs::create_dir_all(dest)?;
+        Ok(())
+    })?;
     Ok(())
 }
 
@@ -487,55 +520,25 @@ fn clone_cmd(source: &str, organization: Option<&str>) -> Result<()> {
                 template.organization_id = resolve_organization(&db, name)?.id;
             }
             let files_from = source_project.base_path.clone();
-            clone_into(&db, &template, &source_project.name, |dest| {
+            create_project_interactively(&db, &template, Some(&source_project.name), |dest| {
                 std::fs::create_dir_all(dest)?;
                 scaffold::copy_dir_excluding_git(
                     std::path::Path::new(&files_from),
                     std::path::Path::new(dest),
                 )
-            })
+            })?;
+            Ok(())
         }
         // `git clone` creates the destination directory itself.
         None => {
             let mut template = new_project_template(&db, organization)?;
             template.github = true; // it is a repo, by construction
-            clone_into(&db, &template, source, |dest| git::clone_repo(source, dest))
+            create_project_interactively(&db, &template, Some(source), |dest| {
+                git::clone_repo(source, dest)
+            })?;
+            Ok(())
         }
     }
-}
-
-/// The shared body of both clone flows: open `template` in the editor,
-/// validate the saved result and resolve its `base_path` to an absolute
-/// path, let `populate` turn that path into an actual, populated directory
-/// (copying a template project's files vs. running `git clone`), then
-/// insert the row. `source_label` only names the origin in the message.
-fn clone_into(
-    db: &Db,
-    template: &Project,
-    source_label: &str,
-    populate: impl FnOnce(&str) -> Result<()>,
-) -> Result<()> {
-    let Some(mut project) = md_edit::edit_in_editor(template)? else {
-        println!("no changes -- project not created");
-        return Ok(());
-    };
-    project.organization_id = template.organization_id; // never carried through the YAML
-    if project.name.trim().is_empty() {
-        return Err(IterError::EmptyProjectName);
-    }
-    if project.base_path.trim().is_empty() {
-        return Err(IterError::EmptyBasePath);
-    }
-    let base_path = scaffold::absolute_path(&project.base_path)?;
-    populate(&base_path)?;
-
-    project.base_path = base_path;
-    Repository::<Project>::insert(db, &project)?;
-    println!(
-        "created project '{}' (cloned from '{source_label}')",
-        project.name
-    );
-    Ok(())
 }
 
 // ---- organization ----------------------------------------------------
@@ -683,7 +686,7 @@ fn dispatch_project(action: Option<&ProjectCommand>) -> Result<()> {
 fn project_new(organization: Option<&str>) -> Result<()> {
     let db = open_db();
     let template = new_project_template(&db, organization)?;
-    create_project_interactively(&db, template)?;
+    create_project_interactively(&db, &template, None, |_| Ok(()))?;
     Ok(())
 }
 
@@ -728,10 +731,19 @@ fn project_delete(name: Option<&str>) -> Result<()> {
     // pane too, so anything after that point may never run.
     Repository::<Project>::delete(&db, project_id)?;
 
-    for session_config in &session_configs {
-        teardown_session_config(&db, &project, session_config);
-    }
+    let tmux_sessions: Vec<&str> = session_configs
+        .iter()
+        .filter_map(|session_config| teardown_session_config(&db, &project, session_config))
+        .collect();
     println!("deleted project '{}'", project.name);
+
+    // Killing is left to the very end for the same reason the row deletion
+    // moved to the front: run this from inside one of these sessions and
+    // the first `kill-session` takes this process with it. Inside the loop
+    // above, that would strand every worktree after the first.
+    for name in tmux_sessions {
+        tmux::kill_session(name);
+    }
     Ok(())
 }
 
@@ -877,8 +889,10 @@ fn task_delete(task_ref: Option<&str>) -> Result<()> {
     // anything after that point may never run.
     Repository::<Task>::delete(&db, task_id)?;
 
-    if let Some(session_config) = session_config {
-        teardown_session_config(&db, &project, &session_config);
+    if let Some(session_config) = session_config
+        && let Some(name) = teardown_session_config(&db, &project, &session_config)
+    {
+        tmux::kill_session(name);
     }
     println!("deleted task '{display}'");
     Ok(())
@@ -945,8 +959,10 @@ fn task_done(task_ref: Option<&str>) -> Result<()> {
     task.status = TaskStatus::Done;
     Repository::<Task>::update(&db, task_id, &task)?;
 
-    if let Some(session_config) = db.find_session_config_by_task(task_id)? {
-        teardown_session_config(&db, &project, &session_config);
+    if let Some(session_config) = db.find_session_config_by_task(task_id)?
+        && let Some(name) = teardown_session_config(&db, &project, &session_config)
+    {
+        tmux::kill_session(name);
     }
 
     println!("task '{display}' marked done");
@@ -1157,75 +1173,91 @@ fn task_push(project_name: Option<&str>, task_name: Option<&str>, body: bool) ->
     // the state of each task's issue one at a time.
     let issues = github::list_issues(&project.base_path)?;
 
-    let (mut opened, mut edited) = (0, 0);
+    let (mut opened, mut edited, mut failed) = (0, 0, 0);
     for task in &mut tasks {
         let display = format!("{}/{}", project.name, task.name);
-        let plan = sync::plan_push(task, &issues, body);
-        // Read off the plan before it's taken apart: closing an issue is
-        // what signs it, whether that's a new issue or an existing one.
-        let signs = plan.closes();
-        match plan {
-            sync::Push::Create { state } => {
-                let number = github::create_issue(
-                    &project.base_path,
-                    &task.name,
-                    &task.description,
-                    &project.github_project,
-                )?;
-                // Written back before the issue is closed below: if that
-                // second call fails, the task still knows its issue, and
-                // running `push` again finishes the job rather than opening
-                // a second issue for the same task.
-                relink_task(&db, task, number, None, None)?;
-                opened += 1;
-                match project.github_project.is_empty() {
-                    true => println!("opened issue #{number} for '{display}'"),
-                    false => println!(
-                        "opened issue #{number} for '{display}', on project '{}'",
-                        project.github_project
-                    ),
-                }
-                if state == github::IssueState::Closed {
-                    sign_and_close(&project, number, &display, signs)?;
-                }
-            }
-            sync::Push::Update {
-                number,
-                state,
-                body,
-            } => {
-                if body {
-                    github::set_issue_body(&project.base_path, number, &task.description)?;
-                    println!("issue #{number} <- '{display}': body updated");
-                }
-                match state {
-                    Some(github::IssueState::Closed) => {
-                        sign_and_close(&project, number, &display, signs)?
+        // One task's `gh` calls are its own: an issue somebody locked, or a
+        // single call that times out, skips that task and lets the rest of
+        // the backlog through -- the warn-and-continue a `Missing` issue
+        // already got. Ending the run there instead would also swallow the
+        // summary below, leaving no way to tell how far the push got.
+        let pushed = (|| -> Result<()> {
+            let plan = sync::plan_push(task, &issues, body);
+            // Read off the plan before it's taken apart: closing an issue is
+            // what signs it, whether that's a new issue or an existing one.
+            let signs = plan.closes();
+            match plan {
+                sync::Push::Create { state } => {
+                    let number = github::create_issue(
+                        &project.base_path,
+                        &task.name,
+                        &task.description,
+                        &project.github_project,
+                    )?;
+                    // Written back before the issue is closed below: if that
+                    // second call fails, the task still knows its issue, and
+                    // running `push` again finishes the job rather than opening
+                    // a second issue for the same task.
+                    relink_task(&db, task, number, None, None)?;
+                    opened += 1;
+                    match project.github_project.is_empty() {
+                        true => println!("opened issue #{number} for '{display}'"),
+                        false => println!(
+                            "opened issue #{number} for '{display}', on project '{}'",
+                            project.github_project
+                        ),
                     }
-                    Some(github::IssueState::Open) => {
-                        github::set_issue_state(
-                            &project.base_path,
-                            number,
-                            github::IssueState::Open,
-                        )?;
-                        println!(
-                            "reopened issue #{number} -- '{display}' is {}",
-                            task.status.as_str()
-                        );
+                    if state == github::IssueState::Closed {
+                        sign_and_close(&project, number, &display, signs)?;
                     }
-                    None => {}
                 }
-                edited += 1;
+                sync::Push::Update {
+                    number,
+                    state,
+                    body,
+                } => {
+                    if body {
+                        github::set_issue_body(&project.base_path, number, &task.description)?;
+                        println!("issue #{number} <- '{display}': body updated");
+                    }
+                    match state {
+                        Some(github::IssueState::Closed) => {
+                            sign_and_close(&project, number, &display, signs)?
+                        }
+                        Some(github::IssueState::Open) => {
+                            github::set_issue_state(
+                                &project.base_path,
+                                number,
+                                github::IssueState::Open,
+                            )?;
+                            println!(
+                                "reopened issue #{number} -- '{display}' is {}",
+                                task.status.as_str()
+                            );
+                        }
+                        None => {}
+                    }
+                    edited += 1;
+                }
+                sync::Push::Unchanged => {}
+                sync::Push::Missing { number } => {
+                    eprintln!("warning: '{display}' skipped -- issue #{number} isn't in this repo")
+                }
             }
-            sync::Push::Unchanged => {}
-            sync::Push::Missing { number } => {
-                eprintln!("warning: '{display}' skipped -- issue #{number} isn't in this repo")
-            }
+            Ok(())
+        })();
+        if let Err(e) = pushed {
+            eprintln!("warning: '{display}' didn't finish -- {e}");
+            failed += 1;
         }
     }
 
+    let failures = match failed {
+        0 => String::new(),
+        failed => format!(", {failed} failed"),
+    };
     println!(
-        "pushed {} task(s) to '{}': {opened} issue(s) opened, {edited} edited",
+        "pushed {} task(s) to '{}': {opened} issue(s) opened, {edited} edited{failures}",
         tasks.len(),
         project.name
     );
@@ -1315,14 +1347,21 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
             "" => git::branch_prefix(&project.branch_template),
             prefix => prefix.to_string(),
         };
+        // One slug for the branch and the directory both. Two tasks whose
+        // names slugify the same ("Fix login" and "fix-login") would
+        // otherwise collide on both at once, and the second `session new`
+        // would fail on a `git worktree add` the user can't work around --
+        // `-b` renames the branch, but nothing renames the directory.
+        let slug = git::task_slug(&task.name, task_id);
+        let worktrees = std::path::Path::new(&project.base_path).join(".iter-worktrees");
+        let slug = match worktrees.join(&slug).exists() {
+            true => format!("{slug}-{task_id}"),
+            false => slug,
+        };
         let branch = branch_override
             .map(|b| b.to_string())
-            .unwrap_or_else(|| git::branch_name(&prefix, &task.name));
-        let slug = git::slugify(&task.name);
-        let path = std::path::Path::new(&project.base_path)
-            .join(".iter-worktrees")
-            .join(&slug);
-        let path_str = path.to_string_lossy().to_string();
+            .unwrap_or_else(|| git::branch_name(&prefix, &slug));
+        let path_str = worktrees.join(&slug).to_string_lossy().to_string();
         git::create_worktree(&project.base_path, &branch, &path_str)?;
         github_branch = Some(branch);
         worktree_path = Some(path_str);
@@ -1332,17 +1371,36 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
     // both `worktree_path` and `project.base_path` already do.
     let cwd: &str = worktree_path.as_deref().unwrap_or(&project.base_path);
 
-    let final_tmux_name = if project.tmux {
+    // Everything from here to the insert can fail, and until that row
+    // exists nothing else knows the worktree and branch are there --
+    // `teardown_session_config` works off the row, so a failure that left
+    // them behind would leave them behind for good, and the retry would hit
+    // "branch already exists" on a branch the user has to clean up by hand.
+    let started = (|| -> Result<Option<String>> {
+        if !project.tmux {
+            println!(
+                "session started for '{task_ref}' at {cwd} (tmux disabled for this project -- use `iter session start`/`iter session stop`)"
+            );
+            return Ok(None);
+        }
         tmux::create_session(&tmux_session_name, cwd)?;
         let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
         tmux::ensure_hooks_installed(&iter_bin)?;
         println!("session '{tmux_session_name}' started");
-        Some(tmux_session_name)
-    } else {
-        println!(
-            "session started for '{task_ref}' at {cwd} (tmux disabled for this project -- use `iter session start`/`iter session stop`)"
-        );
-        None
+        Ok(Some(tmux_session_name.clone()))
+    })();
+
+    let final_tmux_name = match started {
+        Ok(name) => name,
+        Err(e) => {
+            unwind_session_setup(
+                &project,
+                worktree_path.as_deref(),
+                github_branch.as_deref(),
+                Some(&tmux_session_name),
+            );
+            return Err(e);
+        }
     };
 
     let session_config = SessionConfig {
@@ -1352,7 +1410,15 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
         github_branch,
         worktree_path,
     };
-    Repository::<SessionConfig>::insert(&db, &session_config)?;
+    if let Err(e) = Repository::<SessionConfig>::insert(&db, &session_config) {
+        unwind_session_setup(
+            &project,
+            session_config.worktree_path.as_deref(),
+            session_config.github_branch.as_deref(),
+            session_config.tmux_session_name.as_deref(),
+        );
+        return Err(e);
+    }
 
     task.status = TaskStatus::Wip;
     Repository::<Task>::update(&db, task_id, &task)?;
@@ -1369,6 +1435,34 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
     }
 
     Ok(())
+}
+
+/// Undoes what `session_new` built, for a failure before the session-config
+/// row exists. Without a row there is nothing to tear the worktree down
+/// from later, so it has to happen here or not at all.
+///
+/// Killing the tmux session first: it was created detached and nothing has
+/// attached to it yet, so this can't take the running process with it the
+/// way `teardown_session_config` can.
+fn unwind_session_setup(
+    project: &Project,
+    worktree: Option<&str>,
+    branch: Option<&str>,
+    tmux_session: Option<&str>,
+) {
+    if let Some(name) = tmux_session {
+        tmux::kill_session(name);
+    }
+    if let Some(worktree) = worktree
+        && let Err(e) = git::remove_worktree(&project.base_path, worktree)
+    {
+        eprintln!("warning: couldn't remove the worktree at {worktree}: {e}");
+    }
+    if let Some(branch) = branch
+        && let Err(e) = git::delete_branch(&project.base_path, branch)
+    {
+        eprintln!("warning: couldn't delete the branch '{branch}': {e}");
+    }
 }
 
 fn session_start(task_ref: Option<&str>) -> Result<()> {
@@ -1440,10 +1534,19 @@ fn start_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
 /// carrying over a message left in the tmux option by whatever detached
 /// (see `tmux::DETACH_MESSAGE_OPTION`) so a note typed on the way out lands
 /// on the session it belongs to.
+///
+/// A tmux session can have several clients on it -- a second terminal, or
+/// someone pairing -- and it's still being worked as long as one of them is
+/// there, so only the last one out stops the clock. The client that fired
+/// this hook is already off tmux's list by now, so what's left on it is
+/// exactly what "still being worked" means.
 fn stop_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     let Some(session_config) = db.find_session_config_by_tmux_name(tmux_session)? else {
         return Ok(()); // not one of ours -- ignore
     };
+    if tmux::any_client_attached(tmux_session) {
+        return Ok(()); // somebody else is still in there
+    }
     let message = tmux::take_detach_message(tmux_session);
     close_open_session(db, session_config.task_id, message.as_deref())
 }
