@@ -1,4 +1,4 @@
-use crate::{organization_completer, project_completer, task_completer};
+use crate::{organization_completer, project_completer, queued_task_completer, task_completer};
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
 
@@ -289,7 +289,8 @@ pub enum SessionCommand {
     /// the project has no github or auto_branch is off) and, if the
     /// project has tmux enabled, a tmux session named `<project>/<task>`
     New {
-        #[arg(add = ArgValueCompleter::new(task_completer))]
+        /// `<project>/<task>` (completion offers only `queue` tasks)
+        #[arg(add = ArgValueCompleter::new(queued_task_completer))]
         task: String,
 
         /// Override the branch name (default: the task's branch_prefix

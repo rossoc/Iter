@@ -429,7 +429,9 @@ fn spent(hhmm: &str, hours: f64) -> String {
 }
 
 fn non_empty(text: &str) -> Option<String> {
-    Some(text.trim()).filter(|t| !t.is_empty()).map(str::to_string)
+    Some(text.trim())
+        .filter(|t| !t.is_empty())
+        .map(str::to_string)
 }
 
 /// A markdown cell: pipes escaped and newlines flattened, so a typed note
@@ -506,7 +508,13 @@ impl Md {
             let padded: Vec<String> = widths
                 .iter()
                 .enumerate()
-                .map(|(i, w)| format!("{:<w$}", cells.get(i).map(String::as_str).unwrap_or(""), w = w))
+                .map(|(i, w)| {
+                    format!(
+                        "{:<w$}",
+                        cells.get(i).map(String::as_str).unwrap_or(""),
+                        w = w
+                    )
+                })
                 .collect();
             format!("| {} |", padded.join(" | "))
         };
@@ -537,13 +545,7 @@ impl Md {
             &["Task", "Status", "Time"],
             &tasks
                 .iter()
-                .map(|t| {
-                    vec![
-                        cell(&t.name),
-                        t.status_label.clone(),
-                        t.total_hhmm.clone(),
-                    ]
-                })
+                .map(|t| vec![cell(&t.name), t.status_label.clone(), t.total_hhmm.clone()])
                 .collect::<Vec<_>>(),
         );
     }
@@ -1023,7 +1025,10 @@ mod tests {
             sessions: session_rows(&[sess(1, "2026-09-04 09:00", None, None)], now(), false),
         };
         let out = render_task_info(&info, Format::Text).unwrap();
-        assert!(out.contains("| 09:00 | --  | 03:00    | (ongoing) |"), "{out}");
+        assert!(
+            out.contains("| 09:00 | --  | 03:00    | (ongoing) |"),
+            "{out}"
+        );
     }
 
     #[test]
@@ -1046,7 +1051,10 @@ mod tests {
             out.contains("| Task  | Status           | Time  |"),
             "{out}"
         );
-        assert!(out.contains("| task1 | work in progress | 02:00 |"), "{out}");
+        assert!(
+            out.contains("| task1 | work in progress | 02:00 |"),
+            "{out}"
+        );
         assert!(out.contains("\n## task1 -- work in progress\n"), "{out}");
         assert!(out.contains("- wrote the docs\n"), "{out}");
     }

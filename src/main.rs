@@ -119,8 +119,12 @@ pub(crate) fn organization_completer(current: &std::ffi::OsStr) -> Vec<Completio
         .collect()
 }
 
-/// Dynamic completer for arguments naming a task as `<project>/<task>`.
-pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+/// Dynamic completer for arguments naming a task as `<project>/<task>`,
+/// offering only the tasks `keep` accepts.
+fn task_completer_where(
+    current: &std::ffi::OsStr,
+    keep: impl Fn(&Task) -> bool,
+) -> Vec<CompletionCandidate> {
     let Some(current) = current.to_str() else {
         return Vec::new();
     };
@@ -133,7 +137,7 @@ pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandida
         let Ok(tasks) = db.tasks_for_project(p.id.expect(ID_INVARIANT)) else {
             continue;
         };
-        for t in tasks {
+        for t in tasks.iter().filter(|t| keep(t)) {
             let full = format!("{}/{}", p.name, t.name);
             if full.starts_with(current) {
                 out.push(CompletionCandidate::new(full));
@@ -141,6 +145,18 @@ pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandida
         }
     }
     out
+}
+
+/// Dynamic completer for arguments naming any task.
+pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+    task_completer_where(current, |_| true)
+}
+
+/// Dynamic completer for `session new`, which is only ever a sensible thing
+/// to run on a task that hasn't been started: it refuses a task that already
+/// has a session-config, and flips the one it does start to `wip`.
+pub(crate) fn queued_task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+    task_completer_where(current, |t| t.status == TaskStatus::Queue)
 }
 
 /// Splits `<project>/<task>` on the first `/`.
@@ -568,8 +584,7 @@ fn organization_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let mut projects = Vec::new();
     let mut all_sessions = Vec::new();
     for project in db.projects_for_organization(organization_id)? {
-        let (tasks, sessions) =
-            task_reports(&db, project.id.expect(ID_INVARIANT), range, now)?;
+        let (tasks, sessions) = task_reports(&db, project.id.expect(ID_INVARIANT), range, now)?;
         if tasks.is_empty() {
             continue;
         }
