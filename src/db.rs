@@ -5,8 +5,6 @@ use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
 use std::path::Path;
 
-pub const DB_FILE: &str = "/home/local/.config/programmini/buff/iter.db";
-
 const DATETIME_FMT: &str = "%Y-%m-%d %H:%M:%S";
 
 fn dt_to_str(dt: NaiveDateTime) -> String {
@@ -111,8 +109,13 @@ pub struct Db {
 }
 
 impl Db {
-    pub fn open(path: &str) -> Result<Self> {
-        if let Some(parent) = Path::new(path).parent() {
+    /// Opens (creating if need be) the SQLite file at `path`, along with
+    /// the directory holding it -- the configured location is allowed to
+    /// be somewhere that doesn't exist yet, including the default
+    /// `~/.config/iter` on a machine that has never run `iter`.
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref();
+        if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         let conn = Connection::open(path)?;
@@ -430,6 +433,7 @@ impl<T: Column> Column for Option<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ProjectDefaults;
 
     fn dt(s: &str) -> NaiveDateTime {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
@@ -567,7 +571,7 @@ mod tests {
             );
         }
         check(&project("alpha"));
-        check(&Organization::template());
+        check(&Organization::template(&ProjectDefaults::default()));
         check(&Task {
             id: None,
             project_id: 1,
@@ -921,7 +925,7 @@ mod tests {
     }
 
     fn insert_organization(db: &Db, name: &str) -> i64 {
-        let mut organization = Organization::template();
+        let mut organization = Organization::template(&ProjectDefaults::default());
         organization.name = name.to_string();
         organization.github = true;
         organization.tmux = false;

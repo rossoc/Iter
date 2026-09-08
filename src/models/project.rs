@@ -1,3 +1,4 @@
+use crate::config::ProjectDefaults;
 use crate::models::{Organization, default_branch_template, default_true};
 use iter_macros::Table;
 use serde::{Deserialize, Serialize};
@@ -56,25 +57,30 @@ pub struct Project {
 }
 
 impl Project {
-    /// A blank template for `iter project new` to open in the editor.
-    pub fn template() -> Self {
+    /// A blank template for `iter project new` to open in the editor,
+    /// carrying the config file's project defaults -- which is where a
+    /// user who always wants, say, `github: true` sets it once instead of
+    /// flipping it in every buffer.
+    pub fn template(defaults: &ProjectDefaults) -> Self {
         Project {
             id: None,
             organization_id: None,
             name: String::new(),
             description: String::new(),
             base_path: String::new(),
-            github: false,
-            tmux: true,
-            auto_branch: true,
-            branch_template: default_branch_template(),
+            github: defaults.github,
+            tmux: defaults.tmux,
+            auto_branch: defaults.auto_branch,
+            branch_template: defaults.branch_template.clone(),
         }
     }
 
     /// Seeds this template with `organization`'s downstream defaults and
-    /// makes it a member. Only meaningful on a *blank* template: cloning an
-    /// existing project keeps that project's own settings, and sets nothing
-    /// here but the membership.
+    /// makes it a member -- an organization's settings outrank the config
+    /// file's, being the narrower answer to the same question. Only
+    /// meaningful on a *blank* template: cloning an existing project keeps
+    /// that project's own settings, and sets nothing here but the
+    /// membership.
     pub fn inherit_from(&mut self, organization: &Organization) {
         self.organization_id = organization.id;
         self.github = organization.github;

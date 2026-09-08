@@ -22,7 +22,7 @@ pub(crate) fn default_branch_template() -> String {
     "feat/{task}".to_string()
 }
 
-/// A type edited via `md_edit::edit_in_nvim` that carries a free-form
+/// A type edited via `md_edit::edit_in_editor` that carries a free-form
 /// markdown `description`. The field is `#[serde(skip)]`ed on the type
 /// itself and instead placed below the YAML front matter's closing `---`,
 /// as the markdown body

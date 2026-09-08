@@ -16,6 +16,23 @@ pub enum IterError {
     #[error("YAML error: {0}")]
     Yaml(#[from] serde_yaml::Error),
 
+    #[error("cannot locate a config directory -- set $XDG_CONFIG_HOME or $HOME")]
+    NoConfigDir,
+
+    #[error("failed to read config at {path}: {source}")]
+    ConfigUnreadable {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("invalid config at {path}: {source}")]
+    InvalidConfig {
+        path: String,
+        #[source]
+        source: serde_yaml::Error,
+    },
+
     #[error("failed to run `{tool}`: {source}")]
     Spawn {
         tool: &'static str,

@@ -1,3 +1,4 @@
+use crate::config::config;
 use crate::error::Result;
 use crate::models::MarkdownBody;
 use crate::process;
@@ -59,10 +60,11 @@ pub fn resolve_edit<T: DeserializeOwned + MarkdownBody>(original: &str, edited: 
 }
 
 /// Opens `template` as a markdown file -- YAML front matter with the
-/// fields, the `description` as the body -- in `nvim` for the user to fill
-/// in/edit. Returns `Ok(None)` if nvim exited without saving (file
-/// unchanged) or the result doesn't parse back into `T`
-pub fn edit_in_nvim<T: Serialize + DeserializeOwned + MarkdownBody>(
+/// fields, the `description` as the body -- in the configured editor
+/// (`nvim` unless `editor` says otherwise) for the user to fill in/edit.
+/// Returns `Ok(None)` if the editor exited without saving (file unchanged)
+/// or the result doesn't parse back into `T`
+pub fn edit_in_editor<T: Serialize + DeserializeOwned + MarkdownBody>(
     template: &T,
 ) -> Result<Option<T>> {
     let original = render_template(template)?;
@@ -74,7 +76,10 @@ pub fn edit_in_nvim<T: Serialize + DeserializeOwned + MarkdownBody>(
     ));
     std::fs::write(&path, &original)?;
 
-    let saved = process::run_status("nvim", None, &[&path])?;
+    // `config()` hands out a `&'static Config`, so the configured name
+    // lives as long as the process and satisfies `run_status`'s
+    // `&'static str` -- no leaking a `String` to name the tool.
+    let saved = process::run_status(&config().editor, None, &[&path])?;
 
     let edited = std::fs::read_to_string(&path);
     let _ = std::fs::remove_file(&path);

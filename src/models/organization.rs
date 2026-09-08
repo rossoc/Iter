@@ -1,3 +1,4 @@
+use crate::config::ProjectDefaults;
 use crate::models::{default_branch_template, default_true};
 use iter_macros::Table;
 use serde::{Deserialize, Serialize};
@@ -45,17 +46,17 @@ pub struct Organization {
 
 impl Organization {
     /// A blank template for `iter organization new` to open in the
-    /// editor. Its defaults are the same ones a project falls back to when
-    /// it belongs to no organization at all.
-    pub fn template() -> Self {
+    /// editor. Its fields *are* project defaults, so it starts from the
+    /// same config block a project without an organization starts from.
+    pub fn template(defaults: &ProjectDefaults) -> Self {
         Organization {
             id: None,
             name: String::new(),
             description: String::new(),
-            github: false,
-            tmux: true,
-            auto_branch: true,
-            branch_template: default_branch_template(),
+            github: defaults.github,
+            tmux: defaults.tmux,
+            auto_branch: defaults.auto_branch,
+            branch_template: defaults.branch_template.clone(),
         }
     }
 }

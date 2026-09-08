@@ -1,4 +1,5 @@
 mod args;
+mod config;
 mod db;
 mod error;
 mod git;
@@ -19,14 +20,15 @@ use chrono::{Local, NaiveDate};
 use clap::{CommandFactory, Parser};
 use clap_complete::engine::CompletionCandidate;
 use clap_complete::env::CompleteEnv;
+use config::config;
 use db::{Db, Repository};
 use error::{IterError, Result};
 use models::{Organization, Project, Session, SessionConfig, Task, TaskStatus};
 use reporting::{
-    DateRange, Header, MERGE_GAP_MINUTES, OrganizationInfo, ProjectInfo, ProjectReport, TaskInfo,
-    TaskReport, WeekdayReport, in_range, merged_total_minutes, minutes_to_hhmm,
-    render_organization_info, render_project_info, render_task_info, round_to_half_hour,
-    session_rows, settings_of, weekday_averages,
+    DateRange, Header, OrganizationInfo, ProjectInfo, ProjectReport, TaskInfo, TaskReport,
+    WeekdayReport, in_range, merged_total_minutes, minutes_to_hhmm, render_organization_info,
+    render_project_info, render_task_info, round_to_half_hour, session_rows, settings_of,
+    weekday_averages,
 };
 use std::process::ExitCode;
 
@@ -78,9 +80,17 @@ fn main() -> ExitCode {
     }
 }
 
+/// Opens the database the config file points at (by default `iter.db`
+/// beside that file). Exits rather than returning an error: every command
+/// needs it, and so does every completion callback the shell fires, none of
+/// which has anything useful to do without one.
 fn open_db() -> Db {
-    Db::open(db::DB_FILE).unwrap_or_else(|e| {
-        eprintln!("failed to open database at {}: {e}", db::DB_FILE);
+    let path = config().db_path().unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    });
+    Db::open(&path).unwrap_or_else(|e| {
+        eprintln!("failed to open database at {}: {e}", path.display());
         std::process::exit(1);
     })
 }
@@ -287,7 +297,7 @@ fn task_reports(
         if sessions.is_empty() {
             continue;
         }
-        let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
+        let total_minutes = merged_total_minutes(&sessions, now, config().pause_gap_minutes);
         reports.push(TaskReport {
             name: task.name,
             status: task.status.as_str().to_string(),
@@ -374,7 +384,7 @@ fn teardown_session_config(db: &Db, project: &Project, session_config: &SessionC
 /// tail of `project new`, `iter init`, and `iter new`.
 fn create_project_interactively(db: &Db, template: Project) -> Result<bool> {
     let organization_id = template.organization_id;
-    match md_edit::edit_in_nvim(&template)? {
+    match md_edit::edit_in_editor(&template)? {
         Some(mut project) => {
             if project.name.trim().is_empty() {
                 return Err(IterError::EmptyProjectName);
@@ -395,7 +405,7 @@ fn create_project_interactively(db: &Db, template: Project) -> Result<bool> {
 /// was named. With none, the project keeps `Project::template`'s own
 /// defaults -- belonging to an organization is optional throughout.
 fn new_project_template(db: &Db, organization: Option<&str>) -> Result<Project> {
-    let mut template = Project::template();
+    let mut template = Project::template(&config().project);
     if let Some(name) = organization {
         template.inherit_from(&resolve_organization(db, name)?);
     }
@@ -481,7 +491,7 @@ fn clone_into(
     source_label: &str,
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
-    let Some(mut project) = md_edit::edit_in_nvim(template)? else {
+    let Some(mut project) = md_edit::edit_in_editor(template)? else {
         println!("no changes -- project not created");
         return Ok(());
     };
@@ -518,7 +528,7 @@ fn dispatch_organization(action: &OrganizationCommand) -> Result<()> {
 
 fn organization_new() -> Result<()> {
     let db = open_db();
-    match md_edit::edit_in_nvim(&Organization::template())? {
+    match md_edit::edit_in_editor(&Organization::template(&config().project))? {
         Some(organization) => {
             if organization.name.trim().is_empty() {
                 return Err(IterError::EmptyOrganizationName);
@@ -535,7 +545,7 @@ fn organization_edit(name: Option<&str>) -> Result<()> {
     let db = open_db();
     let existing = resolve_organization_or_current(&db, name)?;
     let id = existing.id.expect(ID_INVARIANT);
-    match md_edit::edit_in_nvim(&existing)? {
+    match md_edit::edit_in_editor(&existing)? {
         Some(organization) => {
             Repository::<Organization>::update(&db, id, &organization)?;
             println!("updated organization '{}'", organization.name);
@@ -589,7 +599,7 @@ fn organization_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
         if tasks.is_empty() {
             continue;
         }
-        let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
+        let total_minutes = merged_total_minutes(&sessions, now, config().pause_gap_minutes);
         projects.push(ProjectReport {
             name: project.name,
             total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
@@ -604,7 +614,7 @@ fn organization_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
 
     // The union across every project, so an hour spent switching between
     // two of them isn't counted twice at the organization level either.
-    let total_minutes = merged_total_minutes(&all_sessions, now, MERGE_GAP_MINUTES);
+    let total_minutes = merged_total_minutes(&all_sessions, now, config().pause_gap_minutes);
     let info = OrganizationInfo {
         header: Header::new(
             organization.name.clone(),
@@ -663,7 +673,7 @@ fn project_edit(name: Option<&str>, organization: Option<&str>) -> Result<()> {
         Some(name) => resolve_organization(&db, name)?.id,
         None => existing.organization_id,
     };
-    match md_edit::edit_in_nvim(&existing)? {
+    match md_edit::edit_in_editor(&existing)? {
         Some(mut project) => {
             project.organization_id = organization_id;
             Repository::<Project>::update(&db, id, &project)?;
@@ -712,7 +722,7 @@ fn project_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     // makes working two of the project's tasks in parallel not
     // double-count.
     let (tasks, sessions) = task_reports(&db, project_id, range, now)?;
-    let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
+    let total_minutes = merged_total_minutes(&sessions, now, config().pause_gap_minutes);
 
     let info = ProjectInfo {
         header: Header::new(
@@ -771,7 +781,11 @@ fn task_new(project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
     let project = resolve_project_or_current(&db, project_name)?;
     let project_id = project.id.expect(ID_INVARIANT);
 
-    let mut template = Task::template(project_id, git::branch_prefix(&project.branch_template));
+    let mut template = Task::template(
+        project_id,
+        git::branch_prefix(&project.branch_template),
+        config().task.status,
+    );
     if let Some(issue_number) = issue {
         if !project.github {
             return Err(IterError::GithubDisabled(project.name.clone()));
@@ -787,7 +801,7 @@ fn task_new(project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
         template.status = github::status_for_issue_state(template.status, issue.state);
     }
 
-    match md_edit::edit_in_nvim(&template)? {
+    match md_edit::edit_in_editor(&template)? {
         Some(mut task) => {
             if task.name.trim().is_empty() {
                 return Err(IterError::EmptyTaskName);
@@ -807,7 +821,7 @@ fn task_edit(task_ref: Option<&str>) -> Result<()> {
     let id = existing.id.expect(ID_INVARIANT);
     let project_id = existing.project_id;
     let display = format!("{}/{}", project.name, existing.name);
-    match md_edit::edit_in_nvim(&existing)? {
+    match md_edit::edit_in_editor(&existing)? {
         Some(mut task) => {
             task.project_id = project_id;
             Repository::<Task>::update(&db, id, &task)?;
@@ -844,7 +858,7 @@ fn task_info(task_ref: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let now = Local::now().naive_local();
     let range = resolve_range(opts, now)?;
     let sessions = in_range(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, range);
-    let total_minutes = merged_total_minutes(&sessions, now, MERGE_GAP_MINUTES);
+    let total_minutes = merged_total_minutes(&sessions, now, config().pause_gap_minutes);
 
     let info = TaskInfo {
         header: Header::new(

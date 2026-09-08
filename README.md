@@ -339,18 +339,69 @@ keyed by task, not session-config.
 
 ## Storage
 
-Everything lives in one SQLite file, `iter.db`, at a hardcoded path (see
-`DB_FILE` in `src/db.rs`) alongside where the previous CSV-based version
-kept its log.
+Everything lives in one SQLite file, `iter.db`, kept in `iter`'s config
+directory next to the config file itself -- so the two travel together, and
+pointing `$XDG_CONFIG_HOME` somewhere else moves both. `db_path` in the
+config file overrides where the database goes, if you'd rather keep it
+somewhere backed up or synced.
+
+## Configuration
+
+Optional, and optional key by key: with no config file at all -- or an empty
+one -- every value below is what `iter` uses anyway. It lives at
+`$XDG_CONFIG_HOME/iter/iter.yaml`, which on a machine that doesn't set that
+variable means `~/.config/iter/iter.yaml` (`%APPDATA%\iter\iter.yaml` off
+unix).
+
+```yaml
+# Where the SQLite file lives. Default: iter.db beside this file. A leading
+# `~` is expanded; a relative path is resolved from wherever you run `iter`.
+db_path: ~/.config/iter/iter.db
+
+# A gap between one session's end and the next one's start shorter than this
+# is treated as a pause inside one stretch of work rather than a real break
+# between two -- so a quick interruption doesn't split a morning in half.
+pause_gap_minutes: 17
+
+# Opened to fill in a new/edited organization, project or task. It's handed
+# one argument, the path of a temporary markdown file, and quitting it
+# without saving aborts the create/edit.
+editor: nvim
+
+# What `iter project new` -- and `iter init`/`new`, and `iter clone` of a git
+# URL -- puts in the buffer before you edit it. (Cloning an existing project
+# copies that project's own settings instead.) `iter organization new` starts
+# from this same block, since an organization's fields *are* the defaults its
+# projects inherit.
+project:
+  github: false
+  tmux: true
+  auto_branch: true
+  branch_template: feat/{task}
+
+# What `iter task new` starts a task at: queue, wip, or done.
+task:
+  status: queue
+```
+
+These are starting points, not rules: they're written into the editor buffer
+as ordinary front matter, so any of them can be changed there before you
+save, and none of them touches anything that already exists. An organization
+outranks them for its own projects -- being the narrower answer to the same
+question -- and `github` is overruled by what's actually on disk, since
+`iter init`/`new` won't call a directory a repo when it isn't one.
+
+A key that isn't recognised is an error rather than something quietly
+ignored, so a typo can't leave you with a setting you think you set.
 
 ## Requirements
 
-- `nvim` -- used to fill in a new/edited organization, project or task. It
-  opens a temporary `.md` file: the fields as YAML front matter at the top,
-  the description as the markdown body below it -- so the editor highlights
-  and lints it the way it would any other markdown file with front matter.
-  Quitting without saving (or saving something that doesn't parse) aborts
-  the create/edit.
+- `nvim`, or whatever `editor` in the config file names -- used to fill in a
+  new/edited organization, project or task. It opens a temporary `.md` file:
+  the fields as YAML front matter at the top, the description as the
+  markdown body below it -- so the editor highlights and lints it the way it
+  would any other markdown file with front matter. Quitting without saving
+  (or saving something that doesn't parse) aborts the create/edit.
 - `tmux` -- for session support (skippable per-project via `tmux: false`).
 - `git` -- for worktree/branch support (skippable per-project via
   `github: false`, or per-session via `--no-branch`).

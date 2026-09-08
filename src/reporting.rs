@@ -6,11 +6,6 @@ use serde::Serialize;
 use serde_yaml::{Mapping, Value};
 use std::collections::{HashMap, HashSet};
 
-/// A gap between one record's end and the next record's start shorter than
-/// this many minutes is treated as a pause within one continuous span (e.g.
-/// a quick interruption) rather than a real break between records.
-pub const MERGE_GAP_MINUTES: i64 = 17;
-
 /// What a text report says where a session table would otherwise go.
 const NO_SESSIONS: &str = "_No sessions in this period._";
 

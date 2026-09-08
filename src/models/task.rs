@@ -82,15 +82,16 @@ impl Task {
     /// A blank (or issue-prefilled) template for `iter task new` to open in
     /// the YAML editor. `branch_prefix` comes from the owning project's
     /// `branch_template`, so the default is the project's rule and the
-    /// editor is where it gets overridden.
-    pub fn template(project_id: i64, branch_prefix: String) -> Self {
+    /// editor is where it gets overridden; `status` comes from the config
+    /// file, for anyone who tracks work that starts already in progress.
+    pub fn template(project_id: i64, branch_prefix: String, status: TaskStatus) -> Self {
         Task {
             id: None,
             project_id,
             name: String::new(),
             description: String::new(),
             github_issue: None,
-            status: TaskStatus::Queue,
+            status,
             branch_prefix,
         }
     }
@@ -115,7 +116,7 @@ mod tests {
     /// `project_id`/`description`, which are deliberately kept out of it.
     #[test]
     fn a_new_task_carries_its_branch_prefix_into_the_editor() {
-        let template = Task::template(3, "hotfix/".to_string());
+        let template = Task::template(3, "hotfix/".to_string(), TaskStatus::Queue);
         let yaml = serde_yaml::to_string(&template).expect("a task serializes");
         assert!(
             yaml.contains("branch_prefix: hotfix/"),
