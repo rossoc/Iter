@@ -60,7 +60,7 @@ pub fn any_client_attached(session: &str) -> bool {
     ) else {
         return false;
     };
-    clients.lines().any(|name| !name.trim().is_empty())
+    !clients.trim().is_empty()
 }
 
 /// The tmux session name of the pane this process is running in, if any

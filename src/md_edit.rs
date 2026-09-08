@@ -89,32 +89,36 @@ pub fn edit_in_editor<T: Serialize + DeserializeOwned + MarkdownBody>(
     // lives as long as the process and satisfies `run_status`'s
     // `&'static str` -- no leaking a `String` to name the tool.
     let saved = process::run_status(&config().editor, None, &[&path])?;
-    if !saved {
-        let _ = std::fs::remove_file(&path);
-        return Ok(None);
-    }
 
-    let edited = match std::fs::read_to_string(&path) {
-        Ok(edited) => edited,
-        Err(e) => {
-            let _ = std::fs::remove_file(&path);
-            return Err(e.into());
-        }
+    // An unsaved buffer is the untouched template, so there is nothing to
+    // read back off it.
+    let outcome = match saved {
+        true => read_edited(&path, &original),
+        false => Ok(None),
     };
 
-    match resolve_edit(&original, &edited) {
-        Ok(item) => {
-            let _ = std::fs::remove_file(&path);
-            Ok(item)
-        }
-        // Deliberately left on disk, and named in the error: the buffer is
-        // the only copy of what the user just wrote, and deleting it over a
-        // mistyped `:` would take a long description with it.
-        Err(source) => Err(IterError::InvalidBuffer {
-            path: path.display().to_string(),
-            source,
-        }),
+    // The one exception to cleaning up: front matter that didn't parse
+    // leaves the buffer on disk, named in the error. It's the only copy of
+    // what the user just wrote, and deleting it over a mistyped `:` would
+    // take a long description with it.
+    if !matches!(outcome, Err(IterError::InvalidBuffer { .. })) {
+        let _ = std::fs::remove_file(&path);
     }
+    outcome
+}
+
+/// Reads the saved buffer back at `path` and resolves it against the
+/// `original` template. Split out so `edit_in_editor` has a single place
+/// that decides whether the file stays on disk.
+fn read_edited<T: DeserializeOwned + MarkdownBody>(
+    path: &std::path::Path,
+    original: &str,
+) -> Result<Option<T>> {
+    let edited = std::fs::read_to_string(path)?;
+    resolve_edit(original, &edited).map_err(|source| IterError::InvalidBuffer {
+        path: path.display().to_string(),
+        source,
+    })
 }
 
 #[cfg(test)]

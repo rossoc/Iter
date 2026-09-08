@@ -11,7 +11,10 @@ pub fn is_git_repo(path: &str) -> bool {
 /// Lowercases `name` and collapses every run of non `[a-z0-9]` characters
 /// into a single `-`, trimming leading/trailing dashes -- used to turn a
 /// free-text task name into something safe for a branch name / directory.
-pub fn slugify(name: &str) -> String {
+///
+/// Private: [`task_slug`] is the way in, so nothing can end up with the
+/// empty slug that the fallback there exists to rule out.
+fn slugify(name: &str) -> String {
     let mut out = String::new();
     let mut last_dash = false;
     for c in name.to_lowercase().chars() {
@@ -47,16 +50,11 @@ pub fn branch_prefix(template: &str) -> String {
 /// branch a bare prefix, which git refuses, and the worktree path the
 /// `.iter-worktrees` directory itself.
 pub fn task_slug(name: &str, task_id: i64) -> String {
-    match slugify(name).as_str() {
-        "" => format!("task-{task_id}"),
-        slug => slug.to_string(),
+    let slug = slugify(name);
+    match slug.is_empty() {
+        true => format!("task-{task_id}"),
+        false => slug,
     }
-}
-
-/// A task's branch name: its `branch_prefix` followed by the slug from
-/// [`task_slug`].
-pub fn branch_name(prefix: &str, slug: &str) -> String {
-    format!("{prefix}{slug}")
 }
 
 /// Creates a new worktree at `worktree_path`, on a new branch `branch`,
@@ -119,27 +117,6 @@ mod tests {
     #[test]
     fn branch_prefix_of_a_placeholderless_template_is_the_whole_thing() {
         assert_eq!(branch_prefix("wip/"), "wip/");
-    }
-
-    #[test]
-    fn branch_name_appends_the_slug_to_the_prefix() {
-        assert_eq!(
-            branch_name("feat/", &task_slug("Fix Login Bug", 1)),
-            "feat/fix-login-bug"
-        );
-    }
-
-    #[test]
-    fn branch_name_respects_a_custom_prefix() {
-        assert_eq!(
-            branch_name("fix/", &task_slug("Login Bug", 1)),
-            "fix/login-bug"
-        );
-    }
-
-    #[test]
-    fn branch_name_with_an_empty_prefix_is_the_bare_slug() {
-        assert_eq!(branch_name("", &task_slug("Login Bug", 1)), "login-bug");
     }
 
     /// Without the fallback this is the empty string, which makes `feat/`
