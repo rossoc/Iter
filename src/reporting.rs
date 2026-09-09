@@ -101,10 +101,6 @@ impl DateRange {
         self.from.filter(|from| *from == self.to)
     }
 
-    pub fn contains(&self, date: NaiveDate) -> bool {
-        date <= self.to && self.from.map(|from| date >= from).unwrap_or(true)
-    }
-
     /// How the period reads in a text report's summary line.
     pub fn label(&self) -> String {
         match (self.single_day(), self.from) {
@@ -138,15 +134,6 @@ impl Serialize for DateRange {
 /// The date format every report prints and `main::parse_day` reads back.
 pub fn fmt_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
-}
-
-/// The subset of `sessions` that started within `range`, oldest first --
-/// the date filter every `info` report applies before summing, and the
-/// ordering every session table is printed in.
-pub fn in_range(mut sessions: Vec<Session>, range: DateRange) -> Vec<Session> {
-    sessions.retain(|s| range.contains(s.start.date()));
-    sessions.sort_by_key(|s| s.start);
-    sessions
 }
 
 pub fn minutes_to_hhmm(total_minutes: i64) -> String {
@@ -757,9 +744,6 @@ mod tests {
         let range = DateRange::day(day("2026-09-04"));
         assert_eq!(range.single_day(), Some(day("2026-09-04")));
         assert_eq!(range.label(), "2026-09-04");
-        assert!(range.contains(day("2026-09-04")));
-        assert!(!range.contains(day("2026-09-03")));
-        assert!(!range.contains(day("2026-09-05")));
     }
 
     #[test]
@@ -770,10 +754,6 @@ mod tests {
         };
         assert_eq!(range.single_day(), None);
         assert_eq!(range.label(), "2026-09-01 to 2026-09-04");
-        assert!(range.contains(day("2026-09-01")));
-        assert!(range.contains(day("2026-09-04")));
-        assert!(!range.contains(day("2026-08-31")));
-        assert!(!range.contains(day("2026-09-05")));
     }
 
     #[test]
@@ -784,21 +764,6 @@ mod tests {
         };
         assert_eq!(range.single_day(), None);
         assert_eq!(range.label(), "up to 2026-09-04");
-        assert!(range.contains(day("2001-01-01")));
-        assert!(!range.contains(day("2026-09-05")));
-    }
-
-    #[test]
-    fn in_range_filters_and_orders_oldest_first() {
-        let sessions = vec![
-            sess(1, "2026-09-04 13:00", Some("2026-09-04 14:00"), None),
-            sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-            sess(1, "2026-09-04 09:00", Some("2026-09-04 10:00"), None),
-        ];
-        let kept = in_range(sessions, DateRange::day(day("2026-09-04")));
-        assert_eq!(kept.len(), 2);
-        assert_eq!(kept[0].start, dt("2026-09-04 09:00"));
-        assert_eq!(kept[1].start, dt("2026-09-04 13:00"));
     }
 
     // ---- totals --------------------------------------------------------

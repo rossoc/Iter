@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::process;
+use crate::process::{Git, Tool};
 use std::path::Path;
 
 /// Whether `path` looks like a git repo (has a `.git` entry -- a plain repo
@@ -60,21 +60,13 @@ pub fn task_slug(name: &str, task_id: i64) -> String {
 /// Creates a new worktree at `worktree_path`, on a new branch `branch`,
 /// checked out from `base_path`'s current `HEAD`.
 pub fn create_worktree(base_path: &str, branch: &str, worktree_path: &str) -> Result<()> {
-    process::run(
-        "git",
-        Some(base_path),
-        &["worktree", "add", "-b", branch, worktree_path],
-    )
+    Git(Some(base_path)).run(&["worktree", "add", "-b", branch, worktree_path])
 }
 
 /// Removes a worktree created by `create_worktree`. `--force` because the
 /// task is done and we don't want a stray untracked file to block cleanup.
 pub fn remove_worktree(base_path: &str, worktree_path: &str) -> Result<()> {
-    process::run(
-        "git",
-        Some(base_path),
-        &["worktree", "remove", "--force", worktree_path],
-    )
+    Git(Some(base_path)).run(&["worktree", "remove", "--force", worktree_path])
 }
 
 /// Deletes a branch created by `create_worktree`. `-D` (not `-d`), like
@@ -83,14 +75,14 @@ pub fn remove_worktree(base_path: &str, worktree_path: &str) -> Result<()> {
 /// (if any) has already been removed -- git refuses to delete a branch
 /// that's still checked out in one.
 pub fn delete_branch(base_path: &str, branch: &str) -> Result<()> {
-    process::run("git", Some(base_path), &["branch", "-D", branch])
+    Git(Some(base_path)).run(&["branch", "-D", branch])
 }
 
 /// Clones `source` into `dest`, exactly like `git clone <source> <dest>` --
 /// `source` can be a GitHub (or any remote) URL or a local path to another
 /// repo. `dest` must not already exist (or must be empty); `git` creates it.
 pub fn clone_repo(source: &str, dest: &str) -> Result<()> {
-    process::run("git", None, &["clone", source, dest])
+    Git(None).run(&["clone", source, dest])
 }
 
 #[cfg(test)]

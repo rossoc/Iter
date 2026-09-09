@@ -10,9 +10,9 @@
 //! offer -- never a listing per project -- and treats any error as "nothing
 //! to offer here".
 
-use crate::db::{Db, Table, open_db};
+use crate::db::{Db, open_db};
 use crate::error::Result;
-use crate::models::{Named, Organization, Project, TaskStatus, task_ref};
+use crate::models::{Organization, Project, TaskStatus, task_ref};
 use clap_complete::engine::CompletionCandidate;
 
 /// The candidates a completer offers, out of the names `names` produces.
@@ -37,36 +37,27 @@ fn candidates(
         .collect()
 }
 
-/// Every `T`'s name, in `T`'s listing order -- what both completion and
-/// `iter <entity> list` are after, for any entity that has a name.
-pub(crate) fn names<T: Table + Named>(db: &Db) -> Result<Vec<String>> {
-    Ok(db
-        .list::<T>()?
-        .into_iter()
-        .map(|item| item.name().to_string())
-        .collect())
-}
-
 /// Dynamic completer for arguments naming a project (`project edit/delete/info`,
 /// `task new --project`).
 pub(crate) fn project_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    candidates(current, names::<Project>)
+    candidates(current, Db::names::<Project>)
 }
 
 /// Dynamic completer for arguments naming an organization.
 pub(crate) fn organization_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    candidates(current, names::<Organization>)
+    candidates(current, Db::names::<Organization>)
 }
 
 /// Dynamic completer for arguments naming a task as `<project>/<task>`,
-/// offering only tasks at `status` when one is given.
+/// offering only tasks at one of `statuses` -- or every task, when it's
+/// empty.
 fn task_completer_at(
     current: &std::ffi::OsStr,
-    status: Option<TaskStatus>,
+    statuses: &'static [TaskStatus],
 ) -> Vec<CompletionCandidate> {
     candidates(current, |db| {
         Ok(db
-            .task_refs(status)?
+            .task_refs(None, statuses)?
             .iter()
             .map(|(project, task)| task_ref(project, task))
             .collect())
@@ -75,7 +66,7 @@ fn task_completer_at(
 
 /// Dynamic completer for arguments naming any task.
 pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    task_completer_at(current, None)
+    task_completer_at(current, &[])
 }
 
 /// Dynamic completer for `task pull/push --task`, which takes a bare task
@@ -90,5 +81,5 @@ pub(crate) fn task_name_completer(current: &std::ffi::OsStr) -> Vec<CompletionCa
 /// to run on a task that hasn't been started: it refuses a task that already
 /// has a session-config, and flips the one it does start to `wip`.
 pub(crate) fn queued_task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    task_completer_at(current, Some(TaskStatus::Queue))
+    task_completer_at(current, &[TaskStatus::Queue])
 }

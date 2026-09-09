@@ -97,12 +97,6 @@ impl Task {
     }
 }
 
-impl crate::models::Named for Task {
-    fn name(&self) -> &str {
-        &self.name
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

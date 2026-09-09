@@ -1,6 +1,6 @@
 use crate::error::{IterError, Result};
 use crate::models::TaskStatus;
-use crate::process;
+use crate::process::{Gh, Tool};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
@@ -66,11 +66,8 @@ const ISSUE_LIMIT: usize = 1000;
 /// the repo from its git remote -- `iter` never stores or parses an
 /// "owner/repo" string itself.
 pub fn fetch_issue(repo_path: &str, number: i64) -> Result<Issue> {
-    let json = process::output(
-        "gh",
-        Some(repo_path),
-        &["issue", "view", &number.to_string(), "--json", ISSUE_FIELDS],
-    )?;
+    let json =
+        Gh(repo_path).output(&["issue", "view", &number.to_string(), "--json", ISSUE_FIELDS])?;
     Ok(parse_json::<RawIssue>("issue view", &json)?.into())
 }
 
@@ -79,20 +76,16 @@ pub fn fetch_issue(repo_path: &str, number: i64) -> Result<Issue> {
 /// closed. `gh issue list` excludes pull requests of its own accord.
 pub fn list_issues(repo_path: &str) -> Result<Vec<Issue>> {
     let limit = ISSUE_LIMIT.to_string();
-    let json = process::output(
-        "gh",
-        Some(repo_path),
-        &[
-            "issue",
-            "list",
-            "--state",
-            "all",
-            "--limit",
-            &limit,
-            "--json",
-            ISSUE_FIELDS,
-        ],
-    )?;
+    let json = Gh(repo_path).output(&[
+        "issue",
+        "list",
+        "--state",
+        "all",
+        "--limit",
+        &limit,
+        "--json",
+        ISSUE_FIELDS,
+    ])?;
     let raw: Vec<RawIssue> = parse_json("issue list", &json)?;
     // `gh` lists newest first, so a repo past the cap loses its *oldest*
     // issues -- and a task linked to one of those reads as "issue #N isn't
@@ -122,7 +115,7 @@ pub fn create_issue(repo_path: &str, title: &str, body: &str, project: &str) -> 
     if !project.is_empty() {
         args.extend(["--project", project]);
     }
-    let output = process::output("gh", Some(repo_path), &args)?;
+    let output = Gh(repo_path).output(&args)?;
     issue_number_from_url(&output).ok_or_else(|| {
         IterError::CommandFailed(format!(
             "gh issue create printed no issue URL: {}",
@@ -138,7 +131,7 @@ fn gh_issue(repo_path: &str, verb: &str, number: i64, rest: &[&str]) -> Result<(
     let number = number.to_string();
     let mut args = vec!["issue", verb, &number];
     args.extend_from_slice(rest);
-    process::run("gh", Some(repo_path), &args)
+    Gh(repo_path).run(&args)
 }
 
 /// Replaces an issue's body with `body`. Only ever called for `--body`,

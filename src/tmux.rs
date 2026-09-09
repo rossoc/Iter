@@ -1,14 +1,14 @@
 use crate::error::Result;
-use crate::process;
+use crate::process::{Tmux, Tool};
 
 /// Creates a new detached tmux session named `name`, starting in `cwd`.
 pub fn create_session(name: &str, cwd: &str) -> Result<()> {
-    process::run("tmux", None, &["new-session", "-d", "-s", name, "-c", cwd])
+    Tmux.run(&["new-session", "-d", "-s", name, "-c", cwd])
 }
 
 /// Kills a tmux session if it's running. Not an error if it's already gone.
 pub fn kill_session(name: &str) {
-    let _ = process::run("tmux", None, &["kill-session", "-t", name]);
+    let _ = Tmux.run(&["kill-session", "-t", name]);
 }
 
 /// Whether this process is itself running inside a tmux client -- which
@@ -27,11 +27,11 @@ pub fn attach_session(name: &str) -> Result<()> {
     } else {
         "attach-session"
     };
-    process::run("tmux", None, &[verb, "-t", name])
+    Tmux.run(&[verb, "-t", name])
 }
 
 pub fn session_exists(name: &str) -> bool {
-    process::succeeds("tmux", &["has-session", "-t", name])
+    Tmux.succeeds(&["has-session", "-t", name])
 }
 
 /// Whether any client is still attached to `session`.
@@ -53,11 +53,7 @@ pub fn session_exists(name: &str) -> bool {
 /// which is exactly the `session-closed` case -- so the caller closes the
 /// session, which is what it did before this existed.
 pub fn any_client_attached(session: &str) -> bool {
-    let Ok(clients) = process::output(
-        "tmux",
-        None,
-        &["list-clients", "-t", session, "-F", "#{client_name}"],
-    ) else {
+    let Ok(clients) = Tmux.output(&["list-clients", "-t", session, "-F", "#{client_name}"]) else {
         return false;
     };
     !clients.trim().is_empty()
@@ -71,7 +67,7 @@ pub fn current_session_name() -> Option<String> {
     if !inside_tmux() {
         return None;
     }
-    process::output_trimmed("tmux", None, &["display-message", "-p", "#S"])
+    Tmux.output_trimmed(&["display-message", "-p", "#S"])
 }
 
 /// The session-scoped tmux option a detach message is left in: something
@@ -135,7 +131,7 @@ pub fn ensure_hooks_installed(iter_bin: &str) -> Result<()> {
             continue;
         }
         let action = hook_action(iter_bin, event, args);
-        process::run("tmux", None, &["set-hook", "-g", event, &action])?;
+        Tmux.run(&["set-hook", "-g", event, &action])?;
     }
     Ok(())
 }
@@ -149,7 +145,7 @@ pub fn ensure_hooks_installed(iter_bin: &str) -> Result<()> {
 /// passed `#{hook_session_name}` to every event, and so did nothing) does
 /// not and gets replaced.
 fn hook_is_current(event: &str, args: &str) -> bool {
-    let Ok(existing) = process::output("tmux", None, &["show-options", "-gv", event]) else {
+    let Ok(existing) = Tmux.output(&["show-options", "-gv", event]) else {
         return false; // no tmux, or no such option: install ours
     };
     !existing.trim().is_empty() && format_variables(&existing) == format_variables(args)
@@ -184,17 +180,20 @@ fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
 /// session, most of which have no such option (and, on `session-closed`,
 /// no longer exist to be asked).
 pub fn take_detach_message(session: &str) -> Option<String> {
-    let value = process::output_trimmed(
-        "tmux",
-        None,
-        &["show-options", "-t", session, "-v", DETACH_MESSAGE_OPTION],
-    )?;
-    let _ = process::run(
-        "tmux",
-        None,
-        &["set-option", "-t", session, "-u", DETACH_MESSAGE_OPTION],
-    );
+    let value =
+        Tmux.output_trimmed(&["show-options", "-t", session, "-v", DETACH_MESSAGE_OPTION])?;
+    let _ = Tmux.run(&["set-option", "-t", session, "-u", DETACH_MESSAGE_OPTION]);
     Some(value)
+}
+
+/// Creates the detached session named `name` in `cwd` and makes sure the
+/// hooks that track it are installed -- the two steps `iter session new`
+/// needs done together, and the part of it that can fail, which is why its
+/// unwind path guards exactly this call.
+pub fn start_tracked_session(name: &str, cwd: &str) -> Result<()> {
+    create_session(name, cwd)?;
+    let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
+    ensure_hooks_installed(&iter_bin)
 }
 
 #[cfg(test)]

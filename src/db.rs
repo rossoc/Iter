@@ -1,7 +1,7 @@
 use crate::config::config;
 use crate::error::Result;
-use crate::models::{Project, Session, SessionConfig, Task, TaskStatus};
-use chrono::NaiveDateTime;
+use crate::models::{Named, Project, Session, SessionConfig, Task, TaskStatus};
+use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
 use std::path::Path;
@@ -15,6 +15,29 @@ fn dt_to_str(dt: NaiveDateTime) -> String {
 fn str_to_dt(s: &str) -> NaiveDateTime {
     NaiveDateTime::parse_from_str(s, DATETIME_FMT)
         .unwrap_or_else(|_| panic!("bad datetime in db: {s}"))
+}
+
+/// The half-open `[from 00:00:00, to+1day 00:00:00)` window a date range
+/// covers, as the text `start` is stored in.
+///
+/// Half-open on purpose: an inclusive `<= to 23:59:59` would drop a session
+/// started later in that final second if the stored format ever gained
+/// sub-second precision. An absent `from` reaches back to the beginning of
+/// time, which is what an open-ended range means.
+///
+/// Comparing these as text is exact rather than lucky: [`DATETIME_FMT`] is
+/// fixed-width and zero-padded, so lexicographic order *is* chronological
+/// order.
+fn range_bounds(from: Option<NaiveDate>, to: NaiveDate) -> (String, String) {
+    let lower = from.map_or_else(
+        || "0000-01-01 00:00:00".to_string(),
+        |from| format!("{from} 00:00:00"),
+    );
+    let upper = to.succ_opt().map_or_else(
+        || "9999-12-31 23:59:59".to_string(),
+        |after| format!("{after} 00:00:00"),
+    );
+    (lower, upper)
 }
 
 /// How one type is laid out in SQLite: which table it lives in, which
@@ -200,7 +223,34 @@ impl Db {
              );",
         )?;
         self.add_missing_columns()?;
+        self.create_indexes();
         Ok(())
+    }
+
+    /// The indexes the lookups above would otherwise scan whole tables for.
+    ///
+    /// Without `idx_sessions_task_start`, every `WHERE task_id = ?` on
+    /// `sessions` is a full table scan, and a report walks one per task --
+    /// an organization with 300 tasks scans the whole table 300 times.
+    /// `start` rides along so the date-range predicate is answered from the
+    /// index too, and so each task's sessions come back already ordered.
+    ///
+    /// Failures are deliberately swallowed. An index is an optimisation,
+    /// never a correctness requirement, and it names columns that a
+    /// database old enough may not have yet (the pre-rename `records`
+    /// table became `sessions` without necessarily bringing `start` with
+    /// it). Refusing to open the database over a missing index would turn
+    /// a slow read into no read at all; instead the index appears on the
+    /// first run where the schema can take it.
+    fn create_indexes(&self) {
+        let _ = self.conn.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_sessions_task_start
+                ON sessions(task_id, start);",
+        );
+        let _ = self.conn.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_projects_organization
+                ON projects(organization_id);",
+        );
     }
 
     /// Columns added to a table after it was first created. `CREATE TABLE
@@ -346,7 +396,47 @@ impl Db {
     }
 
     pub fn sessions_for_task(&self, task_id: i64) -> Result<Vec<Session>> {
-        self.find_all("WHERE task_id = ?1", params![task_id])
+        self.find_all("WHERE task_id = ?1 ORDER BY start", params![task_id])
+    }
+
+    /// The sessions of `task_id` that *start* within the range, oldest
+    /// first -- the filter every report applies, answered by SQL instead of
+    /// by loading a task's whole history and discarding most of it.
+    pub fn sessions_for_task_in_range(
+        &self,
+        task_id: i64,
+        from: Option<NaiveDate>,
+        to: NaiveDate,
+    ) -> Result<Vec<Session>> {
+        let (lower, upper) = range_bounds(from, to);
+        self.find_all(
+            "WHERE task_id = ?1 AND start >= ?2 AND start < ?3 ORDER BY start",
+            params![task_id, lower, upper],
+        )
+    }
+
+    /// Every session in the range belonging to any task of `project_id`,
+    /// oldest first. One query for the whole project rather than one per
+    /// task; the caller groups by `task_id`, which each row carries.
+    pub fn sessions_for_project_in_range(
+        &self,
+        project_id: i64,
+        from: Option<NaiveDate>,
+        to: NaiveDate,
+    ) -> Result<Vec<Session>> {
+        let (lower, upper) = range_bounds(from, to);
+        // Written out rather than built by `select_sql`: the join puts an
+        // `id` column on both sides, so the select list has to qualify it.
+        let mut stmt = self.conn.prepare_cached(
+            "SELECT s.id, s.task_id, s.start, s.end, s.message
+             FROM sessions s JOIN tasks t ON t.id = s.task_id
+             WHERE t.project_id = ?1 AND s.start >= ?2 AND s.start < ?3
+             ORDER BY s.start",
+        )?;
+        let rows = stmt
+            .query_map(params![project_id, lower, upper], Session::from_row)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
     }
 
     pub fn open_session_for_task(&self, task_id: i64) -> Result<Option<Session>> {
@@ -354,27 +444,49 @@ impl Db {
     }
 
     /// Every task as `(project name, task name)`, in `<project>/<task>`
-    /// order, optionally narrowed to one status.
+    /// order, optionally narrowed to one project and/or a set of statuses.
+    /// An empty `statuses` means every status, the same way `None` for
+    /// `project` means every project.
     ///
     /// One join rather than a listing plus a query per project: this runs
     /// on every TAB keypress, where the per-project round trips were the
     /// dominant cost and every task's other columns were loaded only to be
     /// dropped.
-    pub fn task_refs(&self, status: Option<TaskStatus>) -> Result<Vec<(String, String)>> {
+    pub fn task_refs(
+        &self,
+        project: Option<&str>,
+        statuses: &[TaskStatus],
+    ) -> Result<Vec<(String, String)>> {
         let mut sql = String::from(
             "SELECT p.name, t.name FROM tasks t JOIN projects p ON p.id = t.project_id",
         );
-        if status.is_some() {
-            sql.push_str(" WHERE t.status = ?1");
+        let mut clauses = Vec::new();
+        if project.is_some() {
+            clauses.push("p.name = ?".to_string());
+        }
+        if !statuses.is_empty() {
+            let placeholders = vec!["?"; statuses.len()].join(", ");
+            clauses.push(format!("t.status IN ({placeholders})"));
+        }
+        if !clauses.is_empty() {
+            sql.push_str(" WHERE ");
+            sql.push_str(&clauses.join(" AND "));
         }
         sql.push_str(" ORDER BY p.name, t.name");
+
+        // Anonymous `?` bound positionally, so the filters compose without
+        // each combination needing its own `query_map` arm.
+        let mut values: Vec<Value> = Vec::new();
+        values.extend(project.map(|name| Value::Text(name.to_string())));
+        values.extend(statuses.iter().map(|s| Value::Text(s.as_str().to_string())));
+
         let mut stmt = self.conn.prepare_cached(&sql)?;
-        let row = |row: &Row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?));
-        let rows: rusqlite::Result<Vec<_>> = match status {
-            Some(status) => stmt.query_map(params![status.as_str()], row)?.collect(),
-            None => stmt.query_map([], row)?.collect(),
-        };
-        Ok(rows?)
+        let rows = stmt
+            .query_map(params_from_iter(values), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
     }
 
     /// Every distinct task name in the database, sorted -- what `task
@@ -388,6 +500,17 @@ impl Db {
             .query_map([], |row| row.get::<_, String>(0))?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
+    }
+
+    /// Every `T`'s name, in `T`'s listing order -- what `iter <entity>
+    /// list` prints and what shell completion offers. A listing of names is
+    /// a query, so it lives here rather than in either caller.
+    pub fn names<T: Table + Named>(&self) -> Result<Vec<String>> {
+        Ok(self
+            .list::<T>()?
+            .into_iter()
+            .map(|item| item.name().to_string())
+            .collect())
     }
 
     // ---- generic CRUD, one implementation for every `Table` --------------
@@ -515,6 +638,11 @@ mod tests {
     use crate::config::ProjectDefaults;
     use crate::models::Organization;
 
+    fn day(s: &str) -> NaiveDate {
+        NaiveDate::parse_from_str(s, "%Y-%m-%d")
+            .unwrap_or_else(|e| panic!("bad test fixture date '{s}': {e}"))
+    }
+
     fn dt(s: &str) -> NaiveDateTime {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
             .unwrap_or_else(|e| panic!("bad test fixture datetime '{s}': {e}"))
@@ -557,6 +685,163 @@ mod tests {
         db.insert(&task).expect("task inserts")
     }
 
+    /// The date window is half-open on the upper end, so the boundaries
+    /// are worth pinning: a session starting at 00:00:00 on `from` is in,
+    /// one at 23:59:59 on `to` is in, and the first instant of the day
+    /// after `to` is out. This is the filter every report applies, and it
+    /// is now SQL's job rather than a Rust-side pass.
+    #[test]
+    fn a_range_query_includes_both_boundary_days_whole() {
+        let db = db();
+        let project = insert_project(&db, "proj");
+        let task = insert_task(&db, project, "t");
+        for start in [
+            "2025-03-02 23:59:59", // day before `from` -- out
+            "2025-03-03 00:00:00", // first instant of `from` -- in
+            "2025-03-04 12:00:00", // inside -- in
+            "2025-03-05 23:59:59", // last instant of `to` -- in
+            "2025-03-06 00:00:00", // first instant after `to` -- out
+        ] {
+            let session = Session {
+                id: None,
+                task_id: task,
+                start: dt(&start[..16]),
+                end: None,
+                message: None,
+            };
+            db.insert(&session).expect("session inserts");
+        }
+
+        let starts: Vec<String> = db
+            .sessions_for_task_in_range(task, Some(day("2025-03-03")), day("2025-03-05"))
+            .expect("range query")
+            .iter()
+            .map(|s| s.start.to_string())
+            .collect();
+        assert_eq!(
+            starts,
+            vec![
+                "2025-03-03 00:00:00".to_string(),
+                "2025-03-04 12:00:00".to_string(),
+                "2025-03-05 23:59:00".to_string(),
+            ]
+        );
+    }
+
+    /// An absent `from` reaches back to the beginning of time rather than
+    /// to some arbitrary epoch.
+    #[test]
+    fn an_open_start_reaches_back_past_any_stored_session() {
+        let db = db();
+        let project = insert_project(&db, "proj");
+        let task = insert_task(&db, project, "t");
+        let session = Session {
+            id: None,
+            task_id: task,
+            start: dt("1970-01-02 03:04"),
+            end: None,
+            message: None,
+        };
+        db.insert(&session).expect("session inserts");
+
+        assert_eq!(
+            db.sessions_for_task_in_range(task, None, day("2025-03-05"))
+                .expect("range query")
+                .len(),
+            1
+        );
+    }
+
+    /// The project-wide query is the same window, across every task, and
+    /// it is what a project or organization report is built from.
+    #[test]
+    fn a_project_range_query_spans_its_tasks_in_time_order() {
+        let db = db();
+        let project = insert_project(&db, "proj");
+        let other = insert_project(&db, "other");
+        let a = insert_task(&db, project, "a");
+        let b = insert_task(&db, project, "b");
+        let elsewhere = insert_task(&db, other, "c");
+        for (task, start) in [
+            (b, "2025-03-04 09:00"),
+            (a, "2025-03-03 09:00"),
+            (elsewhere, "2025-03-03 10:00"), // another project -- excluded
+            (a, "2025-03-09 09:00"),         // outside the range -- excluded
+        ] {
+            let session = Session {
+                id: None,
+                task_id: task,
+                start: dt(start),
+                end: None,
+                message: None,
+            };
+            db.insert(&session).expect("session inserts");
+        }
+
+        let found = db
+            .sessions_for_project_in_range(project, Some(day("2025-03-03")), day("2025-03-05"))
+            .expect("range query");
+        assert_eq!(
+            found
+                .iter()
+                .map(|s| (s.task_id, s.start.to_string()))
+                .collect::<Vec<_>>(),
+            vec![
+                (a, "2025-03-03 09:00:00".to_string()),
+                (b, "2025-03-04 09:00:00".to_string()),
+            ]
+        );
+    }
+
+    /// `task list` narrows by project and by a set of statuses at once;
+    /// both filters reach SQL, and an empty set means "every status".
+    #[test]
+    fn task_refs_narrows_by_project_and_status_set() {
+        let db = db();
+        let alpha = insert_project(&db, "alpha");
+        let beta = insert_project(&db, "beta");
+        insert_task(&db, alpha, "wip one"); // inserted as `wip`
+        insert_task(&db, beta, "wip two");
+        for (project, name, status) in [
+            (alpha, "queued", TaskStatus::Queue),
+            (alpha, "finished", TaskStatus::Done),
+        ] {
+            let task = Task {
+                id: None,
+                project_id: project,
+                name: name.to_string(),
+                description: String::new(),
+                github_issue: None,
+                status,
+                branch_prefix: String::new(),
+            };
+            db.insert(&task).expect("task inserts");
+        }
+
+        assert_eq!(
+            db.task_refs(Some("alpha"), &[]).expect("refs"),
+            vec![
+                ("alpha".to_string(), "finished".to_string()),
+                ("alpha".to_string(), "queued".to_string()),
+                ("alpha".to_string(), "wip one".to_string()),
+            ]
+        );
+        assert_eq!(
+            db.task_refs(None, &[TaskStatus::Queue, TaskStatus::Wip])
+                .expect("refs"),
+            vec![
+                ("alpha".to_string(), "queued".to_string()),
+                ("alpha".to_string(), "wip one".to_string()),
+                ("beta".to_string(), "wip two".to_string()),
+            ]
+        );
+        assert_eq!(
+            db.task_refs(Some("beta"), &[TaskStatus::Queue])
+                .expect("refs"),
+            []
+        );
+    }
+
     /// The completion lookups are one join rather than a query per
     /// project, so what they return is worth pinning: every task, paired
     /// with its own project, ordered the way completion offers it.
@@ -570,7 +855,7 @@ mod tests {
         insert_task(&db, alpha, "another");
 
         assert_eq!(
-            db.task_refs(None).expect("task refs"),
+            db.task_refs(None, &[]).expect("task refs"),
             vec![
                 ("alpha".to_string(), "another".to_string()),
                 ("alpha".to_string(), "write docs".to_string()),
@@ -599,10 +884,13 @@ mod tests {
         db.insert(&queued).expect("task inserts");
 
         assert_eq!(
-            db.task_refs(Some(TaskStatus::Queue)).expect("task refs"),
+            db.task_refs(None, &[TaskStatus::Queue]).expect("task refs"),
             vec![("proj".to_string(), "queued".to_string())]
         );
-        assert_eq!(db.task_refs(Some(TaskStatus::Done)).expect("task refs"), []);
+        assert_eq!(
+            db.task_refs(None, &[TaskStatus::Done]).expect("task refs"),
+            []
+        );
     }
 
     /// `--task` takes a bare name, so the same name under two projects is

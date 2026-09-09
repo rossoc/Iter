@@ -31,10 +31,18 @@ pub trait MarkdownBody {
     fn set_description(&mut self, description: String);
 }
 
-/// A type with a unique, user-facing `name` -- what the CLI addresses it
-/// by, what shell completion offers, and what `iter <entity> list` prints.
-/// One method is enough to give every such type the same generic listing
-/// and completion, instead of one hand-written copy per entity.
+/// A type whose `name` is unique across the whole database -- what the CLI
+/// addresses it by, what `Db::find_by_name` looks it up by, what shell
+/// completion offers and what `iter <entity> list` prints. One method is
+/// enough to give every such type the same generic lookup, listing and
+/// completion instead of one hand-written copy per entity.
+///
+/// Deliberately not implemented for [`Task`]: a task's name is unique only
+/// within its project (`UNIQUE (project_id, name)`), so a bare task name
+/// addresses nothing on its own. Tasks are addressed by [`task_ref`]
+/// instead, and the two task listings that do exist -- `Db::task_refs` and
+/// `Db::task_names` -- are their own queries precisely because neither is
+/// "every row's name".
 pub trait Named {
     fn name(&self) -> &str;
 }

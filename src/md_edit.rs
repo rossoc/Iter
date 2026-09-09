@@ -121,6 +121,26 @@ fn read_edited<T: DeserializeOwned + MarkdownBody>(
     })
 }
 
+/// Opens `template` in the editor and hands what came back to `save`,
+/// which does the writing and returns the line to print.
+///
+/// The other half -- an editor quit without saving -- is the same sentence
+/// every time, and saying it here is what keeps it in step with the verb
+/// the `save` half reports. `noun`/`verb` read as "no changes -- project
+/// not updated".
+pub fn edited<T: Serialize + DeserializeOwned + MarkdownBody>(
+    template: &T,
+    noun: &str,
+    verb: &str,
+    save: impl FnOnce(T) -> Result<String>,
+) -> Result<()> {
+    match edit_in_editor(template)? {
+        Some(item) => println!("{}", save(item)?),
+        None => println!("no changes -- {noun} not {verb}"),
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

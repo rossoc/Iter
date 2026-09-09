@@ -100,10 +100,85 @@ pub fn output_trimmed<S: AsRef<OsStr>>(
 /// Whether `tool` ran *and* exited zero -- for the probe-style checks where
 /// "couldn't run it" and "it said no" mean the same thing to the caller.
 /// Suppresses stdio so the probe stays silent even when it fails.
-pub fn succeeds<S: AsRef<OsStr>>(tool: &'static str, args: &[S]) -> bool {
-    command(tool, None, args)
+pub fn succeeds<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -> bool {
+    command(tool, dir, args)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
         .is_ok_and(|status| status.success())
+}
+
+/// An external binary `iter` drives, bound to the directory it runs in.
+///
+/// The five free functions above are the mechanism -- each encodes a
+/// different failure policy, and that distinction is the point of this
+/// module. This trait adds nothing to it; it only stops every call site
+/// from repeating the tool's name and threading a `dir` that, for some
+/// tools, can never be anything but `None`.
+///
+/// Not object-safe, and deliberately so: the methods stay generic over the
+/// argument type, and nothing here needs `dyn`.
+///
+/// [`run_status`] has no method here on purpose: its only caller is the
+/// editor in [`crate::md_edit`], whose binary comes from the config file
+/// rather than being a fixed tool, so it has no `Tool` to hang off.
+pub trait Tool {
+    /// The binary's name, as it is looked up on `PATH`.
+    const BIN: &'static str;
+
+    /// The directory to run in. `None` -- the default -- is the current
+    /// one, which is right for a tool that takes its target as an argument
+    /// rather than inferring it from the working directory.
+    fn dir(&self) -> Option<&str> {
+        None
+    }
+
+    fn run<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<()> {
+        run(Self::BIN, self.dir(), args)
+    }
+
+    fn output<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<String> {
+        output(Self::BIN, self.dir(), args)
+    }
+
+    fn output_trimmed<S: AsRef<OsStr>>(&self, args: &[S]) -> Option<String> {
+        output_trimmed(Self::BIN, self.dir(), args)
+    }
+
+    fn succeeds<S: AsRef<OsStr>>(&self, args: &[S]) -> bool {
+        succeeds(Self::BIN, self.dir(), args)
+    }
+}
+
+/// `tmux`, which is always addressed by session name rather than by
+/// directory -- hence no `dir`.
+pub struct Tmux;
+
+impl Tool for Tmux {
+    const BIN: &'static str = "tmux";
+}
+
+/// `git`, in the repository at the given path -- or, for `clone`, wherever
+/// the process already is.
+pub struct Git<'a>(pub Option<&'a str>);
+
+impl Tool for Git<'_> {
+    const BIN: &'static str = "git";
+
+    fn dir(&self) -> Option<&str> {
+        self.0
+    }
+}
+
+/// `gh`, in a repository whose remote tells it which GitHub repo is meant.
+/// `iter` never stores or parses an "owner/repo" string of its own, so the
+/// directory is the whole of the addressing.
+pub struct Gh<'a>(pub &'a str);
+
+impl Tool for Gh<'_> {
+    const BIN: &'static str = "gh";
+
+    fn dir(&self) -> Option<&str> {
+        Some(self.0)
+    }
 }
