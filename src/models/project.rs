@@ -1,5 +1,5 @@
 use crate::config::ProjectDefaults;
-use crate::models::{Organization, default_branch_template, default_true};
+use crate::models::{Organization, default_branch_template, default_true, main_branch};
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
@@ -55,6 +55,13 @@ pub struct Project {
     #[serde(default = "default_branch_template")]
     pub branch_template: String,
 
+    /// The branch finished work lands on: what `iter task done --save`
+    /// merges into the task's worktree first, and then fast-forwards onto.
+    /// `main` unless the project's trunk is called something else (`dev`,
+    /// `master`, ...). Only relevant when the project is `github`-backed.
+    #[serde(default = "main_branch")]
+    pub default_branch: String,
+
     /// The GitHub Project (the board, not an `iter` project) that
     /// `iter task push` files a newly opened issue under, by its title --
     /// what `gh issue create --project` takes. Empty means "don't file it
@@ -86,6 +93,7 @@ impl Project {
             tmux: defaults.tmux,
             auto_branch: defaults.auto_branch,
             branch_template: defaults.branch_template.clone(),
+            default_branch: defaults.default_branch.clone(),
             github_project: defaults.github_project.clone(),
         }
     }
@@ -102,6 +110,7 @@ impl Project {
         self.tmux = organization.tmux;
         self.auto_branch = organization.auto_branch;
         self.branch_template = organization.branch_template.clone();
+        self.default_branch = organization.default_branch.clone();
         self.github_project = organization.github_project.clone();
     }
 }

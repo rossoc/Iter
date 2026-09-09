@@ -6,7 +6,7 @@ tmux + GitHub integration.
 - An **organization** is a group of projects that share defaults. It has no
   base_path of its own -- it isn't a place on disk, just a roster and the
   settings (`github`, `tmux`, `auto_branch`, `branch_template`,
-  `github_project`) that new
+  `default_branch`, `github_project`) that new
   projects in it start from. Belonging to one is optional: a project without
   an organization behaves exactly as it always has.
 - A **project** is a base directory of work (optionally a git/GitHub repo).
@@ -62,6 +62,7 @@ iter task info myproj/mytask [--date d]
 iter task list [--project myproj] [--status wip]
 iter task                           # every unfinished task (queue + wip), across all projects
 iter task done myproj/mytask        # closes any open session, tears down its session-config, marks done
+iter task done myproj/mytask --save # ...merging the work onto default_branch first
 iter task weekday myproj/mytask     # average hours per weekday
 iter task pull myproj               # issues -> tasks (and issue state -> task status)
 iter task push myproj               # tasks -> issues (and task status -> issue state)
@@ -112,6 +113,7 @@ settings:
   tmux: true
   auto_branch: true
   branch_template: feat/{task}
+  default_branch: main
 ---
 
 # acme
@@ -289,8 +291,8 @@ and the defaults those projects start from.
 
 **Defaults flow downstream, once.** `--organization` on `iter init`/`new`/
 `project new` seeds the blank template with the organization's `github`,
-`tmux`, `auto_branch`, `branch_template` and `github_project` before nvim
-opens, so you can
+`tmux`, `auto_branch`, `branch_template`, `default_branch` and
+`github_project` before nvim opens, so you can
 still change any of them before saving. They're a starting point, not a
 constraint: editing the organization later doesn't reach back into projects
 already created. Two exceptions, both because a fact beats a default:
@@ -338,7 +340,7 @@ is run later.
     clone <source> <base_path>` -- exactly like running `git clone`
     yourself.
 
-`github`/`tmux`/`auto_branch`/`branch_template`/`github_project` all default the same as
+`github`/`tmux`/`auto_branch`/`branch_template`/`default_branch`/`github_project` all default the same as
 `project new` for `init`/`new` (`github` pre-set to `true` if the resulting
 directory already looks like a git repo), and are carried over as-is from
 the source project for a local `clone`.
@@ -412,6 +414,33 @@ removes the worktree (if any), deletes its branch (if any), and deletes the
 session-config -- the task's past sessions aren't touched, since they're
 keyed by task, not session-config.
 
+## Saving the work: `iter task done --save`
+
+That teardown throws the branch away (`git branch -D`), which is only
+comfortable if the work has landed somewhere first. `--save` is that step:
+
+1. It merges the project's `default_branch` (`main` unless you say
+   otherwise) into the task's worktree, so any conflict happens *there* --
+   on the task's own branch, in the checkout you did the work in.
+2. Then it merges the task's branch into `default_branch`, which after
+   step 1 is a fast-forward.
+
+Only then does the ordinary `task done` run: clock closed, status flipped,
+worktree and branch removed.
+
+A merge that stops is left exactly where git left it. Nothing is aborted or
+rolled back: the conflicted files and the `MERGE_HEAD` beside them stay put,
+`git status` in the worktree the error names says what's outstanding, and
+the task stays `wip` with its worktree still on disk. Resolve it, commit,
+and run `iter task done --save` again -- the second run finds the first
+merge already done and picks up from there.
+
+Two things have to be true, and both are checked before anything is merged:
+the task needs the branch and worktree `iter session new` creates, and the
+project's `base_path` has to have `default_branch` itself checked out --
+that second merge lands in whatever is checked out there, and git would
+merge into a bystander branch as happily as into the right one.
+
 ## Storage
 
 Everything lives in one SQLite file, `iter.db`, kept in `iter`'s config
@@ -453,6 +482,10 @@ project:
   tmux: true
   auto_branch: true
   branch_template: feat/{task}
+  # The branch `iter task done --save` merges finished work into. Worth
+  # setting here if your repos all call their trunk the same thing;
+  # otherwise set it per project.
+  default_branch: main
   # The GitHub Project board `iter task push` files new issues under, by
   # title. Empty files them nowhere -- worth setting here only if your
   # boards are named the same across repos; otherwise set it per project.

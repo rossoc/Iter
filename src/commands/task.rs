@@ -10,7 +10,7 @@ use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::md_edit::edited;
 use crate::models::task_ref;
-use crate::models::{Task, TaskStatus};
+use crate::models::{Project, SessionConfig, Task, TaskStatus};
 use crate::reporting::{
     Header, Report, TaskInfo, WeekdayReport, session_rows, settings_of, weekday_averages,
 };
@@ -18,7 +18,8 @@ use crate::utils::clock::close_open_session;
 use crate::utils::output::print_yaml;
 use crate::utils::report::{resolve_range, total_minutes};
 use crate::utils::resolve::{
-    require_github, resolve_project_or_current, resolve_task_or_current, task_display,
+    require_git_repo, require_github, resolve_project_or_current, resolve_task_or_current,
+    task_display,
 };
 use crate::utils::workspace::teardown_and_kill;
 use crate::{git, github};
@@ -43,7 +44,7 @@ impl Run for TaskCommand {
                 };
                 task_list(app, project.as_deref(), &statuses)
             }
-            Self::Done { task } => task_done(app, task.as_deref()),
+            Self::Done { task, save } => task_done(app, task.as_deref(), *save),
             Self::Pull {
                 project,
                 task,
@@ -163,11 +164,24 @@ pub(crate) fn task_list(
     print_yaml(&names)
 }
 
-fn task_done(app: &App, task_ref: Option<&str>) -> Result<()> {
+fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
     let db = &app.db;
     let (project, mut task) = resolve_task_or_current(db, task_ref)?;
     let task_id = task.id();
     let display = task_display(&project, &task);
+    let session_config = db.find_session_config_by_task(task_id)?;
+
+    // `--save` goes first, before the clock, the status and the teardown:
+    // it is the one step here that can stop halfway, and a merge that
+    // stops has to leave the task exactly as it was -- still `wip`, with
+    // its worktree still on disk, since that worktree is where the
+    // half-done merge is waiting to be finished.
+    if save {
+        let session_config = session_config
+            .as_ref()
+            .ok_or_else(|| IterError::NothingToSave(display.clone()))?;
+        save_to_default_branch(&project, session_config, &display)?;
+    }
 
     close_open_session(db, task_id, None)?;
 
@@ -178,11 +192,71 @@ fn task_done(app: &App, task_ref: Option<&str>) -> Result<()> {
     task.status = TaskStatus::Done;
     db.update(task_id, &task)?;
 
-    if let Some(session_config) = db.find_session_config_by_task(task_id)? {
+    if let Some(session_config) = session_config {
         teardown_and_kill(db, &project, &session_config);
     }
 
     println!("task '{display}' marked done");
+    Ok(())
+}
+
+/// What `--save` does: lands the task's branch on the project's
+/// `default_branch`, so the teardown that follows is throwing away a
+/// worktree and a branch whose work is already home.
+///
+/// Two merges, in this order. The default branch goes into the task's
+/// worktree first, so anything that conflicts conflicts *there* -- on the
+/// task's own branch, in the checkout the work was done in -- and only then
+/// does the task's branch go into the default branch, which by that point
+/// is a fast-forward.
+///
+/// Either merge stopping is left exactly as git left it: the conflicted
+/// files and the `MERGE_HEAD` beside them are the report, `git status` in
+/// the worktree named by the error spells out what's outstanding, and
+/// nothing here is torn down or marked done. Committing the merge and
+/// re-running `--save` picks up where it stopped.
+fn save_to_default_branch(
+    project: &Project,
+    session_config: &SessionConfig,
+    display: &str,
+) -> Result<()> {
+    require_github(project)?;
+    require_git_repo(project)?;
+    let (Some(worktree), Some(branch)) = (
+        session_config.worktree_path.as_deref(),
+        session_config.github_branch.as_deref(),
+    ) else {
+        return Err(IterError::NothingToSave(display.to_string()));
+    };
+    let default_branch = &project.default_branch;
+
+    // The second merge lands in whatever `base_path` has checked out, and
+    // git will merge into a bystander branch as happily as into the right
+    // one -- so this is checked before the first merge rather than
+    // discovered after it, when there would already be a merge commit in
+    // the worktree to explain.
+    if git::current_branch(&project.base_path).as_deref() != Some(default_branch.as_str()) {
+        return Err(IterError::NotOnDefaultBranch {
+            path: project.base_path.clone(),
+            branch: default_branch.clone(),
+        });
+    }
+
+    if !git::merge(worktree, default_branch)? {
+        return Err(IterError::MergeStopped {
+            branch: default_branch.clone(),
+            into: branch.to_string(),
+            path: worktree.to_string(),
+        });
+    }
+    if !git::merge(&project.base_path, branch)? {
+        return Err(IterError::MergeStopped {
+            branch: branch.to_string(),
+            into: default_branch.clone(),
+            path: project.base_path.clone(),
+        });
+    }
+    println!("merged '{branch}' into '{default_branch}'");
     Ok(())
 }
 
@@ -222,6 +296,7 @@ mod tests {
             tmux: false,
             auto_branch: false,
             branch_template: "feat/{task}".to_string(),
+            default_branch: "main".to_string(),
             github_project: String::new(),
         };
         let project_id = app.db.insert(&project).expect("project inserts");
@@ -257,7 +332,7 @@ mod tests {
         };
         app.db.insert(&open).expect("session inserts");
 
-        task_done(&app, Some("proj/a task")).expect("task done succeeds");
+        task_done(&app, Some("proj/a task"), false).expect("task done succeeds");
 
         let task: Task = app.db.get(task_id).expect("reload").expect("task exists");
         assert_eq!(task.status, TaskStatus::Done);
@@ -270,15 +345,31 @@ mod tests {
         );
     }
 
+    /// `--save` on a task that never had a session-config has nothing to
+    /// merge, and the important half is what it *doesn't* do: the task is
+    /// left `wip`, not quietly marked done on the strength of a merge that
+    /// never happened.
+    #[test]
+    fn saving_a_task_with_no_worktree_is_an_error_that_changes_nothing() {
+        let app = app();
+        let (_, task_id) = seed(&app);
+
+        let error = task_done(&app, Some("proj/a task"), true).expect_err("nothing to save");
+        assert!(error.to_string().contains("proj/a task"), "{error}");
+
+        let task: Task = app.db.get(task_id).expect("reload").expect("task exists");
+        assert_eq!(task.status, TaskStatus::Wip);
+    }
+
     /// A `<project>/<task>` that names nothing is an error rather than a
     /// silent no-op, and it names what was missing.
     #[test]
     fn an_unknown_task_ref_is_reported() {
         let app = app();
         seed(&app);
-        let error = task_done(&app, Some("proj/nope")).expect_err("no such task");
+        let error = task_done(&app, Some("proj/nope"), false).expect_err("no such task");
         assert!(error.to_string().contains("nope"), "{error}");
-        let error = task_done(&app, Some("nosuch/a task")).expect_err("no such project");
+        let error = task_done(&app, Some("nosuch/a task"), false).expect_err("no such project");
         assert!(error.to_string().contains("nosuch"), "{error}");
     }
 

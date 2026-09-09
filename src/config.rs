@@ -9,7 +9,7 @@
 //! the two live together and moving the directory moves both.
 
 use crate::error::{IterError, Result};
-use crate::models::{TaskStatus, default_branch_template, default_true};
+use crate::models::{TaskStatus, default_branch_template, default_true, main_branch};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -51,6 +51,12 @@ pub struct ProjectDefaults {
     pub auto_branch: bool,
     pub branch_template: String,
 
+    /// The branch `iter task done --save` merges finished work into.
+    /// Worth setting here for anyone whose repos all call their trunk the
+    /// same thing; anyone with a mix sets it per project (or on the
+    /// organization) instead.
+    pub default_branch: String,
+
     /// The GitHub Project board new issues get filed under, by title.
     /// Empty -- the default -- files them nowhere. Worth setting here for
     /// anyone whose boards are named the same across repos; anyone whose
@@ -68,6 +74,7 @@ impl Default for ProjectDefaults {
             tmux: default_true(),
             auto_branch: default_true(),
             branch_template: default_branch_template(),
+            default_branch: main_branch(),
             github_project: String::new(),
         }
     }

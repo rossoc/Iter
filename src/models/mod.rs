@@ -22,6 +22,14 @@ pub(crate) fn default_branch_template() -> String {
     "feat/{task}".to_string()
 }
 
+/// The value a project's `default_branch` -- the branch `iter task done
+/// --save` merges finished work into -- starts as. Git's own out-of-the-box
+/// name for it; a project whose trunk is `dev` (or anything else) says so
+/// in its own front matter.
+pub(crate) fn main_branch() -> String {
+    "main".to_string()
+}
+
 /// A type edited via `md_edit::edit_in_editor` that carries a free-form
 /// markdown `description`. The field is `#[serde(skip)]`ed on the type
 /// itself and instead placed below the YAML front matter's closing `---`,

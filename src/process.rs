@@ -118,10 +118,6 @@ pub fn succeeds<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[
 ///
 /// Not object-safe, and deliberately so: the methods stay generic over the
 /// argument type, and nothing here needs `dyn`.
-///
-/// [`run_status`] has no method here on purpose: its only caller is the
-/// editor in [`crate::md_edit`], whose binary comes from the config file
-/// rather than being a fixed tool, so it has no `Tool` to hang off.
 pub trait Tool {
     /// The binary's name, as it is looked up on `PATH`.
     const BIN: &'static str;
@@ -135,6 +131,14 @@ pub trait Tool {
 
     fn run<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<()> {
         run(Self::BIN, self.dir(), args)
+    }
+
+    /// [`run_status`] for a tool: the exit status as a plain yes/no, with
+    /// the tool's own output left on the terminal. For the callers that
+    /// read a nonzero exit as an answer rather than a failure -- a merge
+    /// that stops on a conflict, say, whose output *is* the report.
+    fn run_status<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<bool> {
+        run_status(Self::BIN, self.dir(), args)
     }
 
     fn output<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<String> {

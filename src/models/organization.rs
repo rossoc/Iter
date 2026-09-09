@@ -1,5 +1,5 @@
 use crate::config::ProjectDefaults;
-use crate::models::{default_branch_template, default_true};
+use crate::models::{default_branch_template, default_true, main_branch};
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
@@ -43,6 +43,10 @@ pub struct Organization {
     #[serde(default = "default_branch_template")]
     pub branch_template: String,
 
+    /// Default `default_branch` for projects created in this organization.
+    #[serde(default = "main_branch")]
+    pub default_branch: String,
+
     /// Default `github_project` for projects created in this organization.
     #[serde(default)]
     pub github_project: String,
@@ -61,6 +65,7 @@ impl Organization {
             tmux: defaults.tmux,
             auto_branch: defaults.auto_branch,
             branch_template: defaults.branch_template.clone(),
+            default_branch: defaults.default_branch.clone(),
             github_project: defaults.github_project.clone(),
         }
     }

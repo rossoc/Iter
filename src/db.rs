@@ -183,6 +183,7 @@ impl Db {
                 tmux            INTEGER NOT NULL DEFAULT 1,
                 auto_branch     INTEGER NOT NULL DEFAULT 1,
                 branch_template TEXT NOT NULL DEFAULT 'feat/{task}',
+                default_branch  TEXT NOT NULL DEFAULT 'main',
                 github_project  TEXT NOT NULL DEFAULT ''
              );
              CREATE TABLE IF NOT EXISTS projects (
@@ -195,6 +196,7 @@ impl Db {
                 tmux            INTEGER NOT NULL DEFAULT 1,
                 auto_branch     INTEGER NOT NULL DEFAULT 1,
                 branch_template TEXT NOT NULL DEFAULT 'feat/{task}',
+                default_branch  TEXT NOT NULL DEFAULT 'main',
                 github_project  TEXT NOT NULL DEFAULT ''
              );
              CREATE TABLE IF NOT EXISTS tasks (
@@ -265,7 +267,7 @@ impl Db {
     /// They simply stop belonging to one, which is a state every project is
     /// already allowed to be in.
     fn add_missing_columns(&self) -> Result<()> {
-        const ADDED: [(&str, &str, &str); 4] = [
+        const ADDED: [(&str, &str, &str); 6] = [
             (
                 "projects",
                 "organization_id",
@@ -277,6 +279,12 @@ impl Db {
                 "organizations",
                 "github_project",
                 "TEXT NOT NULL DEFAULT ''",
+            ),
+            ("projects", "default_branch", "TEXT NOT NULL DEFAULT 'main'"),
+            (
+                "organizations",
+                "default_branch",
+                "TEXT NOT NULL DEFAULT 'main'",
             ),
         ];
         for (table, column, decl) in ADDED {
@@ -664,6 +672,7 @@ mod tests {
             tmux: false,
             auto_branch: true,
             branch_template: "fix/{task}".to_string(),
+            default_branch: "main".to_string(),
             github_project: "Roadmap".to_string(),
         }
     }
@@ -935,12 +944,13 @@ mod tests {
         assert_eq!(
             insert_sql::<Organization>(),
             "INSERT INTO organizations (name, description, github, tmux, auto_branch, \
-             branch_template, github_project) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
+             branch_template, default_branch, github_project) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
         );
         assert_eq!(
             select_sql::<Organization>("WHERE name = ?1"),
             "SELECT id, name, description, github, tmux, auto_branch, branch_template, \
-             github_project FROM organizations WHERE name = ?1"
+             default_branch, github_project FROM organizations WHERE name = ?1"
         );
     }
 
@@ -1074,6 +1084,7 @@ mod tests {
                     tmux            INTEGER NOT NULL DEFAULT 1,
                     auto_branch     INTEGER NOT NULL DEFAULT 1,
                     branch_template TEXT NOT NULL DEFAULT 'feat/{task}',
+                    default_branch  TEXT NOT NULL DEFAULT 'main',
                     github_project  TEXT NOT NULL DEFAULT '',
                     auto_issue      INTEGER NOT NULL DEFAULT 0
                  );",
@@ -1122,12 +1133,12 @@ mod tests {
         assert_eq!(loaded.branch_prefix, "fix/");
     }
 
-    /// The same guarantee for `github_project`, which lands on two tables
-    /// at once -- a database that predates it has to gain the column on
-    /// `projects` *and* on `organizations`, or the setting a project
-    /// inherits has nowhere to be read from.
+    /// The same guarantee for the settings that land on two tables at once
+    /// -- `github_project` and `default_branch`. A database that predates
+    /// one has to gain the column on `projects` *and* on `organizations`,
+    /// or the setting a project inherits has nowhere to be read from.
     #[test]
-    fn pre_existing_tables_gain_the_github_project_column() {
+    fn pre_existing_tables_gain_the_columns_added_since() {
         let db = db();
         db.conn
             .execute_batch(
@@ -1163,6 +1174,7 @@ mod tests {
             .expect("get succeeds")
             .expect("the row just inserted exists");
         assert_eq!(loaded.github_project, "Roadmap");
+        assert_eq!(loaded.default_branch, "main");
 
         let organization_id = insert_organization(&db, "acme");
         let loaded = db
@@ -1170,6 +1182,7 @@ mod tests {
             .expect("get succeeds")
             .expect("the row just inserted exists");
         assert_eq!(loaded.github_project, "Acme Roadmap");
+        assert_eq!(loaded.default_branch, "dev");
     }
 
     #[test]
@@ -1424,6 +1437,7 @@ mod tests {
         organization.tmux = false;
         organization.branch_template = "chore/{task}".to_string();
         organization.github_project = "Acme Roadmap".to_string();
+        organization.default_branch = "dev".to_string();
         db.insert(&organization).expect("organization inserts")
     }
 

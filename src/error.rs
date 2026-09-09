@@ -121,6 +121,29 @@ pub enum IterError {
 
     #[error("no open session for '{0}' -- run `iter session start` or attach to its tmux session")]
     NoOpenSession(String),
+
+    #[error(
+        "'{0}' has no branch and worktree to save -- \
+         --save merges the ones `iter session new` creates"
+    )]
+    NothingToSave(String),
+
+    #[error(
+        "{path} doesn't have '{branch}' checked out -- \
+         --save merges into the branch that's checked out there, so check \
+         out '{branch}' first"
+    )]
+    NotOnDefaultBranch { path: String, branch: String },
+
+    #[error(
+        "merging '{branch}' into '{into}' stopped -- git's output above \
+         says what's in the way; finish it in {path}, then re-run"
+    )]
+    MergeStopped {
+        branch: String,
+        into: String,
+        path: String,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, IterError>;

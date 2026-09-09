@@ -78,6 +78,25 @@ pub fn delete_branch(base_path: &str, branch: &str) -> Result<()> {
     Git(Some(base_path)).run(&["branch", "-D", branch])
 }
 
+/// The branch checked out at `path` -- `None` if `HEAD` is detached, or if
+/// `path` isn't a repo at all (the two are the same answer to the only
+/// question anyone asks here: is *this* branch the one checked out).
+pub fn current_branch(path: &str) -> Option<String> {
+    Git(Some(path)).output_trimmed(&["symbolic-ref", "--quiet", "--short", "HEAD"])
+}
+
+/// Merges `branch` into whatever `dir` has checked out, letting git print
+/// its own output, and reports whether it came out clean.
+///
+/// A `false` is not an error here, and nothing is rolled back on one: git
+/// has left the merge exactly as far as it got -- the conflicted files, the
+/// `MERGE_HEAD` beside them -- and that half-done state, which `git status`
+/// in `dir` spells out, is the point. The caller's job is to stop and say
+/// where, not to tidy it away.
+pub fn merge(dir: &str, branch: &str) -> Result<bool> {
+    Git(Some(dir)).run_status(&["merge", branch])
+}
+
 /// Clones `source` into `dest`, exactly like `git clone <source> <dest>` --
 /// `source` can be a GitHub (or any remote) URL or a local path to another
 /// repo. `dest` must not already exist (or must be empty); `git` creates it.

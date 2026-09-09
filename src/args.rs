@@ -266,6 +266,13 @@ pub enum TaskCommand {
         /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
+
+        /// Land the work first: merge the project's `default_branch` into
+        /// the task's worktree, then the task's branch into
+        /// `default_branch`. A merge that stops is left half-done for you
+        /// to finish, and the task stays as it was
+        #[clap(long)]
+        save: bool,
     },
 
     /// Bring the project's GitHub issues down as tasks: an issue nothing
