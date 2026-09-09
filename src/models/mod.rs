@@ -30,3 +30,23 @@ pub trait MarkdownBody {
     fn description(&self) -> &str;
     fn set_description(&mut self, description: String);
 }
+
+/// A type with a unique, user-facing `name` -- what the CLI addresses it
+/// by, what shell completion offers, and what `iter <entity> list` prints.
+/// One method is enough to give every such type the same generic listing
+/// and completion, instead of one hand-written copy per entity.
+pub trait Named {
+    fn name(&self) -> &str;
+}
+
+/// How a task is named wherever the CLI speaks about one: `<project>/<task>`.
+/// The separator lives here, next to [`split_task_ref`] which reads it back,
+/// so the two halves of the convention can't drift apart.
+pub fn task_ref(project: &str, task: &str) -> String {
+    format!("{project}/{task}")
+}
+
+/// Splits a [`task_ref`] on its first separator.
+pub fn split_task_ref(task_ref: &str) -> Option<(&str, &str)> {
+    task_ref.split_once('/')
+}

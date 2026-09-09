@@ -1,12 +1,12 @@
 use crate::config::ProjectDefaults;
 use crate::models::{Organization, default_branch_template, default_true};
-use iter_macros::Table;
+use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
 /// A project: a base directory of work, optionally backed by a git repo,
 /// with its own tasks. `id` is `None` for a not-yet-created project (the
 /// blank template opened in the editor); it's filled in once inserted.
-#[derive(Debug, Clone, Serialize, Deserialize, Table)]
+#[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
 #[table(name = "projects", order_by = "name")]
 pub struct Project {
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -106,12 +106,8 @@ impl Project {
     }
 }
 
-impl crate::models::MarkdownBody for Project {
-    fn description(&self) -> &str {
-        &self.description
-    }
-
-    fn set_description(&mut self, description: String) {
-        self.description = description;
+impl crate::models::Named for Project {
+    fn name(&self) -> &str {
+        &self.name
     }
 }

@@ -1,5 +1,6 @@
+use crate::config::config;
 use crate::error::Result;
-use crate::models::{Organization, Project, Session, SessionConfig, Task, TaskStatus};
+use crate::models::{Project, Session, SessionConfig, Task, TaskStatus};
 use chrono::NaiveDateTime;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
@@ -18,9 +19,9 @@ fn str_to_dt(s: &str) -> NaiveDateTime {
 
 /// How one type is laid out in SQLite: which table it lives in, which
 /// columns it writes, how a row is read back, and how an instance is bound
-/// for writing. The blanket `impl<T: Table> Repository<T> for Db` below
-/// derives every statement (`SELECT`/`INSERT`/`UPDATE`/`DELETE`) from these
-/// four items, so no CRUD SQL is written by hand per table.
+/// for writing. `Db`'s generic CRUD methods below derive every statement
+/// (`SELECT`/`INSERT`/`UPDATE`/`DELETE`) from these items, so no CRUD SQL
+/// is written by hand per table.
 ///
 /// Don't implement this by hand -- put `#[derive(Table)]` on the struct.
 /// The derive reads the columns off the struct's own fields, so `COLUMNS`,
@@ -36,7 +37,7 @@ pub(crate) trait Table: Sized {
     /// (not a payload) on update.
     const COLUMNS: &'static [&'static str];
 
-    /// Trailing clause for a bare `Repository::list`, e.g. `"ORDER BY name"`.
+    /// Trailing clause for a bare `Db::list`, e.g. `"ORDER BY name"`.
     const LIST_TAIL: &'static str = "";
 
     /// Reads a row shaped `id, {COLUMNS}` -- the shape `select_sql` builds.
@@ -44,6 +45,20 @@ pub(crate) trait Table: Sized {
 
     /// This item's column values, in `COLUMNS` order.
     fn values(&self) -> Vec<Value>;
+
+    /// The primary key as stored on the item: `None` for one that hasn't
+    /// been inserted yet (the blank template the editor opens), `Some`
+    /// from the moment it comes back out of the database.
+    fn row_id(&self) -> Option<i64>;
+
+    /// The primary key of a row that came *out* of the database, where the
+    /// `Option` above is always `Some`. Panicking here rather than at each
+    /// call site is the point: the invariant is stated once, in the trait
+    /// that owns identity, instead of at every use of an id.
+    fn id(&self) -> i64 {
+        self.row_id()
+            .expect("a row loaded from the database always has an id")
+    }
 }
 
 // ---- statement builders -------------------------------------------------
@@ -94,14 +109,19 @@ fn delete_sql<T: Table>() -> String {
     format!("DELETE FROM {} WHERE id = ?1", T::NAME)
 }
 
-/// Generic storage surface, available for every [`Table`] via one blanket
-/// implementation against the single `Db`/SQLite backend.
-pub trait Repository<T> {
-    fn insert(&self, item: &T) -> Result<i64>;
-    fn update(&self, id: i64, item: &T) -> Result<()>;
-    fn delete(&self, id: i64) -> Result<()>;
-    fn get(&self, id: i64) -> Result<Option<T>>;
-    fn list(&self) -> Result<Vec<T>>;
+/// Opens the configured database, or exits reporting why. Every command
+/// and every completion callback starts here: nothing downstream can do
+/// anything useful without the database, so a failure to reach it is fatal
+/// rather than threaded through as an error.
+pub fn open_db() -> Db {
+    let path = config().db_path().unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    });
+    Db::open(&path).unwrap_or_else(|e| {
+        eprintln!("failed to open database at {}: {e}", path.display());
+        std::process::exit(1);
+    })
 }
 
 pub struct Db {
@@ -218,12 +238,19 @@ impl Db {
         Ok(())
     }
 
+    /// Asked the same way as [`Self::table_exists`] -- a single row that
+    /// either comes back or doesn't, rather than every column name
+    /// collected into a `Vec` to be scanned afterwards.
     fn column_exists(&self, table: &str, column: &str) -> Result<bool> {
-        let mut stmt = self.conn.prepare(&format!("PRAGMA table_info({table})"))?;
-        let names = stmt
-            .query_map([], |row| row.get::<_, String>(1))?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(names.iter().any(|name| name == column))
+        Ok(self
+            .conn
+            .query_row(
+                &format!("SELECT 1 FROM pragma_table_info('{table}') WHERE name = ?1"),
+                params![column],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some())
     }
 
     /// One-time rename from the pre-rename schema (`Session`/`Record`
@@ -264,13 +291,14 @@ impl Db {
     fn find_one<T: Table>(&self, tail: &str, params: impl Params) -> Result<Option<T>> {
         Ok(self
             .conn
-            .query_row(&select_sql::<T>(tail), params, T::from_row)
+            .prepare_cached(&select_sql::<T>(tail))?
+            .query_row(params, T::from_row)
             .optional()?)
     }
 
     /// Every row matching `tail` (a `WHERE`/`ORDER BY` clause).
     fn find_all<T: Table>(&self, tail: &str, params: impl Params) -> Result<Vec<T>> {
-        let mut stmt = self.conn.prepare(&select_sql::<T>(tail))?;
+        let mut stmt = self.conn.prepare_cached(&select_sql::<T>(tail))?;
         let rows = stmt
             .query_map(params, T::from_row)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -279,11 +307,10 @@ impl Db {
 
     // ---- finders (lookups the generic CRUD surface doesn't cover) ---------
 
-    pub fn find_project_by_name(&self, name: &str) -> Result<Option<Project>> {
-        self.find_one("WHERE name = ?1", params![name])
-    }
-
-    pub fn find_organization_by_name(&self, name: &str) -> Result<Option<Organization>> {
+    /// The `T` named `name`, if any. Every table with a unique, user-facing
+    /// `name` column is looked up exactly this way, so the lookup is
+    /// generic rather than written once per entity.
+    pub fn find_by_name<T: Table>(&self, name: &str) -> Result<Option<T>> {
         self.find_one("WHERE name = ?1", params![name])
     }
 
@@ -325,33 +352,77 @@ impl Db {
     pub fn open_session_for_task(&self, task_id: i64) -> Result<Option<Session>> {
         self.find_one("WHERE task_id = ?1 AND end IS NULL", params![task_id])
     }
-}
 
-impl<T: Table> Repository<T> for Db {
-    fn insert(&self, item: &T) -> Result<i64> {
+    /// Every task as `(project name, task name)`, in `<project>/<task>`
+    /// order, optionally narrowed to one status.
+    ///
+    /// One join rather than a listing plus a query per project: this runs
+    /// on every TAB keypress, where the per-project round trips were the
+    /// dominant cost and every task's other columns were loaded only to be
+    /// dropped.
+    pub fn task_refs(&self, status: Option<TaskStatus>) -> Result<Vec<(String, String)>> {
+        let mut sql = String::from(
+            "SELECT p.name, t.name FROM tasks t JOIN projects p ON p.id = t.project_id",
+        );
+        if status.is_some() {
+            sql.push_str(" WHERE t.status = ?1");
+        }
+        sql.push_str(" ORDER BY p.name, t.name");
+        let mut stmt = self.conn.prepare_cached(&sql)?;
+        let row = |row: &Row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?));
+        let rows: rusqlite::Result<Vec<_>> = match status {
+            Some(status) => stmt.query_map(params![status.as_str()], row)?.collect(),
+            None => stmt.query_map([], row)?.collect(),
+        };
+        Ok(rows?)
+    }
+
+    /// Every distinct task name in the database, sorted -- what `task
+    /// pull/push --task` completes, which takes a bare name rather than a
+    /// `<project>/<task>` pair. SQL does the dedup and the ordering.
+    pub fn task_names(&self) -> Result<Vec<String>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT DISTINCT name FROM tasks ORDER BY name")?;
+        let rows = stmt
+            .query_map([], |row| row.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    // ---- generic CRUD, one implementation for every `Table` --------------
+
+    /// Writes `item` as a new row and returns the id SQLite assigned it.
+    pub fn insert<T: Table>(&self, item: &T) -> Result<i64> {
         self.conn
-            .execute(&insert_sql::<T>(), params_from_iter(item.values()))?;
+            .prepare_cached(&insert_sql::<T>())?
+            .execute(params_from_iter(item.values()))?;
         Ok(self.conn.last_insert_rowid())
     }
 
-    fn update(&self, id: i64, item: &T) -> Result<()> {
+    /// Overwrites row `id` with `item`'s columns.
+    pub fn update<T: Table>(&self, id: i64, item: &T) -> Result<()> {
         let mut values = item.values();
         values.push(id.into());
         self.conn
-            .execute(&update_sql::<T>(), params_from_iter(values))?;
+            .prepare_cached(&update_sql::<T>())?
+            .execute(params_from_iter(values))?;
         Ok(())
     }
 
-    fn delete(&self, id: i64) -> Result<()> {
-        self.conn.execute(&delete_sql::<T>(), params![id])?;
+    pub fn delete<T: Table>(&self, id: i64) -> Result<()> {
+        self.conn
+            .prepare_cached(&delete_sql::<T>())?
+            .execute(params![id])?;
         Ok(())
     }
 
-    fn get(&self, id: i64) -> Result<Option<T>> {
+    pub fn get<T: Table>(&self, id: i64) -> Result<Option<T>> {
         self.find_one("WHERE id = ?1", params![id])
     }
 
-    fn list(&self) -> Result<Vec<T>> {
+    /// Every row of `T`, in `T::LIST_TAIL` order.
+    pub fn list<T: Table>(&self) -> Result<Vec<T>> {
         self.find_all(T::LIST_TAIL, [])
     }
 }
@@ -442,6 +513,7 @@ impl<T: Column> Column for Option<T> {
 mod tests {
     use super::*;
     use crate::config::ProjectDefaults;
+    use crate::models::Organization;
 
     fn dt(s: &str) -> NaiveDateTime {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
@@ -469,7 +541,7 @@ mod tests {
     }
 
     fn insert_project(db: &Db, name: &str) -> i64 {
-        Repository::<Project>::insert(db, &project(name)).expect("project inserts")
+        db.insert(&project(name)).expect("project inserts")
     }
 
     fn insert_task(db: &Db, project_id: i64, name: &str) -> i64 {
@@ -482,7 +554,72 @@ mod tests {
             status: TaskStatus::Wip,
             branch_prefix: "fix/".to_string(),
         };
-        Repository::<Task>::insert(db, &task).expect("task inserts")
+        db.insert(&task).expect("task inserts")
+    }
+
+    /// The completion lookups are one join rather than a query per
+    /// project, so what they return is worth pinning: every task, paired
+    /// with its own project, ordered the way completion offers it.
+    #[test]
+    fn task_refs_pairs_every_task_with_its_project() {
+        let db = db();
+        let beta = insert_project(&db, "beta");
+        let alpha = insert_project(&db, "alpha");
+        insert_task(&db, beta, "ship it");
+        insert_task(&db, alpha, "write docs");
+        insert_task(&db, alpha, "another");
+
+        assert_eq!(
+            db.task_refs(None).expect("task refs"),
+            vec![
+                ("alpha".to_string(), "another".to_string()),
+                ("alpha".to_string(), "write docs".to_string()),
+                ("beta".to_string(), "ship it".to_string()),
+            ]
+        );
+    }
+
+    /// `session new` only completes tasks that haven't been started, so the
+    /// status filter has to reach SQL rather than being applied after every
+    /// task in the database was loaded.
+    #[test]
+    fn task_refs_can_narrow_to_one_status() {
+        let db = db();
+        let project = insert_project(&db, "proj");
+        insert_task(&db, project, "in progress"); // inserted as `wip`
+        let queued = Task {
+            id: None,
+            project_id: project,
+            name: "queued".to_string(),
+            description: String::new(),
+            github_issue: None,
+            status: TaskStatus::Queue,
+            branch_prefix: String::new(),
+        };
+        db.insert(&queued).expect("task inserts");
+
+        assert_eq!(
+            db.task_refs(Some(TaskStatus::Queue)).expect("task refs"),
+            vec![("proj".to_string(), "queued".to_string())]
+        );
+        assert_eq!(db.task_refs(Some(TaskStatus::Done)).expect("task refs"), []);
+    }
+
+    /// `--task` takes a bare name, so the same name under two projects is
+    /// one candidate, not two -- deduped and ordered by SQL.
+    #[test]
+    fn task_names_are_distinct_and_sorted() {
+        let db = db();
+        let one = insert_project(&db, "one");
+        let two = insert_project(&db, "two");
+        insert_task(&db, one, "shared");
+        insert_task(&db, two, "shared");
+        insert_task(&db, one, "alone");
+
+        assert_eq!(
+            db.task_names().expect("task names"),
+            vec!["alone".to_string(), "shared".to_string()]
+        );
     }
 
     #[test]
@@ -610,7 +747,8 @@ mod tests {
     fn project_round_trips_every_field() {
         let db = db();
         let id = insert_project(&db, "alpha");
-        let loaded = Repository::<Project>::get(&db, id)
+        let loaded = db
+            .get::<Project>(id)
             .expect("get succeeds")
             .expect("the row just inserted exists");
 
@@ -655,9 +793,10 @@ mod tests {
             .expect("drifted schema is created");
 
         let id = insert_project(&db, "alpha");
-        Repository::<Project>::update(&db, id, &project("renamed")).expect("update succeeds");
+        db.update(id, &project("renamed")).expect("update succeeds");
 
-        let loaded = Repository::<Project>::get(&db, id)
+        let loaded = db
+            .get::<Project>(id)
             .expect("get succeeds")
             .expect("the row exists");
         assert_eq!(loaded.name, "renamed");
@@ -688,7 +827,8 @@ mod tests {
 
         let project_id = insert_project(&db, "alpha");
         let id = insert_task(&db, project_id, "build it");
-        let loaded = Repository::<Task>::get(&db, id)
+        let loaded = db
+            .get::<Task>(id)
             .expect("get succeeds")
             .expect("the row just inserted exists");
         assert_eq!(loaded.branch_prefix, "fix/");
@@ -730,13 +870,15 @@ mod tests {
         db.migrate().expect("migrating adds the columns");
 
         let id = insert_project(&db, "alpha");
-        let loaded = Repository::<Project>::get(&db, id)
+        let loaded = db
+            .get::<Project>(id)
             .expect("get succeeds")
             .expect("the row just inserted exists");
         assert_eq!(loaded.github_project, "Roadmap");
 
         let organization_id = insert_organization(&db, "acme");
-        let loaded = Repository::<Organization>::get(&db, organization_id)
+        let loaded = db
+            .get::<Organization>(organization_id)
             .expect("get succeeds")
             .expect("the row just inserted exists");
         assert_eq!(loaded.github_project, "Acme Roadmap");
@@ -752,9 +894,10 @@ mod tests {
         changed.tmux = true;
         changed.auto_branch = false;
         changed.branch_template = "chore/{task}".to_string();
-        Repository::<Project>::update(&db, id, &changed).expect("update succeeds");
+        db.update(id, &changed).expect("update succeeds");
 
-        let loaded = Repository::<Project>::get(&db, id)
+        let loaded = db
+            .get::<Project>(id)
             .expect("get succeeds")
             .expect("the updated row exists");
         assert_eq!(loaded.name, "renamed");
@@ -771,7 +914,8 @@ mod tests {
         insert_project(&db, "alpha");
         insert_project(&db, "bravo");
 
-        let names: Vec<String> = Repository::<Project>::list(&db)
+        let names: Vec<String> = db
+            .list::<Project>()
             .expect("list succeeds")
             .into_iter()
             .map(|p| p.name)
@@ -784,12 +928,12 @@ mod tests {
         let db = db();
         insert_project(&db, "alpha");
         assert!(
-            db.find_project_by_name("alpha")
+            db.find_by_name::<Project>("alpha")
                 .expect("lookup succeeds")
                 .is_some()
         );
         assert!(
-            db.find_project_by_name("nope")
+            db.find_by_name::<Project>("nope")
                 .expect("lookup succeeds")
                 .is_none()
         );
@@ -826,8 +970,9 @@ mod tests {
             status: TaskStatus::Queue,
             branch_prefix: String::new(),
         };
-        let id = Repository::<Task>::insert(&db, &task).expect("task inserts");
-        let loaded = Repository::<Task>::get(&db, id)
+        let id = db.insert(&task).expect("task inserts");
+        let loaded = db
+            .get::<Task>(id)
             .expect("get succeeds")
             .expect("the row just inserted exists");
         assert_eq!(loaded.github_issue, None);
@@ -840,7 +985,7 @@ mod tests {
         let project_id = insert_project(&db, "alpha");
         insert_task(&db, project_id, "build it");
 
-        Repository::<Project>::delete(&db, project_id).expect("delete succeeds");
+        db.delete::<Project>(project_id).expect("delete succeeds");
         assert!(
             db.tasks_for_project(project_id)
                 .expect("lookup succeeds")
@@ -861,7 +1006,7 @@ mod tests {
             github_branch: None,
             worktree_path: Some("/tmp/wt".to_string()),
         };
-        Repository::<SessionConfig>::insert(&db, &config).expect("config inserts");
+        db.insert(&config).expect("config inserts");
 
         let by_task = db
             .find_session_config_by_task(task_id)
@@ -898,8 +1043,8 @@ mod tests {
             end: None,
             message: None,
         };
-        Repository::<Session>::insert(&db, &closed).expect("closed session inserts");
-        let open_id = Repository::<Session>::insert(&db, &open).expect("open session inserts");
+        db.insert(&closed).expect("closed session inserts");
+        let open_id = db.insert(&open).expect("open session inserts");
 
         let found = db
             .open_session_for_task(task_id)
@@ -923,14 +1068,15 @@ mod tests {
             end: None,
             message: None,
         };
-        let id = Repository::<Session>::insert(&db, &session).expect("session inserts");
+        let id = db.insert(&session).expect("session inserts");
 
         let mut closed = session;
         closed.end = Some(dt("2026-09-01 10:30"));
         closed.message = Some("wrapped up".to_string());
-        Repository::<Session>::update(&db, id, &closed).expect("update succeeds");
+        db.update(id, &closed).expect("update succeeds");
 
-        let loaded = Repository::<Session>::get(&db, id)
+        let loaded = db
+            .get::<Session>(id)
             .expect("get succeeds")
             .expect("the updated row exists");
         assert_eq!(loaded.end, Some(dt("2026-09-01 10:30")));
@@ -964,7 +1110,7 @@ mod tests {
                 end: Some(dt("2026-09-01 10:00")),
                 message: None,
             };
-            Repository::<Session>::insert(&db, &session).expect("session inserts");
+            db.insert(&session).expect("session inserts");
         }
 
         let mut task_ids: Vec<i64> = db
@@ -990,14 +1136,15 @@ mod tests {
         organization.tmux = false;
         organization.branch_template = "chore/{task}".to_string();
         organization.github_project = "Acme Roadmap".to_string();
-        Repository::<Organization>::insert(db, &organization).expect("organization inserts")
+        db.insert(&organization).expect("organization inserts")
     }
 
     #[test]
     fn organization_round_trips_its_downstream_defaults() {
         let db = db();
         let id = insert_organization(&db, "acme");
-        let loaded = Repository::<Organization>::get(&db, id)
+        let loaded = db
+            .get::<Organization>(id)
             .expect("get succeeds")
             .expect("the row just inserted exists");
         assert_eq!(loaded.name, "acme");
@@ -1015,18 +1162,18 @@ mod tests {
 
         let mut member = project("member");
         member.organization_id = Some(organization);
-        let member_id = Repository::<Project>::insert(&db, &member).expect("project inserts");
+        let member_id = db.insert(&member).expect("project inserts");
         let loner_id = insert_project(&db, "loner");
 
         assert_eq!(
-            Repository::<Project>::get(&db, member_id)
+            db.get::<Project>(member_id)
                 .expect("get succeeds")
                 .expect("row exists")
                 .organization_id,
             Some(organization)
         );
         assert_eq!(
-            Repository::<Project>::get(&db, loner_id)
+            db.get::<Project>(loner_id)
                 .expect("get succeeds")
                 .expect("row exists")
                 .organization_id,
@@ -1052,12 +1199,14 @@ mod tests {
         let organization = insert_organization(&db, "acme");
         let mut member = project("member");
         member.organization_id = Some(organization);
-        let project_id = Repository::<Project>::insert(&db, &member).expect("project inserts");
+        let project_id = db.insert(&member).expect("project inserts");
         let task_id = insert_task(&db, project_id, "build it");
 
-        Repository::<Organization>::delete(&db, organization).expect("delete succeeds");
+        db.delete::<Organization>(organization)
+            .expect("delete succeeds");
 
-        let loaded = Repository::<Project>::get(&db, project_id)
+        let loaded = db
+            .get::<Project>(project_id)
             .expect("get succeeds")
             .expect("the project outlives its organization");
         assert_eq!(loaded.organization_id, None);
@@ -1100,7 +1249,7 @@ mod tests {
         // ...and the column is usable, defaulting to "no organization".
         let id = insert_project(&db, "legacy");
         assert_eq!(
-            Repository::<Project>::get(&db, id)
+            db.get::<Project>(id)
                 .expect("get succeeds")
                 .expect("row exists")
                 .organization_id,

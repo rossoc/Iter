@@ -66,13 +66,12 @@ pub fn any_client_attached(session: &str) -> bool {
 /// The tmux session name of the pane this process is running in, if any
 /// (i.e. we're inside a tmux client). Used by `iter t`.
 pub fn current_session_name() -> Option<String> {
-    let name = process::output("tmux", None, &["display-message", "-p", "#S"]).ok()?;
-    let name = name.trim();
-    if name.is_empty() {
-        None
-    } else {
-        Some(name.to_string())
+    // Outside tmux the answer is already known, and asking costs a
+    // fork+exec on every command that defaults to "the task I'm in".
+    if !inside_tmux() {
+        return None;
     }
+    process::output_trimmed("tmux", None, &["display-message", "-p", "#S"])
 }
 
 /// The session-scoped tmux option a detach message is left in: something
@@ -185,22 +184,17 @@ fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
 /// session, most of which have no such option (and, on `session-closed`,
 /// no longer exist to be asked).
 pub fn take_detach_message(session: &str) -> Option<String> {
-    let value = process::output(
+    let value = process::output_trimmed(
         "tmux",
         None,
         &["show-options", "-t", session, "-v", DETACH_MESSAGE_OPTION],
-    )
-    .ok()?;
-    let value = value.trim();
-    if value.is_empty() {
-        return None;
-    }
+    )?;
     let _ = process::run(
         "tmux",
         None,
         &["set-option", "-t", session, "-u", DETACH_MESSAGE_OPTION],
     );
-    Some(value.to_string())
+    Some(value)
 }
 
 #[cfg(test)]

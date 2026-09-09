@@ -131,32 +131,28 @@ pub fn create_issue(repo_path: &str, title: &str, body: &str, project: &str) -> 
     })
 }
 
+/// Runs `gh issue <verb> <number> [rest]` in `repo_path`. Every write below
+/// is that shape, so the number is stringified and the argument list
+/// assembled in one place rather than at each of them.
+fn gh_issue(repo_path: &str, verb: &str, number: i64, rest: &[&str]) -> Result<()> {
+    let number = number.to_string();
+    let mut args = vec!["issue", verb, &number];
+    args.extend_from_slice(rest);
+    process::run("gh", Some(repo_path), &args)
+}
+
 /// Replaces an issue's body with `body`. Only ever called for `--body`,
 /// which is what makes overwriting what's on GitHub something you asked
 /// for rather than something a status sync did on its own.
 pub fn set_issue_body(repo_path: &str, number: i64, body: &str) -> Result<()> {
-    process::run(
-        "gh",
-        Some(repo_path),
-        &["issue", "edit", &number.to_string(), "--body", body],
-    )
+    gh_issue(repo_path, "edit", number, &["--body", body])
 }
 
 /// Adds the authenticated user to an issue's assignees, leaving whoever is
 /// already there in place -- `--add-assignee`, not `--assignee`. Signing an
 /// issue "done at least by me", not claiming it alone.
 pub fn assign_self(repo_path: &str, number: i64) -> Result<()> {
-    process::run(
-        "gh",
-        Some(repo_path),
-        &[
-            "issue",
-            "edit",
-            &number.to_string(),
-            "--add-assignee",
-            "@me",
-        ],
-    )
+    gh_issue(repo_path, "edit", number, &["--add-assignee", "@me"])
 }
 
 /// Closes or reopens an issue, to match the status of the task tracking it.
@@ -165,16 +161,12 @@ pub fn set_issue_state(repo_path: &str, number: i64, state: IssueState) -> Resul
         IssueState::Open => "reopen",
         IssueState::Closed => "close",
     };
-    process::run("gh", Some(repo_path), &["issue", verb, &number.to_string()])
+    gh_issue(repo_path, verb, number, &[])
 }
 
 /// Posts `body` as a new comment on an issue, via `gh`, from `repo_path`.
 pub fn post_comment(repo_path: &str, number: i64, body: &str) -> Result<()> {
-    process::run(
-        "gh",
-        Some(repo_path),
-        &["issue", "comment", &number.to_string(), "--body", body],
-    )
+    gh_issue(repo_path, "comment", number, &["--body", body])
 }
 
 /// An issue exactly as `gh --json` hands it over, before the tidying

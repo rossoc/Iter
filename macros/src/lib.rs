@@ -104,6 +104,59 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             fn values(&self) -> ::std::vec::Vec<::rusqlite::types::Value> {
                 ::std::vec![#(crate::db::Column::to_sql(&self.#columns)),*]
             }
+
+            fn row_id(&self) -> ::std::option::Option<i64> {
+                self.id
+            }
         }
     })
+}
+
+/// Implements `crate::models::MarkdownBody` for a struct with a
+/// `description: String` field.
+///
+/// The field is `#[serde(skip)]`ed on the struct itself and lives below the
+/// YAML front matter as the markdown body instead, so every editable model
+/// needs the same two accessors. They are the same two accessors every
+/// time, which is what this derive is for.
+///
+/// ```ignore
+/// #[derive(MarkdownBody)]
+/// pub struct Task {
+///     pub description: String,
+/// }
+/// ```
+#[proc_macro_derive(MarkdownBody)]
+pub fn derive_markdown_body(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let ty = &input.ident;
+    let has_description = match &input.data {
+        Data::Struct(data) => data.fields.iter().any(|field| {
+            field
+                .ident
+                .as_ref()
+                .is_some_and(|name| name == "description")
+        }),
+        _ => false,
+    };
+    if !has_description {
+        return syn::Error::new(
+            ty.span(),
+            "`MarkdownBody` needs a struct with a `description: String` field",
+        )
+        .into_compile_error()
+        .into();
+    }
+    quote! {
+        impl crate::models::MarkdownBody for #ty {
+            fn description(&self) -> &str {
+                &self.description
+            }
+
+            fn set_description(&mut self, description: ::std::string::String) {
+                self.description = description;
+            }
+        }
+    }
+    .into()
 }

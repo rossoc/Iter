@@ -73,7 +73,28 @@ pub fn output<S: AsRef<OsStr>>(
             false => format!("{message}: {stderr}"),
         }));
     }
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    // Moves the buffer rather than copying it: `gh issue list` output can
+    // run to megabytes, and it is valid UTF-8 in every case but a broken
+    // one, which still falls back rather than failing.
+    Ok(String::from_utf8(output.stdout)
+        .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned()))
+}
+
+/// [`output`] trimmed, with every failure -- couldn't spawn, nonzero exit,
+/// nothing but whitespace printed -- collapsed into `None`. What the
+/// probe-style readers want, which would otherwise each re-spell the same
+/// `.ok()?` / trim / is-empty dance.
+pub fn output_trimmed<S: AsRef<OsStr>>(
+    tool: &'static str,
+    dir: Option<&str>,
+    args: &[S],
+) -> Option<String> {
+    let value = output(tool, dir, args).ok()?;
+    let value = value.trim();
+    match value.is_empty() {
+        true => None,
+        false => Some(value.to_string()),
+    }
 }
 
 /// Whether `tool` ran *and* exited zero -- for the probe-style checks where

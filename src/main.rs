@@ -1,4 +1,5 @@
 mod args;
+mod completion;
 mod config;
 mod db;
 mod error;
@@ -18,24 +19,21 @@ use args::{
 };
 use chrono::{Local, NaiveDate};
 use clap::{CommandFactory, Parser};
-use clap_complete::engine::CompletionCandidate;
 use clap_complete::env::CompleteEnv;
+use completion::names;
 use config::config;
-use db::{Db, Repository};
+use db::{Db, Table, open_db};
 use error::{IterError, Result};
-use models::{Organization, Project, Session, SessionConfig, Task, TaskStatus};
+use models::{
+    Named, Organization, Project, Session, SessionConfig, Task, TaskStatus, split_task_ref,
+    task_ref,
+};
 use reporting::{
-    DateRange, Header, OrganizationInfo, ProjectInfo, ProjectReport, TaskInfo, TaskReport,
-    WeekdayReport, in_range, merged_total_minutes, minutes_to_hhmm, render_organization_info,
-    render_project_info, render_task_info, round_to_half_hour, session_rows, settings_of,
-    weekday_averages,
+    DateRange, Header, OrganizationInfo, ProjectInfo, ProjectReport, Report, TaskInfo, TaskReport,
+    Total, WeekdayReport, in_range, merged_total_minutes, minutes_to_hhmm, non_empty, session_rows,
+    settings_of, weekday_averages,
 };
 use std::process::ExitCode;
-
-// An id read back from the database is always `Some`; this names that
-// invariant at every `.expect()` call site below instead of `.unwrap()`ing
-// silently, per a fetched-row's id never legitimately being absent.
-const ID_INVARIANT: &str = "a row loaded from the database always has an id";
 
 fn cli() -> clap::Command {
     Args::command().name("iter")
@@ -84,130 +82,38 @@ fn main() -> ExitCode {
 /// beside that file). Exits rather than returning an error: every command
 /// needs it, and so does every completion callback the shell fires, none of
 /// which has anything useful to do without one.
-fn open_db() -> Db {
-    let path = config().db_path().unwrap_or_else(|e| {
-        eprintln!("error: {e}");
-        std::process::exit(1);
-    });
-    Db::open(&path).unwrap_or_else(|e| {
-        eprintln!("failed to open database at {}: {e}", path.display());
-        std::process::exit(1);
-    })
+/// Prints `value` as YAML -- what every `list` command emits, and the one
+/// place `serde_yaml` is reached for outside the report renderers.
+fn print_yaml<T: serde::Serialize>(value: &T) -> Result<()> {
+    print!("{}", serde_yaml::to_string(value)?);
+    Ok(())
 }
 
-/// Dynamic completer for arguments naming a project (`project edit/delete/info`,
-/// `task new --project`). Attached via `ArgValueCompleter` in `args.rs`.
-pub(crate) fn project_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    let Some(current) = current.to_str() else {
-        return Vec::new();
-    };
-    let db = open_db();
-    let Ok(projects) = Repository::<Project>::list(&db) else {
-        return Vec::new();
-    };
-    projects
-        .into_iter()
-        .map(|p| p.name)
-        .filter(|n| n.starts_with(current))
-        .map(CompletionCandidate::new)
-        .collect()
+/// `iter <entity> list`: every `T`'s name as a YAML list. One command body
+/// for every named entity.
+fn list_names<T: Table + Named>() -> Result<()> {
+    print_yaml(&names::<T>(&open_db())?)
 }
 
-/// Dynamic completer for arguments naming an organization.
-pub(crate) fn organization_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    let Some(current) = current.to_str() else {
-        return Vec::new();
-    };
-    let db = open_db();
-    let Ok(organizations) = Repository::<Organization>::list(&db) else {
-        return Vec::new();
-    };
-    organizations
-        .into_iter()
-        .map(|o| o.name)
-        .filter(|n| n.starts_with(current))
-        .map(CompletionCandidate::new)
-        .collect()
-}
-
-/// Dynamic completer for arguments naming a task as `<project>/<task>`,
-/// offering only the tasks `keep` accepts.
-fn task_completer_where(
-    current: &std::ffi::OsStr,
-    keep: impl Fn(&Task) -> bool,
-) -> Vec<CompletionCandidate> {
-    let Some(current) = current.to_str() else {
-        return Vec::new();
-    };
-    let db = open_db();
-    let Ok(projects) = Repository::<Project>::list(&db) else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for p in projects {
-        let Ok(tasks) = db.tasks_for_project(p.id.expect(ID_INVARIANT)) else {
-            continue;
-        };
-        for t in tasks.iter().filter(|t| keep(t)) {
-            let full = format!("{}/{}", p.name, t.name);
-            if full.starts_with(current) {
-                out.push(CompletionCandidate::new(full));
-            }
-        }
-    }
-    out
-}
-
-/// Dynamic completer for arguments naming any task.
-pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    task_completer_where(current, |_| true)
-}
-
-/// Dynamic completer for `task pull/push --task`, which takes a bare task
-/// name rather than a `<project>/<task>` pair -- the project is already the
-/// positional argument. Completion can't see that positional, so this
-/// offers every task name there is and leaves narrowing to what you type.
-pub(crate) fn task_name_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    let Some(current) = current.to_str() else {
-        return Vec::new();
-    };
-    let db = open_db();
-    let Ok(projects) = Repository::<Project>::list(&db) else {
-        return Vec::new();
-    };
-    let mut names: Vec<String> = projects
-        .into_iter()
-        .filter_map(|p| db.tasks_for_project(p.id.expect(ID_INVARIANT)).ok())
-        .flatten()
-        .map(|t| t.name)
-        .filter(|name| name.starts_with(current))
-        .collect();
-    names.sort();
-    names.dedup();
-    names.into_iter().map(CompletionCandidate::new).collect()
-}
-
-/// Dynamic completer for `session new`, which is only ever a sensible thing
-/// to run on a task that hasn't been started: it refuses a task that already
-/// has a session-config, and flips the one it does start to `wip`.
-pub(crate) fn queued_task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    task_completer_where(current, |t| t.status == TaskStatus::Queue)
+/// How a task is named everywhere the CLI speaks about one: the exact
+/// `<project>/<task>` syntax [`parse_task_ref`] reads back, written in the
+/// one place its inverse lives so the two can't drift apart.
+fn task_display(project: &Project, task: &Task) -> String {
+    task_ref(&project.name, &task.name)
 }
 
 /// Splits `<project>/<task>` on the first `/`.
-fn parse_task_ref(task_ref: &str) -> Result<(&str, &str)> {
-    task_ref
-        .split_once('/')
-        .ok_or_else(|| IterError::InvalidTaskRef(task_ref.to_string()))
+fn parse_task_ref(reference: &str) -> Result<(&str, &str)> {
+    split_task_ref(reference).ok_or_else(|| IterError::InvalidTaskRef(reference.to_string()))
 }
 
 fn resolve_task(db: &Db, task_ref: &str) -> Result<(Project, Task)> {
     let (project_name, task_name) = parse_task_ref(task_ref)?;
     let project = db
-        .find_project_by_name(project_name)?
+        .find_by_name::<Project>(project_name)?
         .ok_or_else(|| IterError::ProjectNotFound(project_name.to_string()))?;
     let task = db
-        .find_task(project.id.expect(ID_INVARIANT), task_name)?
+        .find_task(project.id(), task_name)?
         .ok_or_else(|| IterError::TaskNotFound {
             project: project_name.to_string(),
             task: task_name.to_string(),
@@ -222,10 +128,12 @@ fn current_session_task(db: &Db) -> Result<(Project, Task)> {
     let session_config = db
         .find_session_config_by_tmux_name(&name)?
         .ok_or_else(|| IterError::UntrackedTmuxSession(name.clone()))?;
-    let task =
-        Repository::<Task>::get(db, session_config.task_id)?.ok_or(IterError::OrphanSessionTask)?;
-    let project =
-        Repository::<Project>::get(db, task.project_id)?.ok_or(IterError::OrphanTaskProject)?;
+    let task = db
+        .get::<Task>(session_config.task_id)?
+        .ok_or(IterError::OrphanSessionTask)?;
+    let project = db
+        .get::<Project>(task.project_id)?
+        .ok_or(IterError::OrphanTaskProject)?;
     Ok((project, task))
 }
 
@@ -243,14 +151,14 @@ fn resolve_task_or_current(db: &Db, task_ref: Option<&str>) -> Result<(Project, 
 fn resolve_project_or_current(db: &Db, name: Option<&str>) -> Result<Project> {
     match name {
         Some(n) => db
-            .find_project_by_name(n)?
+            .find_by_name::<Project>(n)?
             .ok_or_else(|| IterError::ProjectNotFound(n.to_string())),
         None => current_session_task(db).map(|(project, _)| project),
     }
 }
 
 fn resolve_organization(db: &Db, name: &str) -> Result<Organization> {
-    db.find_organization_by_name(name)?
+    db.find_by_name::<Organization>(name)?
         .ok_or_else(|| IterError::OrganizationNotFound(name.to_string()))
 }
 
@@ -266,7 +174,8 @@ fn resolve_organization_or_current(db: &Db, name: Option<&str>) -> Result<Organi
     let id = project
         .organization_id
         .ok_or_else(|| IterError::ProjectHasNoOrganization(project.name.clone()))?;
-    Repository::<Organization>::get(db, id)?.ok_or(IterError::OrphanProjectOrganization)
+    db.get::<Organization>(id)?
+        .ok_or(IterError::OrphanProjectOrganization)
 }
 
 fn parse_day(value: &str) -> Result<NaiveDate> {
@@ -279,24 +188,19 @@ fn parse_day(value: &str) -> Result<NaiveDate> {
 /// today and `--from` to no lower bound at all. clap already rejects mixing
 /// the two formulations, so only one branch can apply.
 fn resolve_range(opts: &ReportOpts, now: chrono::NaiveDateTime) -> Result<DateRange> {
+    let day = |value: &Option<String>| value.as_deref().map(parse_day).transpose();
     if opts.from.is_none() && opts.to.is_none() {
-        return Ok(DateRange::day(match &opts.date {
-            Some(date) => parse_day(date)?,
-            None => now.date(),
-        }));
+        return Ok(DateRange::day(day(&opts.date)?.unwrap_or(now.date())));
     }
-    let from = opts.from.as_deref().map(parse_day).transpose()?;
-    let to = match &opts.to {
-        Some(date) => parse_day(date)?,
-        None => now.date(),
-    };
-    if let Some(from) = from {
-        if from > to {
-            return Err(IterError::InvalidDateRange {
-                from: from.to_string(),
-                to: to.to_string(),
-            });
-        }
+    let from = day(&opts.from)?;
+    let to = day(&opts.to)?.unwrap_or(now.date());
+    if let Some(from) = from
+        && from > to
+    {
+        return Err(IterError::InvalidDateRange {
+            from: from.to_string(),
+            to: to.to_string(),
+        });
     }
     Ok(DateRange { from, to })
 }
@@ -317,22 +221,18 @@ fn task_reports(
     let mut reports = Vec::new();
     let mut all = Vec::new();
     for task in db.tasks_for_project(project_id)? {
-        let sessions = in_range(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, range);
+        let sessions = in_range(db.sessions_for_task(task.id())?, range);
         if sessions.is_empty() {
             continue;
         }
         let total_minutes = merged_total_minutes(&sessions, now, config().pause_gap_minutes);
-        reports.push(TaskReport {
-            name: task.name,
-            status: task.status.as_str().to_string(),
-            status_label: task.status.label().to_string(),
-            total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
-            total_hhmm: minutes_to_hhmm(total_minutes),
-            description: Some(task.description.trim())
-                .filter(|d| !d.is_empty())
-                .map(str::to_string),
-            sessions: session_rows(&sessions, now, dated),
-        });
+        reports.push(TaskReport::new(
+            task.name,
+            task.status,
+            total_minutes,
+            non_empty(&task.description),
+            session_rows(&sessions, now, dated),
+        ));
         all.extend(sessions);
     }
     Ok((reports, all))
@@ -351,7 +251,7 @@ fn start_session(db: &Db, task_id: i64) -> Result<()> {
         end: None,
         message: None,
     };
-    Repository::<Session>::insert(db, &session)?;
+    db.insert(&session)?;
     Ok(())
 }
 
@@ -365,7 +265,7 @@ fn close_open_session(db: &Db, task_id: i64, message: Option<&str>) -> Result<()
         if let Some(m) = message {
             open.message = Some(m.to_string());
         }
-        Repository::<Session>::update(db, open.id.expect(ID_INVARIANT), &open)?;
+        db.update(open.id(), &open)?;
     }
     Ok(())
 }
@@ -395,7 +295,7 @@ fn teardown_session_config<'a>(
         session_config.github_branch.as_deref(),
     );
     if let Some(id) = session_config.id
-        && let Err(e) = Repository::<SessionConfig>::delete(db, id)
+        && let Err(e) = db.delete::<SessionConfig>(id)
     {
         eprintln!("warning: failed to delete session-config row: {e}");
     }
@@ -449,33 +349,30 @@ fn create_project_interactively(
     cloned_from: Option<&str>,
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
-    let Some(mut project) = md_edit::edit_in_editor(template)? else {
-        println!("no changes -- project not created");
-        return Ok(());
-    };
-    project.organization_id = template.organization_id; // never carried through the YAML
-    if project.name.trim().is_empty() {
-        return Err(IterError::EmptyProjectName);
-    }
-    if project.base_path.trim().is_empty() {
-        return Err(IterError::EmptyBasePath);
-    }
-    // Absolutised here, once, for every path a project can arrive by. A
-    // relative `base_path` names a different directory from every place
-    // `iter` is later run -- a different worktree to create, a different
-    // repo to ask whether it's one -- and an empty one, rejected above,
-    // reads as the current directory throughout.
-    project.base_path = scaffold::absolute_path(project.base_path.trim())?;
-    populate(&project.base_path)?;
-    Repository::<Project>::insert(db, &project)?;
-    match cloned_from {
-        Some(source) => println!(
-            "created project '{}' (cloned from '{source}')",
-            project.name
-        ),
-        None => println!("created project '{}'", project.name),
-    }
-    Ok(())
+    edited(template, "project", "created", |mut project| {
+        project.organization_id = template.organization_id; // never carried through the YAML
+        if project.name.trim().is_empty() {
+            return Err(IterError::EmptyProjectName);
+        }
+        if project.base_path.trim().is_empty() {
+            return Err(IterError::EmptyBasePath);
+        }
+        // Absolutised here, once, for every path a project can arrive by. A
+        // relative `base_path` names a different directory from every place
+        // `iter` is later run -- a different worktree to create, a different
+        // repo to ask whether it's one -- and an empty one, rejected above,
+        // reads as the current directory throughout.
+        project.base_path = scaffold::absolute_path(project.base_path.trim())?;
+        populate(&project.base_path)?;
+        db.insert(&project)?;
+        Ok(match cloned_from {
+            Some(source) => format!(
+                "created project '{}' (cloned from '{source}')",
+                project.name
+            ),
+            None => format!("created project '{}'", project.name),
+        })
+    })
 }
 
 /// A blank project template, seeded with `organization`'s defaults when one
@@ -523,7 +420,7 @@ fn new_cmd(path: &str, organization: Option<&str>) -> Result<()> {
 /// URL / local repo path and clones that.
 fn clone_cmd(source: &str, organization: Option<&str>) -> Result<()> {
     let db = open_db();
-    match db.find_project_by_name(source)? {
+    match db.find_by_name::<Project>(source)? {
         // Pre-fill from the source project -- including its name,
         // deliberately, so the user has to change it before saving --
         // leaving `base_path` blank for them to fill in. The source's
@@ -559,6 +456,28 @@ fn clone_cmd(source: &str, organization: Option<&str>) -> Result<()> {
     }
 }
 
+// ---- editing ---------------------------------------------------------
+
+/// Opens `template` in the editor and hands what came back to `save`,
+/// which does the writing and returns the line to print.
+///
+/// The other half -- an editor quit without saving -- is the same sentence
+/// every time, and saying it here is what keeps it in step with the verb
+/// the `save` half reports. `noun`/`verb` read as "no changes -- project
+/// not updated".
+fn edited<T: serde::Serialize + serde::de::DeserializeOwned + models::MarkdownBody>(
+    template: &T,
+    noun: &str,
+    verb: &str,
+    save: impl FnOnce(T) -> Result<String>,
+) -> Result<()> {
+    match md_edit::edit_in_editor(template)? {
+        Some(item) => println!("{}", save(item)?),
+        None => println!("no changes -- {noun} not {verb}"),
+    }
+    Ok(())
+}
+
 // ---- organization ----------------------------------------------------
 
 fn dispatch_organization(action: &OrganizationCommand) -> Result<()> {
@@ -573,31 +492,24 @@ fn dispatch_organization(action: &OrganizationCommand) -> Result<()> {
 
 fn organization_new() -> Result<()> {
     let db = open_db();
-    match md_edit::edit_in_editor(&Organization::template(&config().project))? {
-        Some(organization) => {
-            if organization.name.trim().is_empty() {
-                return Err(IterError::EmptyOrganizationName);
-            }
-            Repository::<Organization>::insert(&db, &organization)?;
-            println!("created organization '{}'", organization.name);
+    let template = Organization::template(&config().project);
+    edited(&template, "organization", "created", |organization| {
+        if organization.name.trim().is_empty() {
+            return Err(IterError::EmptyOrganizationName);
         }
-        None => println!("no changes -- organization not created"),
-    }
-    Ok(())
+        db.insert(&organization)?;
+        Ok(format!("created organization '{}'", organization.name))
+    })
 }
 
 fn organization_edit(name: Option<&str>) -> Result<()> {
     let db = open_db();
     let existing = resolve_organization_or_current(&db, name)?;
-    let id = existing.id.expect(ID_INVARIANT);
-    match md_edit::edit_in_editor(&existing)? {
-        Some(organization) => {
-            Repository::<Organization>::update(&db, id, &organization)?;
-            println!("updated organization '{}'", organization.name);
-        }
-        None => println!("no changes -- organization not updated"),
-    }
-    Ok(())
+    let id = existing.id();
+    edited(&existing, "organization", "updated", |organization| {
+        db.update(id, &organization)?;
+        Ok(format!("updated organization '{}'", organization.name))
+    })
 }
 
 /// Deletes the organization row only. Its projects survive -- the schema's
@@ -606,22 +518,17 @@ fn organization_edit(name: Option<&str>) -> Result<()> {
 fn organization_delete(name: Option<&str>) -> Result<()> {
     let db = open_db();
     let organization = resolve_organization_or_current(&db, name)?;
-    let id = organization.id.expect(ID_INVARIANT);
+    let id = organization.id();
     let kept = db.projects_for_organization(id)?.len();
 
-    Repository::<Organization>::delete(&db, id)?;
+    db.delete::<Organization>(id)?;
 
-    match kept {
-        0 => println!("deleted organization '{}'", organization.name),
-        1 => println!(
-            "deleted organization '{}' -- 1 project kept, now without an organization",
-            organization.name
-        ),
-        n => println!(
-            "deleted organization '{}' -- {n} projects kept, now without an organization",
-            organization.name
-        ),
-    }
+    let orphaned = match kept {
+        0 => String::new(),
+        1 => " -- 1 project kept, now without an organization".to_string(),
+        n => format!(" -- {n} projects kept, now without an organization"),
+    };
+    println!("deleted organization '{}'{orphaned}", organization.name);
     Ok(())
 }
 
@@ -633,25 +540,22 @@ fn organization_delete(name: Option<&str>) -> Result<()> {
 fn organization_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = open_db();
     let organization = resolve_organization_or_current(&db, name)?;
-    let organization_id = organization.id.expect(ID_INVARIANT);
+    let organization_id = organization.id();
     let now = Local::now().naive_local();
     let range = resolve_range(opts, now)?;
 
     let mut projects = Vec::new();
     let mut all_sessions = Vec::new();
     for project in db.projects_for_organization(organization_id)? {
-        let (tasks, sessions) = task_reports(&db, project.id.expect(ID_INVARIANT), range, now)?;
+        let (tasks, sessions) = task_reports(&db, project.id(), range, now)?;
         if tasks.is_empty() {
             continue;
         }
         let total_minutes = merged_total_minutes(&sessions, now, config().pause_gap_minutes);
         projects.push(ProjectReport {
             name: project.name,
-            total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
-            total_hhmm: minutes_to_hhmm(total_minutes),
-            description: Some(project.description.trim())
-                .filter(|d| !d.is_empty())
-                .map(str::to_string),
+            total: Total::new(total_minutes),
+            description: non_empty(&project.description),
             tasks,
         });
         all_sessions.extend(sessions);
@@ -670,18 +574,12 @@ fn organization_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
         ),
         projects,
     };
-    print!("{}", render_organization_info(&info, opts.format)?);
+    print!("{}", info.render(opts.format)?);
     Ok(())
 }
 
 fn organization_list() -> Result<()> {
-    let db = open_db();
-    let names: Vec<String> = Repository::<Organization>::list(&db)?
-        .into_iter()
-        .map(|o| o.name)
-        .collect();
-    print!("{}", serde_yaml::to_string(&names)?);
-    Ok(())
+    list_names::<Organization>()
 }
 
 // ---- project ---------------------------------------------------------
@@ -710,34 +608,28 @@ fn project_new(organization: Option<&str>) -> Result<()> {
 fn project_edit(name: Option<&str>, organization: Option<&str>) -> Result<()> {
     let db = open_db();
     let existing = resolve_project_or_current(&db, name)?;
-    let id = existing.id.expect(ID_INVARIANT);
+    let id = existing.id();
     // `--organization` moves the project; without it, membership (or the
     // lack of it) is carried through untouched.
     let organization_id = match organization {
         Some(name) => resolve_organization(&db, name)?.id,
         None => existing.organization_id,
     };
-    match md_edit::edit_in_editor(&existing)? {
-        Some(mut project) => {
-            project.organization_id = organization_id;
-            Repository::<Project>::update(&db, id, &project)?;
-            println!("updated project '{}'", project.name);
-        }
-        None => println!("no changes -- project not updated"),
-    }
-    Ok(())
+    edited(&existing, "project", "updated", |mut project| {
+        project.organization_id = organization_id; // never carried through the YAML
+        db.update(id, &project)?;
+        Ok(format!("updated project '{}'", project.name))
+    })
 }
 
 fn project_delete(name: Option<&str>) -> Result<()> {
     let db = open_db();
     let project = resolve_project_or_current(&db, name)?;
-    let project_id = project.id.expect(ID_INVARIANT);
+    let project_id = project.id();
 
     let mut session_configs = Vec::new();
     for task in db.tasks_for_project(project_id)? {
-        if let Some(session_config) =
-            db.find_session_config_by_task(task.id.expect(ID_INVARIANT))?
-        {
+        if let Some(session_config) = db.find_session_config_by_task(task.id())? {
             session_configs.push(session_config);
         }
     }
@@ -746,7 +638,7 @@ fn project_delete(name: Option<&str>) -> Result<()> {
     // before tearing down tmux/worktrees: if we're running inside one of
     // those tmux sessions, `kill-session` in the teardown takes down this
     // pane too, so anything after that point may never run.
-    Repository::<Project>::delete(&db, project_id)?;
+    db.delete::<Project>(project_id)?;
 
     let tmux_sessions: Vec<&str> = session_configs
         .iter()
@@ -767,7 +659,7 @@ fn project_delete(name: Option<&str>) -> Result<()> {
 fn project_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = open_db();
     let project = resolve_project_or_current(&db, name)?;
-    let project_id = project.id.expect(ID_INVARIANT);
+    let project_id = project.id();
     let now = Local::now().naive_local();
     let range = resolve_range(opts, now)?;
 
@@ -787,18 +679,12 @@ fn project_info(name: Option<&str>, opts: &ReportOpts) -> Result<()> {
         ),
         tasks,
     };
-    print!("{}", render_project_info(&info, opts.format)?);
+    print!("{}", info.render(opts.format)?);
     Ok(())
 }
 
 fn project_list() -> Result<()> {
-    let db = open_db();
-    let names: Vec<String> = Repository::<Project>::list(&db)?
-        .into_iter()
-        .map(|p| p.name)
-        .collect();
-    print!("{}", serde_yaml::to_string(&names)?);
-    Ok(())
+    list_names::<Project>()
 }
 
 // ---- task --------------------------------------------------------------
@@ -840,7 +726,7 @@ fn dispatch_task(action: Option<&TaskCommand>) -> Result<()> {
 fn task_new(project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
     let db = open_db();
     let project = resolve_project_or_current(&db, project_name)?;
-    let project_id = project.id.expect(ID_INVARIANT);
+    let project_id = project.id();
 
     let mut template = Task::template(
         project_id,
@@ -862,49 +748,40 @@ fn task_new(project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
         template.status = github::status_for_issue_state(template.status, issue.state);
     }
 
-    match md_edit::edit_in_editor(&template)? {
-        Some(mut task) => {
-            if task.name.trim().is_empty() {
-                return Err(IterError::EmptyTaskName);
-            }
-            task.project_id = project_id; // never carried through the YAML
-            Repository::<Task>::insert(&db, &task)?;
-            println!("created task '{}/{}'", project.name, task.name);
+    edited(&template, "task", "created", |mut task| {
+        if task.name.trim().is_empty() {
+            return Err(IterError::EmptyTaskName);
         }
-        None => println!("no changes -- task not created"),
-    }
-    Ok(())
+        task.project_id = project_id; // never carried through the YAML
+        db.insert(&task)?;
+        Ok(format!("created task '{}'", task_display(&project, &task)))
+    })
 }
 
 fn task_edit(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, existing) = resolve_task_or_current(&db, task_ref)?;
-    let id = existing.id.expect(ID_INVARIANT);
+    let id = existing.id();
     let project_id = existing.project_id;
-    let display = format!("{}/{}", project.name, existing.name);
-    match md_edit::edit_in_editor(&existing)? {
-        Some(mut task) => {
-            task.project_id = project_id;
-            Repository::<Task>::update(&db, id, &task)?;
-            println!("updated task '{display}'");
-        }
-        None => println!("no changes -- task not updated"),
-    }
-    Ok(())
+    edited(&existing, "task", "updated", |mut task| {
+        task.project_id = project_id; // never carried through the YAML
+        db.update(id, &task)?;
+        Ok(format!("updated task '{}'", task_display(&project, &task)))
+    })
 }
 
 fn task_delete(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
-    let task_id = task.id.expect(ID_INVARIANT);
-    let display = format!("{}/{}", project.name, task.name);
+    let task_id = task.id();
+    let display = task_display(&project, &task);
     let session_config = db.find_session_config_by_task(task_id)?;
 
     // Delete the task row (cascades to its session-config) before tearing
     // down tmux/the worktree: if we're running inside the task's own tmux
     // session, `kill-session` in the teardown takes down this pane too, so
     // anything after that point may never run.
-    Repository::<Task>::delete(&db, task_id)?;
+    db.delete::<Task>(task_id)?;
 
     if let Some(session_config) = session_config {
         teardown_and_kill(&db, &project, &session_config);
@@ -918,12 +795,12 @@ fn task_info(task_ref: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
     let now = Local::now().naive_local();
     let range = resolve_range(opts, now)?;
-    let sessions = in_range(db.sessions_for_task(task.id.expect(ID_INVARIANT))?, range);
+    let sessions = in_range(db.sessions_for_task(task.id())?, range);
     let total_minutes = merged_total_minutes(&sessions, now, config().pause_gap_minutes);
 
     let info = TaskInfo {
         header: Header::new(
-            format!("{}/{}", project.name, task.name),
+            task_display(&project, &task),
             &task.description,
             settings_of(&task)?,
             range,
@@ -931,7 +808,7 @@ fn task_info(task_ref: Option<&str>, opts: &ReportOpts) -> Result<()> {
         ),
         sessions: session_rows(&sessions, now, range.single_day().is_none()),
     };
-    print!("{}", render_task_info(&info, opts.format)?);
+    print!("{}", info.render(opts.format)?);
     Ok(())
 }
 
@@ -941,29 +818,27 @@ fn task_info(task_ref: Option<&str>, opts: &ReportOpts) -> Result<()> {
 fn task_list(project_filter: Option<&str>, statuses: &[TaskStatus]) -> Result<()> {
     let db = open_db();
 
-    let projects: Vec<Project> = Repository::<Project>::list(&db)?
-        .into_iter()
-        .filter(|p| project_filter.map(|f| f == p.name).unwrap_or(true))
-        .collect();
-
     let mut names = Vec::new();
-    for p in projects {
-        let tasks = db.tasks_for_project(p.id.expect(ID_INVARIANT))?;
+    for p in db
+        .list::<Project>()?
+        .into_iter()
+        .filter(|p| project_filter.is_none_or(|f| f == p.name))
+    {
+        let tasks = db.tasks_for_project(p.id())?;
         for t in tasks {
             if statuses.is_empty() || statuses.contains(&t.status) {
-                names.push(format!("{}/{}", p.name, t.name));
+                names.push(task_display(&p, &t));
             }
         }
     }
-    print!("{}", serde_yaml::to_string(&names)?);
-    Ok(())
+    print_yaml(&names)
 }
 
 fn task_done(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, mut task) = resolve_task_or_current(&db, task_ref)?;
-    let task_id = task.id.expect(ID_INVARIANT);
-    let display = format!("{}/{}", project.name, task.name);
+    let task_id = task.id();
+    let display = task_display(&project, &task);
 
     close_open_session(&db, task_id, None)?;
 
@@ -972,7 +847,7 @@ fn task_done(task_ref: Option<&str>) -> Result<()> {
     // takes down every pane in it -- including this one -- so anything after
     // that point may never run.
     task.status = TaskStatus::Done;
-    Repository::<Task>::update(&db, task_id, &task)?;
+    db.update(task_id, &task)?;
 
     if let Some(session_config) = db.find_session_config_by_task(task_id)? {
         teardown_and_kill(&db, &project, &session_config);
@@ -1019,13 +894,13 @@ fn relink_task(
     if let Some(description) = description {
         task.description = description.to_string();
     }
-    Repository::<Task>::update(db, task.id.expect(ID_INVARIANT), task)
+    db.update(task.id(), task)
 }
 
 /// One named task of `project`, or the same "no such task" error a
 /// `<project>/<task>` ref would have raised.
-fn find_task_or_err(db: &Db, project: &Project, project_id: i64, name: &str) -> Result<Task> {
-    db.find_task(project_id, name)?
+fn find_task_or_err(db: &Db, project: &Project, name: &str) -> Result<Task> {
+    db.find_task(project.id(), name)?
         .ok_or_else(|| IterError::TaskNotFound {
             project: project.name.clone(),
             task: name.to_string(),
@@ -1042,16 +917,15 @@ fn find_task_or_err(db: &Db, project: &Project, project_id: i64, name: &str) -> 
 fn issues_to_pull(
     db: &Db,
     project: &Project,
-    project_id: i64,
     task_name: Option<&str>,
 ) -> Result<Vec<github::Issue>> {
     let Some(task_name) = task_name else {
         return github::list_issues(&project.base_path);
     };
-    let task = find_task_or_err(db, project, project_id, task_name)?;
+    let task = find_task_or_err(db, project, task_name)?;
     let number = task
         .github_issue
-        .ok_or_else(|| IterError::NoLinkedIssue(format!("{}/{}", project.name, task.name)))?;
+        .ok_or_else(|| IterError::NoLinkedIssue(task_display(project, &task)))?;
     Ok(vec![github::fetch_issue(&project.base_path, number)?])
 }
 
@@ -1068,10 +942,10 @@ fn issues_to_pull(
 fn task_pull(project_name: Option<&str>, task_name: Option<&str>, body: bool) -> Result<()> {
     let db = open_db();
     let project = github_project(&db, project_name)?;
-    let project_id = project.id.expect(ID_INVARIANT);
+    let project_id = project.id();
     let branch_prefix = git::branch_prefix(&project.branch_template);
 
-    let issues = issues_to_pull(&db, &project, project_id, task_name)?;
+    let issues = issues_to_pull(&db, &project, task_name)?;
     // Read once, then kept current as the pull goes: each issue is planned
     // against what the ones before it did, so two issues sharing a title
     // read as the clash they are rather than colliding on the name index.
@@ -1090,7 +964,7 @@ fn task_pull(project_name: Option<&str>, task_name: Option<&str>, body: bool) ->
                     status,
                     branch_prefix: branch_prefix.clone(),
                 };
-                task.id = Some(Repository::<Task>::insert(&db, &task)?);
+                task.id = Some(db.insert(&task)?);
                 println!(
                     "created task '{}/{}' from issue #{} ({})",
                     project.name,
@@ -1257,10 +1131,10 @@ fn push_task(
 fn task_push(project_name: Option<&str>, task_name: Option<&str>, body: bool) -> Result<()> {
     let db = open_db();
     let project = github_project(&db, project_name)?;
-    let project_id = project.id.expect(ID_INVARIANT);
+    let project_id = project.id();
 
     let mut tasks = match task_name {
-        Some(name) => vec![find_task_or_err(&db, &project, project_id, name)?],
+        Some(name) => vec![find_task_or_err(&db, &project, name)?],
         None => db.tasks_for_project(project_id)?,
     };
 
@@ -1270,7 +1144,7 @@ fn task_push(project_name: Option<&str>, task_name: Option<&str>, body: bool) ->
 
     let (mut opened, mut edited, mut failed) = (0, 0, 0);
     for task in &mut tasks {
-        let display = format!("{}/{}", project.name, task.name);
+        let display = task_display(&project, task);
         // One task's `gh` calls are its own: an issue somebody locked, or a
         // single call that times out, skips that task and lets the rest of
         // the backlog through -- the warn-and-continue a `Missing` issue
@@ -1320,13 +1194,12 @@ fn task_weekday(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
     let now = Local::now().naive_local();
-    let sessions = db.sessions_for_task(task.id.expect(ID_INVARIANT))?;
+    let sessions = db.sessions_for_task(task.id())?;
     let report = WeekdayReport {
-        name: format!("{}/{}", project.name, task.name),
+        name: task_display(&project, &task),
         weekdays: weekday_averages(&sessions, now),
     };
-    print!("{}", serde_yaml::to_string(&report)?);
-    Ok(())
+    print_yaml(&report)
 }
 
 // ---- session -------------------------------------------------------------
@@ -1347,7 +1220,7 @@ fn dispatch_session(action: &SessionCommand) -> Result<()> {
 fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -> Result<()> {
     let db = open_db();
     let (project, mut task) = resolve_task(&db, task_ref)?;
-    let task_id = task.id.expect(ID_INVARIANT);
+    let task_id = task.id();
 
     if db.find_session_config_by_task(task_id)?.is_some() {
         return Err(IterError::SessionAlreadyExists(task_ref.to_string()));
@@ -1411,26 +1284,22 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
     // `teardown_session_config` works off the row, so a failure that left
     // them behind would leave them behind for good, and the retry would hit
     // "branch already exists" on a branch the user has to clean up by hand.
-    let final_tmux_name = match project.tmux {
-        true => {
-            if let Err(e) = start_tmux(&tmux_session_name, cwd) {
-                unwind_session_setup(
-                    &project,
-                    worktree_path.as_deref(),
-                    github_branch.as_deref(),
-                    Some(&tmux_session_name),
-                );
-                return Err(e);
-            }
-            println!("session '{tmux_session_name}' started");
-            Some(tmux_session_name)
-        }
-        false => {
-            println!(
-                "session started for '{task_ref}' at {cwd} (tmux disabled for this project -- use `iter session start`/`iter session stop`)"
-            );
-            None
-        }
+    let final_tmux_name = if project.tmux {
+        start_tmux(&tmux_session_name, cwd).inspect_err(|_| {
+            unwind_session_setup(
+                &project,
+                worktree_path.as_deref(),
+                github_branch.as_deref(),
+                Some(&tmux_session_name),
+            )
+        })?;
+        println!("session '{tmux_session_name}' started");
+        Some(tmux_session_name)
+    } else {
+        println!(
+            "session started for '{task_ref}' at {cwd} (tmux disabled for this project -- use `iter session start`/`iter session stop`)"
+        );
+        None
     };
 
     let session_config = SessionConfig {
@@ -1440,18 +1309,17 @@ fn session_new(task_ref: &str, branch_override: Option<&str>, no_branch: bool) -
         github_branch,
         worktree_path,
     };
-    if let Err(e) = Repository::<SessionConfig>::insert(&db, &session_config) {
+    db.insert(&session_config).inspect_err(|_| {
         unwind_session_setup(
             &project,
             session_config.worktree_path.as_deref(),
             session_config.github_branch.as_deref(),
             session_config.tmux_session_name.as_deref(),
-        );
-        return Err(e);
-    }
+        )
+    })?;
 
     task.status = TaskStatus::Wip;
-    Repository::<Task>::update(&db, task_id, &task)?;
+    db.update(task_id, &task)?;
 
     // Attaching last, and only once every row is written: it hands the
     // terminal over to tmux until the user detaches, and the
@@ -1498,7 +1366,7 @@ fn unwind_session_setup(
 fn session_start(task_ref: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
-    start_session(&db, task.id.expect(ID_INVARIANT))?;
+    start_session(&db, task.id())?;
     println!("started a session for '{}/{}'", project.name, task.name);
     Ok(())
 }
@@ -1506,7 +1374,7 @@ fn session_start(task_ref: Option<&str>) -> Result<()> {
 fn session_stop(task_ref: Option<&str>, message: Option<&str>) -> Result<()> {
     let db = open_db();
     let (project, task) = resolve_task_or_current(&db, task_ref)?;
-    close_open_session(&db, task.id.expect(ID_INVARIANT), message)?;
+    close_open_session(&db, task.id(), message)?;
     println!("stopped the session for '{}/{}'", project.name, task.name);
     Ok(())
 }
@@ -1517,8 +1385,8 @@ fn session_stop(task_ref: Option<&str>, message: Option<&str>) -> Result<()> {
 fn session_elapse() -> Result<()> {
     let db = open_db();
     let (project, task) = current_session_task(&db)?;
-    let task_id = task.id.expect(ID_INVARIANT);
-    let display = format!("{}/{}", project.name, task.name);
+    let task_id = task.id();
+    let display = task_display(&project, &task);
     let session = db
         .open_session_for_task(task_id)?
         .ok_or_else(|| IterError::NoOpenSession(display))?;
@@ -1537,7 +1405,7 @@ fn comment_cmd(task_ref: Option<&str>, message: &str) -> Result<()> {
     }
     let issue = task
         .github_issue
-        .ok_or_else(|| IterError::NoLinkedIssue(format!("{}/{}", project.name, task.name)))?;
+        .ok_or_else(|| IterError::NoLinkedIssue(task_display(&project, &task)))?;
     github::post_comment(&project.base_path, issue, message)?;
     println!("posted comment on issue #{issue}");
     Ok(())

@@ -1,10 +1,21 @@
-use crate::args::Format;
 use crate::error::Result;
-use crate::models::Session;
-use chrono::{Datelike, NaiveDate, NaiveDateTime, Weekday};
+use crate::models::{Session, TaskStatus};
+use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use serde::Serialize;
 use serde_yaml::{Mapping, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+use std::fmt::Write;
+
+/// How an `info` report is printed.
+#[derive(clap::ValueEnum, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Format {
+    /// A readable markdown report: YAML front matter, a `---` divider, then
+    /// the description and a breakdown of the period's sessions
+    #[default]
+    Text,
+    /// The same report as plain YAML, for piping somewhere else
+    Yaml,
+}
 
 /// What a text report says where a session table would otherwise go.
 const NO_SESSIONS: &str = "_No sessions in this period._";
@@ -15,17 +26,17 @@ pub struct WeekdayAverage {
     pub average_hours: f64,
 }
 
-/// The seven weekdays in report order (Monday first), each with the label
-/// it's reported under -- one table, so the ordering and the names can't
-/// drift apart the way a separate list and `match` could.
-const WEEKDAYS: [(Weekday, &str); 7] = [
-    (Weekday::Mon, "Monday"),
-    (Weekday::Tue, "Tuesday"),
-    (Weekday::Wed, "Wednesday"),
-    (Weekday::Thu, "Thursday"),
-    (Weekday::Fri, "Friday"),
-    (Weekday::Sat, "Saturday"),
-    (Weekday::Sun, "Sunday"),
+/// The seven weekdays' report labels in report order, which is the order
+/// `Weekday::num_days_from_monday` indexes -- so the label table and the
+/// slot a session lands in are the same list, and can't drift apart.
+const WEEKDAYS: [&str; 7] = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
 ];
 
 /// For each weekday Monday..Sunday (always all seven, zero-filled when
@@ -35,30 +46,26 @@ const WEEKDAYS: [(Weekday, &str); 7] = [
 /// session is attributed to its `start` date's weekday. Callers filter
 /// `sessions` to one task (or one project) beforehand.
 pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<WeekdayAverage> {
-    let mut minutes_by_weekday: HashMap<Weekday, i64> = HashMap::new();
-    let mut dates_by_weekday: HashMap<Weekday, HashSet<NaiveDate>> = HashMap::new();
+    // Seven fixed slots rather than two maps keyed by weekday: the
+    // zero-fill an absent weekday needs is what an array gives for free.
+    let mut by_weekday: [(i64, HashSet<NaiveDate>); 7] = Default::default();
 
-    for r in sessions {
-        let date = r.start.date();
-        let wd = date.weekday();
-        *minutes_by_weekday.entry(wd).or_insert(0) += r.duration_minutes(now);
-        dates_by_weekday.entry(wd).or_default().insert(date);
+    for session in sessions {
+        let date = session.start.date();
+        let (minutes, days) = &mut by_weekday[date.weekday().num_days_from_monday() as usize];
+        *minutes += session.duration_minutes(now);
+        days.insert(date);
     }
 
     WEEKDAYS
-        .iter()
-        .map(|&(wd, weekday)| {
-            let total_minutes = *minutes_by_weekday.get(&wd).unwrap_or(&0);
-            let distinct_days = dates_by_weekday.get(&wd).map(|s| s.len()).unwrap_or(0);
-            let average_hours = if distinct_days == 0 {
-                0.0
-            } else {
-                (total_minutes as f64 / 60.0) / distinct_days as f64
-            };
-            WeekdayAverage {
-                weekday,
-                average_hours,
-            }
+        .into_iter()
+        .zip(by_weekday)
+        .map(|(weekday, (total_minutes, days))| WeekdayAverage {
+            weekday,
+            average_hours: match days.len() {
+                0 => 0.0,
+                distinct_days => (total_minutes as f64 / 60.0) / distinct_days as f64,
+            },
         })
         .collect()
 }
@@ -69,6 +76,10 @@ pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<Weekday
 /// defaulting to today) or an interval (`--from`/`--to`) -- the CLI lets
 /// you write one formulation or the other, never both. `from: None` is an
 /// open start: every session up to and including `to`.
+/// Serialized as the header's own date fields: `date:` for a single day,
+/// `from:`/`to:` for an interval -- the same split [`Self::single_day`]
+/// makes everywhere else, so the range is stored once and rendered from,
+/// rather than stored again as three strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DateRange {
     pub from: Option<NaiveDate>,
@@ -104,20 +115,38 @@ impl DateRange {
     }
 }
 
-fn fmt_date(date: NaiveDate) -> String {
+impl Serialize for DateRange {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> std::result::Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(None)?;
+        match self.single_day() {
+            Some(day) => map.serialize_entry("date", &fmt_date(day))?,
+            None => {
+                if let Some(from) = self.from {
+                    map.serialize_entry("from", &fmt_date(from))?;
+                }
+                map.serialize_entry("to", &fmt_date(self.to))?;
+            }
+        }
+        map.end()
+    }
+}
+
+/// The date format every report prints and `main::parse_day` reads back.
+pub fn fmt_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }
 
 /// The subset of `sessions` that started within `range`, oldest first --
 /// the date filter every `info` report applies before summing, and the
 /// ordering every session table is printed in.
-pub fn in_range(sessions: Vec<Session>, range: DateRange) -> Vec<Session> {
-    let mut kept: Vec<Session> = sessions
-        .into_iter()
-        .filter(|s| range.contains(s.start.date()))
-        .collect();
-    kept.sort_by_key(|s| s.start);
-    kept
+pub fn in_range(mut sessions: Vec<Session>, range: DateRange) -> Vec<Session> {
+    sessions.retain(|s| range.contains(s.start.date()));
+    sessions.sort_by_key(|s| s.start);
+    sessions
 }
 
 pub fn minutes_to_hhmm(total_minutes: i64) -> String {
@@ -126,6 +155,32 @@ pub fn minutes_to_hhmm(total_minutes: i64) -> String {
 
 pub fn round_to_half_hour(hours: f64) -> f64 {
     (hours * 2.0).round() / 2.0
+}
+
+/// An amount of time spent, in the two shapes every report prints it in.
+/// They are one number twice over, so they are derived together, once,
+/// rather than re-paired at each of the places a total is built.
+///
+/// `#[serde(flatten)]`ed wherever it appears, so the two keys sit in the
+/// YAML exactly where the two fields used to.
+#[derive(Debug, Clone, Serialize)]
+pub struct Total {
+    pub total_hours: f64,
+    pub total_hhmm: String,
+}
+
+impl Total {
+    pub fn new(total_minutes: i64) -> Self {
+        Total {
+            total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
+            total_hhmm: minutes_to_hhmm(total_minutes),
+        }
+    }
+
+    /// How a total reads in a report body, e.g. `03:30 (3.5 h)`.
+    fn spent(&self) -> String {
+        format!("{} ({:.1} h)", self.total_hhmm, self.total_hours)
+    }
 }
 
 /// Total minutes covered by `sessions`, merging any two chronologically
@@ -192,16 +247,13 @@ pub fn settings_of<T: Serialize>(item: &T) -> Result<Mapping> {
 #[derive(Debug, Clone, Serialize)]
 pub struct Header {
     pub name: String,
-    /// Set only for a single-day report; `from`/`to` are set only for an
-    /// interval, so the header says which formulation was asked for.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub date: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub from: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub to: Option<String>,
-    pub total_hours: f64,
-    pub total_hhmm: String,
+    /// The period covered. Serializes as `date:` for a single day and
+    /// `from:`/`to:` for an interval -- one field carrying what used to be
+    /// three derived strings alongside it.
+    #[serde(flatten)]
+    pub period: DateRange,
+    #[serde(flatten)]
+    pub total: Total,
     #[serde(skip_serializing_if = "Mapping::is_empty")]
     pub settings: Mapping,
     /// The markdown notes off the row. Kept out of a text report's front
@@ -209,8 +261,6 @@ pub struct Header {
     /// YAML, where there is no body.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip)]
-    pub period: DateRange,
 }
 
 impl Header {
@@ -221,20 +271,12 @@ impl Header {
         period: DateRange,
         total_minutes: i64,
     ) -> Self {
-        let (date, from, to) = match period.single_day() {
-            Some(day) => (Some(fmt_date(day)), None, None),
-            None => (None, period.from.map(fmt_date), Some(fmt_date(period.to))),
-        };
         Header {
             name,
-            date,
-            from,
-            to,
-            total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
-            total_hhmm: minutes_to_hhmm(total_minutes),
+            period,
+            total: Total::new(total_minutes),
             settings,
             description: non_empty(description),
-            period,
         }
     }
 }
@@ -276,15 +318,40 @@ pub fn session_rows(sessions: &[Session], now: NaiveDateTime, dated: bool) -> Ve
 #[derive(Debug, Serialize)]
 pub struct TaskReport {
     pub name: String,
-    pub status: String,
-    /// The status spelled out for a heading -- `wip` reads as "work in
-    /// progress" once it's sitting next to a task name.
+    /// Serializes as `queue`/`wip`/`done`, as the plain string it replaced
+    /// did -- but carried as the enum, so the label below is derived from
+    /// it rather than being a second thing to keep in step.
+    pub status: TaskStatus,
+    /// The status spelled out -- `wip` reads as "work in progress" once
+    /// it's sitting next to a task name. Derived from `status` by
+    /// [`TaskReport::new`] rather than passed in, but stored rather than
+    /// computed at render time because `-f yaml` has always carried it and
+    /// something may be reading it.
     pub status_label: String,
-    pub total_hours: f64,
-    pub total_hhmm: String,
+    #[serde(flatten)]
+    pub total: Total,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub sessions: Vec<SessionRow>,
+}
+
+impl TaskReport {
+    pub fn new(
+        name: String,
+        status: TaskStatus,
+        total_minutes: i64,
+        description: Option<String>,
+        sessions: Vec<SessionRow>,
+    ) -> Self {
+        TaskReport {
+            name,
+            status,
+            status_label: status.label().to_string(),
+            total: Total::new(total_minutes),
+            description,
+            sessions,
+        }
+    }
 }
 
 /// One project's section of an organization report. `total_hhmm` is the
@@ -293,8 +360,8 @@ pub struct TaskReport {
 #[derive(Debug, Serialize)]
 pub struct ProjectReport {
     pub name: String,
-    pub total_hours: f64,
-    pub total_hhmm: String,
+    #[serde(flatten)]
+    pub total: Total,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub tasks: Vec<TaskReport>,
@@ -329,70 +396,76 @@ pub struct WeekdayReport {
 
 // ---- rendering ---------------------------------------------------------
 
-pub fn render_task_info(info: &TaskInfo, format: Format) -> Result<String> {
-    if let Format::Yaml = format {
-        return Ok(serde_yaml::to_string(info)?);
-    }
-    let mut md = Md::new();
-    md.heading(1, &info.header.name);
-    md.block(&summary_line(&info.header));
-    if let Some(description) = &info.header.description {
-        md.block(description);
-    }
-    md.session_table(&info.sessions);
-    document(&info.header, md)
-}
+/// A report that can be printed: a header every report shares, and the
+/// body only this kind of report knows how to write.
+///
+/// The two formats are handled once here rather than three times: `Yaml` is
+/// the serialized struct, and `Text` is the same fenced front matter every
+/// report opens with -- title, summary line, description -- followed by
+/// [`Self::body`]. A new report kind implements two methods and gets both.
+pub trait Report: Serialize {
+    fn header(&self) -> &Header;
 
-pub fn render_project_info(info: &ProjectInfo, format: Format) -> Result<String> {
-    if let Format::Yaml = format {
-        return Ok(serde_yaml::to_string(info)?);
-    }
-    let mut md = Md::new();
-    md.heading(1, &info.header.name);
-    md.block(&summary_line(&info.header));
-    if let Some(description) = &info.header.description {
-        md.block(description);
-    }
-    md.task_summary(&info.tasks);
-    for task in &info.tasks {
-        md.task_section(task, 2);
-    }
-    document(&info.header, md)
-}
+    /// Everything below the title, summary line and description.
+    fn body(&self, md: &mut Md);
 
-pub fn render_organization_info(info: &OrganizationInfo, format: Format) -> Result<String> {
-    if let Format::Yaml = format {
-        return Ok(serde_yaml::to_string(info)?);
-    }
-    let mut md = Md::new();
-    md.heading(1, &info.header.name);
-    md.block(&summary_line(&info.header));
-    if let Some(description) = &info.header.description {
-        md.block(description);
-    }
-    if info.projects.is_empty() {
-        md.block(NO_SESSIONS);
-    }
-    md.table(
-        &["Project", "Time"],
-        &info
-            .projects
-            .iter()
-            .map(|p| vec![cell(&p.name), p.total_hhmm.clone()])
-            .collect::<Vec<_>>(),
-    );
-    for project in &info.projects {
-        md.heading(2, &project.name);
-        md.block(&spent(&project.total_hhmm, project.total_hours));
-        if let Some(description) = &project.description {
+    fn render(&self, format: Format) -> Result<String> {
+        if let Format::Yaml = format {
+            return Ok(serde_yaml::to_string(self)?);
+        }
+        let header = self.header();
+        let mut md = Md::new();
+        md.heading(1, &header.name);
+        md.block(&summary_line(header));
+        if let Some(description) = &header.description {
             md.block(description);
         }
-        md.task_summary(&project.tasks);
-        for task in &project.tasks {
-            md.task_section(task, 3);
+        self.body(&mut md);
+        document(header, md)
+    }
+}
+
+impl Report for TaskInfo {
+    fn header(&self) -> &Header {
+        &self.header
+    }
+
+    fn body(&self, md: &mut Md) {
+        md.session_table(&self.sessions);
+    }
+}
+
+impl Report for ProjectInfo {
+    fn header(&self) -> &Header {
+        &self.header
+    }
+
+    fn body(&self, md: &mut Md) {
+        md.task_breakdown(&self.tasks, 2);
+    }
+}
+
+impl Report for OrganizationInfo {
+    fn header(&self) -> &Header {
+        &self.header
+    }
+
+    fn body(&self, md: &mut Md) {
+        if self.projects.is_empty() {
+            md.block(NO_SESSIONS);
+        }
+        md.table(
+            &["Project", "Time"],
+            &self
+                .projects
+                .iter()
+                .map(|p| vec![cell(&p.name), p.total.total_hhmm.clone()])
+                .collect::<Vec<_>>(),
+        );
+        for project in &self.projects {
+            md.project_section(project, 2);
         }
     }
-    document(&info.header, md)
 }
 
 /// A text report: the header's scalars as fenced YAML front matter, then
@@ -413,18 +486,13 @@ fn document(header: &Header, md: Md) -> Result<String> {
 /// it. The period goes here rather than in the heading so the title stays
 /// just the name of the thing.
 fn summary_line(header: &Header) -> String {
-    format!(
-        "{} -- {}",
-        header.period.label(),
-        spent(&header.total_hhmm, header.total_hours)
-    )
+    format!("{} -- {}", header.period.label(), header.total.spent())
 }
 
-fn spent(hhmm: &str, hours: f64) -> String {
-    format!("{hhmm} ({hours:.1} h)")
-}
-
-fn non_empty(text: &str) -> Option<String> {
+/// Trimmed text, or `None` when there's nothing left -- the one rule for
+/// "empty means absent" that every optional description and message in a
+/// report goes through.
+pub fn non_empty(text: &str) -> Option<String> {
     Some(text.trim())
         .filter(|t| !t.is_empty())
         .map(str::to_string)
@@ -441,7 +509,7 @@ fn cell(text: &str) -> String {
 
 /// The messages recorded on `rows`' closing events, as a bulleted,
 /// copy-paste-ready list.
-pub fn message_bullets(rows: &[SessionRow]) -> Option<String> {
+fn message_bullets(rows: &[SessionRow]) -> Option<String> {
     let messages: Vec<String> = rows
         .iter()
         .filter_map(|r| r.message.as_deref())
@@ -454,9 +522,22 @@ pub fn message_bullets(rows: &[SessionRow]) -> Option<String> {
     }
 }
 
+/// One `| a | b |` row, every cell padded to its column's width. Generic
+/// over the cell type so a `&[&str]` header row and a `&[String]` body row
+/// go through the same code without either being copied into the other's
+/// shape first.
+fn row_line<S: AsRef<str>>(widths: &[usize], cells: &[S]) -> String {
+    let mut out = String::from("|");
+    for (i, width) in widths.iter().enumerate() {
+        let cell = cells.get(i).map_or("", AsRef::as_ref);
+        let _ = write!(out, " {cell:<width$} |");
+    }
+    out
+}
+
 /// A markdown buffer that keeps exactly one blank line between blocks, so
 /// the callers above can just append sections without tracking spacing.
-struct Md {
+pub struct Md {
     out: String,
 }
 
@@ -500,35 +581,37 @@ impl Md {
             })
             .collect();
 
-        let line = |cells: &[String]| {
-            let padded: Vec<String> = widths
-                .iter()
-                .enumerate()
-                .map(|(i, w)| {
-                    format!(
-                        "{:<w$}",
-                        cells.get(i).map(String::as_str).unwrap_or(""),
-                        w = w
-                    )
-                })
-                .collect();
-            format!("| {} |", padded.join(" | "))
-        };
-
-        let mut table = line(&headers.iter().map(|h| h.to_string()).collect::<Vec<_>>());
-        table.push_str(&format!(
-            "\n|{}|",
-            widths
-                .iter()
-                .map(|w| "-".repeat(w + 2))
-                .collect::<Vec<_>>()
-                .join("|")
-        ));
+        let mut table = row_line(&widths, headers);
+        table.push_str("\n|");
+        for width in &widths {
+            let _ = write!(table, "{}|", "-".repeat(width + 2));
+        }
         for row in rows {
             table.push('\n');
-            table.push_str(&line(row));
+            table.push_str(&row_line(&widths, row));
         }
         self.block(&table);
+    }
+
+    /// A project's tasks: the summary table, then a section per task. The
+    /// tail shared by a project report (which puts it at the top level) and
+    /// a project's section of an organization report (one level deeper).
+    fn task_breakdown(&mut self, tasks: &[TaskReport], level: usize) {
+        self.task_summary(tasks);
+        for task in tasks {
+            self.task_section(task, level);
+        }
+    }
+
+    /// One project's section of an organization report -- the mirror of
+    /// [`Self::task_section`] one level up.
+    fn project_section(&mut self, project: &ProjectReport, level: usize) {
+        self.heading(level, &project.name);
+        self.block(&project.total.spent());
+        if let Some(description) = &project.description {
+            self.block(description);
+        }
+        self.task_breakdown(&project.tasks, level + 1);
     }
 
     /// The "how much time went into each task" table under a project.
@@ -541,14 +624,20 @@ impl Md {
             &["Task", "Status", "Time"],
             &tasks
                 .iter()
-                .map(|t| vec![cell(&t.name), t.status_label.clone(), t.total_hhmm.clone()])
+                .map(|t| {
+                    vec![
+                        cell(&t.name),
+                        t.status_label.clone(),
+                        t.total.total_hhmm.clone(),
+                    ]
+                })
                 .collect::<Vec<_>>(),
         );
     }
 
     fn task_section(&mut self, task: &TaskReport, level: usize) {
         self.heading(level, &format!("{} -- {}", task.name, task.status_label));
-        self.block(&spent(&task.total_hhmm, task.total_hours));
+        self.block(&task.total.spent());
         if let Some(description) = &task.description {
             self.block(description);
         }
@@ -566,11 +655,10 @@ impl Md {
         // A report over one day would repeat that date on every row, so
         // `session_rows` leaves it off and the column goes with it.
         let dated = rows.iter().any(|r| r.date.is_some());
-        let mut headers: Vec<&str> = Vec::new();
-        if dated {
-            headers.push("Date");
-        }
-        headers.extend(["Start", "End", "Duration", "Message"]);
+        let headers: &[&str] = match dated {
+            true => &["Date", "Start", "End", "Duration", "Message"],
+            false => &["Start", "End", "Duration", "Message"],
+        };
 
         let body: Vec<Vec<String>> = rows
             .iter()
@@ -590,7 +678,7 @@ impl Md {
                 row
             })
             .collect();
-        self.table(&headers, &body);
+        self.table(headers, &body);
     }
 }
 
@@ -889,15 +977,13 @@ mod tests {
     }
 
     fn task_report(name: &str, minutes: i64, sessions: Vec<SessionRow>) -> TaskReport {
-        TaskReport {
-            name: name.to_string(),
-            status: "wip".to_string(),
-            status_label: "work in progress".to_string(),
-            total_hours: round_to_half_hour(minutes as f64 / 60.0),
-            total_hhmm: minutes_to_hhmm(minutes),
-            description: Some("Task notes.".to_string()),
+        TaskReport::new(
+            name.to_string(),
+            TaskStatus::Wip,
+            minutes,
+            Some("Task notes.".to_string()),
             sessions,
-        }
+        )
     }
 
     fn one_row() -> Vec<SessionRow> {
@@ -926,7 +1012,7 @@ mod tests {
             sessions: one_row(),
         };
         assert_eq!(
-            render_task_info(&info, Format::Text).unwrap(),
+            info.render(Format::Text).unwrap(),
             "---\n\
              name: proj/task\n\
              date: 2026-09-04\n\
@@ -955,13 +1041,35 @@ mod tests {
             ),
             sessions: Vec::new(),
         };
-        let out = render_task_info(&info, Format::Text).unwrap();
+        let out = info.render(Format::Text).unwrap();
         let front = out.strip_prefix("---\n").expect("front matter");
         let (front, body) = front.split_once("\n---\n").expect("a closing divider");
         assert!(!front.contains("Task notes."), "{front}");
         assert!(body.contains("Task notes."), "{body}");
         // Nothing logged that day, so there's no table to print.
         assert!(body.contains(NO_SESSIONS), "{body}");
+    }
+
+    /// An open start -- `--to` with no `--from` -- leaves `from:` out
+    /// altogether rather than emitting a null.
+    #[test]
+    fn an_open_ended_range_omits_from() {
+        let info = TaskInfo {
+            header: Header::new(
+                "proj".to_string(),
+                "",
+                Mapping::new(),
+                DateRange {
+                    from: None,
+                    to: day("2026-09-04"),
+                },
+                0,
+            ),
+            sessions: Vec::new(),
+        };
+        let out = info.render(Format::Yaml).unwrap();
+        assert!(!out.contains("from:"), "{out}");
+        assert!(out.contains("to: 2026-09-04\n"), "{out}");
     }
 
     #[test]
@@ -976,7 +1084,7 @@ mod tests {
             ),
             sessions: one_row(),
         };
-        let out = render_task_info(&info, Format::Yaml).unwrap();
+        let out = info.render(Format::Yaml).unwrap();
         // The header is flattened, not nested under a `header:` key.
         assert!(out.starts_with("name: proj/task\n"), "{out}");
         assert!(out.contains("date: 2026-09-04\n"), "{out}");
@@ -1002,7 +1110,7 @@ mod tests {
                 true,
             ),
         };
-        let out = render_task_info(&info, Format::Text).unwrap();
+        let out = info.render(Format::Text).unwrap();
         assert!(out.contains("from: 2026-09-01\nto: 2026-09-04\n"), "{out}");
         assert!(!out.contains("\ndate:"), "{out}");
         assert!(out.contains("2026-09-01 to 2026-09-04 -- 01:00"), "{out}");
@@ -1022,7 +1130,7 @@ mod tests {
             ),
             sessions: session_rows(&[sess(1, "2026-09-04 09:00", None, None)], now(), false),
         };
-        let out = render_task_info(&info, Format::Text).unwrap();
+        let out = info.render(Format::Text).unwrap();
         assert!(
             out.contains("| 09:00 | --  | 03:00    | (ongoing) |"),
             "{out}"
@@ -1041,7 +1149,7 @@ mod tests {
             ),
             tasks: vec![task_report("task1", 120, one_row())],
         };
-        let out = render_project_info(&info, Format::Text).unwrap();
+        let out = info.render(Format::Text).unwrap();
         assert!(out.contains("base_path: /tmp/proj"), "{out}");
         assert!(out.contains("\n# proj\n"), "{out}");
         // The per-task summary table, then the task's own section.
@@ -1069,13 +1177,12 @@ mod tests {
             ),
             projects: vec![ProjectReport {
                 name: "proj".to_string(),
-                total_hours: 2.0,
-                total_hhmm: "02:00".to_string(),
+                total: Total::new(120),
                 description: Some("Project notes.".to_string()),
                 tasks: vec![task_report("task1", 120, one_row())],
             }],
         };
-        let out = render_organization_info(&info, Format::Text).unwrap();
+        let out = info.render(Format::Text).unwrap();
         assert!(out.contains("\n# acme\n"), "{out}");
         assert!(out.contains("\n## proj\n"), "{out}");
         assert!(out.contains("\n### task1 -- work in progress\n"), "{out}");
@@ -1094,7 +1201,7 @@ mod tests {
             ),
             projects: Vec::new(),
         };
-        let out = render_organization_info(&info, Format::Text).unwrap();
+        let out = info.render(Format::Text).unwrap();
         assert!(out.contains(NO_SESSIONS), "{out}");
         assert!(!out.contains("| Project"), "{out}");
     }
@@ -1121,7 +1228,7 @@ mod tests {
             ),
             sessions: rows,
         };
-        let out = render_task_info(&info, Format::Text).unwrap();
+        let out = info.render(Format::Text).unwrap();
         assert!(out.contains("| a \\| b c |"), "{out}");
     }
 

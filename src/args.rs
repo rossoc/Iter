@@ -1,20 +1,10 @@
-use crate::{
+use crate::completion::{
     organization_completer, project_completer, queued_task_completer, task_completer,
     task_name_completer,
 };
+use crate::reporting::Format;
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
-
-/// How an `info` report is printed.
-#[derive(clap::ValueEnum, Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Format {
-    /// A readable markdown report: YAML front matter, a `---` divider, then
-    /// the description and a breakdown of the period's sessions
-    #[default]
-    Text,
-    /// The same report as plain YAML, for piping somewhere else
-    Yaml,
-}
 
 /// The period an `info` report covers, and how it's printed.
 ///

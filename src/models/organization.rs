@@ -1,6 +1,6 @@
 use crate::config::ProjectDefaults;
 use crate::models::{default_branch_template, default_true};
-use iter_macros::Table;
+use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
 /// A grouping of projects, and the defaults new projects in it start from.
@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// `id` is `None` for a not-yet-created organization (the blank template
 /// opened in the YAML editor); it's filled in once inserted.
-#[derive(Debug, Clone, Serialize, Deserialize, Table)]
+#[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
 #[table(name = "organizations", order_by = "name")]
 pub struct Organization {
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -66,12 +66,8 @@ impl Organization {
     }
 }
 
-impl crate::models::MarkdownBody for Organization {
-    fn description(&self) -> &str {
-        &self.description
-    }
-
-    fn set_description(&mut self, description: String) {
-        self.description = description;
+impl crate::models::Named for Organization {
+    fn name(&self) -> &str {
+        &self.name
     }
 }
