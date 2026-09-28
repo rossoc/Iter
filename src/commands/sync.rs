@@ -98,6 +98,10 @@ pub(crate) fn task_pull(
                     github_issue: Some(issue.number),
                     status,
                     branch_prefix: branch_prefix.clone(),
+                    urgency: false,
+                    importance: false,
+                    start_time: None,
+                    duration: None,
                 };
                 task.id = Some(db.insert(&task)?);
                 println!(

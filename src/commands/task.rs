@@ -309,6 +309,10 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Wip,
             branch_prefix: String::new(),
+            urgency: false,
+            importance: false,
+            start_time: None,
+            duration: None,
         };
         let task_id = app.db.insert(&task).expect("task inserts");
         (project_id, task_id)
@@ -388,6 +392,10 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Done,
             branch_prefix: String::new(),
+            urgency: false,
+            importance: false,
+            start_time: None,
+            duration: None,
         };
         app.db.insert(&done).expect("task inserts");
 

@@ -46,7 +46,7 @@ iter organization list
 iter board new                      # opens a blank board in nvim; save & quit to create it
 iter board edit work
 iter board delete work              # deletes only the board; its projects are kept, unbound
-iter board info work                # description and the projects bound to it
+iter board info work                # description, the projects bound to it, and the agenda of their open tasks
 iter board list
 
 # projects
@@ -64,6 +64,8 @@ iter org info acme --from 2026-09-01    # an interval (up to today) instead of a
 
 # tasks
 iter task new --project myproj [--issue 42]   # opens a blank (or issue-prefilled) task in nvim
+                                    # front matter also takes urgency/importance (true|false),
+                                    # start_time (yyyy-mm-dd hh:mm) and duration (hh:mm)
 iter task edit myproj/mytask
 iter task delete myproj/mytask
 iter task info myproj/mytask [--date d]

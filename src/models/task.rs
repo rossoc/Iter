@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
@@ -76,6 +77,102 @@ pub struct Task {
     /// existed still branches the project's way.
     #[serde(default)]
     pub branch_prefix: String,
+
+    /// Eisenhower "urgent" flag -- something is waiting on this task.
+    #[serde(default)]
+    pub urgency: bool,
+
+    /// Eisenhower "important" flag -- this task moves a goal forward.
+    #[serde(default)]
+    pub importance: bool,
+
+    /// When the task is scheduled to begin, as `yyyy-mm-dd hh:mm`. Together
+    /// with `duration` this places the task on the board's agenda.
+    #[serde(default, with = "datetime_opt")]
+    pub start_time: Option<NaiveDateTime>,
+
+    /// How long the task is expected to take, as `hh:mm`. The end of the
+    /// slot is `start_time + duration` rather than a stored field, so the
+    /// two can never disagree.
+    #[serde(default)]
+    pub duration: Option<Duration>,
+}
+
+/// The format `start_time` is typed and shown in. chrono's own serde form is
+/// ISO 8601 with a `T`, which is not what anyone edits by hand.
+pub const START_TIME_FMT: &str = "%Y-%m-%d %H:%M";
+
+mod datetime_opt {
+    use super::START_TIME_FMT;
+    use chrono::NaiveDateTime;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(
+        value: &Option<NaiveDateTime>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match value {
+            Some(dt) => serializer.serialize_str(&dt.format(START_TIME_FMT).to_string()),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<NaiveDateTime>, D::Error> {
+        let raw = Option::<String>::deserialize(deserializer)?;
+        match raw.as_deref().map(str::trim) {
+            None | Some("") => Ok(None),
+            Some(text) => NaiveDateTime::parse_from_str(text, START_TIME_FMT)
+                .map(Some)
+                .map_err(|_| {
+                    serde::de::Error::custom(format!(
+                        "invalid start_time `{text}`, expected yyyy-mm-dd hh:mm"
+                    ))
+                }),
+        }
+    }
+}
+
+/// A span of time in whole minutes, written `hh:mm` (hours may exceed 24).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Duration(pub i64);
+
+impl Duration {
+    pub fn minutes(self) -> i64 {
+        self.0
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        let (hours, minutes) = text.trim().split_once(':')?;
+        let all_digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+        if !all_digits(hours) || !all_digits(minutes) {
+            return None;
+        }
+        let (hours, minutes): (i64, i64) = (hours.parse().ok()?, minutes.parse().ok()?);
+        (minutes < 60).then(|| Duration(hours * 60 + minutes))
+    }
+}
+
+impl std::fmt::Display for Duration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:02}:{:02}", self.0 / 60, self.0 % 60)
+    }
+}
+
+impl Serialize for Duration {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for Duration {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        Duration::parse(&text).ok_or_else(|| {
+            serde::de::Error::custom(format!("invalid duration `{text}`, expected hh:mm"))
+        })
+    }
 }
 
 impl Task {
@@ -93,6 +190,10 @@ impl Task {
             github_issue: None,
             status,
             branch_prefix,
+            urgency: false,
+            importance: false,
+            start_time: None,
+            duration: None,
         }
     }
 }
@@ -128,5 +229,45 @@ mod tests {
     fn a_missing_prefix_defaults_to_blank() {
         let task: Task = serde_yaml::from_str("name: t\n").expect("front matter parses");
         assert_eq!(task.branch_prefix, "");
+    }
+
+    #[test]
+    fn scheduling_fields_default_when_absent() {
+        let task: Task = serde_yaml::from_str("name: t\n").expect("front matter parses");
+        assert!(!task.urgency && !task.importance);
+        assert_eq!(task.start_time, None);
+        assert_eq!(task.duration, None);
+    }
+
+    #[test]
+    fn scheduling_fields_round_trip_in_the_editor_format() {
+        let task: Task = serde_yaml::from_str(
+            "name: t\nurgency: true\nimportance: true\nstart_time: 2026-09-28 09:30\nduration: 01:45\n",
+        )
+        .expect("front matter parses");
+        assert!(task.urgency && task.importance);
+        assert_eq!(task.duration, Some(Duration(105)));
+        let yaml = serde_yaml::to_string(&task).expect("a task serializes");
+        assert!(yaml.contains("2026-09-28 09:30"), "{yaml}");
+        assert!(yaml.contains("01:45"), "{yaml}");
+        let back: Task = serde_yaml::from_str(&yaml).expect("round trip parses");
+        assert_eq!(back.start_time, task.start_time);
+        assert_eq!(back.duration, task.duration);
+    }
+
+    #[test]
+    fn a_blank_schedule_serializes_as_null_and_parses_back() {
+        let template = Task::template(1, String::new(), TaskStatus::Queue);
+        let yaml = serde_yaml::to_string(&template).expect("a task serializes");
+        assert!(yaml.contains("start_time: null"), "{yaml}");
+        let back: Task = serde_yaml::from_str(&yaml).expect("parses");
+        assert_eq!((back.start_time, back.duration), (None, None));
+    }
+
+    #[test]
+    fn malformed_schedule_values_are_rejected() {
+        assert!(serde_yaml::from_str::<Task>("name: t\nstart_time: tomorrow\n").is_err());
+        assert!(serde_yaml::from_str::<Task>("name: t\nduration: 1:75\n").is_err());
+        assert!(serde_yaml::from_str::<Task>("name: t\nduration: soon\n").is_err());
     }
 }
