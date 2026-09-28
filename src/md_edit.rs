@@ -55,7 +55,7 @@ pub fn resolve_edit<T: DeserializeOwned + MarkdownBody>(
         return Ok(None);
     }
     let (front, body) = split_front_matter(edited);
-    let mut item: T = serde_yaml::from_str(front)?;
+    let mut item = T::from_front_matter(front)?;
     // The blank line the template leaves under the front matter is
     // separator, not description -- trimming it keeps a description from
     // growing an extra leading newline on every round trip. The trailing
@@ -141,9 +141,15 @@ pub fn edited<T: Serialize + DeserializeOwned + MarkdownBody>(
 ) -> Result<()> {
     match edit_in_editor(template)? {
         Some(item) => println!("{}", save(item)?),
-        None => println!("no changes -- {noun} not {verb}"),
+        None => println!("{}", no_changes(noun, verb)),
     }
     Ok(())
+}
+
+/// What an editor quit without saving reports: "no changes -- project not
+/// updated".
+pub fn no_changes(noun: &str, verb: &str) -> String {
+    format!("no changes -- {noun} not {verb}")
 }
 
 #[cfg(test)]
@@ -331,5 +337,34 @@ mod tests {
             // than as the untouched one `resolve_edit` reads as "no save".
             assert_eq!(resolve_edit::<Thing>("", &rendered).unwrap(), Some(item));
         }
+    }
+
+    /// The task and group buffers read text fields exactly as typed, the
+    /// same as a project's: a bare number, `1.10`, `~` or `true` is text.
+    #[test]
+    fn wrapped_buffers_take_bare_scalars_as_typed_text() {
+        use crate::models::{GroupEdit, Organization, Task, TaskEdit, TaskStatus};
+        let original = render_template(&TaskEdit {
+            task: Task::template(1, String::new(), TaskStatus::Queue),
+            tags: Vec::new(),
+        })
+        .unwrap();
+        let edited = original.replacen("name: ''", "name: 2024", 1);
+        let task = resolve_edit::<TaskEdit>(&original, &edited)
+            .unwrap()
+            .unwrap();
+        assert_eq!((task.task.name.as_str(), task.tags.len()), ("2024", 0));
+
+        let front = "name: ~\ndefault_branch: 1.10\ngithub_project: true\nprojects: [a, b]\n";
+        let group = GroupEdit::<Organization>::from_front_matter(front).unwrap();
+        assert_eq!(
+            (
+                group.group.name.as_str(),
+                group.group.default_branch.as_str(),
+                group.group.github_project.as_str(),
+            ),
+            ("~", "1.10", "true")
+        );
+        assert_eq!(group.projects, vec!["a".to_string(), "b".to_string()]);
     }
 }

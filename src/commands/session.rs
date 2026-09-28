@@ -6,8 +6,7 @@ use crate::args::SessionCommand;
 use crate::commands::Run;
 use crate::db::Table;
 use crate::error::{IterError, Result};
-use crate::models::{Project, SessionConfig, Task, TaskStatus};
-use crate::reporting::minutes_to_hhmm;
+use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
 use crate::utils::clock::{close_open_session, start_session};
 use crate::utils::resolve::{
     current_session_task, require_git_repo, resolve_task, resolve_task_or_current, task_display,
@@ -190,6 +189,6 @@ fn session_elapse(app: &App) -> Result<()> {
         .open_session_for_task(task_id)?
         .ok_or_else(|| IterError::NoOpenSession(display))?;
     let now = app.now;
-    println!("{}", minutes_to_hhmm(session.duration_minutes(now)));
+    println!("{}", Duration(session.duration_minutes(now)));
     Ok(())
 }

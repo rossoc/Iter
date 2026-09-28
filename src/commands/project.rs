@@ -41,13 +41,8 @@ fn create_project_interactively(
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
     edited(template, Project::KIND, "created", |mut project| {
+        // Also absolutises `base_path` -- see `Project::check`.
         project.validate()?;
-        // Absolutised here, once, for every path a project can arrive by. A
-        // relative `base_path` names a different directory from every place
-        // `iter` is later run -- a different worktree to create, a different
-        // repo to ask whether it's one -- and an empty one, rejected above,
-        // reads as the current directory throughout.
-        project.base_path = scaffold::absolute_path(project.base_path.trim())?;
         populate(&project.base_path)?;
         db.insert(&project)?;
         Ok(match cloned_from {
@@ -103,7 +98,16 @@ pub(crate) fn new_cmd(app: &App, path: &str, organization: Option<&str>) -> Resu
 /// `iter clone <source>`: clones an existing local project as a template
 /// when `source` names one, and otherwise treats `source` as a git remote
 /// URL / local repo path and clones that.
-pub(crate) fn clone_cmd(app: &App, source: &str, organization: Option<&str>) -> Result<()> {
+///
+/// The clone of a project stays on that project's board unless `--board`
+/// or `--no-board` says otherwise.
+pub(crate) fn clone_cmd(
+    app: &App,
+    source: &str,
+    organization: Option<&str>,
+    board: Option<&str>,
+    no_board: bool,
+) -> Result<()> {
     let db = &app.db;
     match db.find_by_name::<Project>(source)? {
         // Pre-fill from the source project -- including its name,
@@ -121,6 +125,7 @@ pub(crate) fn clone_cmd(app: &App, source: &str, organization: Option<&str>) -> 
             if let Some(name) = organization {
                 template.organization_id = db.resolve::<Organization>(name)?.id;
             }
+            template.board_id = chosen_board(db, board, no_board, source_project.board_id)?;
             let files_from = source_project.base_path.clone();
             create_project_interactively(db, &template, Some(&source_project.name), |dest| {
                 std::fs::create_dir_all(dest)?;
@@ -134,11 +139,27 @@ pub(crate) fn clone_cmd(app: &App, source: &str, organization: Option<&str>) -> 
         None => {
             let mut template = new_project_template(db, organization)?;
             template.github = true; // it is a repo, by construction
+            template.board_id = chosen_board(db, board, no_board, None)?;
             create_project_interactively(db, &template, Some(source), |dest| {
                 git::clone_repo(source, dest)
             })
         }
     }
+}
+
+/// The board `--board <name>` / `--no-board` pick, or `current` when
+/// neither was given.
+fn chosen_board(
+    db: &Db,
+    board: Option<&str>,
+    no_board: bool,
+    current: Option<i64>,
+) -> Result<Option<i64>> {
+    Ok(match (board, no_board) {
+        (Some(name), _) => db.resolve::<Board>(name)?.id,
+        (None, true) => None,
+        (None, false) => current,
+    })
 }
 
 impl Run for ProjectCommand {
@@ -184,19 +205,20 @@ fn project_edit(
     no_board: bool,
 ) -> Result<()> {
     let db = &app.db;
-    let mut existing = resolve_project_or_current(db, name)?;
+    let stored = resolve_project_or_current(db, name)?;
+    let mut existing = stored.clone();
     // `--organization` moves the project; without it, membership (or the
     // lack of it) is carried through untouched.
     if let Some(name) = organization {
         existing.organization_id = db.resolve::<Organization>(name)?.id;
     }
     // Same for the board; `--no-board` is the one way to leave it.
-    match (board, no_board) {
-        (Some(name), _) => existing.board_id = db.resolve::<Board>(name)?.id,
-        (None, true) => existing.board_id = None,
-        (None, false) => {}
-    }
-    update(db, &existing, |_| Ok(()))
+    existing.board_id = chosen_board(db, board, no_board, existing.board_id)?;
+    // Neither is in the buffer, so a move is saved even if the buffer isn't
+    // touched.
+    let moved =
+        (existing.organization_id, existing.board_id) != (stored.organization_id, stored.board_id);
+    update(db, &existing, moved, |_| Ok(()))
 }
 
 fn project_delete(app: &App, name: Option<&str>) -> Result<()> {
@@ -204,12 +226,7 @@ fn project_delete(app: &App, name: Option<&str>) -> Result<()> {
     let project = resolve_project_or_current(db, name)?;
     let project_id = project.id();
 
-    let mut session_configs = Vec::new();
-    for task in db.tasks_for_project(project_id)? {
-        if let Some(session_config) = db.find_session_config_by_task(task.id())? {
-            session_configs.push(session_config);
-        }
-    }
+    let session_configs = db.session_configs_for_project(project_id)?;
 
     // Delete the project (cascades to its tasks and their session-configs)
     // before tearing down tmux/worktrees: if we're running inside one of

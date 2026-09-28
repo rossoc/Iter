@@ -6,7 +6,10 @@ use crate::models::{
 };
 use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Value, ValueRef};
-use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
+use rusqlite::{
+    Connection, OptionalExtension, Params, Row, Transaction, TransactionBehavior, params,
+    params_from_iter,
+};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -155,6 +158,27 @@ pub struct Db {
     conn: Connection,
 }
 
+/// Puts the database in WAL mode. The mode is stored in the file, so this
+/// is a no-op after the first run -- but on that first run, two processes
+/// opening a brand-new file at once (a tmux hook and a web request, say)
+/// can race to switch it, and SQLite reports the loser as busy straight
+/// away rather than through `busy_timeout`. So a busy switch is retried,
+/// for about as long as the timeout would have waited.
+fn enable_wal(conn: &Connection) -> Result<()> {
+    const ATTEMPTS: u32 = 500;
+    for attempt in 1.. {
+        match conn.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(())) {
+            Err(rusqlite::Error::SqliteFailure(e, _))
+                if e.code == rusqlite::ErrorCode::DatabaseBusy && attempt < ATTEMPTS =>
+            {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            result => return Ok(result?),
+        }
+    }
+    unreachable!("the last attempt returns")
+}
+
 impl Db {
     /// Opens (creating if need be) the SQLite file at `path`, along with
     /// the directory holding it -- the configured location is allowed to
@@ -167,10 +191,10 @@ impl Db {
         }
         let conn = Connection::open(path)?;
         conn.execute_batch(
-            "PRAGMA journal_mode = WAL;
-             PRAGMA busy_timeout = 5000;
+            "PRAGMA busy_timeout = 5000;
              PRAGMA foreign_keys = ON;",
         )?;
+        enable_wal(&conn)?;
         let db = Db { conn };
         db.migrate()?;
         Ok(db)
@@ -182,18 +206,35 @@ impl Db {
     /// request, and to shell completion, opening one per TAB. Each step runs
     /// in its own transaction together with bumping the version, so a step
     /// either lands whole or runs again next time.
+    ///
+    /// Two processes can open an old database at once (a tmux hook and an
+    /// `iter serve` request, say). Each step's transaction is therefore
+    /// `IMMEDIATE` -- it takes the write lock up front, where `busy_timeout`
+    /// waits for it, rather than upgrading a read lock mid-step, which fails
+    /// outright -- and re-reads the version under that lock, so the process
+    /// that waited skips a step the other one already ran.
     fn migrate(&self) -> Result<()> {
+        if self.user_version()? >= Self::MIGRATIONS.len() {
+            return Ok(());
+        }
+        loop {
+            let tx = Transaction::new_unchecked(&self.conn, TransactionBehavior::Immediate)?;
+            let done = self.user_version()?;
+            let Some(step) = Self::MIGRATIONS.get(done) else {
+                return Ok(());
+            };
+            step(self)?;
+            tx.execute_batch(&format!("PRAGMA user_version = {}", done + 1))?;
+            tx.commit()?;
+        }
+    }
+
+    /// How many of [`Self::MIGRATIONS`] this database has run.
+    fn user_version(&self) -> Result<usize> {
         let done: i64 = self
             .conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))?;
-        let done = usize::try_from(done).unwrap_or(0);
-        for (version, step) in Self::MIGRATIONS.iter().enumerate().skip(done) {
-            let tx = self.conn.unchecked_transaction()?;
-            step(self)?;
-            tx.execute_batch(&format!("PRAGMA user_version = {}", version + 1))?;
-            tx.commit()?;
-        }
-        Ok(())
+        Ok(usize::try_from(done).unwrap_or(0))
     }
 
     /// The schema's history, oldest first. Append a step; never edit one
@@ -300,7 +341,7 @@ impl Db {
     /// Every task on board `id`'s projects as a [`Card`], ordered by
     /// project, then task. Three queries however big the board.
     pub fn cards(&self, board_id: i64) -> Result<Vec<Card>> {
-        let priorities = self.priorities()?;
+        let priorities = self.priorities_in::<Board>(board_id)?;
         Ok(self
             .tasks_in::<Board>(board_id)?
             .into_iter()
@@ -312,19 +353,24 @@ impl Db {
             .collect())
     }
 
-    /// Every task's [`Priority`], by task id -- one query for a listing of
-    /// many. A task missing from the map has neither flag.
-    pub fn priorities(&self) -> Result<HashMap<i64, Priority>> {
-        let mut stmt = self.conn.prepare_cached(
-            "SELECT tt.task_id, g.name FROM task_tags tt JOIN tags g ON g.id = tt.tag_id
-             WHERE g.name IN (?1, ?2)",
+    /// The [`Priority`] of every task in group `id`, by task id -- one
+    /// query for a listing of many, reading only that group's tag rows. A
+    /// task missing from the map has neither flag.
+    pub fn priorities_in<G: ProjectGroup>(&self, id: i64) -> Result<HashMap<i64, Priority>> {
+        let rows = self.query_all(
+            &format!(
+                "SELECT tt.task_id, g.name FROM task_tags tt
+                 JOIN tags g ON g.id = tt.tag_id
+                 JOIN tasks t ON t.id = tt.task_id
+                 JOIN projects p ON p.id = t.project_id
+                 WHERE g.name IN (?1, ?2) AND p.{} = ?3",
+                G::MEMBER_COLUMN
+            ),
+            params![URGENT_TAG, IMPORTANT_TAG, id],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
         )?;
-        let rows = stmt.query_map(params![URGENT_TAG, IMPORTANT_TAG], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
-        })?;
         let mut out: HashMap<i64, Priority> = HashMap::new();
-        for row in rows {
-            let (task_id, tag) = row?;
+        for (task_id, tag) in rows {
             let priority = out.entry(task_id).or_default();
             match tag == URGENT_TAG {
                 true => priority.urgent = true,
@@ -421,6 +467,17 @@ impl Db {
         let _ = self.conn.execute_batch(
             "CREATE INDEX IF NOT EXISTS idx_projects_board
                 ON projects(board_id);",
+        );
+        // Every tmux hook resolves its session this way.
+        let _ = self.conn.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_session_configs_tmux
+                ON session_configs(tmux_session_name);",
+        );
+        // `task_tags`' primary key leads with `task_id`, so it can't answer
+        // "which tasks carry tag X" -- the priority lookup.
+        let _ = self.conn.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_task_tags_tag
+                ON task_tags(tag_id);",
         );
     }
 
@@ -534,9 +591,20 @@ impl Db {
 
     /// Every row matching `tail` (a `WHERE`/`ORDER BY` clause).
     fn find_all<T: Table>(&self, tail: &str, params: impl Params) -> Result<Vec<T>> {
-        let mut stmt = self.conn.prepare_cached(&select_sql::<T>(tail))?;
+        self.query_all(&select_sql::<T>(tail), params, T::from_row)
+    }
+
+    /// Every row `sql` returns, each read by `map` -- the one
+    /// prepare/query/collect sequence every multi-row read goes through.
+    fn query_all<R>(
+        &self,
+        sql: &str,
+        params: impl Params,
+        map: impl FnMut(&Row) -> rusqlite::Result<R>,
+    ) -> Result<Vec<R>> {
+        let mut stmt = self.conn.prepare_cached(sql)?;
         let rows = stmt
-            .query_map(params, T::from_row)?
+            .query_map(params, map)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
@@ -633,6 +701,15 @@ impl Db {
         self.find_one("WHERE task_id = ?1", params![task_id])
     }
 
+    /// Every session-config belonging to a task of `project_id` -- one
+    /// query, rather than one per task.
+    pub fn session_configs_for_project(&self, project_id: i64) -> Result<Vec<SessionConfig>> {
+        self.find_all(
+            "WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?1)",
+            params![project_id],
+        )
+    }
+
     pub fn find_session_config_by_tmux_name(
         &self,
         tmux_name: &str,
@@ -672,24 +749,21 @@ impl Db {
         let (lower, upper) = range_bounds(from, to);
         // Written out rather than built by `select_sql`: the join puts an
         // `id` column on both sides, so the select list has to qualify it.
-        let mut stmt = self.conn.prepare_cached(
+        self.query_all(
             "SELECT s.id, s.task_id, s.start, s.end, s.message
              FROM sessions s JOIN tasks t ON t.id = s.task_id
              WHERE t.project_id = ?1 AND s.start >= ?2 AND s.start < ?3
              ORDER BY s.start",
-        )?;
-        let rows = stmt
-            .query_map(params![project_id, lower, upper], Session::from_row)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+            params![project_id, lower, upper],
+            Session::from_row,
+        )
     }
 
     pub fn open_session_for_task(&self, task_id: i64) -> Result<Option<Session>> {
         self.find_one("WHERE task_id = ?1 AND end IS NULL", params![task_id])
     }
 
-    /// Every task as `(project name, task name)`, in `<project>/<task>`
-    /// order, optionally narrowed to one project and/or a set of statuses.
+    /// Every task as a [`task_ref`], in `<project>/<task>` order, optionally narrowed to one project and/or a set of statuses.
     /// An empty `statuses` means every status, the same way `None` for
     /// `project` means every project.
     ///
@@ -697,11 +771,7 @@ impl Db {
     /// on every TAB keypress, where the per-project round trips were the
     /// dominant cost and every task's other columns were loaded only to be
     /// dropped.
-    pub fn task_refs(
-        &self,
-        project: Option<&str>,
-        statuses: &[TaskStatus],
-    ) -> Result<Vec<(String, String)>> {
+    pub fn task_refs(&self, project: Option<&str>, statuses: &[TaskStatus]) -> Result<Vec<String>> {
         let mut sql = String::from(
             "SELECT p.name, t.name FROM tasks t JOIN projects p ON p.id = t.project_id",
         );
@@ -725,37 +795,45 @@ impl Db {
         values.extend(project.map(|name| Value::Text(name.to_string())));
         values.extend(statuses.iter().map(|s| Value::Text(s.as_str().to_string())));
 
-        let mut stmt = self.conn.prepare_cached(&sql)?;
-        let rows = stmt
-            .query_map(params_from_iter(values), |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-            })?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+        self.query_all(&sql, params_from_iter(values), |row| {
+            Ok(task_ref(
+                &row.get::<_, String>(0)?,
+                &row.get::<_, String>(1)?,
+            ))
+        })
     }
 
     /// Every distinct task name in the database, sorted -- what `task
     /// pull/push --task` completes, which takes a bare name rather than a
     /// `<project>/<task>` pair. SQL does the dedup and the ordering.
     pub fn task_names(&self) -> Result<Vec<String>> {
-        let mut stmt = self
-            .conn
-            .prepare_cached("SELECT DISTINCT name FROM tasks ORDER BY name")?;
-        let rows = stmt
-            .query_map([], |row| row.get::<_, String>(0))?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+        self.query_all("SELECT DISTINCT name FROM tasks ORDER BY name", [], |row| {
+            row.get(0)
+        })
     }
 
     /// Every `T`'s name, in `T`'s listing order -- what `iter <entity>
     /// list` prints and what shell completion offers. A listing of names is
-    /// a query, so it lives here rather than in either caller.
+    /// a query, so it lives here rather than in either caller. Only the
+    /// `name` column is read: completion runs this on every TAB.
     pub fn names<T: Named>(&self) -> Result<Vec<String>> {
-        Ok(self
-            .list::<T>()?
-            .into_iter()
-            .map(|item| item.name().to_string())
-            .collect())
+        self.query_all(
+            &format!("SELECT name FROM {} {}", T::NAME, T::LIST_TAIL),
+            [],
+            |row| row.get(0),
+        )
+    }
+
+    /// Runs `writes` as one transaction, so a burst of row writes costs one
+    /// commit (and one fsync) rather than one each. Whatever `writes` got
+    /// done is committed even when it then fails -- this batches commits,
+    /// it doesn't make the batch all-or-nothing. `writes` must not open a
+    /// transaction of its own.
+    pub fn batched<R>(&self, writes: impl FnOnce() -> Result<R>) -> Result<R> {
+        let tx = self.conn.unchecked_transaction()?;
+        let result = writes();
+        tx.commit()?;
+        result
     }
 
     // ---- generic CRUD, one implementation for every `Table` --------------
@@ -911,6 +989,37 @@ mod tests {
         db.migrate()
     }
 
+    /// Several processes opening one fresh file at once -- a tmux hook and
+    /// a web request, say -- all get a migrated database: the step
+    /// transactions queue on the write lock rather than failing, and each
+    /// re-reads the version under it.
+    #[test]
+    fn concurrent_opens_migrate_once_without_failing() {
+        let path = std::env::temp_dir().join(format!(
+            "iter-migrate-race-{}-{:?}.db",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_file(&path);
+        let opens: Vec<_> = (0..4)
+            .map(|_| {
+                let path = path.clone();
+                std::thread::spawn(move || Db::open(&path).map(|db| db.user_version()))
+            })
+            .collect();
+        for open in opens {
+            let version = open
+                .join()
+                .expect("no panic")
+                .expect("opens")
+                .expect("reads");
+            assert_eq!(version, Db::MIGRATIONS.len());
+        }
+        for suffix in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
+        }
+    }
+
     /// A fresh, empty, migrated database held entirely in memory.
     fn db() -> Db {
         Db::open(":memory:").expect("in-memory database opens")
@@ -978,8 +1087,14 @@ mod tests {
 
         assert!(!db.column_exists("tasks", "urgency").expect("check"));
         assert!(!db.column_exists("tasks", "importance").expect("check"));
-        let flags = db.priorities().expect("priorities");
-        let of = |id| flags.get(&id).copied().unwrap_or_default();
+        let of = |id| {
+            let tags = db.tags_for_task(id).expect("tags");
+            let has = |name| tags.iter().any(|t| t.name == name);
+            Priority {
+                urgent: has(URGENT_TAG),
+                important: has(IMPORTANT_TAG),
+            }
+        };
         assert_eq!(
             of(both),
             Priority {
@@ -1189,25 +1304,17 @@ mod tests {
 
         assert_eq!(
             db.task_refs(Some("alpha"), &[]).expect("refs"),
-            vec![
-                ("alpha".to_string(), "finished".to_string()),
-                ("alpha".to_string(), "queued".to_string()),
-                ("alpha".to_string(), "wip one".to_string()),
-            ]
+            vec!["alpha/finished", "alpha/queued", "alpha/wip one",]
         );
         assert_eq!(
             db.task_refs(None, &[TaskStatus::Queue, TaskStatus::Wip])
                 .expect("refs"),
-            vec![
-                ("alpha".to_string(), "queued".to_string()),
-                ("alpha".to_string(), "wip one".to_string()),
-                ("beta".to_string(), "wip two".to_string()),
-            ]
+            vec!["alpha/queued", "alpha/wip one", "beta/wip two",]
         );
         assert_eq!(
             db.task_refs(Some("beta"), &[TaskStatus::Queue])
                 .expect("refs"),
-            []
+            Vec::<String>::new()
         );
     }
 
@@ -1225,11 +1332,7 @@ mod tests {
 
         assert_eq!(
             db.task_refs(None, &[]).expect("task refs"),
-            vec![
-                ("alpha".to_string(), "another".to_string()),
-                ("alpha".to_string(), "write docs".to_string()),
-                ("beta".to_string(), "ship it".to_string()),
-            ]
+            vec!["alpha/another", "alpha/write docs", "beta/ship it",]
         );
     }
 
@@ -1257,11 +1360,11 @@ mod tests {
 
         assert_eq!(
             db.task_refs(None, &[TaskStatus::Queue]).expect("task refs"),
-            vec![("proj".to_string(), "queued".to_string())]
+            vec!["proj/queued"]
         );
         assert_eq!(
             db.task_refs(None, &[TaskStatus::Done]).expect("task refs"),
-            []
+            Vec::<String>::new()
         );
     }
 
