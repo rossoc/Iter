@@ -150,6 +150,10 @@ pub fn round_to_half_hour(hours: f64) -> f64 {
 pub struct Total {
     pub total_hours: f64,
     pub total_hhmm: String,
+    /// The exact figure the two above are rounded from -- for the web
+    /// report's bars; not part of the printed report.
+    #[serde(skip)]
+    pub minutes: i64,
 }
 
 impl Total {
@@ -157,6 +161,7 @@ impl Total {
         Total {
             total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
             total_hhmm: Duration(total_minutes).to_string(),
+            minutes: total_minutes,
         }
     }
 
@@ -300,6 +305,10 @@ pub fn session_rows(sessions: &[Session], now: NaiveDateTime, dated: bool) -> Ve
 /// where it stands, and every session it had in the period.
 #[derive(Debug, Serialize)]
 pub struct TaskReport {
+    /// The task's row id -- for the web report's links; not part of the
+    /// printed report.
+    #[serde(skip)]
+    pub id: i64,
     pub name: String,
     /// Serializes as `queue`/`wip`/`done`, as the plain string it replaced
     /// did -- but carried as the enum, so the label below is derived from
@@ -320,6 +329,7 @@ pub struct TaskReport {
 
 impl TaskReport {
     pub fn new(
+        id: i64,
         name: String,
         status: TaskStatus,
         total_minutes: i64,
@@ -327,6 +337,7 @@ impl TaskReport {
         sessions: Vec<SessionRow>,
     ) -> Self {
         TaskReport {
+            id,
             name,
             status,
             status_label: status.label().to_string(),
@@ -342,6 +353,10 @@ impl TaskReport {
 /// -- see `merged_total_minutes`.
 #[derive(Debug, Serialize)]
 pub struct ProjectReport {
+    /// The project's row id -- for the web report's links; not part of the
+    /// printed report.
+    #[serde(skip)]
+    pub id: i64,
     pub name: String,
     #[serde(flatten)]
     pub total: Total,
@@ -939,6 +954,7 @@ mod tests {
 
     fn task_report(name: &str, minutes: i64, sessions: Vec<SessionRow>) -> TaskReport {
         TaskReport::new(
+            0,
             name.to_string(),
             TaskStatus::Wip,
             minutes,
@@ -1137,6 +1153,7 @@ mod tests {
                 150,
             ),
             projects: vec![ProjectReport {
+                id: 0,
                 name: "proj".to_string(),
                 total: Total::new(120),
                 description: Some("Project notes.".to_string()),

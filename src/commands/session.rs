@@ -7,7 +7,7 @@ use crate::commands::Run;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
-use crate::utils::clock::{close_open_session, start_session};
+use crate::utils::clock::{Closed, close_open_session, start_session};
 use crate::utils::resolve::{
     current_session_task, require_git_repo, resolve_task, resolve_task_or_current, task_display,
 };
@@ -169,11 +169,11 @@ fn session_start(app: &App, task_ref: Option<&str>) -> Result<()> {
 fn session_stop(app: &App, task_ref: Option<&str>, message: Option<&str>) -> Result<()> {
     let db = &app.db;
     let (project, task) = resolve_task_or_current(db, task_ref)?;
-    close_open_session(db, task.id(), message)?;
-    println!(
-        "stopped the session for '{}'",
-        task_display(&project, &task)
-    );
+    let what = match close_open_session(db, task.id(), message)? {
+        Closed::Discarded => "discarded the session (under a minute) for",
+        Closed::Kept | Closed::Nothing => "stopped the session for",
+    };
+    println!("{what} '{}'", task_display(&project, &task));
     Ok(())
 }
 
