@@ -1,6 +1,6 @@
 use crate::config::config;
 use crate::error::Result;
-use crate::models::{Named, Project, Session, SessionConfig, Task, TaskStatus};
+use crate::models::{Duration, Named, Project, Session, SessionConfig, Task, TaskStatus};
 use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
@@ -212,6 +212,10 @@ impl Db {
                 github_issue  INTEGER,
                 status        TEXT NOT NULL DEFAULT 'queue' CHECK (status IN ('queue', 'wip', 'done')),
                 branch_prefix TEXT NOT NULL DEFAULT '',
+                urgency       INTEGER NOT NULL DEFAULT 0,
+                importance    INTEGER NOT NULL DEFAULT 0,
+                start_time    TEXT,
+                duration      INTEGER,
                 UNIQUE (project_id, name)
              );
              CREATE TABLE IF NOT EXISTS session_configs (
@@ -277,7 +281,11 @@ impl Db {
     /// already allowed to be in. `board_id` follows the same rule: a board
     /// is a container, so deleting one just unbinds its projects.
     fn add_missing_columns(&self) -> Result<()> {
-        const ADDED: [(&str, &str, &str); 7] = [
+        const ADDED: [(&str, &str, &str); 11] = [
+            ("tasks", "urgency", "INTEGER NOT NULL DEFAULT 0"),
+            ("tasks", "importance", "INTEGER NOT NULL DEFAULT 0"),
+            ("tasks", "start_time", "TEXT"),
+            ("tasks", "duration", "INTEGER"),
             (
                 "projects",
                 "organization_id",
@@ -631,6 +639,17 @@ impl Column for NaiveDateTime {
     }
 }
 
+/// Stored as whole minutes.
+impl Column for Duration {
+    fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
+        Ok(Duration(row.get(index)?))
+    }
+
+    fn to_sql(&self) -> Value {
+        Value::Integer(self.0)
+    }
+}
+
 impl Column for TaskStatus {
     /// An unrecognised status falls back to `Queue` rather than failing the
     /// read, so a row written by a newer build stays loadable.
@@ -712,6 +731,10 @@ mod tests {
             github_issue: Some(7),
             status: TaskStatus::Wip,
             branch_prefix: "fix/".to_string(),
+            urgency: false,
+            importance: false,
+            start_time: None,
+            duration: None,
         };
         db.insert(&task).expect("task inserts")
     }
@@ -845,6 +868,10 @@ mod tests {
                 github_issue: None,
                 status,
                 branch_prefix: String::new(),
+                urgency: false,
+                importance: false,
+                start_time: None,
+                duration: None,
             };
             db.insert(&task).expect("task inserts");
         }
@@ -911,6 +938,10 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Queue,
             branch_prefix: String::new(),
+            urgency: false,
+            importance: false,
+            start_time: None,
+            duration: None,
         };
         db.insert(&queued).expect("task inserts");
 
@@ -1046,6 +1077,10 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Queue,
             branch_prefix: String::new(),
+            urgency: false,
+            importance: false,
+            start_time: None,
+            duration: None,
         });
         check(&SessionConfig {
             id: None,
@@ -1294,6 +1329,10 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Queue,
             branch_prefix: String::new(),
+            urgency: false,
+            importance: false,
+            start_time: None,
+            duration: None,
         };
         let id = db.insert(&task).expect("task inserts");
         let loaded = db
@@ -1689,6 +1728,46 @@ mod tests {
         }
         let db = Db::open(path.to_str().expect("utf8 path")).expect("migrates");
         assert!(db.column_exists("projects", "board_id").expect("check"));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn task_schedule_round_trips_and_migrates_onto_an_old_tasks_table() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let mut task = Task::template(project_id, String::new(), TaskStatus::Queue);
+        task.name = "scheduled".to_string();
+        task.urgency = true;
+        task.start_time = Some(dt("2026-09-28 09:30"));
+        task.duration = Some(Duration(90));
+        db.insert(&task).expect("insert");
+        let found = db
+            .find_task(project_id, "scheduled")
+            .expect("lookup")
+            .expect("exists");
+        assert!(found.urgency && !found.importance);
+        assert_eq!(found.start_time, Some(dt("2026-09-28 09:30")));
+        assert_eq!(found.duration, Some(Duration(90)));
+
+        let dir = std::env::temp_dir().join(format!("iter-task-mig-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("iter.db");
+        let _ = std::fs::remove_file(&path);
+        {
+            let conn = Connection::open(&path).expect("open");
+            conn.execute_batch(
+                "CREATE TABLE tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id INTEGER NOT NULL,
+                    name TEXT NOT NULL
+                 );",
+            )
+            .expect("legacy schema");
+        }
+        let db = Db::open(path.to_str().expect("utf8 path")).expect("migrates");
+        for column in ["urgency", "importance", "start_time", "duration"] {
+            assert!(db.column_exists("tasks", column).expect("check"), "{column}");
+        }
         std::fs::remove_dir_all(&dir).ok();
     }
 }
