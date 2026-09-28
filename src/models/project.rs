@@ -124,8 +124,4 @@ impl Project {
     }
 }
 
-impl crate::models::Named for Project {
-    fn name(&self) -> &str {
-        &self.name
-    }
-}
+crate::models::named!(Project, "project");

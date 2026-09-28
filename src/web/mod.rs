@@ -38,7 +38,11 @@ pub fn serve(port: u16, open: bool) -> Result<()> {
         let url = format!("http://127.0.0.1:{port}");
         println!("iter is serving {url} (Ctrl-C to stop)");
         if open {
-            let opener = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
+            let opener = if cfg!(target_os = "macos") {
+                "open"
+            } else {
+                "xdg-open"
+            };
             // Best effort: the URL is printed either way.
             let _ = std::process::Command::new(opener).arg(&url).status();
         }

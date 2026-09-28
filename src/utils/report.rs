@@ -104,7 +104,7 @@ pub(crate) fn project_reports(
 ) -> Result<(Vec<ProjectReport>, Vec<Session>)> {
     let mut reports = Vec::new();
     let mut all = Vec::new();
-    for project in db.projects_for_organization(organization_id)? {
+    for project in db.projects_in::<crate::models::Organization>(organization_id)? {
         let (tasks, sessions) = task_reports(db, project.id(), range, now)?;
         if tasks.is_empty() {
             continue;

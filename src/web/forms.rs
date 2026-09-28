@@ -6,7 +6,9 @@
 //! the YAML editor follows in `commands`.
 
 use crate::error::{IterError, Result};
-use crate::models::{Duration, Organization, Project, START_TIME_FMT, Task, TaskStatus};
+use crate::models::{
+    Duration, Organization, Project, START_TIME_FMT, Task, TaskStatus, require_name,
+};
 use chrono::NaiveDateTime;
 use serde::Deserialize;
 
@@ -54,10 +56,7 @@ impl OrgForm {
     /// acceptable. The row is filled in even when it isn't, so the form can
     /// be shown again with what the user typed.
     pub fn apply(&self, mut org: Organization) -> (Organization, Result<()>) {
-        let valid = match self.name.trim().is_empty() {
-            true => Err(IterError::EmptyOrganizationName),
-            false => Ok(()),
-        };
+        let valid = require_name("organization", &self.name);
         org.name = self.name.trim().to_string();
         org.description = text(&self.description);
         org.github = checked(&self.github);
@@ -89,7 +88,7 @@ impl ProjectForm {
     /// See [`OrgForm::apply`].
     pub fn apply(&self, mut project: Project) -> (Project, Result<()>) {
         let valid = if self.name.trim().is_empty() {
-            Err(IterError::EmptyProjectName)
+            Err(IterError::EmptyName("project"))
         } else if self.base_path.trim().is_empty() {
             Err(IterError::EmptyBasePath)
         } else {
@@ -136,10 +135,7 @@ impl TaskForm {
     /// See [`OrgForm::apply`]. An unparseable issue number or status keeps
     /// the row's old value.
     pub fn apply(&self, mut task: Task) -> (Task, Result<()>) {
-        let mut valid = Ok(());
-        if self.name.trim().is_empty() {
-            valid = Err(IterError::EmptyTaskName);
-        }
+        let mut valid = require_name("task", &self.name);
         let issue = self.github_issue.trim();
         if issue.is_empty() {
             task.github_issue = None;
@@ -232,7 +228,10 @@ mod tests {
     #[test]
     fn task_form_rejects_bad_input_but_keeps_what_was_typed() {
         let bad = |name, issue, status| task_form(name, issue, status).apply(task());
-        assert!(matches!(bad(" ", "", "wip").1, Err(IterError::EmptyTaskName)));
+        assert!(matches!(
+            bad(" ", "", "wip").1,
+            Err(IterError::EmptyName("task"))
+        ));
         assert!(bad("x", "abc", "wip").1.is_err());
         let (t, valid) = bad("x", "", "nope");
         assert!(matches!(valid, Err(IterError::InvalidStatus(_))));

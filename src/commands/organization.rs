@@ -5,46 +5,39 @@ use crate::args::{OrganizationCommand, ReportOpts};
 use crate::commands::Run;
 use crate::config::config;
 use crate::db::Table;
-use crate::error::{IterError, Result};
+use crate::error::Result;
 use crate::md_edit::edited;
-use crate::models::{Organization, OrganizationEdit};
+use crate::models::{Named, Organization, OrganizationEdit, Project};
 use crate::reporting::{Header, OrganizationInfo, Report, settings_of};
+use crate::utils::crud::{create, delete_group};
 use crate::utils::output::list_names;
 use crate::utils::report::{project_reports, resolve_range, total_minutes};
-use crate::utils::resolve::{resolve_organization_or_current, resolve_project_ids};
+use crate::utils::resolve::resolve_group_or_current;
 
 impl Run for OrganizationCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
-            Self::New => organization_new(app),
+            Self::New => create(&app.db, &Organization::template(&config().project)),
             Self::Edit { name } => organization_edit(app, name.as_deref()),
-            Self::Delete { name } => organization_delete(app, name.as_deref()),
+            Self::Delete { name } => {
+                let organization: Organization =
+                    resolve_group_or_current(&app.db, name.as_deref())?;
+                delete_group(&app.db, &organization)
+            }
             Self::Info { name, report } => organization_info(app, name.as_deref(), report),
-            Self::List => organization_list(app),
+            Self::List => list_names::<Organization>(&app.db),
         }
     }
-}
-
-fn organization_new(app: &App) -> Result<()> {
-    let db = &app.db;
-    let template = Organization::template(&config().project);
-    edited(&template, "organization", "created", |organization| {
-        if organization.name.trim().is_empty() {
-            return Err(IterError::EmptyOrganizationName);
-        }
-        db.insert(&organization)?;
-        Ok(format!("created organization '{}'", organization.name))
-    })
 }
 
 /// Edits the organization and its roster together: the buffer lists the
 /// projects in it by name, and saving makes that list the membership.
 fn organization_edit(app: &App, name: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let existing = resolve_organization_or_current(db, name)?;
+    let existing: Organization = resolve_group_or_current(db, name)?;
     let id = existing.id();
     let projects = db
-        .projects_for_organization(id)?
+        .projects_in::<Organization>(id)?
         .into_iter()
         .map(|p| p.name)
         .collect();
@@ -52,38 +45,16 @@ fn organization_edit(app: &App, name: Option<&str>) -> Result<()> {
         organization: existing,
         projects,
     };
-    edited(&template, "organization", "updated", |edit| {
-        let organization = edit.organization;
-        if organization.name.trim().is_empty() {
-            return Err(IterError::EmptyOrganizationName);
-        }
+    edited(&template, Organization::KIND, "updated", |edit| {
+        let mut organization = edit.organization;
+        organization.validate()?;
         // Resolved before anything is written, so an unknown name leaves
         // the organization untouched.
-        let project_ids = resolve_project_ids(db, &edit.projects)?;
+        let project_ids = db.ids_by_name::<Project>(&edit.projects)?;
         db.update(id, &organization)?;
-        db.set_organization_projects(id, &project_ids)?;
+        db.set_projects::<Organization>(id, &project_ids)?;
         Ok(format!("updated organization '{}'", organization.name))
     })
-}
-
-/// Deletes the organization row only. Its projects survive -- the schema's
-/// `ON DELETE SET NULL` just clears their `organization_id`, leaving them in
-/// the state any project without an organization is already in.
-fn organization_delete(app: &App, name: Option<&str>) -> Result<()> {
-    let db = &app.db;
-    let organization = resolve_organization_or_current(db, name)?;
-    let id = organization.id();
-    let kept = db.projects_for_organization(id)?.len();
-
-    db.delete::<Organization>(id)?;
-
-    let orphaned = match kept {
-        0 => String::new(),
-        1 => " -- 1 project kept, now without an organization".to_string(),
-        n => format!(" -- {n} projects kept, now without an organization"),
-    };
-    println!("deleted organization '{}'{orphaned}", organization.name);
-    Ok(())
 }
 
 /// The organization's report for a period: every project that was worked
@@ -93,7 +64,7 @@ fn organization_delete(app: &App, name: Option<&str>) -> Result<()> {
 /// the place for the full roster.
 fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = &app.db;
-    let organization = resolve_organization_or_current(db, name)?;
+    let organization: Organization = resolve_group_or_current(db, name)?;
     let organization_id = organization.id();
     let now = app.now;
     let range = resolve_range(opts, now)?;
@@ -115,8 +86,4 @@ fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result
     };
     print!("{}", info.render(opts.format)?);
     Ok(())
-}
-
-fn organization_list(app: &App) -> Result<()> {
-    list_names::<Organization>(&app.db)
 }

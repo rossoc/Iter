@@ -33,8 +33,14 @@ impl Board {
     }
 }
 
-impl crate::models::Named for Board {
-    fn name(&self) -> &str {
-        &self.name
+crate::models::named!(Board, "board");
+
+impl crate::models::ProjectGroup for Board {
+    const MEMBER_COLUMN: &'static str = "board_id";
+    const NOT_A_MEMBER: &'static str = "isn't bound to a board";
+    const DETACHED: &'static str = "on no board";
+
+    fn group_of(project: &crate::models::Project) -> Option<i64> {
+        project.board_id
     }
 }

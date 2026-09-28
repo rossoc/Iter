@@ -6,7 +6,6 @@
 use super::layout::{Nav, Sel, shell};
 use super::open_db;
 use crate::db::{Db, Table};
-use crate::error::IterError;
 use crate::models::{
     Board, Duration, IMPORTANT_TAG, Project, START_TIME_FMT, Tag, Task, TaskStatus, URGENT_TAG,
 };
@@ -97,7 +96,7 @@ fn colors_style(db: &Db) -> crate::error::Result<String> {
 /// Every unfinished task on the board's projects, urgent first, then by name.
 fn cards(db: &Db, board_id: i64) -> crate::error::Result<Vec<Card>> {
     let mut out = Vec::new();
-    for project in db.projects_for_board(board_id)? {
+    for project in db.projects_in::<Board>(board_id)? {
         for task in db.tasks_for_project(project.id())? {
             if task.status == TaskStatus::Done {
                 continue;
@@ -281,10 +280,18 @@ async fn agenda_page(cx: &Cx) -> Result<impl View> {
             let slot = day.and_hms_opt(h, 0, 0).expect("hour is in range");
             let here = all
                 .iter()
-                .filter(|c| c.task.start_time.is_some_and(|s| s >= slot && s < slot + chrono::Duration::hours(1)))
+                .filter(|c| {
+                    c.task
+                        .start_time
+                        .is_some_and(|s| s >= slot && s < slot + chrono::Duration::hours(1))
+                })
                 .cloned()
                 .collect();
-            (format!("{h:02}:00"), slot.format(START_TIME_FMT).to_string(), here)
+            (
+                format!("{h:02}:00"),
+                slot.format(START_TIME_FMT).to_string(),
+                here,
+            )
         })
         .collect();
     let date = day.format("%Y-%m-%d").to_string();
@@ -329,10 +336,18 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
         (Nav::load(&db)?, board, colors_style(&db)?, cards(&db, id)?)
     };
     let waiting = pick(&all, |c| !c.task.matrix_placed);
-    let both = pick(&all, |c| c.task.matrix_placed && c.task.urgency && c.task.importance);
-    let important = pick(&all, |c| c.task.matrix_placed && !c.task.urgency && c.task.importance);
-    let urgent = pick(&all, |c| c.task.matrix_placed && c.task.urgency && !c.task.importance);
-    let neither = pick(&all, |c| c.task.matrix_placed && !c.task.urgency && !c.task.importance);
+    let both = pick(&all, |c| {
+        c.task.matrix_placed && c.task.urgency && c.task.importance
+    });
+    let important = pick(&all, |c| {
+        c.task.matrix_placed && !c.task.urgency && c.task.importance
+    });
+    let urgent = pick(&all, |c| {
+        c.task.matrix_placed && c.task.urgency && !c.task.importance
+    });
+    let neither = pick(&all, |c| {
+        c.task.matrix_placed && !c.task.urgency && !c.task.importance
+    });
     let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
     Ok(view! {
         shell(
@@ -393,11 +408,7 @@ impl BoardForm {
     /// `board` with the name and description applied, and whether the name
     /// is acceptable.
     fn apply(&self, mut board: Board) -> (Board, crate::error::Result<()>) {
-        let valid = if self.name.trim().is_empty() {
-            Err(IterError::EmptyBoardName)
-        } else {
-            Ok(())
-        };
+        let valid = crate::models::require_name("board", &self.name);
         board.name = self.name.trim().to_string();
         board.description = self.description.clone();
         (board, valid)
@@ -428,13 +439,21 @@ fn choices(db: &Db, board_id: i64, ticked: Option<&[i64]>) -> crate::error::Resu
                 .find(|b| Some(b.id()) == project.board_id && b.id() != board_id)
                 .map(|b| b.name.clone())
                 .unwrap_or_default();
-            Choice { project, on, elsewhere }
+            Choice {
+                project,
+                on,
+                elsewhere,
+            }
         })
         .collect())
 }
 
 #[component]
-async fn board_form(board: &Board, choices: &[Choice], #[default] error: Option<String>) -> Result<impl View> {
+async fn board_form(
+    board: &Board,
+    choices: &[Choice],
+    #[default] error: Option<String>,
+) -> Result<impl View> {
     Ok(view! {
         <h1>"Edit board"</h1>
         if let Some(message) = &error {
@@ -468,7 +487,7 @@ async fn info_page(cx: &Cx) -> Result<impl View> {
     let (nav, board, projects) = {
         let db = open_db()?;
         let board = db.get::<Board>(id)?.ok_or_not_found()?;
-        (Nav::load(&db)?, board, db.projects_for_board(id)?)
+        (Nav::load(&db)?, board, db.projects_in::<Board>(id)?)
     };
     let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
     Ok(view! {
@@ -520,7 +539,12 @@ async fn save_page(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<
         });
         match saved {
             Ok(()) => return Err(see_other(format!("/board/{id}/info")).into()),
-            Err(e) => (Nav::load(&db)?, board, choices(&db, id, Some(&form.projects))?, e.to_string()),
+            Err(e) => (
+                Nav::load(&db)?,
+                board,
+                choices(&db, id, Some(&form.projects))?,
+                e.to_string(),
+            ),
         }
     };
     Ok(view! {
@@ -557,7 +581,9 @@ mod tests {
     #[test]
     fn board_form_reads_repeated_project_fields() {
         let pairs = |v: &[(&str, &str)]| -> Vec<(String, String)> {
-            v.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+            v.iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect()
         };
         let form = BoardForm::parse(&pairs(&[
             ("name", " work "),
@@ -567,12 +593,22 @@ mod tests {
             ("project", "5"),
         ]));
         assert_eq!(form.projects, [3, 5]);
-        let board = Board { id: Some(1), name: String::new(), description: String::new() };
+        let board = Board {
+            id: Some(1),
+            name: String::new(),
+            description: String::new(),
+        };
         let (board, valid) = form.apply(board);
         assert!(valid.is_ok());
-        assert_eq!((board.name.as_str(), board.description.as_str()), ("work", "a\nb"));
+        assert_eq!(
+            (board.name.as_str(), board.description.as_str()),
+            ("work", "a\nb")
+        );
         let (_, blank) = BoardForm::parse(&pairs(&[("name", " ")])).apply(board);
-        assert!(matches!(blank, Err(IterError::EmptyBoardName)));
+        assert!(matches!(
+            blank,
+            Err(crate::error::IterError::EmptyName("board"))
+        ));
     }
 
     #[test]

@@ -60,20 +60,73 @@ impl Tag {
 
 /// `#` followed by exactly six hex digits.
 pub fn is_hex_color(s: &str) -> bool {
-    s.len() == 7
-        && s.starts_with('#')
-        && s[1..].chars().all(|c| c.is_ascii_hexdigit())
+    s.len() == 7 && s.starts_with('#') && s[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
 
 impl crate::models::Named for Tag {
+    const KIND: &'static str = "tag";
+
     fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Trims the name, lowercases the colour, and holds the colour to
+    /// `#rrggbb`.
+    fn validate(&mut self) -> crate::error::Result<()> {
+        self.name = self.name.trim().to_string();
+        self.color = self.color.trim().to_lowercase();
+        crate::models::require_name("tag", &self.name)?;
+        match is_hex_color(&self.color) {
+            true => Ok(()),
+            false => Err(crate::error::IterError::InvalidTagColor(self.color.clone())),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::IterError;
+    use crate::models::{Board, Named};
+
+    fn tag(name: &str, color: &str) -> Tag {
+        Tag {
+            name: name.to_string(),
+            color: color.to_string(),
+            ..Tag::template()
+        }
+    }
+
+    #[test]
+    fn a_tag_is_normalised_before_it_is_checked() {
+        let mut t = tag("  work ", " #ABCDEF ");
+        t.validate().expect("valid once trimmed");
+        assert_eq!((t.name.as_str(), t.color.as_str()), ("work", "#abcdef"));
+    }
+
+    #[test]
+    fn a_tag_needs_a_name_and_a_hex_colour() {
+        assert!(matches!(
+            tag(" ", "#ffffff").validate(),
+            Err(IterError::EmptyName("tag"))
+        ));
+        assert!(matches!(
+            tag("x", "red").validate(),
+            Err(IterError::InvalidTagColor(c)) if c == "red"
+        ));
+    }
+
+    /// Everything else only has the default check: a name.
+    #[test]
+    fn the_default_validation_is_a_non_blank_name() {
+        let mut board = Board::template();
+        assert!(matches!(
+            board.validate(),
+            Err(IterError::EmptyName("board"))
+        ));
+        board.name = "work".to_string();
+        assert!(board.validate().is_ok());
+    }
 
     #[test]
     fn hex_colors_are_hash_and_six_digits() {

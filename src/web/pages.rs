@@ -8,7 +8,6 @@ use super::layout::{self, Nav, Sel, shell};
 use super::open_db;
 use crate::db::{Db, Table};
 use crate::models::{Organization, Project, START_TIME_FMT, Session, Tag, Task, TaskStatus};
-use crate::utils::resolve::resolve_project_ids;
 use chrono::{Local, NaiveDateTime};
 use topcoat::{
     Result,
@@ -249,7 +248,7 @@ async fn org_page(cx: &Cx) -> Result<impl View> {
     let (nav, org, projects, tasks) = {
         let db = open_db()?;
         let org = db.get::<Organization>(id)?.ok_or_not_found()?;
-        let projects = db.projects_for_organization(id)?;
+        let projects = db.projects_in::<Organization>(id)?;
         let mut tasks = Vec::new();
         if tab == Tab::Tasks {
             for p in &projects {
@@ -295,11 +294,19 @@ async fn org_page(cx: &Cx) -> Result<impl View> {
 /// The names of `projects`, comma-separated -- what the organization
 /// form's "Projects" field shows.
 fn project_list(projects: &[Project]) -> String {
-    projects.iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", ")
+    projects
+        .iter()
+        .map(|p| p.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 #[component]
-async fn org_form(org: &Organization, projects: &str, #[default] error: Option<String>) -> Result<impl View> {
+async fn org_form(
+    org: &Organization,
+    projects: &str,
+    #[default] error: Option<String>,
+) -> Result<impl View> {
     Ok(view! {
         <h1>"Edit organization"</h1>
         error_box(error: &error)
@@ -324,7 +331,7 @@ async fn org_edit(cx: &Cx) -> Result<impl View> {
     let (nav, org, projects) = {
         let db = open_db()?;
         let org = db.get::<Organization>(id)?.ok_or_not_found()?;
-        let projects = project_list(&db.projects_for_organization(id)?);
+        let projects = project_list(&db.projects_in::<Organization>(id)?);
         (Nav::load(&db)?, org, projects)
     };
     Ok(view! { shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org, projects: &projects)) })
@@ -338,10 +345,10 @@ async fn org_save(cx: &Cx, Form(form): Form<OrgForm>) -> Result<impl View> {
         let existing = db.get::<Organization>(id)?.ok_or_not_found()?;
         let (org, valid) = form.apply(existing);
         let saved = valid
-            .and_then(|()| resolve_project_ids(&db, &form.project_names()))
+            .and_then(|()| db.ids_by_name::<Project>(&form.project_names()))
             .and_then(|ids| {
                 db.update(id, &org)?;
-                db.set_organization_projects(id, &ids)
+                db.set_projects::<Organization>(id, &ids)
             });
         match saved {
             Ok(()) => return Err(see_other(format!("/org/{id}")).into()),
@@ -437,7 +444,9 @@ async fn project_edit(cx: &Cx) -> Result<impl View> {
         let project = db.get::<Project>(id)?.ok_or_not_found()?;
         (Nav::load(&db)?, project, db.list::<Organization>()?)
     };
-    Ok(view! { shell(nav: &nav, sel: Sel::Project(id), project_form(project: &project, orgs: &orgs)) })
+    Ok(
+        view! { shell(nav: &nav, sel: Sel::Project(id), project_form(project: &project, orgs: &orgs)) },
+    )
 }
 
 #[page(POST "/project/{id}/edit")]
@@ -449,7 +458,12 @@ async fn project_save(cx: &Cx, Form(form): Form<ProjectForm>) -> Result<impl Vie
         let (project, valid) = form.apply(existing);
         match valid.and_then(|()| db.update(id, &project)) {
             Ok(()) => return Err(see_other(format!("/project/{id}")).into()),
-            Err(e) => (Nav::load(&db)?, project, db.list::<Organization>()?, e.to_string()),
+            Err(e) => (
+                Nav::load(&db)?,
+                project,
+                db.list::<Organization>()?,
+                e.to_string(),
+            ),
         }
     };
     Ok(view! {
@@ -551,20 +565,10 @@ async fn task_page(cx: &Cx) -> Result<impl View> {
 }
 
 fn tag_list(tags: &[Tag]) -> String {
-    tags.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ")
-}
-
-/// The ids of the tags named `names`; an unknown name is an error rather
-/// than a new tag, so a typo can't quietly mint one.
-fn tag_ids(db: &Db, names: &[String]) -> crate::error::Result<Vec<i64>> {
-    names
-        .iter()
-        .map(|n| {
-            db.find_by_name::<Tag>(n)?
-                .map(|t| t.id())
-                .ok_or_else(|| crate::error::IterError::TagNotFound(n.clone()))
-        })
-        .collect()
+    tags.iter()
+        .map(|t| t.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 #[component]
@@ -609,7 +613,9 @@ async fn task_edit(cx: &Cx) -> Result<impl View> {
         let tags = tag_list(&db.tags_for_task(id)?);
         (Nav::load(&db)?, task, tags)
     };
-    Ok(view! { shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task, tags: &tags)) })
+    Ok(
+        view! { shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task, tags: &tags)) },
+    )
 }
 
 #[page(POST "/task/{id}/edit")]
@@ -620,7 +626,7 @@ async fn task_save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
         let existing = db.get::<Task>(id)?.ok_or_not_found()?;
         let (task, valid) = form.apply(existing);
         let saved = valid
-            .and_then(|()| tag_ids(&db, &form.tag_names()))
+            .and_then(|()| db.ids_by_name::<Tag>(&form.tag_names()))
             .and_then(|ids| {
                 db.update(id, &task)?;
                 db.set_task_tags(id, &ids)

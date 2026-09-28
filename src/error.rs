@@ -53,11 +53,13 @@ pub enum IterError {
     #[error("{0}")]
     CommandFailed(String),
 
-    #[error("no such organization '{0}'")]
-    OrganizationNotFound(String),
+    /// A board, organization, project or tag looked up by a name nothing has.
+    #[error("no such {kind} '{name}'")]
+    NotFound { kind: &'static str, name: String },
 
-    #[error("no such project '{0}'")]
-    ProjectNotFound(String),
+    /// `kind` is what the name belongs to: "board", "task", ...
+    #[error("{0} name cannot be empty")]
+    EmptyName(&'static str),
 
     #[error("no such task '{task}' in project '{project}'")]
     TaskNotFound { project: String, task: String },
@@ -74,32 +76,11 @@ pub enum IterError {
     #[error("invalid status '{0}', expected queue, wip, or done")]
     InvalidStatus(String),
 
-    #[error("no such board '{0}'")]
-    BoardNotFound(String),
-
-    #[error("board name cannot be empty")]
-    EmptyBoardName,
-
-    #[error("no such tag '{0}'")]
-    TagNotFound(String),
-
-    #[error("tag name cannot be empty")]
-    EmptyTagName,
-
     #[error("invalid tag color '{0}' (expected #rrggbb)")]
     InvalidTagColor(String),
 
     #[error("tag '{0}' is built in and can't be renamed or deleted")]
     BuiltinTag(String),
-
-    #[error("organization name cannot be empty")]
-    EmptyOrganizationName,
-
-    #[error("project name cannot be empty")]
-    EmptyProjectName,
-
-    #[error("task name cannot be empty")]
-    EmptyTaskName,
 
     #[error("base_path cannot be empty")]
     EmptyBasePath,
@@ -125,23 +106,20 @@ pub enum IterError {
     #[error("tmux session '{0}' isn't tracked by iter")]
     UntrackedTmuxSession(String),
 
-    #[error("task for this session no longer exists")]
-    OrphanSessionTask,
+    /// A foreign key pointing at a row that's gone: the `what` a `of` names.
+    #[error("{what} for this {of} no longer exists")]
+    Orphan {
+        what: &'static str,
+        of: &'static str,
+    },
 
-    #[error("project for this task no longer exists")]
-    OrphanTaskProject,
-
-    #[error("board for this project no longer exists")]
-    OrphanProjectBoard,
-
-    #[error("project '{0}' isn't bound to a board")]
-    ProjectHasNoBoard(String),
-
-    #[error("organization for this project no longer exists")]
-    OrphanProjectOrganization,
-
-    #[error("project '{0}' doesn't belong to an organization")]
-    ProjectHasNoOrganization(String),
+    /// A project in no board/organization, where one was needed.
+    /// `relation` reads as "isn't bound to a board".
+    #[error("project '{project}' {relation}")]
+    NotAMember {
+        project: String,
+        relation: &'static str,
+    },
 
     #[error("no open session for '{0}' -- run `iter session start` or attach to its tmux session")]
     NoOpenSession(String),
@@ -171,3 +149,56 @@ pub enum IterError {
 }
 
 pub type Result<T> = std::result::Result<T, IterError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The parameterised variants replaced one variant per entity; what
+    /// the user reads has to be exactly what those used to say.
+    #[test]
+    fn parameterised_errors_read_as_the_per_entity_ones_did() {
+        let cases = [
+            (
+                IterError::NotFound {
+                    kind: "organization",
+                    name: "acme".into(),
+                },
+                "no such organization 'acme'",
+            ),
+            (
+                IterError::NotFound {
+                    kind: "tag",
+                    name: "x".into(),
+                },
+                "no such tag 'x'",
+            ),
+            (IterError::EmptyName("board"), "board name cannot be empty"),
+            (IterError::EmptyName("task"), "task name cannot be empty"),
+            (
+                IterError::Orphan {
+                    what: "task",
+                    of: "session",
+                },
+                "task for this session no longer exists",
+            ),
+            (
+                IterError::Orphan {
+                    what: "organization",
+                    of: "project",
+                },
+                "organization for this project no longer exists",
+            ),
+            (
+                IterError::NotAMember {
+                    project: "p".into(),
+                    relation: "isn't bound to a board",
+                },
+                "project 'p' isn't bound to a board",
+            ),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(error.to_string(), expected);
+        }
+    }
+}

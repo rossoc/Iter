@@ -11,8 +11,7 @@ use topcoat::{
     Result,
     context::Cx,
     router::{
-        Body, Next, error::forbidden, layer, request::headers, request::method,
-        response::Response,
+        Body, Next, error::forbidden, layer, request::headers, request::method, response::Response,
     },
 };
 

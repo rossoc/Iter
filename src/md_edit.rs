@@ -242,7 +242,9 @@ mod tests {
         let rendered = render_template(&edit).unwrap();
         assert!(rendered.contains("projects:\n- one\n- two\n"), "{rendered}");
 
-        let back = resolve_edit::<OrganizationEdit>("", &rendered).unwrap().unwrap();
+        let back = resolve_edit::<OrganizationEdit>("", &rendered)
+            .unwrap()
+            .unwrap();
         assert_eq!(back.projects, ["one", "two"]);
         assert_eq!(back.organization.id, Some(7));
         assert_eq!(back.organization.name, "acme");
@@ -250,7 +252,9 @@ mod tests {
         assert_eq!(back.organization.tmux, edit.organization.tmux);
 
         let without = rendered.replace("projects:\n- one\n- two\n", "");
-        let back = resolve_edit::<OrganizationEdit>("", &without).unwrap().unwrap();
+        let back = resolve_edit::<OrganizationEdit>("", &without)
+            .unwrap()
+            .unwrap();
         assert!(back.projects.is_empty());
     }
 

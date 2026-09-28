@@ -9,8 +9,8 @@ use crate::config::config;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::md_edit::edited;
-use crate::models::task_ref;
 use crate::models::{Project, SessionConfig, Task, TaskStatus};
+use crate::models::{require_name, task_ref};
 use crate::reporting::{
     Header, Report, TaskInfo, WeekdayReport, session_rows, settings_of, weekday_averages,
 };
@@ -84,9 +84,7 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
     }
 
     edited(&template, "task", "created", |mut task| {
-        if task.name.trim().is_empty() {
-            return Err(IterError::EmptyTaskName);
-        }
+        require_name("task", &task.name)?;
         task.project_id = project_id; // never carried through the YAML
         db.insert(&task)?;
         Ok(format!("created task '{}'", task_display(&project, &task)))

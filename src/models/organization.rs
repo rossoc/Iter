@@ -71,9 +71,15 @@ impl Organization {
     }
 }
 
-impl crate::models::Named for Organization {
-    fn name(&self) -> &str {
-        &self.name
+crate::models::named!(Organization, "organization");
+
+impl crate::models::ProjectGroup for Organization {
+    const MEMBER_COLUMN: &'static str = "organization_id";
+    const NOT_A_MEMBER: &'static str = "doesn't belong to an organization";
+    const DETACHED: &'static str = "without an organization";
+
+    fn group_of(project: &crate::models::Project) -> Option<i64> {
+        project.organization_id
     }
 }
 

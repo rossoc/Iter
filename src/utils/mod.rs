@@ -9,6 +9,7 @@
 //! each one in a single place with a single reason to change.
 
 pub mod clock;
+pub mod crud;
 pub mod output;
 pub mod report;
 pub mod resolve;

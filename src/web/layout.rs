@@ -6,7 +6,11 @@ use crate::db::{Db, Table};
 use crate::models::{Organization, Project};
 use topcoat::{
     Result,
-    router::{Slot, content::{Css, Js}, layout, route},
+    router::{
+        Slot,
+        content::{Css, Js},
+        layout, route,
+    },
     view::{Child, View, component, view},
 };
 
@@ -32,7 +36,7 @@ impl Nav {
     pub fn load(db: &Db) -> crate::error::Result<Nav> {
         let mut orgs = Vec::new();
         for org in db.list::<Organization>()? {
-            let projects = db.projects_for_organization(org.id())?;
+            let projects = db.projects_in::<Organization>(org.id())?;
             orgs.push((org, projects));
         }
         let loose = db

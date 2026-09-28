@@ -14,11 +14,11 @@ use crate::db::Db;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::md_edit::edited;
-use crate::models::Project;
+use crate::models::{Board, Named, Organization, Project};
 use crate::reporting::{Header, ProjectInfo, Report, settings_of};
 use crate::utils::output::list_names;
 use crate::utils::report::{resolve_range, task_reports, total_minutes};
-use crate::utils::resolve::{resolve_board, resolve_organization, resolve_project_or_current};
+use crate::utils::resolve::resolve_project_or_current;
 use crate::utils::workspace::teardown_session_config;
 use crate::{git, scaffold, tmux};
 
@@ -42,9 +42,7 @@ fn create_project_interactively(
     edited(template, "project", "created", |mut project| {
         project.organization_id = template.organization_id; // never carried through the YAML
         project.board_id = template.board_id;
-        if project.name.trim().is_empty() {
-            return Err(IterError::EmptyProjectName);
-        }
+        project.validate()?;
         if project.base_path.trim().is_empty() {
             return Err(IterError::EmptyBasePath);
         }
@@ -72,7 +70,7 @@ fn create_project_interactively(
 fn new_project_template(db: &Db, organization: Option<&str>) -> Result<Project> {
     let mut template = Project::template(&config().project);
     if let Some(name) = organization {
-        template.inherit_from(&resolve_organization(db, name)?);
+        template.inherit_from(&db.resolve::<Organization>(name)?);
     }
     Ok(template)
 }
@@ -125,7 +123,7 @@ pub(crate) fn clone_cmd(app: &App, source: &str, organization: Option<&str>) -> 
             // `--organization` here only changes which organization the
             // copy belongs to -- it doesn't re-seed the defaults.
             if let Some(name) = organization {
-                template.organization_id = resolve_organization(db, name)?.id;
+                template.organization_id = db.resolve::<Organization>(name)?.id;
             }
             let files_from = source_project.base_path.clone();
             create_project_interactively(db, &template, Some(&source_project.name), |dest| {
@@ -150,9 +148,10 @@ pub(crate) fn clone_cmd(app: &App, source: &str, organization: Option<&str>) -> 
 impl Run for ProjectCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
-            Self::New { organization, board } => {
-                project_new(app, organization.as_deref(), board.as_deref())
-            }
+            Self::New {
+                organization,
+                board,
+            } => project_new(app, organization.as_deref(), board.as_deref()),
             Self::Edit {
                 name,
                 organization,
@@ -176,7 +175,7 @@ fn project_new(app: &App, organization: Option<&str>, board: Option<&str>) -> Re
     let db = &app.db;
     let mut template = new_project_template(db, organization)?;
     if let Some(name) = board {
-        template.board_id = resolve_board(db, name)?.id;
+        template.board_id = db.resolve::<Board>(name)?.id;
     }
     create_project_interactively(db, &template, None, |_| Ok(()))
 }
@@ -194,12 +193,12 @@ fn project_edit(
     // `--organization` moves the project; without it, membership (or the
     // lack of it) is carried through untouched.
     let organization_id = match organization {
-        Some(name) => resolve_organization(db, name)?.id,
+        Some(name) => db.resolve::<Organization>(name)?.id,
         None => existing.organization_id,
     };
     // Same for the board; `--no-board` is the one way to leave it.
     let board_id = match (board, no_board) {
-        (Some(name), _) => resolve_board(db, name)?.id,
+        (Some(name), _) => db.resolve::<Board>(name)?.id,
         (None, true) => None,
         (None, false) => existing.board_id,
     };

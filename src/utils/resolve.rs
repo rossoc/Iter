@@ -8,7 +8,7 @@
 
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::models::{Board, Tag, Organization, Project, Task, split_task_ref, task_ref};
+use crate::models::{Project, ProjectGroup, Task, split_task_ref, task_ref};
 use crate::{git, tmux};
 
 /// How a task is named everywhere the CLI speaks about one: the exact
@@ -25,11 +25,14 @@ pub(crate) fn parse_task_ref(reference: &str) -> Result<(&str, &str)> {
 
 pub(crate) fn resolve_task(db: &Db, task_ref: &str) -> Result<(Project, Task)> {
     let (project_name, task_name) = parse_task_ref(task_ref)?;
-    let project = db
-        .find_by_name::<Project>(project_name)?
-        .ok_or_else(|| IterError::ProjectNotFound(project_name.to_string()))?;
+    let project = db.resolve::<Project>(project_name)?;
     let task = find_task_or_err(db, &project, task_name)?;
     Ok((project, task))
+}
+
+/// The row `id` points at, or the error saying `what` the `of` named is gone.
+fn follow<T: Table>(db: &Db, id: i64, what: &'static str, of: &'static str) -> Result<T> {
+    db.get::<T>(id)?.ok_or(IterError::Orphan { what, of })
 }
 
 /// Resolves the project + task for the tmux session this process is
@@ -39,12 +42,8 @@ pub(crate) fn current_session_task(db: &Db) -> Result<(Project, Task)> {
     let session_config = db
         .find_session_config_by_tmux_name(&name)?
         .ok_or_else(|| IterError::UntrackedTmuxSession(name.clone()))?;
-    let task = db
-        .get::<Task>(session_config.task_id)?
-        .ok_or(IterError::OrphanSessionTask)?;
-    let project = db
-        .get::<Project>(task.project_id)?
-        .ok_or(IterError::OrphanTaskProject)?;
+    let task: Task = follow(db, session_config.task_id, "task", "session")?;
+    let project = follow(db, task.project_id, "project", "task")?;
     Ok((project, task))
 }
 
@@ -61,56 +60,25 @@ pub(crate) fn resolve_task_or_current(db: &Db, task_ref: Option<&str>) -> Result
 /// project of the tmux session this process is running inside.
 pub(crate) fn resolve_project_or_current(db: &Db, name: Option<&str>) -> Result<Project> {
     match name {
-        Some(n) => db
-            .find_by_name::<Project>(n)?
-            .ok_or_else(|| IterError::ProjectNotFound(n.to_string())),
+        Some(n) => db.resolve(n),
         None => current_session_task(db).map(|(project, _)| project),
     }
 }
 
-/// The ids of the projects named `names`, all or nothing: an unknown name
-/// is an error before anything is written, so a typo can't half-apply a
-/// roster.
-pub(crate) fn resolve_project_ids(db: &Db, names: &[String]) -> Result<Vec<i64>> {
-    names
-        .iter()
-        .map(|n| {
-            db.find_by_name::<Project>(n)?
-                .map(|p| p.id())
-                .ok_or_else(|| IterError::ProjectNotFound(n.clone()))
-        })
-        .collect()
-}
-
-pub(crate) fn resolve_board(db: &Db, name: &str) -> Result<Board> {
-    db.find_by_name::<Board>(name)?
-        .ok_or_else(|| IterError::BoardNotFound(name.to_string()))
-}
-
-pub(crate) fn resolve_tag(db: &Db, name: &str) -> Result<Tag> {
-    db.find_by_name::<Tag>(name)?
-        .ok_or_else(|| IterError::TagNotFound(name.to_string()))
-}
-
-pub(crate) fn resolve_organization(db: &Db, name: &str) -> Result<Organization> {
-    db.find_by_name::<Organization>(name)?
-        .ok_or_else(|| IterError::OrganizationNotFound(name.to_string()))
-}
-
-/// Resolves an explicit organization name, or -- when none is given -- the
-/// organization of the tmux session's project. Erroring when that project
-/// belongs to none is deliberate: there's no sensible "current"
-/// organization to fall back to, and membership is optional by design.
-pub(crate) fn resolve_organization_or_current(db: &Db, name: Option<&str>) -> Result<Organization> {
+/// Resolves an explicit board/organization name, or -- when none is given
+/// -- the one the tmux session's project is in. Erroring when that project
+/// is in none is deliberate: membership is optional by design, so there's
+/// no sensible "current" one to fall back to.
+pub(crate) fn resolve_group_or_current<G: ProjectGroup>(db: &Db, name: Option<&str>) -> Result<G> {
     if let Some(name) = name {
-        return resolve_organization(db, name);
+        return db.resolve(name);
     }
     let project = current_session_task(db)?.0;
-    let id = project
-        .organization_id
-        .ok_or_else(|| IterError::ProjectHasNoOrganization(project.name.clone()))?;
-    db.get::<Organization>(id)?
-        .ok_or(IterError::OrphanProjectOrganization)
+    let id = G::group_of(&project).ok_or_else(|| IterError::NotAMember {
+        project: project.name.clone(),
+        relation: G::NOT_A_MEMBER,
+    })?;
+    follow(db, id, G::KIND, "project")
 }
 
 /// One named task of `project`, or the same "no such task" error a

@@ -1,6 +1,8 @@
 use crate::config::config;
-use crate::error::Result;
-use crate::models::{Duration, Named, Project, Session, SessionConfig, Tag, Task, TaskStatus};
+use crate::error::{IterError, Result};
+use crate::models::{
+    Duration, Named, Project, ProjectGroup, Session, SessionConfig, Tag, Task, TaskStatus,
+};
 use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
@@ -441,43 +443,55 @@ impl Db {
     /// The `T` named `name`, if any. Every table with a unique, user-facing
     /// `name` column is looked up exactly this way, so the lookup is
     /// generic rather than written once per entity.
-    pub fn find_by_name<T: Table>(&self, name: &str) -> Result<Option<T>> {
+    pub fn find_by_name<T: Named>(&self, name: &str) -> Result<Option<T>> {
         self.find_one("WHERE name = ?1", params![name])
     }
 
-    /// Every project belonging to `organization_id`, in name order -- the
-    /// roster an organization report walks.
-    pub fn projects_for_organization(&self, organization_id: i64) -> Result<Vec<Project>> {
+    /// The `T` named `name`, or the "no such <kind>" error.
+    pub fn resolve<T: Named>(&self, name: &str) -> Result<T> {
+        self.find_by_name(name)?.ok_or_else(|| IterError::NotFound {
+            kind: T::KIND,
+            name: name.to_string(),
+        })
+    }
+
+    /// The ids of the `T`s named `names`, all or nothing: an unknown name
+    /// is an error before anything is written, so a typo can't half-apply
+    /// a roster.
+    pub fn ids_by_name<T: Named>(&self, names: &[String]) -> Result<Vec<i64>> {
+        names
+            .iter()
+            .map(|n| Ok(self.resolve::<T>(n)?.id()))
+            .collect()
+    }
+
+    /// Every project in group `id` (a board, an organization), in name order.
+    pub fn projects_in<G: ProjectGroup>(&self, id: i64) -> Result<Vec<Project>> {
         self.find_all(
-            "WHERE organization_id = ?1 ORDER BY name",
-            params![organization_id],
+            &format!("WHERE {} = ?1 ORDER BY name", G::MEMBER_COLUMN),
+            params![id],
         )
     }
 
-    /// Makes `project_ids` exactly the projects in `organization_id`: the
-    /// ones listed move in (out of whichever organization they were in),
-    /// the ones left off move out to no organization. Only membership
-    /// changes -- a project keeps its own settings either way.
-    pub fn set_organization_projects(&self, organization_id: i64, project_ids: &[i64]) -> Result<()> {
+    /// Makes `project_ids` exactly the projects in group `id`: the ones
+    /// listed move in (out of whichever group they were in), the ones left
+    /// off move out to none. Only membership changes -- a project keeps its
+    /// own settings either way.
+    pub fn set_projects<G: ProjectGroup>(&self, id: i64, project_ids: &[i64]) -> Result<()> {
+        let column = G::MEMBER_COLUMN;
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
-            "UPDATE projects SET organization_id = NULL WHERE organization_id = ?1",
-            params![organization_id],
+            &format!("UPDATE projects SET {column} = NULL WHERE {column} = ?1"),
+            params![id],
         )?;
         for project_id in project_ids {
             tx.execute(
-                "UPDATE projects SET organization_id = ?1 WHERE id = ?2",
-                params![organization_id, project_id],
+                &format!("UPDATE projects SET {column} = ?1 WHERE id = ?2"),
+                params![id, project_id],
             )?;
         }
         tx.commit()?;
         Ok(())
-    }
-
-    /// Every project bound to `board_id`, in name order -- the roster a
-    /// board is a container of.
-    pub fn projects_for_board(&self, board_id: i64) -> Result<Vec<Project>> {
-        self.find_all("WHERE board_id = ?1 ORDER BY name", params![board_id])
     }
 
     pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
@@ -612,7 +626,7 @@ impl Db {
     /// Every `T`'s name, in `T`'s listing order -- what `iter <entity>
     /// list` prints and what shell completion offers. A listing of names is
     /// a query, so it lives here rather than in either caller.
-    pub fn names<T: Table + Named>(&self) -> Result<Vec<String>> {
+    pub fn names<T: Named>(&self) -> Result<Vec<String>> {
         Ok(self
             .list::<T>()?
             .into_iter()
@@ -754,7 +768,7 @@ impl<T: Column> Column for Option<T> {
 mod tests {
     use super::*;
     use crate::config::ProjectDefaults;
-    use crate::models::Organization;
+    use crate::models::{Board, Organization};
 
     fn day(s: &str) -> NaiveDate {
         NaiveDate::parse_from_str(s, "%Y-%m-%d")
@@ -1607,13 +1621,16 @@ mod tests {
         let dropped = insert_project(&db, "dropped");
         let stolen = insert_project(&db, "stolen");
         let bystander = insert_project(&db, "bystander");
-        db.set_organization_projects(acme, &[kept, dropped]).unwrap();
-        db.set_organization_projects(other, &[stolen, bystander]).unwrap();
+        db.set_projects::<Organization>(acme, &[kept, dropped])
+            .unwrap();
+        db.set_projects::<Organization>(other, &[stolen, bystander])
+            .unwrap();
 
-        db.set_organization_projects(acme, &[kept, stolen]).unwrap();
+        db.set_projects::<Organization>(acme, &[kept, stolen])
+            .unwrap();
 
         let names = |org| -> Vec<String> {
-            db.projects_for_organization(org)
+            db.projects_in::<Organization>(org)
                 .unwrap()
                 .into_iter()
                 .map(|p| p.name)
@@ -1621,7 +1638,10 @@ mod tests {
         };
         assert_eq!(names(acme), ["kept", "stolen"]);
         assert_eq!(names(other), ["bystander"]);
-        assert_eq!(db.get::<Project>(dropped).unwrap().unwrap().organization_id, None);
+        assert_eq!(
+            db.get::<Project>(dropped).unwrap().unwrap().organization_id,
+            None
+        );
     }
 
     #[test]
@@ -1651,7 +1671,7 @@ mod tests {
         );
 
         let roster: Vec<String> = db
-            .projects_for_organization(organization)
+            .projects_in::<Organization>(organization)
             .expect("roster loads")
             .into_iter()
             .map(|p| p.name)
@@ -1757,6 +1777,57 @@ mod tests {
         assert!(!db.table_exists("records").expect("check succeeds"));
     }
 
+    #[test]
+    fn resolve_names_the_kind_it_could_not_find() {
+        let db = db();
+        insert_project(&db, "alpha");
+        assert_eq!(db.resolve::<Project>("alpha").expect("found").name, "alpha");
+        let missing = db.resolve::<Board>("nope").expect_err("no such board");
+        assert_eq!(missing.to_string(), "no such board 'nope'");
+    }
+
+    /// One unknown name fails the whole lookup, so a roster is never
+    /// half-applied.
+    #[test]
+    fn ids_by_name_is_all_or_nothing() {
+        let db = db();
+        let a = insert_project(&db, "a");
+        let b = insert_project(&db, "b");
+        let names = |ns: &[&str]| ns.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            db.ids_by_name::<Project>(&names(&["b", "a"])).expect("ids"),
+            [b, a]
+        );
+        assert!(db.ids_by_name::<Project>(&names(&["a", "typo"])).is_err());
+        assert_eq!(
+            db.ids_by_name::<Tag>(&names(&["Urgent"]))
+                .expect("seeded")
+                .len(),
+            1
+        );
+    }
+
+    /// Board and organization membership are independent columns driven by
+    /// the same generic code: moving a project on one leaves the other be.
+    #[test]
+    fn set_projects_touches_only_its_own_group_column() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("insert board");
+        let acme = insert_organization(&db, "acme");
+        let (a, b) = (insert_project(&db, "a"), insert_project(&db, "b"));
+        db.set_projects::<Organization>(acme, &[a, b])
+            .expect("org roster");
+        db.set_projects::<Board>(work, &[a]).expect("board roster");
+        db.set_projects::<Board>(work, &[b]).expect("board roster");
+
+        let names = |ps: Vec<Project>| ps.into_iter().map(|p| p.name).collect::<Vec<_>>();
+        assert_eq!(names(db.projects_in::<Board>(work).expect("board")), ["b"]);
+        assert_eq!(
+            names(db.projects_in::<Organization>(acme).expect("org")),
+            ["a", "b"]
+        );
+    }
+
     fn board(name: &str) -> crate::models::Board {
         crate::models::Board {
             id: None,
@@ -1766,10 +1837,10 @@ mod tests {
     }
 
     /// Binding is the whole point of a board: a project put on one shows
-    /// up in `projects_for_board`, and a project on another board or none
+    /// up in `projects_in::<Board>`, and a project on another board or none
     /// does not.
     #[test]
-    fn projects_for_board_returns_only_the_projects_bound_to_it() {
+    fn projects_in_a_board_are_only_the_projects_bound_to_it() {
         let db = db();
         let work = db.insert(&board("work")).expect("insert board");
         let home = db.insert(&board("home")).expect("insert board");
@@ -1785,7 +1856,7 @@ mod tests {
         }
 
         let names: Vec<String> = db
-            .projects_for_board(work)
+            .projects_in::<Board>(work)
             .expect("query")
             .into_iter()
             .map(|p| p.name)
@@ -1799,27 +1870,48 @@ mod tests {
     #[test]
     fn urgent_and_important_tags_are_seeded_once() {
         let db = db();
-        let mut urgent = db.find_by_name::<Tag>("Urgent").expect("find").expect("seeded");
-        let important = db.find_by_name::<Tag>("Important").expect("find").expect("seeded");
-        assert_eq!((urgent.color.as_str(), important.color.as_str()), ("#facc15", "#3b82f6"));
+        let mut urgent = db
+            .find_by_name::<Tag>("Urgent")
+            .expect("find")
+            .expect("seeded");
+        let important = db
+            .find_by_name::<Tag>("Important")
+            .expect("find")
+            .expect("seeded");
+        assert_eq!(
+            (urgent.color.as_str(), important.color.as_str()),
+            ("#facc15", "#3b82f6")
+        );
 
         urgent.color = "#ff0000".into();
         db.update(urgent.id(), &urgent).expect("recolor");
         db.seed_tags().expect("reseed");
         assert_eq!(db.list::<Tag>().expect("list").len(), 2);
-        let urgent = db.find_by_name::<Tag>("Urgent").expect("find").expect("seeded");
+        let urgent = db
+            .find_by_name::<Tag>("Urgent")
+            .expect("find")
+            .expect("seeded");
         assert_eq!(urgent.color, "#ff0000");
     }
 
     /// Tags are shared: setting replaces, and deleting a task or a tag
     /// drops only the link.
+    #[cfg(feature = "web")]
     #[test]
     fn task_tags_replace_and_cascade() {
         let db = db();
         let project = insert_project(&db, "a");
         let task = insert_task(&db, project, "t");
-        let urgent = db.find_by_name::<Tag>("Urgent").expect("find").expect("seeded").id();
-        let important = db.find_by_name::<Tag>("Important").expect("find").expect("seeded").id();
+        let urgent = db
+            .find_by_name::<Tag>("Urgent")
+            .expect("find")
+            .expect("seeded")
+            .id();
+        let important = db
+            .find_by_name::<Tag>("Important")
+            .expect("find")
+            .expect("seeded")
+            .id();
 
         db.set_task_tags(task, &[urgent, important]).expect("set");
         assert_eq!(db.tags_for_task(task).expect("tags").len(), 2);
@@ -1910,7 +2002,10 @@ mod tests {
         }
         let db = Db::open(path.to_str().expect("utf8 path")).expect("migrates");
         for column in ["urgency", "importance", "start_time", "duration"] {
-            assert!(db.column_exists("tasks", column).expect("check"), "{column}");
+            assert!(
+                db.column_exists("tasks", column).expect("check"),
+                "{column}"
+            );
         }
         std::fs::remove_dir_all(&dir).ok();
     }
