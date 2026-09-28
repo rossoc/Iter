@@ -3,24 +3,31 @@
 //! only then builds its view, so no database connection lives across
 //! rendering.
 
-use super::edit::{Loaded, load, submit};
-use super::forms::{OrgForm, ProjectForm, TaskForm, joined};
+use super::edit::{EditForm, Loaded, load, submit};
+use super::forms::{OrgForm, ProjectForm, TaskForm, joined, names};
 use super::layout::{
     self, Nav, Sel, check, cls, description, error_box, field, form_actions, shell, textarea,
 };
 use super::open_db;
 use super::org;
 use super::v2::compare;
+use crate::config::config;
 use crate::db::{Db, Table};
+use crate::git;
 use crate::models::{
     Configured, Duration, Organization, Project, ProjectGroup, START_TIME_FMT, Session, Settings,
-    Task, TaskStatus,
+    Tag, Task, TaskStatus,
 };
 use chrono::{Local, NaiveDateTime};
 use topcoat::{
     Result,
     context::Cx,
-    router::{RouterBuilder, content::Form, error::RouterErrorExt, page, path_param, query_params},
+    router::{
+        RouterBuilder,
+        content::Form,
+        error::{RouterErrorExt, see_other},
+        page, path_param, query_params,
+    },
     view::{View, component, view},
 };
 
@@ -50,6 +57,8 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .page(task_page)
         .page(task_edit)
         .page(task_save)
+        .page(task_new)
+        .page(task_new_save)
 }
 
 // ---- small building blocks --------------------------------------------------
@@ -132,9 +141,14 @@ fn org_of(db: &Db, project: &Project) -> crate::error::Result<Option<Organizatio
 
 /// `rows` are `(project name, task)`, the shape `Db::tasks_in` returns.
 #[component]
-async fn task_table(rows: &[(String, Task)], with_project: bool) -> Result<impl View> {
+async fn task_table(
+    rows: &[(String, Task)],
+    with_project: bool,
+    /// The project a placeholder "new task" row at the top adds to, if any.
+    #[default] new_in: Option<i64>,
+) -> Result<impl View> {
     Ok(view! {
-        if rows.is_empty() {
+        if rows.is_empty() && new_in.is_none() {
             <p class="empty">"No tasks."</p>
         } else {
             <table>
@@ -146,6 +160,13 @@ async fn task_table(rows: &[(String, Task)], with_project: bool) -> Result<impl 
                     <th>"Status"</th>
                     <th>"Issue"</th>
                 </tr>
+                if let Some(project_id) = new_in {
+                    <tr class="new">
+                        <td colspan=(if with_project { "4" } else { "3" })>
+                            <a href=(format!("/project/{project_id}/task/new"))>"+ New task"</a>
+                        </td>
+                    </tr>
+                }
                 for (project, task) in rows.iter() {
                     <tr>
                         <td><a href=(format!("/task/{}", task.id()))>(task.name.clone())</a></td>
@@ -326,7 +347,7 @@ async fn project_page(cx: &Cx) -> Result<impl View> {
                 <dl>row(label: "base path", value: &project.base_path)</dl>
                 settings(s: project.settings())
             } else {
-                task_table(rows: &tasks, with_project: false)
+                task_table(rows: &tasks, with_project: false, new_in: Some(id))
             }
         )
     })
@@ -460,13 +481,20 @@ async fn task_page(cx: &Cx) -> Result<impl View> {
 }
 
 #[component]
-async fn task_form(task: &Task, tags: &str, #[default] error: Option<String>) -> Result<impl View> {
+async fn task_form(
+    task: &Task,
+    tags: &str,
+    title: &str,
+    #[into] action: String,
+    #[into] cancel: String,
+    #[default] error: Option<String>,
+) -> Result<impl View> {
     let issue_number = task.github_issue.map(|n| n.to_string()).unwrap_or_default();
     let (start, duration) = (task.start_text(), task.duration_text());
     Ok(view! {
-        <h1>"Edit task"</h1>
+        <h1>(title.to_string())</h1>
         error_box(error: &error)
-        <form method="post" action=(format!("/task/{}/edit", task.id()))>
+        <form method="post" action=(action.clone())>
             field(name: "name", label: "Name", value: &task.name)
             textarea(text: &task.description)
             <label>"Status"</label>
@@ -480,7 +508,7 @@ async fn task_form(task: &Task, tags: &str, #[default] error: Option<String>) ->
             field(name: "start_time", label: "Start (yyyy-mm-dd hh:mm)", value: &start)
             field(name: "duration", label: "Duration (hh:mm)", value: &duration)
             field(name: "tags", label: "Tags (comma-separated -- Urgent and Important flag the task)", value: tags)
-            form_actions(cancel: format!("/task/{}", task.id()))
+            form_actions(cancel: cancel.clone())
         </form>
     })
 }
@@ -490,7 +518,13 @@ async fn task_edit(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let page: Loaded<Task, _> = load(id, |db| Ok(joined(&db.tags_for_task(id)?)))?;
     Ok(view! {
-        shell(nav: &page.nav, sel: Sel::Project(page.row.project_id), task_form(task: &page.row, tags: &page.extra))
+        shell(nav: &page.nav, sel: Sel::Project(page.row.project_id), task_form(
+            task: &page.row,
+            tags: &page.extra,
+            title: "Edit task",
+            action: format!("/task/{id}/edit"),
+            cancel: format!("/task/{id}"),
+        ))
     })
 }
 
@@ -499,6 +533,77 @@ async fn task_save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let (page, error) = submit(id, &form, |_| Ok(()))?;
     Ok(view! {
-        shell(nav: &page.nav, sel: Sel::Project(page.row.project_id), task_form(task: &page.row, tags: &form.tags, error: Some(error)))
+        shell(
+            nav: &page.nav,
+            sel: Sel::Project(page.row.project_id),
+            task_form(
+                task: &page.row,
+                tags: &form.tags,
+                title: "Edit task",
+                action: format!("/task/{id}/edit"),
+                cancel: format!("/task/{id}"),
+                error: Some(error),
+            )
+        )
+    })
+}
+
+#[page("/project/{id}/task/new")]
+async fn task_new(cx: &Cx) -> Result<impl View> {
+    let id = *path_param::<Id>(cx)?;
+    let (nav, task) = {
+        let db = open_db()?;
+        let project = db.get::<Project>(id)?.ok_or_not_found()?;
+        let task = Task::template(id, git::branch_prefix(&project.branch_template), config().task.status);
+        (Nav::load(&db)?, task)
+    };
+    Ok(view! {
+        shell(
+            nav: &nav,
+            sel: Sel::Project(id),
+            task_form(
+                task: &task,
+                tags: "",
+                title: "New task",
+                action: format!("/project/{id}/task/new"),
+                cancel: format!("/project/{id}?tab=tasks"),
+            )
+        )
+    })
+}
+
+#[page(POST "/project/{id}/task/new")]
+async fn task_new_save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
+    let id = *path_param::<Id>(cx)?;
+    let (nav, task, error) = {
+        let db = open_db()?;
+        let project = db.get::<Project>(id)?.ok_or_not_found()?;
+        let template = Task::template(id, git::branch_prefix(&project.branch_template), config().task.status);
+        let (task, valid) = form.apply(template);
+        let saved = valid
+            .and_then(|()| db.ids_by_name::<Tag>(&names(&form.tags)))
+            .and_then(|tag_ids| {
+                let new_id = db.insert(&task)?;
+                db.set_task_tags(new_id, &tag_ids)?;
+                Ok(new_id)
+            });
+        match saved {
+            Ok(new_id) => return Err(see_other(format!("/task/{new_id}")).into()),
+            Err(e) => (Nav::load(&db)?, task, e.to_string()),
+        }
+    };
+    Ok(view! {
+        shell(
+            nav: &nav,
+            sel: Sel::Project(id),
+            task_form(
+                task: &task,
+                tags: &form.tags,
+                title: "New task",
+                action: format!("/project/{id}/task/new"),
+                cancel: format!("/project/{id}?tab=tasks"),
+                error: Some(error),
+            )
+        )
     })
 }

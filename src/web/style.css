@@ -25,6 +25,9 @@ pre.desc{white-space:pre-wrap;font:inherit;background:var(--side);padding:12px;b
 table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 th{color:var(--muted);font-weight:500;font-size:13px}
+tr.new td{padding:0}
+tr.new a{display:block;padding:6px 8px;color:var(--muted);text-decoration:none}
+tr.new a:hover{background:var(--side);color:var(--accent)}
 .pill{font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line)}
 .pill.wip{border-color:var(--accent);color:var(--accent)}
 form label{display:block;margin:12px 0 4px;color:var(--muted);font-size:13px}
