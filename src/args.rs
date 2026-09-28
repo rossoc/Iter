@@ -121,6 +121,19 @@ pub enum Command {
     /// Print `<project>/<task>` for the tmux session you're currently in
     T,
 
+    /// Browse and edit organizations, projects and tasks in the browser
+    /// (a local server over the same database the CLI uses)
+    #[cfg(feature = "web")]
+    Serve {
+        /// Port to listen on (127.0.0.1 only)
+        #[clap(long, short = 'p', default_value_t = 3000)]
+        port: u16,
+
+        /// Don't open the browser
+        #[clap(long)]
+        no_open: bool,
+    },
+
     /// Commands invoked by tmux hooks -- not meant to be run by hand
     #[clap(hide = true)]
     Internal {
