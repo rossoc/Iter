@@ -461,6 +461,29 @@ project's `base_path` has to have `default_branch` itself checked out --
 that second merge lands in whatever is checked out there, and git would
 merge into a bystander branch as happily as into the right one.
 
+## Browsing in the browser: `iter serve`
+
+```sh
+iter serve            # http://127.0.0.1:3000, opens your browser
+iter serve --port 8080 --no-open
+```
+
+A small local web app (built on [topcoat](https://github.com/tokio-rs/topcoat))
+over the same `iter.db` the CLI uses -- nothing is copied or moved, and the
+CLI keeps working while it runs. The sidebar lists organizations with their
+projects below (projects without an organization are listed separately).
+Click an organization or project for its info; the **Info | Tasks** switch
+above it shows its tasks instead -- for an organization, those of all its
+projects; for a project, only its own. A task opens on its own page with its
+sessions. **Edit** on any of the three opens a form and saves straight back
+to the database.
+
+The server listens on `127.0.0.1` only, refuses requests whose `Host` isn't
+a loopback name, and refuses form submissions whose `Origin` isn't itself, so
+a web page you happen to have open can't edit your data. topcoat is a
+server-side framework (it does not use wasm) and needs Rust 1.98 or newer to
+build; `cargo build --no-default-features` leaves it out.
+
 ## Storage
 
 Everything lives in one SQLite file, `iter.db`, kept in `iter`'s config
@@ -558,3 +581,6 @@ gets you tab-completion on project names (`project edit/delete/info`,
 ```sh
 cargo build --release
 ```
+
+The `iter serve` web UI is the default `web` feature and needs Rust 1.98+;
+`cargo build --release --no-default-features` builds the CLI alone.

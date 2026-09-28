@@ -15,6 +15,8 @@ mod scaffold;
 mod sync;
 mod tmux;
 mod utils;
+#[cfg(feature = "web")]
+mod web;
 
 use app::App;
 use args::{Args, Command, ProjectCommand};
@@ -60,6 +62,8 @@ fn main() -> ExitCode {
         Command::Session { action } => action.run(app),
         Command::Comment { task, message } => misc::comment_cmd(app, task.as_deref(), message),
         Command::T => misc::t_cmd(app),
+        #[cfg(feature = "web")]
+        Command::Serve { port, no_open } => web::serve(*port, !*no_open),
         Command::Internal { action } => action.run(app),
     };
 

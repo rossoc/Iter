@@ -1,0 +1,36 @@
+:root{--bg:#fff;--fg:#1c1c1e;--muted:#6b6b70;--line:#e3e3e6;--side:#f6f6f8;--accent:#2563eb;--danger:#b91c1c}
+@media (prefers-color-scheme:dark){:root{--bg:#161618;--fg:#ececee;--muted:#9a9aa1;--line:#2d2d31;--side:#1d1d20;--accent:#7aa2ff;--danger:#f87171}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.app{display:flex;min-height:100vh}
+nav.side{width:260px;flex:none;background:var(--side);border-right:1px solid var(--line);padding:16px;overflow-y:auto}
+nav.side h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+nav.side h2:first-child{margin-top:0}
+nav.side ul{list-style:none;margin:0;padding:0}
+nav.side ul ul{margin-left:14px;border-left:1px solid var(--line);padding-left:8px}
+nav.side a{display:block;padding:2px 6px;border-radius:4px;color:var(--fg)}
+nav.side a.sel{background:var(--accent);color:#fff}
+nav.side a.org{font-weight:600}
+main{flex:1;max-width:820px;padding:24px 32px}
+h1{margin:0 0 4px;font-size:22px}
+.crumbs{color:var(--muted);font-size:13px;margin-bottom:8px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:12px 0 20px}
+.tabs a{padding:6px 12px;border-bottom:2px solid transparent;color:var(--muted)}
+.tabs a.sel{border-color:var(--accent);color:var(--fg)}
+.tabs .edit{margin-left:auto}
+dl{display:grid;grid-template-columns:150px 1fr;gap:6px 12px}
+dt{color:var(--muted)}dd{margin:0}
+pre.desc{white-space:pre-wrap;font:inherit;background:var(--side);padding:12px;border-radius:6px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;font-size:13px}
+.pill{font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line)}
+.pill.wip{border-color:var(--accent);color:var(--accent)}
+form label{display:block;margin:12px 0 4px;color:var(--muted);font-size:13px}
+form label.check{display:flex;gap:8px;align-items:center;color:var(--fg);font-size:15px}
+form input[type=text],form select,form textarea{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+form textarea{min-height:160px;font-family:ui-monospace,monospace}
+button{margin-top:18px;padding:6px 16px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
+.error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);padding:8px 12px;border-radius:6px;margin-bottom:12px}
+.empty{color:var(--muted)}
