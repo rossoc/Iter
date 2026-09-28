@@ -56,6 +56,39 @@ pub trait MarkdownBody {
     /// field the buffer doesn't carry, so an edit can't lose them. The
     /// derive writes this for every other `#[serde(skip)]` field.
     fn carry_over(&mut self, _original: &Self) {}
+
+    /// Reads the buffer's YAML front matter back into this type. Plainly,
+    /// by default; the edit types that wrap a row plus a list override it
+    /// (see [`read_wrapped`]).
+    fn from_front_matter(front: &str) -> serde_yaml::Result<Self>
+    where
+        Self: DeserializeOwned,
+    {
+        serde_yaml::from_str(front)
+    }
+}
+
+/// Reads front matter holding a row's fields plus one list beside them --
+/// [`GroupEdit`], [`TaskEdit`] -- as two plain reads of the same text rather
+/// than through `#[serde(flatten)]`.
+///
+/// Flattening buffers every value first and loses what was typed: a bare
+/// `name: 2025` or `default_branch: 1.10` then reaches a text field as a
+/// number and fails (or would come back as `1.1`). Read plainly, a text
+/// field takes the scalar exactly as written, the same as a project's or a
+/// tag's does. The row's read ignores the list's key, and the list's read
+/// ignores every other.
+pub(crate) fn read_wrapped<R: DeserializeOwned>(
+    front: &str,
+    list: &str,
+) -> serde_yaml::Result<(R, Vec<String>)> {
+    let row = serde_yaml::from_str(front)?;
+    let mut mapping: serde_yaml::Mapping = serde_yaml::from_str(front)?;
+    let names = match mapping.remove(list) {
+        Some(value) if !value.is_null() => serde_yaml::from_value(value)?,
+        _ => Vec::new(),
+    };
+    Ok((row, names))
 }
 
 /// Everything the editor round trip needs of a type: written out as YAML,
@@ -124,7 +157,7 @@ pub struct GroupEdit<G> {
     pub projects: Vec<String>,
 }
 
-impl<G: MarkdownBody> MarkdownBody for GroupEdit<G> {
+impl<G: MarkdownBody + DeserializeOwned> MarkdownBody for GroupEdit<G> {
     fn description(&self) -> &str {
         self.group.description()
     }
@@ -136,6 +169,11 @@ impl<G: MarkdownBody> MarkdownBody for GroupEdit<G> {
     fn carry_over(&mut self, original: &Self) {
         self.group.carry_over(&original.group);
     }
+
+    fn from_front_matter(front: &str) -> serde_yaml::Result<Self> {
+        let (group, projects) = read_wrapped(front, "projects")?;
+        Ok(GroupEdit { group, projects })
+    }
 }
 
 /// The one "must have a name" check, for named entities and tasks alike.
@@ -144,6 +182,18 @@ pub(crate) fn require_name(kind: &'static str, name: &str) -> Result<()> {
         true => Err(IterError::EmptyName(kind)),
         false => Ok(()),
     }
+}
+
+/// Refuses a `kind` name with a comma in it -- for the names (projects,
+/// tags) the web forms list comma-separated.
+pub(crate) fn require_no_comma(kind: &'static str, name: &str) -> Result<()> {
+    if name.contains(',') {
+        return Err(IterError::CommaInName {
+            kind,
+            name: name.to_string(),
+        });
+    }
+    Ok(())
 }
 
 /// How a task is named wherever the CLI speaks about one: `<project>/<task>`.

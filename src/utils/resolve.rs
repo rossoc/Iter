@@ -18,6 +18,13 @@ pub(crate) fn task_display(project: &Project, task: &Task) -> String {
     task_ref(&project.name, &task.name)
 }
 
+/// The number of the issue `task` tracks, or the "no linked issue" error
+/// for a command that has nothing to do without one.
+pub(crate) fn linked_issue(project: &Project, task: &Task) -> Result<i64> {
+    task.github_issue
+        .ok_or_else(|| IterError::NoLinkedIssue(task_display(project, task)))
+}
+
 /// Splits `<project>/<task>` on the first `/`.
 pub(crate) fn parse_task_ref(reference: &str) -> Result<(&str, &str)> {
     split_task_ref(reference).ok_or_else(|| IterError::InvalidTaskRef(reference.to_string()))

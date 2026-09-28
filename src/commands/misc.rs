@@ -4,20 +4,18 @@
 use crate::app::App;
 use crate::args::InternalCommand;
 use crate::commands::Run;
-use crate::error::{IterError, Result};
+use crate::error::Result;
 use crate::github;
 use crate::utils::clock::{start_for_tmux_session, stop_for_tmux_session};
 use crate::utils::resolve::{
-    current_session_task, require_github, resolve_task_or_current, task_display,
+    current_session_task, linked_issue, require_github, resolve_task_or_current, task_display,
 };
 
 pub(crate) fn comment_cmd(app: &App, task_ref: Option<&str>, message: &str) -> Result<()> {
     let db = &app.db;
     let (project, task) = resolve_task_or_current(db, task_ref)?;
     require_github(&project)?;
-    let issue = task
-        .github_issue
-        .ok_or_else(|| IterError::NoLinkedIssue(task_display(&project, &task)))?;
+    let issue = linked_issue(&project, &task)?;
     github::post_comment(&project.base_path, issue, message)?;
     println!("posted comment on issue #{issue}");
     Ok(())

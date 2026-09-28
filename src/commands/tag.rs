@@ -6,6 +6,7 @@ use crate::commands::Run;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::Tag;
+use crate::reporting::non_empty;
 use crate::utils::crud::{create, update};
 use crate::utils::output::list_names;
 
@@ -23,7 +24,7 @@ impl Run for TagCommand {
 
 fn tag_edit(app: &App, name: &str) -> Result<()> {
     let existing: Tag = app.db.resolve(name)?;
-    update(&app.db, &existing, |tag| {
+    update(&app.db, &existing, false, |tag| {
         // The board views find these two by name, so they may be recoloured
         // and re-described but not renamed.
         match existing.is_builtin() && tag.name.trim() != existing.name {
@@ -46,8 +47,8 @@ fn tag_delete(app: &App, name: &str) -> Result<()> {
 fn tag_info(app: &App, name: &str) -> Result<()> {
     let tag: Tag = app.db.resolve(name)?;
     println!("{}  {}", tag.name, tag.color);
-    if !tag.description.trim().is_empty() {
-        println!("\n{}", tag.description.trim());
+    if let Some(description) = non_empty(&tag.description) {
+        println!("\n{description}");
     }
     Ok(())
 }

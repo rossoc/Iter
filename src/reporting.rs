@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::{Session, TaskStatus};
+use crate::models::{Duration, Session, TaskStatus};
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use serde::Serialize;
 use serde_yaml::{Mapping, Value};
@@ -136,10 +136,6 @@ pub fn fmt_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }
 
-pub fn minutes_to_hhmm(total_minutes: i64) -> String {
-    format!("{:02}:{:02}", total_minutes / 60, total_minutes % 60)
-}
-
 pub fn round_to_half_hour(hours: f64) -> f64 {
     (hours * 2.0).round() / 2.0
 }
@@ -164,7 +160,7 @@ impl Total {
     pub fn new(total_minutes: i64) -> Self {
         Total {
             total_hours: round_to_half_hour(total_minutes as f64 / 60.0),
-            total_hhmm: minutes_to_hhmm(total_minutes),
+            total_hhmm: Duration(total_minutes).to_string(),
             minutes: total_minutes,
         }
     }
@@ -299,7 +295,7 @@ pub fn session_rows(sessions: &[Session], now: NaiveDateTime, dated: bool) -> Ve
             date: dated.then(|| fmt_date(s.start.date())),
             start: s.start.format("%H:%M").to_string(),
             end: s.end.map(|e| e.format("%H:%M").to_string()),
-            duration: minutes_to_hhmm(s.duration_minutes(now)),
+            duration: Duration(s.duration_minutes(now)).to_string(),
             message: s.message.as_deref().and_then(non_empty),
         })
         .collect()

@@ -156,7 +156,12 @@ impl Duration {
             return None;
         }
         let (hours, minutes): (i64, i64) = (hours.parse().ok()?, minutes.parse().ok()?);
-        (minutes < 60).then(|| Duration(hours * 60 + minutes))
+        if minutes >= 60 {
+            return None;
+        }
+        // Checked: `hours` is whatever was typed, and a huge one must be a
+        // parse failure rather than an overflow.
+        hours.checked_mul(60)?.checked_add(minutes).map(Duration)
     }
 }
 
@@ -206,6 +211,11 @@ impl crate::models::MarkdownBody for TaskEdit {
 
     fn carry_over(&mut self, original: &Self) {
         self.task.carry_over(&original.task);
+    }
+
+    fn from_front_matter(front: &str) -> serde_yaml::Result<Self> {
+        let (task, tags) = crate::models::read_wrapped(front, "tags")?;
+        Ok(TaskEdit { task, tags })
     }
 }
 
@@ -327,6 +337,14 @@ mod tests {
         assert!(yaml.contains("start_time: null"), "{yaml}");
         let back: Task = serde_yaml::from_str(&yaml).expect("parses");
         assert_eq!((back.start_time, back.duration), (None, None));
+    }
+
+    /// Hours are whatever was typed: one too big for the minutes to fit
+    /// is a parse failure, not an overflow.
+    #[test]
+    fn a_duration_too_long_to_count_is_rejected() {
+        assert_eq!(Duration::parse("999999999999999999:00"), None);
+        assert_eq!(Duration::parse("1000:30"), Some(Duration(60_030)));
     }
 
     #[test]

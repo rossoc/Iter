@@ -6,6 +6,7 @@ use crate::commands::Run;
 use crate::db::Table;
 use crate::error::Result;
 use crate::models::{Board, Card, Priority, Project, START_TIME_FMT, TaskStatus};
+use crate::reporting::non_empty;
 use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
 use crate::utils::resolve::resolve_group_or_current;
@@ -39,8 +40,8 @@ fn board_info(app: &App, board: &Board) -> Result<()> {
 
 fn render_info(board: &Board, projects: &[Project], cards: &[Card]) -> String {
     let mut out = format!("{}\n", board.name);
-    if !board.description.trim().is_empty() {
-        out.push_str(&format!("\n{}\n", board.description.trim()));
+    if let Some(description) = non_empty(&board.description) {
+        out.push_str(&format!("\n{description}\n"));
     }
     out.push_str("\nprojects:\n");
     if projects.is_empty() {
@@ -59,8 +60,8 @@ fn render_agenda(cards: &[Card]) -> String {
     let open = cards.iter().filter(|c| c.task.status != TaskStatus::Done);
     let (mut scheduled, mut unscheduled): (Vec<_>, Vec<_>) =
         open.partition(|c| c.task.start_time.is_some());
-    scheduled.sort_by_key(|c| (c.task.start_time, c.label.clone()));
-    unscheduled.sort_by_key(|c| c.label.clone());
+    scheduled.sort_by(|a, b| (a.task.start_time, &a.label).cmp(&(b.task.start_time, &b.label)));
+    unscheduled.sort_by(|a, b| a.label.cmp(&b.label));
 
     let mut out = String::from("\nagenda:\n");
     if scheduled.is_empty() {

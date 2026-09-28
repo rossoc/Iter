@@ -7,12 +7,14 @@
 //! and this module carries those plans out. That split is what lets the
 //! decisions be tested without a `gh` in sight.
 
+use std::collections::HashMap;
+
 use crate::app::App;
 use crate::db::Db;
 use crate::db::Table;
-use crate::error::{IterError, Result};
+use crate::error::Result;
 use crate::models::{Project, Task, TaskStatus};
-use crate::utils::resolve::{find_task_or_err, github_project, task_display};
+use crate::utils::resolve::{find_task_or_err, github_project, linked_issue, task_display};
 use crate::{git, github, sync};
 
 /// Sets a task's issue link, status and description -- in the database, and
@@ -53,9 +55,7 @@ fn issues_to_pull(
         return github::list_issues(&project.base_path);
     };
     let task = find_task_or_err(db, project, task_name)?;
-    let number = task
-        .github_issue
-        .ok_or_else(|| IterError::NoLinkedIssue(task_display(project, &task)))?;
+    let number = linked_issue(project, &task)?;
     Ok(vec![github::fetch_issue(&project.base_path, number)?])
 }
 
@@ -84,60 +84,63 @@ pub(crate) fn task_pull(
     // Read once, then kept current as the pull goes: each issue is planned
     // against what the ones before it did, so two issues sharing a title
     // read as the clash they are rather than colliding on the name index.
-    let mut tasks = db.tasks_for_project(project_id)?;
+    let mut tasks = sync::Tasks::new(db.tasks_for_project(project_id)?);
 
     let (mut created, mut updated) = (0, 0);
-    for issue in &issues {
-        match sync::plan_pull(&tasks, issue, body) {
-            sync::Pull::Create { status } => {
-                let mut task = Task {
-                    name: issue.title.clone(),
-                    description: issue.body.clone(),
-                    github_issue: Some(issue.number),
-                    ..Task::template(project_id, branch_prefix.clone(), status)
-                };
-                task.id = Some(db.insert(&task)?);
-                println!(
-                    "created task '{}' from issue #{} ({})",
-                    task_display(&project, &task),
-                    issue.number,
-                    status.as_str()
-                );
-                tasks.push(task);
-                created += 1;
-            }
-            sync::Pull::Update {
-                task,
-                link,
-                status,
-                description,
-            } => {
-                relink_task(
-                    db,
-                    &mut tasks[task],
-                    issue.number,
+    db.batched(|| {
+        for issue in &issues {
+            match sync::plan_pull(&tasks, issue, body) {
+                sync::Pull::Create { status } => {
+                    let mut task = Task {
+                        name: issue.title.clone(),
+                        description: issue.body.clone(),
+                        github_issue: Some(issue.number),
+                        ..Task::template(project_id, branch_prefix.clone(), status)
+                    };
+                    task.id = Some(db.insert(&task)?);
+                    println!(
+                        "created task '{}' from issue #{} ({})",
+                        task_display(&project, &task),
+                        issue.number,
+                        status.as_str()
+                    );
+                    tasks.push(task);
+                    created += 1;
+                }
+                sync::Pull::Update {
+                    task,
+                    link,
                     status,
-                    description.then_some(issue.body.as_str()),
-                )?;
-                println!(
-                    "task '{}' <- issue #{}: {}",
-                    task_display(&project, &tasks[task]),
+                    description,
+                } => {
+                    relink_task(
+                        db,
+                        tasks.link(task, issue.number),
+                        issue.number,
+                        status,
+                        description.then_some(issue.body.as_str()),
+                    )?;
+                    println!(
+                        "task '{}' <- issue #{}: {}",
+                        task_display(&project, &tasks[task]),
+                        issue.number,
+                        pull_changes(link, status, description)
+                    );
+                    updated += 1;
+                }
+                sync::Pull::Unchanged => {}
+                sync::Pull::Conflict { task } => eprintln!(
+                    "warning: issue #{} skipped -- task '{}' has the same name but tracks issue #{}",
                     issue.number,
-                    pull_changes(link, status, description)
-                );
-                updated += 1;
+                    task_display(&project, &tasks[task]),
+                    tasks[task]
+                        .github_issue
+                        .expect("a conflicting task is a linked one")
+                ),
             }
-            sync::Pull::Unchanged => {}
-            sync::Pull::Conflict { task } => eprintln!(
-                "warning: issue #{} skipped -- task '{}' has the same name but tracks issue #{}",
-                issue.number,
-                task_display(&project, &tasks[task]),
-                tasks[task]
-                    .github_issue
-                    .expect("a conflicting task is a linked one")
-            ),
         }
-    }
+        Ok(())
+    })?;
 
     println!(
         "pulled {} issue(s) from '{}': {created} created, {updated} updated",
@@ -181,15 +184,11 @@ fn push_task(
     db: &Db,
     project: &Project,
     task: &mut Task,
-    issues: &[github::Issue],
+    issues: &HashMap<i64, github::Issue>,
     display: &str,
     body: bool,
 ) -> Result<Pushed> {
-    let plan = sync::plan_push(task, issues, body);
-    // Read off the plan before it's taken apart: closing an issue is
-    // what signs it, whether that's a new issue or an existing one.
-    let signs = plan.closes();
-    match plan {
+    match sync::plan_push(task, issues, body) {
         sync::Push::Create { state } => {
             let number = github::create_issue(
                 &project.base_path,
@@ -210,7 +209,7 @@ fn push_task(
                 ),
             }
             if state == github::IssueState::Closed {
-                sign_and_close(project, number, display, signs)?;
+                sign_and_close(project, number, display)?;
             }
             Ok(Pushed::Opened)
         }
@@ -224,9 +223,7 @@ fn push_task(
                 println!("issue #{number} <- '{display}': body updated");
             }
             match state {
-                Some(github::IssueState::Closed) => {
-                    sign_and_close(project, number, display, signs)?
-                }
+                Some(github::IssueState::Closed) => sign_and_close(project, number, display)?,
                 Some(github::IssueState::Open) => {
                     github::set_issue_state(&project.base_path, number, github::IssueState::Open)?;
                     println!(
@@ -272,9 +269,7 @@ pub(crate) fn task_push(
         None => db.tasks_for_project(project_id)?,
     };
 
-    // One listing, then a decision per task -- rather than asking `gh` for
-    // the state of each task's issue one at a time.
-    let issues = github::list_issues(&project.base_path)?;
+    let issues = issues_to_push(&project, task_name.is_some(), &tasks)?;
 
     let (mut opened, mut edited, mut failed) = (0, 0, 0);
     for task in &mut tasks {
@@ -307,6 +302,37 @@ pub(crate) fn task_push(
     Ok(())
 }
 
+/// The issues a push plans against, by number. A whole-project push lists
+/// every issue in one call rather than asking `gh` about each task's issue
+/// one at a time; a `--task` push fetches just the one issue that task
+/// tracks (none, if it tracks none), instead of the whole backlog.
+fn issues_to_push(
+    project: &Project,
+    single: bool,
+    tasks: &[Task],
+) -> Result<HashMap<i64, github::Issue>> {
+    let issues = match single {
+        false => github::list_issues(&project.base_path)?,
+        // A fetch that fails -- the issue deleted or transferred, most
+        // often -- is warned about and left out, so the task reaches the
+        // same warn-and-skip `Missing` plan a whole-project push gives it.
+        true => tasks
+            .iter()
+            .filter_map(|t| t.github_issue)
+            .filter_map(
+                |number| match github::fetch_issue(&project.base_path, number) {
+                    Ok(issue) => Some(issue),
+                    Err(e) => {
+                        eprintln!("warning: couldn't fetch issue #{number}: {e}");
+                        None
+                    }
+                },
+            )
+            .collect(),
+    };
+    Ok(issues.into_iter().map(|i| (i.number, i)).collect())
+}
+
 /// Signs an issue as done by the pusher and closes it -- in that order, so
 /// a run cut short leaves a signed open issue rather than a closed one
 /// nobody is named on.
@@ -315,8 +341,8 @@ pub(crate) fn task_push(
 /// needs write access to the repo, and losing the state sync -- the part
 /// that keeps a task and its issue agreeing -- over a signature would be
 /// the worse trade.
-fn sign_and_close(project: &Project, number: i64, display: &str, sign: bool) -> Result<()> {
-    if sign && let Err(e) = github::assign_self(&project.base_path, number) {
+fn sign_and_close(project: &Project, number: i64, display: &str) -> Result<()> {
+    if let Err(e) = github::assign_self(&project.base_path, number) {
         eprintln!("warning: couldn't assign yourself to issue #{number}: {e}");
     }
     github::set_issue_state(&project.base_path, number, github::IssueState::Closed)?;

@@ -1,5 +1,7 @@
+use crate::models::Named;
 use crate::models::{
     Configured, Organization, Settings, default_branch_template, default_true, main_branch,
+    require_no_comma,
 };
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
@@ -102,12 +104,22 @@ impl Project {
         project
     }
 
-    /// Beyond a name: a `base_path` -- a project is a place on disk.
+    /// Beyond a name: no comma in it (see [`require_no_comma`]), and a
+    /// `base_path` -- a project is a place on disk.
+    ///
+    /// The path is expanded (`~`) and absolutised here, once, for every way
+    /// a project is written -- created, edited in the editor or in the
+    /// browser. A relative `base_path` names a different directory from
+    /// every place `iter` is later run: a different worktree to create, a
+    /// different repo to ask whether it's one.
     fn check(&mut self) -> crate::error::Result<()> {
-        match self.base_path.trim().is_empty() {
-            true => Err(crate::error::IterError::EmptyBasePath),
-            false => Ok(()),
+        require_no_comma(Self::KIND, &self.name)?;
+        let base_path = self.base_path.trim();
+        if base_path.is_empty() {
+            return Err(crate::error::IterError::EmptyBasePath);
         }
+        self.base_path = crate::scaffold::absolute_path(base_path)?;
+        Ok(())
     }
 
     /// Seeds this template with `organization`'s downstream defaults and

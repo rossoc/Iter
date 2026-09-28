@@ -9,8 +9,8 @@ use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::md_edit::edited;
+use crate::models::require_name;
 use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
-use crate::models::{require_name, task_ref};
 use crate::reporting::{
     Header, Report, TaskInfo, WeekdayReport, session_rows, settings_of, weekday_averages,
 };
@@ -175,13 +175,7 @@ pub(crate) fn task_list(
     project_filter: Option<&str>,
     statuses: &[TaskStatus],
 ) -> Result<()> {
-    let db = &app.db;
-    let names: Vec<String> = db
-        .task_refs(project_filter, statuses)?
-        .iter()
-        .map(|(project, task)| task_ref(project, task))
-        .collect();
-    print_yaml(&names)
+    print_yaml(&app.db.task_refs(project_filter, statuses)?)
 }
 
 fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
@@ -421,7 +415,7 @@ mod tests {
             .db
             .task_refs(None, &[TaskStatus::Queue, TaskStatus::Wip])
             .expect("refs");
-        assert_eq!(unfinished, vec![("proj".to_string(), "a task".to_string())]);
+        assert_eq!(unfinished, vec!["proj/a task"]);
         assert_eq!(
             app.db.task_refs(Some("nosuch"), &[]).expect("refs").len(),
             0

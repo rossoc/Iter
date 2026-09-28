@@ -5,7 +5,7 @@
 
 use crate::db::Db;
 use crate::error::Result;
-use crate::md_edit::edited;
+use crate::md_edit::{edit_in_editor, edited, no_changes};
 use crate::models::{Editable, GroupEdit, Named, Project, ProjectGroup};
 
 /// `iter <entity> new`: opens `template`, validates what comes back and
@@ -21,18 +21,30 @@ pub(crate) fn create<T: Named + Editable>(db: &Db, template: &T) -> Result<()> {
 /// `iter <entity> edit`: opens `existing`, lets `fixup` restore what the
 /// buffer doesn't carry (and refuse what it mustn't change), validates and
 /// writes it back over the same row.
-pub(crate) fn update<T: Named + Editable>(
+///
+/// `pending` says `existing` already differs from the stored row in a way
+/// the buffer can't show -- a field set from a command-line flag, like
+/// `project edit --board`. Quitting the editor without changes then still
+/// saves `existing`, rather than dropping the flag as "no changes".
+pub(crate) fn update<T: Named + Editable + Clone>(
     db: &Db,
     existing: &T,
+    pending: bool,
     fixup: impl FnOnce(&mut T) -> Result<()>,
 ) -> Result<()> {
-    let id = existing.id();
-    edited(existing, T::KIND, "updated", |mut item| {
-        fixup(&mut item)?;
-        item.validate()?;
-        db.update(id, &item)?;
-        Ok(format!("updated {} '{}'", T::KIND, item.name()))
-    })
+    let mut item = match edit_in_editor(existing)? {
+        Some(item) => item,
+        None if pending => existing.clone(),
+        None => {
+            println!("{}", no_changes(T::KIND, "updated"));
+            return Ok(());
+        }
+    };
+    fixup(&mut item)?;
+    item.validate()?;
+    db.update(existing.id(), &item)?;
+    println!("updated {} '{}'", T::KIND, item.name());
+    Ok(())
 }
 
 /// `iter board edit`/`iter organization edit`: edits the group and its

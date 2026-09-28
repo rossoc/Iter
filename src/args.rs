@@ -78,6 +78,16 @@ pub enum Command {
         #[clap(long = "organization", short = 'o',
                add = ArgValueCompleter::new(organization_completer))]
         organization: Option<String>,
+
+        /// Bind the new project to this board (when cloning a project, the
+        /// clone otherwise lands on that project's board, if any)
+        #[clap(long, short = 'b', add = ArgValueCompleter::new(board_completer))]
+        board: Option<String>,
+
+        /// Leave the new project on no board, even if the project it was
+        /// cloned from is on one
+        #[clap(long, conflicts_with = "board")]
+        no_board: bool,
     },
 
     /// Manage tags: coloured labels shared by every task

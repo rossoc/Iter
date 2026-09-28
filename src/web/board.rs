@@ -14,8 +14,9 @@ use crate::models::{
 };
 use crate::reporting::fmt_date;
 use crate::utils::report::parse_day;
-use chrono::{Local, NaiveDate};
+use chrono::{Local, NaiveDate, Timelike};
 use serde::Deserialize;
+use std::collections::{HashMap, HashSet};
 use topcoat::{
     Result,
     context::Cx,
@@ -89,10 +90,6 @@ fn cards(db: &Db, board_id: i64) -> crate::error::Result<Vec<Card>> {
     out.retain(|c| c.task.status != TaskStatus::Done);
     out.sort_by(|a, b| (b.priority.urgent, &a.label).cmp(&(a.priority.urgent, &b.label)));
     Ok(out)
-}
-
-fn pick(all: &[Card], keep: impl Fn(&Card) -> bool) -> Vec<Card> {
-    all.iter().filter(|c| keep(c)).cloned().collect()
 }
 
 fn day_of(cx: &Cx) -> Result<NaiveDate> {
@@ -261,20 +258,21 @@ async fn agenda_page(cx: &Cx) -> Result<impl View> {
         let board = db.get::<Board>(id)?.ok_or_not_found()?;
         (Nav::load(&db)?, board, colors_style(&db)?, cards(&db, id)?)
     };
-    let important = pick(&all, |c| {
-        c.task.start_time.is_none() && c.priority.important
-    });
-    let other = pick(&all, |c| {
-        c.task.start_time.is_none() && !c.priority.important
-    });
+    // One pass sorting every card into its list or its hour on `day`.
+    let (mut important, mut other) = (Vec::new(), Vec::new());
+    let mut by_hour: [Vec<Card>; 24] = Default::default();
+    for c in all {
+        match c.task.start_time {
+            None if c.priority.important => important.push(c),
+            None => other.push(c),
+            Some(start) if start.date() == day => by_hour[start.hour() as usize].push(c),
+            Some(_) => {}
+        }
+    }
     let hours: Vec<(String, String, Vec<Card>)> = (0..24)
-        .map(|h| {
+        .zip(by_hour)
+        .map(|(h, here)| {
             let slot = day.and_hms_opt(h, 0, 0).expect("hour is in range");
-            let here = pick(&all, |c| {
-                c.task
-                    .start_time
-                    .is_some_and(|s| s >= slot && s < slot + chrono::Duration::hours(1))
-            });
             (
                 format!("{h:02}:00"),
                 slot.format(START_TIME_FMT).to_string(),
@@ -323,13 +321,24 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
         let board = db.get::<Board>(id)?.ok_or_not_found()?;
         (Nav::load(&db)?, board, colors_style(&db)?, cards(&db, id)?)
     };
-    let waiting = pick(&all, |c| !c.task.matrix_placed);
+    // One pass sorting every card into the side list or its quadrant.
+    let mut waiting = Vec::new();
+    let mut placed: [Vec<Card>; 4] = Default::default();
+    for c in all {
+        if !c.task.matrix_placed {
+            waiting.push(c);
+            continue;
+        }
+        let quadrant = QUADRANTS
+            .iter()
+            .position(|&(_, flags, _)| flags == c.priority)
+            .expect("the four quadrants cover every priority");
+        placed[quadrant].push(c);
+    }
     let quadrants: Vec<(&str, String, &str, Vec<Card>)> = QUADRANTS
         .iter()
-        .map(|&(target, flags, title)| {
-            let here = pick(&all, |c| c.task.matrix_placed && c.priority == flags);
-            (target, format!("q-{target}"), title, here)
-        })
+        .zip(placed)
+        .map(|(&(target, _, title), here)| (target, format!("q-{target}"), title, here))
         .collect();
     let today = fmt_date(Local::now().date_naive());
     Ok(view! {
@@ -419,19 +428,24 @@ struct Choice {
 }
 
 fn choices(db: &Db, board_id: i64, ticked: Option<&[i64]>) -> crate::error::Result<Vec<Choice>> {
-    let boards = db.list::<Board>()?;
+    let boards: HashMap<i64, String> = db
+        .list::<Board>()?
+        .into_iter()
+        .map(|b| (b.id(), b.name))
+        .collect();
+    let ticked: Option<HashSet<i64>> = ticked.map(|ids| ids.iter().copied().collect());
     Ok(db
         .list::<Project>()?
         .into_iter()
         .map(|project| {
-            let on = match ticked {
+            let on = match &ticked {
                 Some(ids) => ids.contains(&project.id()),
                 None => project.board_id == Some(board_id),
             };
-            let elsewhere = boards
-                .iter()
-                .find(|b| Some(b.id()) == project.board_id && b.id() != board_id)
-                .map(|b| b.name.clone())
+            let elsewhere = project
+                .board_id
+                .filter(|&id| id != board_id)
+                .and_then(|id| boards.get(&id).cloned())
                 .unwrap_or_default();
             Choice {
                 project,

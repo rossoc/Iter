@@ -66,6 +66,7 @@ impl Tag {
     /// to `#rrggbb`.
     fn check(&mut self) -> crate::error::Result<()> {
         self.name = self.name.trim().to_string();
+        crate::models::require_no_comma("tag", &self.name)?;
         self.color = self.color.trim().to_lowercase();
         match is_hex_color(&self.color) {
             true => Ok(()),
@@ -128,6 +129,44 @@ mod tests {
         assert!(matches!(p.validate(), Err(IterError::EmptyBasePath)));
         p.base_path = "/tmp/p".to_string();
         assert!(p.validate().is_ok());
+    }
+
+    /// Every write path validates, so every write path stores an absolute
+    /// `base_path` -- an edited or web-submitted one included.
+    #[test]
+    fn a_relative_base_path_is_stored_absolute() {
+        use crate::models::{Project, Settings};
+        let mut p = Project::template(&Settings::default());
+        p.name = "p".to_string();
+        p.base_path = " work/p ".to_string();
+        p.validate().expect("valid");
+        assert!(
+            std::path::Path::new(&p.base_path).is_absolute(),
+            "{}",
+            p.base_path
+        );
+        assert!(p.base_path.ends_with("work/p"), "{}", p.base_path);
+    }
+
+    /// The web forms list projects and tags comma-separated, so a comma
+    /// inside a name couldn't survive the trip.
+    #[test]
+    fn project_and_tag_names_cannot_hold_a_comma() {
+        use crate::models::{Project, Settings};
+        assert!(matches!(
+            tag("a,b", "#ffffff").validate(),
+            Err(IterError::CommaInName { kind: "tag", .. })
+        ));
+        let mut p = Project::template(&Settings::default());
+        p.name = "foo, bar".to_string();
+        p.base_path = "/tmp/p".to_string();
+        assert!(matches!(
+            p.validate(),
+            Err(IterError::CommaInName {
+                kind: "project",
+                ..
+            })
+        ));
     }
 
     /// Everything else only has the default check: a name.

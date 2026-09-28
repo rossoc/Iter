@@ -85,6 +85,11 @@ pub enum IterError {
     #[error("base_path cannot be empty")]
     EmptyBasePath,
 
+    /// Project and tag names travel comma-separated in the web forms'
+    /// roster and tag fields, so a comma inside one can't round-trip.
+    #[error("{kind} name '{name}' cannot contain a comma")]
+    CommaInName { kind: &'static str, name: String },
+
     #[error("'{0}' already has a session")]
     SessionAlreadyExists(String),
 
