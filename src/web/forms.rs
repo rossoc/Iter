@@ -21,6 +21,15 @@ fn text(value: &str) -> String {
     value.replace("\r\n", "\n")
 }
 
+/// A comma-separated list of names, trimmed and without blanks.
+fn names(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .map(|n| n.trim().to_string())
+        .filter(|n| !n.is_empty())
+        .collect()
+}
+
 #[derive(Deserialize)]
 pub struct OrgForm {
     pub name: String,
@@ -31,9 +40,16 @@ pub struct OrgForm {
     pub branch_template: String,
     pub default_branch: String,
     pub github_project: String,
+    /// Project names, comma-separated.
+    pub projects: String,
 }
 
 impl OrgForm {
+    /// The project names typed into the form, trimmed and without blanks.
+    pub fn project_names(&self) -> Vec<String> {
+        names(&self.projects)
+    }
+
     /// `org` with the submission applied, and whether that submission is
     /// acceptable. The row is filled in even when it isn't, so the form can
     /// be shown again with what the user typed.
@@ -114,11 +130,7 @@ pub struct TaskForm {
 impl TaskForm {
     /// The tag names typed into the form, trimmed and without blanks.
     pub fn tag_names(&self) -> Vec<String> {
-        self.tags
-            .split(',')
-            .map(|t| t.trim().to_string())
-            .filter(|t| !t.is_empty())
-            .collect()
+        names(&self.tags)
     }
 
     /// See [`OrgForm::apply`]. An unparseable issue number or status keeps

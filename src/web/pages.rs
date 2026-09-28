@@ -8,6 +8,7 @@ use super::layout::{self, Nav, Sel, shell};
 use super::open_db;
 use crate::db::{Db, Table};
 use crate::models::{Organization, Project, START_TIME_FMT, Session, Tag, Task, TaskStatus};
+use crate::utils::resolve::resolve_project_ids;
 use chrono::{Local, NaiveDateTime};
 use topcoat::{
     Result,
@@ -291,8 +292,14 @@ async fn org_page(cx: &Cx) -> Result<impl View> {
     })
 }
 
+/// The names of `projects`, comma-separated -- what the organization
+/// form's "Projects" field shows.
+fn project_list(projects: &[Project]) -> String {
+    projects.iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", ")
+}
+
 #[component]
-async fn org_form(org: &Organization, #[default] error: Option<String>) -> Result<impl View> {
+async fn org_form(org: &Organization, projects: &str, #[default] error: Option<String>) -> Result<impl View> {
     Ok(view! {
         <h1>"Edit organization"</h1>
         error_box(error: &error)
@@ -305,6 +312,7 @@ async fn org_form(org: &Organization, #[default] error: Option<String>) -> Resul
             field(name: "branch_template", label: "Branch template", value: &org.branch_template)
             field(name: "default_branch", label: "Default branch", value: &org.default_branch)
             field(name: "github_project", label: "GitHub project", value: &org.github_project)
+            field(name: "projects", label: "Projects (comma-separated)", value: projects)
             form_actions(cancel: format!("/org/{}", org.id()))
         </form>
     })
@@ -313,12 +321,13 @@ async fn org_form(org: &Organization, #[default] error: Option<String>) -> Resul
 #[page("/org/{id}/edit")]
 async fn org_edit(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, org) = {
+    let (nav, org, projects) = {
         let db = open_db()?;
         let org = db.get::<Organization>(id)?.ok_or_not_found()?;
-        (Nav::load(&db)?, org)
+        let projects = project_list(&db.projects_for_organization(id)?);
+        (Nav::load(&db)?, org, projects)
     };
-    Ok(view! { shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org)) })
+    Ok(view! { shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org, projects: &projects)) })
 }
 
 #[page(POST "/org/{id}/edit")]
@@ -328,12 +337,20 @@ async fn org_save(cx: &Cx, Form(form): Form<OrgForm>) -> Result<impl View> {
         let db = open_db()?;
         let existing = db.get::<Organization>(id)?.ok_or_not_found()?;
         let (org, valid) = form.apply(existing);
-        match valid.and_then(|()| db.update(id, &org)) {
+        let saved = valid
+            .and_then(|()| resolve_project_ids(&db, &form.project_names()))
+            .and_then(|ids| {
+                db.update(id, &org)?;
+                db.set_organization_projects(id, &ids)
+            });
+        match saved {
             Ok(()) => return Err(see_other(format!("/org/{id}")).into()),
             Err(e) => (Nav::load(&db)?, org, e.to_string()),
         }
     };
-    Ok(view! { shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org, error: Some(error))) })
+    Ok(view! {
+        shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org, projects: &form.projects, error: Some(error)))
+    })
 }
 
 // ---- projects ---------------------------------------------------------------

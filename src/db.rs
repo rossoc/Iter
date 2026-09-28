@@ -454,6 +454,26 @@ impl Db {
         )
     }
 
+    /// Makes `project_ids` exactly the projects in `organization_id`: the
+    /// ones listed move in (out of whichever organization they were in),
+    /// the ones left off move out to no organization. Only membership
+    /// changes -- a project keeps its own settings either way.
+    pub fn set_organization_projects(&self, organization_id: i64, project_ids: &[i64]) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "UPDATE projects SET organization_id = NULL WHERE organization_id = ?1",
+            params![organization_id],
+        )?;
+        for project_id in project_ids {
+            tx.execute(
+                "UPDATE projects SET organization_id = ?1 WHERE id = ?2",
+                params![organization_id, project_id],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
     /// Every project bound to `board_id`, in name order -- the roster a
     /// board is a container of.
     pub fn projects_for_board(&self, board_id: i64) -> Result<Vec<Project>> {
@@ -1573,6 +1593,35 @@ mod tests {
         assert!(loaded.auto_branch);
         assert_eq!(loaded.branch_template, "chore/{task}");
         assert_eq!(loaded.github_project, "Acme Roadmap");
+    }
+
+    /// Setting the roster moves listed projects in -- even out of another
+    /// organization -- and drops unlisted ones to no organization, without
+    /// touching anyone else's members.
+    #[test]
+    fn setting_an_organizations_projects_moves_them_in_and_out() {
+        let db = db();
+        let acme = insert_organization(&db, "acme");
+        let other = insert_organization(&db, "other");
+        let kept = insert_project(&db, "kept");
+        let dropped = insert_project(&db, "dropped");
+        let stolen = insert_project(&db, "stolen");
+        let bystander = insert_project(&db, "bystander");
+        db.set_organization_projects(acme, &[kept, dropped]).unwrap();
+        db.set_organization_projects(other, &[stolen, bystander]).unwrap();
+
+        db.set_organization_projects(acme, &[kept, stolen]).unwrap();
+
+        let names = |org| -> Vec<String> {
+            db.projects_for_organization(org)
+                .unwrap()
+                .into_iter()
+                .map(|p| p.name)
+                .collect()
+        };
+        assert_eq!(names(acme), ["kept", "stolen"]);
+        assert_eq!(names(other), ["bystander"]);
+        assert_eq!(db.get::<Project>(dropped).unwrap().unwrap().organization_id, None);
     }
 
     #[test]

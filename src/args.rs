@@ -276,7 +276,8 @@ pub enum OrganizationCommand {
     /// Open a blank organization in nvim; saving & quitting creates it
     New,
 
-    /// Edit an existing organization in nvim; saving & quitting updates it
+    /// Edit an existing organization (and which projects are in it) in
+    /// nvim; saving & quitting updates it
     Edit {
         /// Default: the organization of the tmux session's project
         #[arg(add = ArgValueCompleter::new(organization_completer))]

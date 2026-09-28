@@ -7,11 +7,11 @@ use crate::config::config;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::md_edit::edited;
-use crate::models::Organization;
+use crate::models::{Organization, OrganizationEdit};
 use crate::reporting::{Header, OrganizationInfo, Report, settings_of};
 use crate::utils::output::list_names;
 use crate::utils::report::{project_reports, resolve_range, total_minutes};
-use crate::utils::resolve::resolve_organization_or_current;
+use crate::utils::resolve::{resolve_organization_or_current, resolve_project_ids};
 
 impl Run for OrganizationCommand {
     fn run(&self, app: &App) -> Result<()> {
@@ -37,12 +37,31 @@ fn organization_new(app: &App) -> Result<()> {
     })
 }
 
+/// Edits the organization and its roster together: the buffer lists the
+/// projects in it by name, and saving makes that list the membership.
 fn organization_edit(app: &App, name: Option<&str>) -> Result<()> {
     let db = &app.db;
     let existing = resolve_organization_or_current(db, name)?;
     let id = existing.id();
-    edited(&existing, "organization", "updated", |organization| {
+    let projects = db
+        .projects_for_organization(id)?
+        .into_iter()
+        .map(|p| p.name)
+        .collect();
+    let template = OrganizationEdit {
+        organization: existing,
+        projects,
+    };
+    edited(&template, "organization", "updated", |edit| {
+        let organization = edit.organization;
+        if organization.name.trim().is_empty() {
+            return Err(IterError::EmptyOrganizationName);
+        }
+        // Resolved before anything is written, so an unknown name leaves
+        // the organization untouched.
+        let project_ids = resolve_project_ids(db, &edit.projects)?;
         db.update(id, &organization)?;
+        db.set_organization_projects(id, &project_ids)?;
         Ok(format!("updated organization '{}'", organization.name))
     })
 }

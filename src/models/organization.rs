@@ -76,3 +76,28 @@ impl crate::models::Named for Organization {
         &self.name
     }
 }
+
+/// What `iter organization edit` opens in the editor: the organization
+/// plus the names of the projects in it. The roster isn't a column -- it's
+/// each project's `organization_id` -- so it rides alongside the row
+/// rather than on it, and saving it moves projects in and out.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OrganizationEdit {
+    #[serde(flatten)]
+    pub organization: Organization,
+
+    /// Project names, by `name`. Listing one that's in another
+    /// organization moves it here; leaving one off moves it out to none.
+    #[serde(default)]
+    pub projects: Vec<String>,
+}
+
+impl crate::models::MarkdownBody for OrganizationEdit {
+    fn description(&self) -> &str {
+        &self.organization.description
+    }
+
+    fn set_description(&mut self, description: String) {
+        self.organization.description = description;
+    }
+}

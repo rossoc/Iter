@@ -7,7 +7,7 @@ mod tag;
 mod task;
 
 pub use board::Board;
-pub use organization::Organization;
+pub use organization::{Organization, OrganizationEdit};
 pub use project::Project;
 pub use session::Session;
 pub use session_config::SessionConfig;

@@ -223,6 +223,37 @@ mod tests {
         );
     }
 
+    /// `OrganizationEdit` flattens the organization into the front matter
+    /// next to its `projects` list; both have to survive the round trip,
+    /// and a buffer with no `projects` key at all means "none".
+    #[test]
+    fn an_organization_edit_round_trips_its_projects() {
+        use crate::config::ProjectDefaults;
+        use crate::models::{Organization, OrganizationEdit};
+
+        let mut organization = Organization::template(&ProjectDefaults::default());
+        organization.id = Some(7);
+        organization.name = "acme".to_string();
+        organization.description = "notes".to_string();
+        let edit = OrganizationEdit {
+            organization,
+            projects: vec!["one".to_string(), "two".to_string()],
+        };
+        let rendered = render_template(&edit).unwrap();
+        assert!(rendered.contains("projects:\n- one\n- two\n"), "{rendered}");
+
+        let back = resolve_edit::<OrganizationEdit>("", &rendered).unwrap().unwrap();
+        assert_eq!(back.projects, ["one", "two"]);
+        assert_eq!(back.organization.id, Some(7));
+        assert_eq!(back.organization.name, "acme");
+        assert_eq!(back.organization.description, "notes");
+        assert_eq!(back.organization.tmux, edit.organization.tmux);
+
+        let without = rendered.replace("projects:\n- one\n- two\n", "");
+        let back = resolve_edit::<OrganizationEdit>("", &without).unwrap().unwrap();
+        assert!(back.projects.is_empty());
+    }
+
     #[test]
     fn description_is_optional() {
         let original = render_template(&thing("", "")).unwrap();

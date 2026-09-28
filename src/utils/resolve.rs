@@ -68,6 +68,20 @@ pub(crate) fn resolve_project_or_current(db: &Db, name: Option<&str>) -> Result<
     }
 }
 
+/// The ids of the projects named `names`, all or nothing: an unknown name
+/// is an error before anything is written, so a typo can't half-apply a
+/// roster.
+pub(crate) fn resolve_project_ids(db: &Db, names: &[String]) -> Result<Vec<i64>> {
+    names
+        .iter()
+        .map(|n| {
+            db.find_by_name::<Project>(n)?
+                .map(|p| p.id())
+                .ok_or_else(|| IterError::ProjectNotFound(n.clone()))
+        })
+        .collect()
+}
+
 pub(crate) fn resolve_board(db: &Db, name: &str) -> Result<Board> {
     db.find_by_name::<Board>(name)?
         .ok_or_else(|| IterError::BoardNotFound(name.to_string()))
