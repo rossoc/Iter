@@ -12,10 +12,11 @@ use crate::commands::Run;
 use crate::config::config;
 use crate::db::Db;
 use crate::db::Table;
-use crate::error::{IterError, Result};
+use crate::error::Result;
 use crate::md_edit::edited;
 use crate::models::{Board, Named, Organization, Project};
 use crate::reporting::{Header, ProjectInfo, Report, settings_of};
+use crate::utils::crud::update;
 use crate::utils::output::list_names;
 use crate::utils::report::{resolve_range, task_reports, total_minutes};
 use crate::utils::resolve::resolve_project_or_current;
@@ -39,13 +40,10 @@ fn create_project_interactively(
     cloned_from: Option<&str>,
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
-    edited(template, "project", "created", |mut project| {
+    edited(template, Project::KIND, "created", |mut project| {
         project.organization_id = template.organization_id; // never carried through the YAML
         project.board_id = template.board_id;
         project.validate()?;
-        if project.base_path.trim().is_empty() {
-            return Err(IterError::EmptyBasePath);
-        }
         // Absolutised here, once, for every path a project can arrive by. A
         // relative `base_path` names a different directory from every place
         // `iter` is later run -- a different worktree to create, a different
@@ -189,7 +187,6 @@ fn project_edit(
 ) -> Result<()> {
     let db = &app.db;
     let existing = resolve_project_or_current(db, name)?;
-    let id = existing.id();
     // `--organization` moves the project; without it, membership (or the
     // lack of it) is carried through untouched.
     let organization_id = match organization {
@@ -202,11 +199,10 @@ fn project_edit(
         (None, true) => None,
         (None, false) => existing.board_id,
     };
-    edited(&existing, "project", "updated", |mut project| {
+    update(db, &existing, |project| {
         project.organization_id = organization_id; // never carried through the YAML
         project.board_id = board_id;
-        db.update(id, &project)?;
-        Ok(format!("updated project '{}'", project.name))
+        Ok(())
     })
 }
 

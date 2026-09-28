@@ -12,6 +12,10 @@ pub enum TaskStatus {
 }
 
 impl TaskStatus {
+    /// Every status, in workflow order.
+    #[cfg(any(test, feature = "web"))]
+    pub const ALL: [TaskStatus; 3] = [TaskStatus::Queue, TaskStatus::Wip, TaskStatus::Done];
+
     pub fn as_str(self) -> &'static str {
         match self {
             TaskStatus::Queue => "queue",
@@ -108,8 +112,14 @@ pub struct Task {
 /// ISO 8601 with a `T`, which is not what anyone edits by hand.
 pub const START_TIME_FMT: &str = "%Y-%m-%d %H:%M";
 
+/// Reads a [`START_TIME_FMT`] timestamp -- the one parser for every place a
+/// start time is typed (the editor, the web form, a board drop).
+pub fn parse_start_time(text: &str) -> Option<NaiveDateTime> {
+    NaiveDateTime::parse_from_str(text.trim(), START_TIME_FMT).ok()
+}
+
 mod datetime_opt {
-    use super::START_TIME_FMT;
+    use super::{START_TIME_FMT, parse_start_time};
     use chrono::NaiveDateTime;
     use serde::{Deserialize, Deserializer, Serializer};
 
@@ -129,13 +139,11 @@ mod datetime_opt {
         let raw = Option::<String>::deserialize(deserializer)?;
         match raw.as_deref().map(str::trim) {
             None | Some("") => Ok(None),
-            Some(text) => NaiveDateTime::parse_from_str(text, START_TIME_FMT)
-                .map(Some)
-                .map_err(|_| {
-                    serde::de::Error::custom(format!(
-                        "invalid start_time `{text}`, expected yyyy-mm-dd hh:mm"
-                    ))
-                }),
+            Some(text) => parse_start_time(text).map(Some).ok_or_else(|| {
+                serde::de::Error::custom(format!(
+                    "invalid start_time `{text}`, expected yyyy-mm-dd hh:mm"
+                ))
+            }),
         }
     }
 }
@@ -182,6 +190,25 @@ impl<'de> Deserialize<'de> for Duration {
 }
 
 impl Task {
+    /// When the scheduled slot ends: `start_time + duration`, if both are set.
+    pub fn end_time(&self) -> Option<NaiveDateTime> {
+        Some(self.start_time? + chrono::Duration::minutes(self.duration?.minutes()))
+    }
+
+    /// `start_time` as typed and shown, or empty when unscheduled.
+    #[cfg(feature = "web")]
+    pub fn start_text(&self) -> String {
+        self.start_time
+            .map(|t| t.format(START_TIME_FMT).to_string())
+            .unwrap_or_default()
+    }
+
+    /// `duration` as `hh:mm`, or empty when there is none.
+    #[cfg(feature = "web")]
+    pub fn duration_text(&self) -> String {
+        self.duration.map(|d| d.to_string()).unwrap_or_default()
+    }
+
     /// A blank (or issue-prefilled) template for `iter task new` to open in
     /// the YAML editor. `branch_prefix` comes from the owning project's
     /// `branch_template`, so the default is the project's rule and the
@@ -207,6 +234,22 @@ impl Task {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_slot_ends_after_its_duration_and_only_when_both_are_set() {
+        let mut t = Task::template(1, String::new(), TaskStatus::Queue);
+        assert_eq!(t.end_time(), None);
+        t.start_time = parse_start_time(" 2026-09-28 23:30 ");
+        assert_eq!(t.end_time(), None);
+        t.duration = Some(Duration(90));
+        assert_eq!(t.end_time(), parse_start_time("2026-09-29 01:00"));
+        #[cfg(feature = "web")]
+        assert_eq!(
+            (t.start_text(), t.duration_text()),
+            ("2026-09-28 23:30".to_string(), "01:30".to_string())
+        );
+        assert_eq!(parse_start_time("tomorrow"), None);
+    }
+
     use super::*;
 
     /// `branch_prefix` has to reach the YAML editor as an ordinary field --

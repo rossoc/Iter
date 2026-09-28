@@ -3,13 +3,17 @@
 //! dropped task and where it landed to the two `POST` routes below, and
 //! reloads.
 
-use super::layout::{Nav, Sel, shell};
+use super::forms::text;
+use super::layout::{Nav, Sel, cls, description, error_box, field, form_actions, shell, textarea};
 use super::open_db;
 use crate::db::{Db, Table};
 use crate::models::{
-    Board, Duration, IMPORTANT_TAG, Project, START_TIME_FMT, Tag, Task, TaskStatus, URGENT_TAG,
+    Board, Duration, IMPORTANT_TAG, Named, Project, START_TIME_FMT, Tag, Task, TaskStatus,
+    URGENT_TAG, parse_start_time, task_ref,
 };
-use chrono::{Local, NaiveDate, NaiveDateTime};
+use crate::reporting::fmt_date;
+use crate::utils::report::parse_day;
+use chrono::{Local, NaiveDate};
 use serde::Deserialize;
 use topcoat::{
     Result,
@@ -48,7 +52,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
 /// sorted and dropped.
 #[derive(Clone)]
 struct Card {
-    id: i64,
     /// `<project>/<task>`, the same way the CLI names it.
     label: String,
     task: Task,
@@ -70,8 +73,7 @@ impl Card {
             return String::new();
         };
         let mut slot = start.format("%H:%M").to_string();
-        if let Some(d) = self.task.duration {
-            let end = start + chrono::Duration::minutes(d.minutes());
+        if let Some(end) = self.task.end_time() {
             slot.push_str(&format!("-{}", end.format("%H:%M")));
         }
         slot
@@ -79,35 +81,26 @@ impl Card {
 }
 
 /// The colours a board draws with: the Urgent and Important tags' colours,
-/// as CSS variables.
+/// as CSS variables. Both tags are seeded and can't be deleted.
 fn colors_style(db: &Db) -> crate::error::Result<String> {
-    let color = |name: &str, fallback: &str| -> crate::error::Result<String> {
-        Ok(db
-            .find_by_name::<Tag>(name)?
-            .map_or_else(|| fallback.to_string(), |t| t.color))
-    };
     Ok(format!(
         "--urgent:{};--important:{}",
-        color(URGENT_TAG, "#facc15")?,
-        color(IMPORTANT_TAG, "#3b82f6")?
+        db.resolve::<Tag>(URGENT_TAG)?.color,
+        db.resolve::<Tag>(IMPORTANT_TAG)?.color
     ))
 }
 
 /// Every unfinished task on the board's projects, urgent first, then by name.
 fn cards(db: &Db, board_id: i64) -> crate::error::Result<Vec<Card>> {
-    let mut out = Vec::new();
-    for project in db.projects_in::<Board>(board_id)? {
-        for task in db.tasks_for_project(project.id())? {
-            if task.status == TaskStatus::Done {
-                continue;
-            }
-            out.push(Card {
-                id: task.id(),
-                label: crate::models::task_ref(&project.name, &task.name),
-                task,
-            });
-        }
-    }
+    let mut out: Vec<Card> = db
+        .tasks_in::<Board>(board_id)?
+        .into_iter()
+        .filter(|(_, task)| task.status != TaskStatus::Done)
+        .map(|(project, task)| Card {
+            label: task_ref(&project, &task.name),
+            task,
+        })
+        .collect();
     out.sort_by(|a, b| {
         b.task
             .urgency
@@ -124,7 +117,7 @@ fn pick(all: &[Card], keep: impl Fn(&Card) -> bool) -> Vec<Card> {
 fn day_of(cx: &Cx) -> Result<NaiveDate> {
     let today = Local::now().date_naive();
     Ok(match query_params::<DayQuery>(cx)?.date.as_deref() {
-        Some(text) => NaiveDate::parse_from_str(text, "%Y-%m-%d").unwrap_or(today),
+        Some(text) => parse_day(text).unwrap_or(today),
         None => today,
     })
 }
@@ -140,27 +133,32 @@ fn schedule(task: &mut Task, target: &str) -> std::result::Result<(), String> {
         task.start_time = None;
         return Ok(());
     }
-    let start = NaiveDateTime::parse_from_str(target, START_TIME_FMT)
-        .map_err(|_| format!("invalid start time '{target}'"))?;
+    let start = parse_start_time(target).ok_or_else(|| format!("invalid start time '{target}'"))?;
     task.start_time = Some(start);
     task.duration.get_or_insert(Duration(60));
     Ok(())
 }
 
+/// The matrix's quadrants: the drop target `board.js` posts, the flags it
+/// stands for (urgent, important), and its heading.
+const QUADRANTS: [(&str, bool, bool, &str); 4] = [
+    ("both", true, true, "Important and urgent"),
+    ("important", false, true, "Important, not urgent"),
+    ("urgent", true, false, "Urgent, not important"),
+    ("neither", false, false, "Not urgent, not important"),
+];
+
 /// Applies a matrix drop. `target` is `left` (back to the side list, flags
 /// untouched) or a quadrant, which sets the flags to match.
 fn place(task: &mut Task, target: &str) -> std::result::Result<(), String> {
-    let (urgent, important) = match target {
-        "left" => {
-            task.matrix_placed = false;
-            return Ok(());
-        }
-        "both" => (true, true),
-        "important" => (false, true),
-        "urgent" => (true, false),
-        "neither" => (false, false),
-        other => return Err(format!("unknown quadrant '{other}'")),
-    };
+    if target == "left" {
+        task.matrix_placed = false;
+        return Ok(());
+    }
+    let &(_, urgent, important, _) = QUADRANTS
+        .iter()
+        .find(|q| q.0 == target)
+        .ok_or_else(|| format!("unknown quadrant '{target}'"))?;
     task.urgency = urgent;
     task.importance = important;
     task.matrix_placed = true;
@@ -181,12 +179,13 @@ fn drop_on(
     apply: fn(&mut Task, &str) -> std::result::Result<(), String>,
 ) -> Result<Json<bool>> {
     let db = open_db()?;
-    let mut found = cards(&db, board_id)?
-        .into_iter()
-        .find(|c| c.id == drop.task_id)
+    let mut task = db.get::<Task>(drop.task_id)?.ok_or_not_found()?;
+    let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
+    (project.board_id == Some(board_id))
+        .then_some(())
         .ok_or_not_found()?;
-    apply(&mut found.task, &drop.target).map_err(bad_request)?;
-    db.update(found.id, &found.task)?;
+    apply(&mut task, &drop.target).map_err(bad_request)?;
+    db.update(drop.task_id, &task)?;
     Ok(Json(true))
 }
 
@@ -205,8 +204,8 @@ async fn place_task(cx: &Cx, Form(drop): Form<Drop>) -> Result<Json<bool>> {
 #[component]
 async fn card(c: &Card) -> Result<impl View> {
     Ok(view! {
-        <div class=(c.class()) draggable="true" data-task=(c.id.to_string())>
-            <a href=(format!("/task/{}", c.id))>(c.label.clone())</a>
+        <div class=(c.class()) draggable="true" data-task=(c.task.id().to_string())>
+            <a href=(format!("/task/{}", c.task.id()))>(c.label.clone())</a>
             <span class="slot">(c.slot())</span>
         </div>
     })
@@ -227,14 +226,11 @@ async fn zone(target: String, class: &str, title: &str, cards: &[Card]) -> Resul
 
 #[component]
 async fn board_tabs(id: i64, active: &str, date: &str) -> Result<impl View> {
-    let agenda = if active == "agenda" { "sel" } else { "" };
-    let matrix = if active == "matrix" { "sel" } else { "" };
-    let info = if active == "info" { "sel" } else { "" };
     Ok(view! {
         <div class="tabs">
-            <a class=(agenda) href=(format!("/board/{id}?date={date}"))>"Agenda"</a>
-            <a class=(matrix) href=(format!("/board/{id}/matrix"))>"Eisenhower matrix"</a>
-            <a class=(info) href=(format!("/board/{id}/info"))>"Info"</a>
+            <a class=(cls(active == "agenda")) href=(format!("/board/{id}?date={date}"))>"Agenda"</a>
+            <a class=(cls(active == "matrix")) href=(format!("/board/{id}/matrix"))>"Eisenhower matrix"</a>
+            <a class=(cls(active == "info")) href=(format!("/board/{id}/info"))>"Info"</a>
             <a class="edit" href=(format!("/board/{id}/edit"))>"Edit"</a>
         </div>
     })
@@ -278,15 +274,11 @@ async fn agenda_page(cx: &Cx) -> Result<impl View> {
     let hours: Vec<(String, String, Vec<Card>)> = (0..24)
         .map(|h| {
             let slot = day.and_hms_opt(h, 0, 0).expect("hour is in range");
-            let here = all
-                .iter()
-                .filter(|c| {
-                    c.task
-                        .start_time
-                        .is_some_and(|s| s >= slot && s < slot + chrono::Duration::hours(1))
-                })
-                .cloned()
-                .collect();
+            let here = pick(&all, |c| {
+                c.task
+                    .start_time
+                    .is_some_and(|s| s >= slot && s < slot + chrono::Duration::hours(1))
+            });
             (
                 format!("{h:02}:00"),
                 slot.format(START_TIME_FMT).to_string(),
@@ -294,7 +286,7 @@ async fn agenda_page(cx: &Cx) -> Result<impl View> {
             )
         })
         .collect();
-    let date = day.format("%Y-%m-%d").to_string();
+    let date = fmt_date(day);
     let (prev, next) = (day.pred_opt().unwrap_or(day), day.succ_opt().unwrap_or(day));
     Ok(view! {
         shell(
@@ -310,9 +302,9 @@ async fn agenda_page(cx: &Cx) -> Result<impl View> {
                 </div>
                 <div class="agenda">
                     <div class="days">
-                        <a href=(format!("/board/{id}?date={}", prev.format("%Y-%m-%d")))>"<"</a>
+                        <a href=(format!("/board/{id}?date={}", fmt_date(prev)))>"<"</a>
                         <strong>(day.format("%A %-d %B %Y").to_string())</strong>
-                        <a href=(format!("/board/{id}?date={}", next.format("%Y-%m-%d")))>">"</a>
+                        <a href=(format!("/board/{id}?date={}", fmt_date(next)))>">"</a>
                     </div>
                     for (label, target, here) in hours.iter() {
                         <div class="hour">
@@ -336,19 +328,16 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
         (Nav::load(&db)?, board, colors_style(&db)?, cards(&db, id)?)
     };
     let waiting = pick(&all, |c| !c.task.matrix_placed);
-    let both = pick(&all, |c| {
-        c.task.matrix_placed && c.task.urgency && c.task.importance
-    });
-    let important = pick(&all, |c| {
-        c.task.matrix_placed && !c.task.urgency && c.task.importance
-    });
-    let urgent = pick(&all, |c| {
-        c.task.matrix_placed && c.task.urgency && !c.task.importance
-    });
-    let neither = pick(&all, |c| {
-        c.task.matrix_placed && !c.task.urgency && !c.task.importance
-    });
-    let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
+    let quadrants: Vec<(&str, String, &str, Vec<Card>)> = QUADRANTS
+        .iter()
+        .map(|&(target, urgent, important, title)| {
+            let here = pick(&all, |c| {
+                c.task.matrix_placed && c.task.urgency == urgent && c.task.importance == important
+            });
+            (target, format!("q-{target}"), title, here)
+        })
+        .collect();
+    let today = fmt_date(Local::now().date_naive());
     Ok(view! {
         shell(
             nav: &nav,
@@ -363,10 +352,9 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
                 <div class="matrix">
                     <div class="axis">"Urgent"</div>
                     <div class="axis">"Not urgent"</div>
-                    zone(target: "both".to_string(), class: "q-both", title: "Important and urgent", cards: &both)
-                    zone(target: "important".to_string(), class: "q-important", title: "Important, not urgent", cards: &important)
-                    zone(target: "urgent".to_string(), class: "q-urgent", title: "Urgent, not important", cards: &urgent)
-                    zone(target: "neither".to_string(), class: "q-neither", title: "Not urgent, not important", cards: &neither)
+                    for (target, class, title, here) in quadrants.iter() {
+                        zone(target: target.to_string(), class: class, title: title, cards: here)
+                    }
                 </div>
             </div>
             <script src="/board.js"></script>
@@ -396,7 +384,7 @@ impl BoardForm {
         };
         BoardForm {
             name: first("name"),
-            description: first("description").replace("\r\n", "\n"),
+            description: text(&first("description")),
             projects: pairs
                 .iter()
                 .filter(|(k, _)| k == "project")
@@ -408,9 +396,9 @@ impl BoardForm {
     /// `board` with the name and description applied, and whether the name
     /// is acceptable.
     fn apply(&self, mut board: Board) -> (Board, crate::error::Result<()>) {
-        let valid = crate::models::require_name("board", &self.name);
         board.name = self.name.trim().to_string();
         board.description = self.description.clone();
+        let valid = board.validate();
         (board, valid)
     }
 }
@@ -456,14 +444,10 @@ async fn board_form(
 ) -> Result<impl View> {
     Ok(view! {
         <h1>"Edit board"</h1>
-        if let Some(message) = &error {
-            <div class="error">(message.clone())</div>
-        }
+        error_box(error: &error)
         <form method="post" action=(format!("/board/{}/edit", board.id()))>
-            <label>"Name"</label>
-            <input type="text" name="name" value=(board.name.clone())>
-            <label>"Description (markdown)"</label>
-            <textarea name="description">(board.description.clone())</textarea>
+            field(name: "name", label: "Name", value: &board.name)
+            textarea(text: &board.description)
             <label>"Projects"</label>
             for c in choices.iter() {
                 <label class="check">
@@ -474,9 +458,7 @@ async fn board_form(
                     }
                 </label>
             }
-            <button type="submit">"Save"</button>
-            " "
-            <a href=(format!("/board/{}/info", board.id()))>"Cancel"</a>
+            form_actions(cancel: format!("/board/{}/info", board.id()))
         </form>
     })
 }
@@ -489,7 +471,7 @@ async fn info_page(cx: &Cx) -> Result<impl View> {
         let board = db.get::<Board>(id)?.ok_or_not_found()?;
         (Nav::load(&db)?, board, db.projects_in::<Board>(id)?)
     };
-    let today = Local::now().date_naive().format("%Y-%m-%d").to_string();
+    let today = fmt_date(Local::now().date_naive());
     Ok(view! {
         shell(
             nav: &nav,
@@ -497,9 +479,7 @@ async fn info_page(cx: &Cx) -> Result<impl View> {
             <div class="crumbs"><a href="/boards">"Boards"</a></div>
             <h1>(board.name.clone())</h1>
             board_tabs(id: id, active: "info", date: &today)
-            if !board.description.is_empty() {
-                <pre class="desc">(board.description.clone())</pre>
-            }
+            description(text: &board.description)
             <h3>"Projects"</h3>
             if projects.is_empty() {
                 <p class="empty">"No projects on this board."</p>
@@ -535,7 +515,7 @@ async fn save_page(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<
         let (board, valid) = form.apply(existing);
         let saved = valid.and_then(|()| {
             db.update(id, &board)?;
-            bind_projects(&db, id, &form.projects)
+            db.set_projects::<Board>(id, &form.projects)
         });
         match saved {
             Ok(()) => return Err(see_other(format!("/board/{id}/info")).into()),
@@ -550,24 +530,6 @@ async fn save_page(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<
     Ok(view! {
         shell(nav: &nav, sel: Sel::Board, board_form(board: &board, choices: &choices, error: Some(error)))
     })
-}
-
-/// Makes `ids` exactly the projects on the board: the others that were on
-/// it are unbound, the rest are bound (moving them off any other board).
-fn bind_projects(db: &Db, board_id: i64, ids: &[i64]) -> crate::error::Result<()> {
-    for mut project in db.list::<Project>()? {
-        let wanted = ids.contains(&project.id());
-        let target = match (wanted, project.board_id) {
-            (true, _) => Some(board_id),
-            (false, Some(b)) if b == board_id => None,
-            (false, current) => current,
-        };
-        if target != project.board_id {
-            project.board_id = target;
-            db.update(project.id(), &project)?;
-        }
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -615,10 +577,7 @@ mod tests {
     fn dropping_on_an_hour_schedules_with_a_default_hour() {
         let mut t = task();
         schedule(&mut t, "2026-09-28 09:00").expect("valid slot");
-        assert_eq!(
-            t.start_time,
-            NaiveDateTime::parse_from_str("2026-09-28 09:00", START_TIME_FMT).ok()
-        );
+        assert_eq!(t.start_time, parse_start_time("2026-09-28 09:00"));
         assert_eq!(t.duration, Some(Duration(60)));
     }
 

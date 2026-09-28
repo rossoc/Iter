@@ -75,7 +75,7 @@ impl crate::models::Named for Tag {
     fn validate(&mut self) -> crate::error::Result<()> {
         self.name = self.name.trim().to_string();
         self.color = self.color.trim().to_lowercase();
-        crate::models::require_name("tag", &self.name)?;
+        crate::models::require_name(Self::KIND, &self.name)?;
         match is_hex_color(&self.color) {
             true => Ok(()),
             false => Err(crate::error::IterError::InvalidTagColor(self.color.clone())),
@@ -114,6 +114,19 @@ mod tests {
             tag("x", "red").validate(),
             Err(IterError::InvalidTagColor(c)) if c == "red"
         ));
+    }
+
+    /// A project is a place on disk, so it needs a path as well as a name.
+    #[test]
+    fn a_project_needs_a_name_and_a_base_path() {
+        use crate::config::ProjectDefaults;
+        use crate::models::Project;
+        let mut p = Project::template(&ProjectDefaults::default());
+        assert!(matches!(p.validate(), Err(IterError::EmptyName("project"))));
+        p.name = "p".to_string();
+        assert!(matches!(p.validate(), Err(IterError::EmptyBasePath)));
+        p.base_path = "/tmp/p".to_string();
+        assert!(p.validate().is_ok());
     }
 
     /// Everything else only has the default check: a name.

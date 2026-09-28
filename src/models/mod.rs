@@ -20,6 +20,8 @@ pub use tag::Tag;
 #[cfg(feature = "web")]
 pub use tag::{IMPORTANT_TAG, URGENT_TAG};
 pub use task::{Duration, START_TIME_FMT, Task, TaskStatus};
+#[cfg(feature = "web")]
+pub use task::parse_start_time;
 
 /// The fallback settings a project uses when it inherits none -- i.e. when
 /// it belongs to no organization. Shared by `Project` and `Organization`,

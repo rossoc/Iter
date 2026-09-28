@@ -32,12 +32,12 @@ fn board_info(app: &App, board: &Board) -> Result<()> {
     let projects = app.db.projects_in::<Board>(board.id())?;
     // Tasks are flattened across projects and named `<project>/<task>`: the
     // agenda is about *when*, so it isn't grouped by project.
-    let mut tasks = Vec::new();
-    for project in &projects {
-        for task in app.db.tasks_for_project(project.id())? {
-            tasks.push((task_ref(&project.name, &task.name), task));
-        }
-    }
+    let tasks: Vec<(String, Task)> = app
+        .db
+        .tasks_in::<Board>(board.id())?
+        .into_iter()
+        .map(|(project, task)| (task_ref(&project, &task.name), task))
+        .collect();
     print!("{}", render_info(board, &projects, &tasks));
     Ok(())
 }
@@ -74,8 +74,7 @@ fn render_agenda(tasks: &[(String, Task)]) -> String {
     for (name, task) in scheduled {
         let start = task.start_time.expect("partitioned on start_time");
         let mut slot = start.format(START_TIME_FMT).to_string();
-        if let Some(duration) = task.duration {
-            let end = start + chrono::Duration::minutes(duration.minutes());
+        if let Some(end) = task.end_time() {
             let end_fmt = if end.date() == start.date() {
                 "%H:%M"
             } else {

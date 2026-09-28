@@ -7,9 +7,8 @@
 
 use crate::error::{IterError, Result};
 use crate::models::{
-    Duration, Organization, Project, START_TIME_FMT, Task, TaskStatus, require_name,
+    Duration, Named, Organization, Project, Task, TaskStatus, parse_start_time, require_name,
 };
-use chrono::NaiveDateTime;
 use serde::Deserialize;
 
 /// A checkbox is present in the submission (as `on`) only when ticked.
@@ -19,17 +18,39 @@ fn checked(value: &Option<String>) -> bool {
 
 /// Browsers submit textareas with CRLF line endings; the database (and the
 /// YAML editor) use LF.
-fn text(value: &str) -> String {
+pub fn text(value: &str) -> String {
     value.replace("\r\n", "\n")
 }
 
 /// A comma-separated list of names, trimmed and without blanks.
-fn names(value: &str) -> Vec<String> {
+pub fn names(value: &str) -> Vec<String> {
     value
         .split(',')
         .map(|n| n.trim().to_string())
         .filter(|n| !n.is_empty())
         .collect()
+}
+
+/// The inverse of [`names`]: `items`' names, comma-separated.
+pub fn joined<T: Named>(items: &[T]) -> String {
+    items.iter().map(Named::name).collect::<Vec<_>>().join(", ")
+}
+
+/// Sets an optional field from its form text: blank clears it, a value that
+/// `parse`s sets it, and anything else leaves it be and is the error.
+fn optional<T>(
+    slot: &mut Option<T>,
+    raw: &str,
+    parse: impl FnOnce(&str) -> Option<T>,
+    error: impl FnOnce(&str) -> IterError,
+) -> Result<()> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        *slot = None;
+    } else {
+        *slot = Some(parse(raw).ok_or_else(|| error(raw))?);
+    }
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -47,16 +68,10 @@ pub struct OrgForm {
 }
 
 impl OrgForm {
-    /// The project names typed into the form, trimmed and without blanks.
-    pub fn project_names(&self) -> Vec<String> {
-        names(&self.projects)
-    }
-
     /// `org` with the submission applied, and whether that submission is
-    /// acceptable. The row is filled in even when it isn't, so the form can
-    /// be shown again with what the user typed.
+    /// acceptable (see `Named::validate`). The row is filled in even when it
+    /// isn't, so the form can be shown again with what the user typed.
     pub fn apply(&self, mut org: Organization) -> (Organization, Result<()>) {
-        let valid = require_name("organization", &self.name);
         org.name = self.name.trim().to_string();
         org.description = text(&self.description);
         org.github = checked(&self.github);
@@ -65,6 +80,7 @@ impl OrgForm {
         org.branch_template = self.branch_template.trim().to_string();
         org.default_branch = self.default_branch.trim().to_string();
         org.github_project = self.github_project.trim().to_string();
+        let valid = org.validate();
         (org, valid)
     }
 }
@@ -87,13 +103,6 @@ pub struct ProjectForm {
 impl ProjectForm {
     /// See [`OrgForm::apply`].
     pub fn apply(&self, mut project: Project) -> (Project, Result<()>) {
-        let valid = if self.name.trim().is_empty() {
-            Err(IterError::EmptyName("project"))
-        } else if self.base_path.trim().is_empty() {
-            Err(IterError::EmptyBasePath)
-        } else {
-            Ok(())
-        };
         project.name = self.name.trim().to_string();
         project.description = text(&self.description);
         project.base_path = self.base_path.trim().to_string();
@@ -104,6 +113,7 @@ impl ProjectForm {
         project.branch_template = self.branch_template.trim().to_string();
         project.default_branch = self.default_branch.trim().to_string();
         project.github_project = self.github_project.trim().to_string();
+        let valid = project.validate();
         (project, valid)
     }
 }
@@ -127,64 +137,38 @@ pub struct TaskForm {
 }
 
 impl TaskForm {
-    /// The tag names typed into the form, trimmed and without blanks.
-    pub fn tag_names(&self) -> Vec<String> {
-        names(&self.tags)
-    }
-
-    /// See [`OrgForm::apply`]. An unparseable issue number or status keeps
-    /// the row's old value.
+    /// See [`OrgForm::apply`]. A field that doesn't parse keeps the row's old
+    /// value; the first such error is the one reported.
     pub fn apply(&self, mut task: Task) -> (Task, Result<()>) {
         let mut valid = require_name("task", &self.name);
-        let issue = self.github_issue.trim();
-        if issue.is_empty() {
-            task.github_issue = None;
-        } else {
-            match issue.parse() {
-                Ok(n) => task.github_issue = Some(n),
-                Err(_) if valid.is_ok() => {
-                    valid = Err(IterError::CommandFailed(format!(
-                        "invalid github issue number '{issue}'"
-                    )));
-                }
-                Err(_) => {}
-            }
-        }
+        valid = valid.and(optional(
+            &mut task.github_issue,
+            &self.github_issue,
+            |s| s.parse().ok(),
+            |raw| IterError::CommandFailed(format!("invalid github issue number '{raw}'")),
+        ));
         match TaskStatus::parse(&self.status) {
             Some(status) => task.status = status,
-            None if valid.is_ok() => valid = Err(IterError::InvalidStatus(self.status.clone())),
-            None => {}
+            None => valid = valid.and(Err(IterError::InvalidStatus(self.status.clone()))),
         }
+        valid = valid.and(optional(
+            &mut task.start_time,
+            &self.start_time,
+            parse_start_time,
+            |raw| {
+                IterError::CommandFailed(format!(
+                    "invalid start time '{raw}', expected yyyy-mm-dd hh:mm"
+                ))
+            },
+        ));
+        valid = valid.and(optional(
+            &mut task.duration,
+            &self.duration,
+            Duration::parse,
+            |raw| IterError::CommandFailed(format!("invalid duration '{raw}', expected hh:mm")),
+        ));
         task.urgency = checked(&self.urgency);
         task.importance = checked(&self.importance);
-        let start = self.start_time.trim();
-        if start.is_empty() {
-            task.start_time = None;
-        } else {
-            match NaiveDateTime::parse_from_str(start, START_TIME_FMT) {
-                Ok(t) => task.start_time = Some(t),
-                Err(_) if valid.is_ok() => {
-                    valid = Err(IterError::CommandFailed(format!(
-                        "invalid start time '{start}', expected yyyy-mm-dd hh:mm"
-                    )));
-                }
-                Err(_) => {}
-            }
-        }
-        let duration = self.duration.trim();
-        if duration.is_empty() {
-            task.duration = None;
-        } else {
-            match Duration::parse(duration) {
-                Some(d) => task.duration = Some(d),
-                None if valid.is_ok() => {
-                    valid = Err(IterError::CommandFailed(format!(
-                        "invalid duration '{duration}', expected hh:mm"
-                    )));
-                }
-                None => {}
-            }
-        }
         task.name = self.name.trim().to_string();
         task.description = text(&self.description);
         task.branch_prefix = self.branch_prefix.trim().to_string();
@@ -214,6 +198,13 @@ mod tests {
 
     fn task() -> Task {
         Task::template(7, String::new(), TaskStatus::Queue)
+    }
+
+    #[test]
+    fn joined_is_the_inverse_of_names() {
+        let tags = crate::models::Tag::defaults();
+        assert_eq!(joined(&tags), "Urgent, Important");
+        assert_eq!(names(&joined(&tags)), ["Urgent", "Important"]);
     }
 
     #[test]
@@ -251,7 +242,7 @@ mod tests {
         assert!(t.urgency && !t.importance);
         assert_eq!(t.duration, Some(Duration(105)));
         assert!(t.start_time.is_some());
-        assert_eq!(form.tag_names(), ["Urgent", "work"]);
+        assert_eq!(names(&form.tags), ["Urgent", "work"]);
 
         form.duration = "1h".into();
         assert!(form.apply(task()).1.is_err());

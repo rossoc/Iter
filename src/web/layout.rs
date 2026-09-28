@@ -34,22 +34,87 @@ pub struct Nav {
 
 impl Nav {
     pub fn load(db: &Db) -> crate::error::Result<Nav> {
-        let mut orgs = Vec::new();
-        for org in db.list::<Organization>()? {
-            let projects = db.projects_in::<Organization>(org.id())?;
-            orgs.push((org, projects));
-        }
-        let loose = db
-            .list::<Project>()?
+        // Two queries, grouped here, rather than one per organization.
+        let projects = db.list::<Project>()?;
+        let members = |id: Option<i64>| -> Vec<Project> {
+            projects
+                .iter()
+                .filter(|p| p.organization_id == id)
+                .cloned()
+                .collect()
+        };
+        let orgs = db
+            .list::<Organization>()?
             .into_iter()
-            .filter(|p| p.organization_id.is_none())
+            .map(|org| {
+                let mine = members(org.id);
+                (org, mine)
+            })
             .collect();
-        Ok(Nav { orgs, loose })
+        Ok(Nav {
+            orgs,
+            loose: members(None),
+        })
     }
 }
 
-fn cls(on: bool) -> &'static str {
+// ---- building blocks shared by every page --------------------------------
+
+pub(super) fn cls(on: bool) -> &'static str {
     if on { "sel" } else { "" }
+}
+
+#[component]
+pub(super) async fn description(text: &str) -> Result<impl View> {
+    Ok(view! {
+        if !text.is_empty() {
+            <pre class="desc">(text.to_string())</pre>
+        }
+    })
+}
+
+#[component]
+pub(super) async fn error_box(error: &Option<String>) -> Result<impl View> {
+    Ok(view! {
+        if let Some(message) = error {
+            <div class="error">(message.clone())</div>
+        }
+    })
+}
+
+#[component]
+pub(super) async fn check(name: &str, label: &str, on: bool) -> Result<impl View> {
+    Ok(view! {
+        <label class="check">
+            <input type="checkbox" name=(name.to_string()) if on { checked="" }>
+            (label.to_string())
+        </label>
+    })
+}
+
+#[component]
+pub(super) async fn field(name: &str, label: &str, value: &str) -> Result<impl View> {
+    Ok(view! {
+        <label>(label.to_string())</label>
+        <input type="text" name=(name.to_string()) value=(value.to_string())>
+    })
+}
+
+#[component]
+pub(super) async fn textarea(text: &str) -> Result<impl View> {
+    Ok(view! {
+        <label>"Description (markdown)"</label>
+        <textarea name="description">(text.to_string())</textarea>
+    })
+}
+
+#[component]
+pub(super) async fn form_actions(#[into] cancel: String) -> Result<impl View> {
+    Ok(view! {
+        <button type="submit">"Save"</button>
+        " "
+        <a href=(cancel.clone())>"Cancel"</a>
+    })
 }
 
 /// The frame around a page's content.

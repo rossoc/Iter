@@ -6,6 +6,7 @@ use crate::models::{
 use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
+use std::collections::HashMap;
 use std::path::Path;
 
 const DATETIME_FMT: &str = "%Y-%m-%d %H:%M:%S";
@@ -276,16 +277,18 @@ impl Db {
     }
 
     #[cfg(feature = "web")]
-    /// Replaces the tags on `task_id` with exactly `tag_ids`.
+    /// Replaces the tags on `task_id` with exactly `tag_ids`, in one
+    /// transaction.
     pub fn set_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM task_tags WHERE task_id = ?1", params![task_id])?;
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute("DELETE FROM task_tags WHERE task_id = ?1", params![task_id])?;
+        let mut insert =
+            tx.prepare("INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)")?;
         for tag_id in tag_ids {
-            self.conn.execute(
-                "INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)",
-                params![task_id, tag_id],
-            )?;
+            insert.execute(params![task_id, tag_id])?;
         }
+        drop(insert);
+        tx.commit()?;
         Ok(())
     }
 
@@ -484,14 +487,35 @@ impl Db {
             &format!("UPDATE projects SET {column} = NULL WHERE {column} = ?1"),
             params![id],
         )?;
+        let mut join = tx.prepare(&format!("UPDATE projects SET {column} = ?1 WHERE id = ?2"))?;
         for project_id in project_ids {
-            tx.execute(
-                &format!("UPDATE projects SET {column} = ?1 WHERE id = ?2"),
-                params![id, project_id],
-            )?;
+            join.execute(params![id, project_id])?;
         }
+        drop(join);
         tx.commit()?;
         Ok(())
+    }
+
+    /// Every task of every project in group `id`, paired with its project's
+    /// name and ordered by project, then task. Two queries however many
+    /// projects the group holds.
+    pub fn tasks_in<G: ProjectGroup>(&self, id: i64) -> Result<Vec<(String, Task)>> {
+        let names: HashMap<i64, String> = self
+            .projects_in::<G>(id)?
+            .into_iter()
+            .map(|p| (p.id(), p.name))
+            .collect();
+        let tail = format!(
+            "WHERE project_id IN (SELECT id FROM projects WHERE {} = ?1)",
+            G::MEMBER_COLUMN
+        );
+        let mut tasks: Vec<(String, Task)> = self
+            .find_all::<Task>(&tail, params![id])?
+            .into_iter()
+            .map(|t| (names.get(&t.project_id).cloned().unwrap_or_default(), t))
+            .collect();
+        tasks.sort_by(|(a, x), (b, y)| (a, &x.name).cmp(&(b, &y.name)));
+        Ok(tasks)
     }
 
     pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
@@ -1826,6 +1850,33 @@ mod tests {
             names(db.projects_in::<Organization>(acme).expect("org")),
             ["a", "b"]
         );
+    }
+
+    /// The tasks of a group come back with their project's name, ordered by
+    /// project then task, and only from that group's projects.
+    #[test]
+    fn tasks_in_a_group_pair_each_task_with_its_project() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("insert board");
+        let (b, a, off) = (
+            insert_project(&db, "b"),
+            insert_project(&db, "a"),
+            insert_project(&db, "off"),
+        );
+        db.set_projects::<Board>(work, &[a, b]).expect("roster");
+        for (project, name) in [(b, "y"), (a, "z"), (a, "x"), (off, "w")] {
+            insert_task(&db, project, name);
+        }
+        let got: Vec<(String, String)> = db
+            .tasks_in::<Board>(work)
+            .expect("query")
+            .into_iter()
+            .map(|(project, task)| (project, task.name))
+            .collect();
+        let want =
+            [("a", "x"), ("a", "z"), ("b", "y")].map(|(p, t)| (p.to_string(), t.to_string()));
+        assert_eq!(got, want);
+        assert!(db.tasks_in::<Organization>(1).expect("query").is_empty());
     }
 
     fn board(name: &str) -> crate::models::Board {

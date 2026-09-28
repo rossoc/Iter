@@ -124,4 +124,19 @@ impl Project {
     }
 }
 
-crate::models::named!(Project, "project");
+impl crate::models::Named for Project {
+    const KIND: &'static str = "project";
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// A name, and a `base_path` -- a project is a place on disk.
+    fn validate(&mut self) -> crate::error::Result<()> {
+        crate::models::require_name(Self::KIND, &self.name)?;
+        match self.base_path.trim().is_empty() {
+            true => Err(crate::error::IterError::EmptyBasePath),
+            false => Ok(()),
+        }
+    }
+}

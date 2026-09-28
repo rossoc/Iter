@@ -44,7 +44,7 @@ pub fn serve(port: u16, open: bool) -> Result<()> {
                 "xdg-open"
             };
             // Best effort: the URL is printed either way.
-            let _ = std::process::Command::new(opener).arg(&url).status();
+            let _ = std::process::Command::new(opener).arg(&url).spawn();
         }
         topcoat::serve(listener, router()).await?;
         Ok(())

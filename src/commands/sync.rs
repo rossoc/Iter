@@ -91,18 +91,10 @@ pub(crate) fn task_pull(
         match sync::plan_pull(&tasks, issue, body) {
             sync::Pull::Create { status } => {
                 let mut task = Task {
-                    id: None,
-                    project_id,
                     name: issue.title.clone(),
                     description: issue.body.clone(),
                     github_issue: Some(issue.number),
-                    status,
-                    branch_prefix: branch_prefix.clone(),
-                    urgency: false,
-                    importance: false,
-                    matrix_placed: false,
-                    start_time: None,
-                    duration: None,
+                    ..Task::template(project_id, branch_prefix.clone(), status)
                 };
                 task.id = Some(db.insert(&task)?);
                 println!(

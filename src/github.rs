@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn a_closed_issue_marks_its_task_done() {
-        for status in [TaskStatus::Queue, TaskStatus::Wip, TaskStatus::Done] {
+        for status in TaskStatus::ALL {
             assert_eq!(
                 status_for_issue_state(status, IssueState::Closed),
                 TaskStatus::Done

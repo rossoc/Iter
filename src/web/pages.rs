@@ -3,11 +3,15 @@
 //! only then builds its view, so no database connection lives across
 //! rendering.
 
-use super::forms::{OrgForm, ProjectForm, TaskForm};
-use super::layout::{self, Nav, Sel, shell};
+use super::forms::{OrgForm, ProjectForm, TaskForm, joined, names};
+use super::layout::{
+    self, Nav, Sel, check, cls, description, error_box, field, form_actions, shell, textarea,
+};
 use super::open_db;
 use crate::db::{Db, Table};
-use crate::models::{Organization, Project, START_TIME_FMT, Session, Tag, Task, TaskStatus};
+use crate::models::{
+    Duration, Organization, Project, ProjectGroup, START_TIME_FMT, Session, Tag, Task, TaskStatus,
+};
 use chrono::{Local, NaiveDateTime};
 use topcoat::{
     Result,
@@ -62,10 +66,6 @@ impl Tab {
     }
 }
 
-fn cls(on: bool) -> &'static str {
-    if on { "sel" } else { "" }
-}
-
 fn yes_no(on: bool) -> &'static str {
     if on { "yes" } else { "no" }
 }
@@ -91,15 +91,6 @@ async fn row(label: &str, value: &str) -> Result<impl View> {
     Ok(view! { <dt>(label.to_string())</dt><dd>(value.to_string())</dd> })
 }
 
-#[component]
-async fn description(text: &str) -> Result<impl View> {
-    Ok(view! {
-        if !text.is_empty() {
-            <pre class="desc">(text.to_string())</pre>
-        }
-    })
-}
-
 /// The branch/tool settings an organization and a project share.
 #[component]
 async fn settings(
@@ -122,25 +113,17 @@ async fn settings(
     })
 }
 
-/// A task with the project it belongs to, for listings that span projects.
-struct TaskRow {
-    project: Project,
-    task: Task,
+/// The organization `project` is in, if any.
+fn org_of(db: &Db, project: &Project) -> crate::error::Result<Option<Organization>> {
+    Ok(match Organization::group_of(project) {
+        Some(id) => db.get(id)?,
+        None => None,
+    })
 }
 
-fn tasks_of(db: &Db, project: &Project) -> crate::error::Result<Vec<TaskRow>> {
-    Ok(db
-        .tasks_for_project(project.id())?
-        .into_iter()
-        .map(|task| TaskRow {
-            project: project.clone(),
-            task,
-        })
-        .collect())
-}
-
+/// `rows` are `(project name, task)`, the shape `Db::tasks_in` returns.
 #[component]
-async fn task_table(rows: &[TaskRow], with_project: bool) -> Result<impl View> {
+async fn task_table(rows: &[(String, Task)], with_project: bool) -> Result<impl View> {
     Ok(view! {
         if rows.is_empty() {
             <p class="empty">"No tasks."</p>
@@ -154,16 +137,16 @@ async fn task_table(rows: &[TaskRow], with_project: bool) -> Result<impl View> {
                     <th>"Status"</th>
                     <th>"Issue"</th>
                 </tr>
-                for r in rows.iter() {
+                for (project, task) in rows.iter() {
                     <tr>
-                        <td><a href=(format!("/task/{}", r.task.id()))>(r.task.name.clone())</a></td>
+                        <td><a href=(format!("/task/{}", task.id()))>(task.name.clone())</a></td>
                         if with_project {
-                            <td><a href=(format!("/project/{}", r.project.id()))>(r.project.name.clone())</a></td>
+                            <td><a href=(format!("/project/{}", task.project_id))>(project.clone())</a></td>
                         }
                         <td>
-                            <span class=(format!("pill {}", r.task.status.as_str()))>(r.task.status.label())</span>
+                            <span class=(format!("pill {}", task.status.as_str()))>(task.status.label())</span>
                         </td>
-                        <td>(issue(r.task.github_issue))</td>
+                        <td>(issue(task.github_issue))</td>
                     </tr>
                 }
             </table>
@@ -178,50 +161,6 @@ async fn org_crumb(org: &Option<Organization>) -> Result<impl View> {
         if let Some(org) = org {
             <a href=(format!("/org/{}", org.id()))>(org.name.clone())</a>" / "
         }
-    })
-}
-
-#[component]
-async fn error_box(error: &Option<String>) -> Result<impl View> {
-    Ok(view! {
-        if let Some(message) = error {
-            <div class="error">(message.clone())</div>
-        }
-    })
-}
-
-#[component]
-async fn check(name: &str, label: &str, on: bool) -> Result<impl View> {
-    Ok(view! {
-        <label class="check">
-            <input type="checkbox" name=(name.to_string()) if on { checked="" }>
-            (label.to_string())
-        </label>
-    })
-}
-
-#[component]
-async fn field(name: &str, label: &str, value: &str) -> Result<impl View> {
-    Ok(view! {
-        <label>(label.to_string())</label>
-        <input type="text" name=(name.to_string()) value=(value.to_string())>
-    })
-}
-
-#[component]
-async fn textarea(text: &str) -> Result<impl View> {
-    Ok(view! {
-        <label>"Description (markdown)"</label>
-        <textarea name="description">(text.to_string())</textarea>
-    })
-}
-
-#[component]
-async fn form_actions(#[into] cancel: String) -> Result<impl View> {
-    Ok(view! {
-        <button type="submit">"Save"</button>
-        " "
-        <a href=(cancel.clone())>"Cancel"</a>
     })
 }
 
@@ -249,12 +188,10 @@ async fn org_page(cx: &Cx) -> Result<impl View> {
         let db = open_db()?;
         let org = db.get::<Organization>(id)?.ok_or_not_found()?;
         let projects = db.projects_in::<Organization>(id)?;
-        let mut tasks = Vec::new();
-        if tab == Tab::Tasks {
-            for p in &projects {
-                tasks.extend(tasks_of(&db, p)?);
-            }
-        }
+        let tasks = match tab {
+            Tab::Tasks => db.tasks_in::<Organization>(id)?,
+            Tab::Info => Vec::new(),
+        };
         (Nav::load(&db)?, org, projects, tasks)
     };
     let base = format!("/org/{id}");
@@ -291,16 +228,6 @@ async fn org_page(cx: &Cx) -> Result<impl View> {
     })
 }
 
-/// The names of `projects`, comma-separated -- what the organization
-/// form's "Projects" field shows.
-fn project_list(projects: &[Project]) -> String {
-    projects
-        .iter()
-        .map(|p| p.name.as_str())
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
 #[component]
 async fn org_form(
     org: &Organization,
@@ -331,7 +258,7 @@ async fn org_edit(cx: &Cx) -> Result<impl View> {
     let (nav, org, projects) = {
         let db = open_db()?;
         let org = db.get::<Organization>(id)?.ok_or_not_found()?;
-        let projects = project_list(&db.projects_in::<Organization>(id)?);
+        let projects = joined(&db.projects_in::<Organization>(id)?);
         (Nav::load(&db)?, org, projects)
     };
     Ok(view! { shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org, projects: &projects)) })
@@ -345,7 +272,7 @@ async fn org_save(cx: &Cx, Form(form): Form<OrgForm>) -> Result<impl View> {
         let existing = db.get::<Organization>(id)?.ok_or_not_found()?;
         let (org, valid) = form.apply(existing);
         let saved = valid
-            .and_then(|()| db.ids_by_name::<Project>(&form.project_names()))
+            .and_then(|()| db.ids_by_name::<Project>(&names(&form.projects)))
             .and_then(|ids| {
                 db.update(id, &org)?;
                 db.set_projects::<Organization>(id, &ids)
@@ -369,11 +296,12 @@ async fn project_page(cx: &Cx) -> Result<impl View> {
     let (nav, project, org, tasks) = {
         let db = open_db()?;
         let project = db.get::<Project>(id)?.ok_or_not_found()?;
-        let org = match project.organization_id {
-            Some(org_id) => db.get::<Organization>(org_id)?,
-            None => None,
-        };
-        let tasks = tasks_of(&db, &project)?;
+        let org = org_of(&db, &project)?;
+        let tasks = db
+            .tasks_for_project(id)?
+            .into_iter()
+            .map(|task| (project.name.clone(), task))
+            .collect::<Vec<_>>();
         (Nav::load(&db)?, project, org, tasks)
     };
     let base = format!("/project/{id}");
@@ -477,12 +405,8 @@ async fn project_save(cx: &Cx, Form(form): Form<ProjectForm>) -> Result<impl Vie
 
 // ---- tasks ------------------------------------------------------------------
 
-fn minutes(total: i64) -> String {
-    format!("{}h {:02}m", total / 60, total % 60)
-}
-
 fn stamp(t: NaiveDateTime) -> String {
-    t.format("%Y-%m-%d %H:%M").to_string()
+    t.format(START_TIME_FMT).to_string()
 }
 
 #[component]
@@ -499,7 +423,7 @@ async fn sessions_table(sessions: &[Session]) -> Result<impl View> {
                     <tr>
                         <td>(stamp(s.start))</td>
                         <td>(s.end.map(stamp).unwrap_or_else(|| "ongoing".to_string()))</td>
-                        <td>(minutes(s.duration_minutes(now)))</td>
+                        <td>(Duration(s.duration_minutes(now)).to_string())</td>
                         <td>(s.message.clone().unwrap_or_default())</td>
                     </tr>
                 }
@@ -515,20 +439,13 @@ async fn task_page(cx: &Cx) -> Result<impl View> {
         let db = open_db()?;
         let task = db.get::<Task>(id)?.ok_or_not_found()?;
         let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
-        let org = match project.organization_id {
-            Some(org_id) => db.get::<Organization>(org_id)?,
-            None => None,
-        };
+        let org = org_of(&db, &project)?;
         let sessions = db.sessions_for_task(id)?;
         let tags = db.tags_for_task(id)?;
         (Nav::load(&db)?, task, project, org, sessions, tags)
     };
     let issue_text = issue(task.github_issue);
-    let start_text = task
-        .start_time
-        .map(|t| t.format(START_TIME_FMT).to_string())
-        .unwrap_or_default();
-    let duration_text = task.duration.map(|d| d.to_string()).unwrap_or_default();
+    let (start_text, duration_text) = (task.start_text(), task.duration_text());
     Ok(view! {
         shell(
             nav: &nav,
@@ -564,22 +481,10 @@ async fn task_page(cx: &Cx) -> Result<impl View> {
     })
 }
 
-fn tag_list(tags: &[Tag]) -> String {
-    tags.iter()
-        .map(|t| t.name.as_str())
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
 #[component]
 async fn task_form(task: &Task, tags: &str, #[default] error: Option<String>) -> Result<impl View> {
-    let statuses = [TaskStatus::Queue, TaskStatus::Wip, TaskStatus::Done];
     let issue_number = task.github_issue.map(|n| n.to_string()).unwrap_or_default();
-    let start = task
-        .start_time
-        .map(|t| t.format(START_TIME_FMT).to_string())
-        .unwrap_or_default();
-    let duration = task.duration.map(|d| d.to_string()).unwrap_or_default();
+    let (start, duration) = (task.start_text(), task.duration_text());
     Ok(view! {
         <h1>"Edit task"</h1>
         error_box(error: &error)
@@ -588,7 +493,7 @@ async fn task_form(task: &Task, tags: &str, #[default] error: Option<String>) ->
             textarea(text: &task.description)
             <label>"Status"</label>
             <select name="status">
-                for s in statuses {
+                for s in TaskStatus::ALL {
                     <option value=(s.as_str()) if task.status == s { selected="" }>(s.label())</option>
                 }
             </select>
@@ -610,7 +515,7 @@ async fn task_edit(cx: &Cx) -> Result<impl View> {
     let (nav, task, tags) = {
         let db = open_db()?;
         let task = db.get::<Task>(id)?.ok_or_not_found()?;
-        let tags = tag_list(&db.tags_for_task(id)?);
+        let tags = joined(&db.tags_for_task(id)?);
         (Nav::load(&db)?, task, tags)
     };
     Ok(
@@ -626,7 +531,7 @@ async fn task_save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
         let existing = db.get::<Task>(id)?.ok_or_not_found()?;
         let (task, valid) = form.apply(existing);
         let saved = valid
-            .and_then(|()| db.ids_by_name::<Tag>(&form.tag_names()))
+            .and_then(|()| db.ids_by_name::<Tag>(&names(&form.tags)))
             .and_then(|ids| {
                 db.update(id, &task)?;
                 db.set_task_tags(id, &ids)
