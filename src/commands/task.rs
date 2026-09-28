@@ -6,10 +6,10 @@ use crate::args::{ReportOpts, TaskCommand};
 use crate::commands::Run;
 use crate::commands::sync::{task_pull, task_push};
 use crate::config::config;
-use crate::db::Table;
+use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::md_edit::edited;
-use crate::models::{Project, SessionConfig, Task, TaskStatus};
+use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
 use crate::models::{require_name, task_ref};
 use crate::reporting::{
     Header, Report, TaskInfo, WeekdayReport, session_rows, settings_of, weekday_averages,
@@ -83,23 +83,45 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
         template.status = github::status_for_issue_state(template.status, issue.state);
     }
 
-    edited(&template, "task", "created", |mut task| {
-        require_name("task", &task.name)?;
-        task.project_id = project_id; // never carried through the YAML
-        db.insert(&task)?;
-        Ok(format!("created task '{}'", task_display(&project, &task)))
+    let template = TaskEdit {
+        task: template,
+        tags: Vec::new(),
+    };
+    edited(&template, "task", "created", |edit| {
+        let tag_ids = checked_tags(db, &edit)?;
+        let id = db.insert(&edit.task)?;
+        db.set_task_tags(id, &tag_ids)?;
+        Ok(format!(
+            "created task '{}'",
+            task_display(&project, &edit.task)
+        ))
     })
+}
+
+/// Validates an edited task and resolves its tags, before anything is
+/// written -- so an unknown tag name leaves the task untouched.
+fn checked_tags(db: &Db, edit: &TaskEdit) -> Result<Vec<i64>> {
+    require_name("task", &edit.task.name)?;
+    db.ids_by_name::<Tag>(&edit.tags)
 }
 
 fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
     let (project, existing) = resolve_task_or_current(db, task_ref)?;
     let id = existing.id();
-    let project_id = existing.project_id;
-    edited(&existing, "task", "updated", |mut task| {
-        task.project_id = project_id; // never carried through the YAML
-        db.update(id, &task)?;
-        Ok(format!("updated task '{}'", task_display(&project, &task)))
+    let tags = db.tags_for_task(id)?.into_iter().map(|t| t.name).collect();
+    let template = TaskEdit {
+        task: existing,
+        tags,
+    };
+    edited(&template, "task", "updated", |edit| {
+        let tag_ids = checked_tags(db, &edit)?;
+        db.update(id, &edit.task)?;
+        db.set_task_tags(id, &tag_ids)?;
+        Ok(format!(
+            "updated task '{}'",
+            task_display(&project, &edit.task)
+        ))
     })
 }
 
@@ -307,8 +329,6 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Wip,
             branch_prefix: String::new(),
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,
@@ -391,8 +411,6 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Done,
             branch_prefix: String::new(),
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,

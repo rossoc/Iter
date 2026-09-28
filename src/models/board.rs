@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// `id` is `None` for a not-yet-created board (the blank template opened
 /// in the editor); it's filled in once inserted.
 #[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
-#[table(name = "boards", order_by = "name")]
+#[table(name = "boards", order_by = "name", kind = "board")]
 pub struct Board {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<i64>,
@@ -33,8 +33,6 @@ impl Board {
     }
 }
 
-crate::models::named!(Board, "board");
-
 impl crate::models::ProjectGroup for Board {
     const MEMBER_COLUMN: &'static str = "board_id";
     const NOT_A_MEMBER: &'static str = "isn't bound to a board";
@@ -43,4 +41,13 @@ impl crate::models::ProjectGroup for Board {
     fn group_of(project: &crate::models::Project) -> Option<i64> {
         project.board_id
     }
+}
+
+/// A task as a board shows it: named `<project>/<task>`, with its flags --
+/// what both `iter board info` and the web board draw.
+#[derive(Debug, Clone)]
+pub struct Card {
+    pub label: String,
+    pub task: crate::models::Task,
+    pub priority: crate::models::Priority,
 }

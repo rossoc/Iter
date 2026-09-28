@@ -5,8 +5,8 @@ use crate::args::BoardCommand;
 use crate::commands::Run;
 use crate::db::Table;
 use crate::error::Result;
-use crate::models::{Board, Project, START_TIME_FMT, Task, TaskStatus, task_ref};
-use crate::utils::crud::{create, delete_group, update};
+use crate::models::{Board, Card, Priority, Project, START_TIME_FMT, TaskStatus};
+use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
 use crate::utils::resolve::resolve_group_or_current;
 
@@ -14,7 +14,7 @@ impl Run for BoardCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
             Self::New => create(&app.db, &Board::template()),
-            Self::Edit { name } => update(&app.db, &board(app, name)?, |_| Ok(())),
+            Self::Edit { name } => update_group(&app.db, board(app, name)?),
             Self::Delete { name } => delete_group(&app.db, &board(app, name)?),
             Self::Info { name } => board_info(app, &board(app, name)?),
             Self::List => list_names::<Board>(&app.db),
@@ -32,17 +32,12 @@ fn board_info(app: &App, board: &Board) -> Result<()> {
     let projects = app.db.projects_in::<Board>(board.id())?;
     // Tasks are flattened across projects and named `<project>/<task>`: the
     // agenda is about *when*, so it isn't grouped by project.
-    let tasks: Vec<(String, Task)> = app
-        .db
-        .tasks_in::<Board>(board.id())?
-        .into_iter()
-        .map(|(project, task)| (task_ref(&project, &task.name), task))
-        .collect();
-    print!("{}", render_info(board, &projects, &tasks));
+    let cards = app.db.cards(board.id())?;
+    print!("{}", render_info(board, &projects, &cards));
     Ok(())
 }
 
-fn render_info(board: &Board, projects: &[Project], tasks: &[(String, Task)]) -> String {
+fn render_info(board: &Board, projects: &[Project], cards: &[Card]) -> String {
     let mut out = format!("{}\n", board.name);
     if !board.description.trim().is_empty() {
         out.push_str(&format!("\n{}\n", board.description.trim()));
@@ -54,27 +49,27 @@ fn render_info(board: &Board, projects: &[Project], tasks: &[(String, Task)]) ->
     for project in projects {
         out.push_str(&format!("  {}\n", project.name));
     }
-    out.push_str(&render_agenda(tasks));
+    out.push_str(&render_agenda(cards));
     out
 }
 
 /// Open tasks that have a `start_time`, soonest first, then the ones that
 /// have none. Finished work is left off: an agenda is what's still ahead.
-fn render_agenda(tasks: &[(String, Task)]) -> String {
-    let open = tasks.iter().filter(|(_, t)| t.status != TaskStatus::Done);
+fn render_agenda(cards: &[Card]) -> String {
+    let open = cards.iter().filter(|c| c.task.status != TaskStatus::Done);
     let (mut scheduled, mut unscheduled): (Vec<_>, Vec<_>) =
-        open.partition(|(_, t)| t.start_time.is_some());
-    scheduled.sort_by_key(|(name, t)| (t.start_time, name.clone()));
-    unscheduled.sort_by_key(|(name, _)| name.clone());
+        open.partition(|c| c.task.start_time.is_some());
+    scheduled.sort_by_key(|c| (c.task.start_time, c.label.clone()));
+    unscheduled.sort_by_key(|c| c.label.clone());
 
     let mut out = String::from("\nagenda:\n");
     if scheduled.is_empty() {
         out.push_str("  (none)\n");
     }
-    for (name, task) in scheduled {
-        let start = task.start_time.expect("partitioned on start_time");
+    for card in scheduled {
+        let start = card.task.start_time.expect("partitioned on start_time");
         let mut slot = start.format(START_TIME_FMT).to_string();
-        if let Some(end) = task.end_time() {
+        if let Some(end) = card.task.end_time() {
             let end_fmt = if end.date() == start.date() {
                 "%H:%M"
             } else {
@@ -82,20 +77,24 @@ fn render_agenda(tasks: &[(String, Task)]) -> String {
             };
             slot.push_str(&format!("-{}", end.format(end_fmt)));
         }
-        out.push_str(&format!("  {slot}  {name}{}\n", markers(task)));
+        out.push_str(&format!(
+            "  {slot}  {}{}\n",
+            card.label,
+            markers(card.priority)
+        ));
     }
     if !unscheduled.is_empty() {
         out.push_str("\nunscheduled:\n");
-        for (name, task) in unscheduled {
-            out.push_str(&format!("  {name}{}\n", markers(task)));
+        for card in unscheduled {
+            out.push_str(&format!("  {}{}\n", card.label, markers(card.priority)));
         }
     }
     out
 }
 
 /// ` [U]`, ` [I]` or ` [UI]` for urgent and/or important tasks, else empty.
-fn markers(task: &Task) -> String {
-    let flags: String = [(task.urgency, 'U'), (task.importance, 'I')]
+fn markers(priority: Priority) -> String {
+    let flags: String = [(priority.urgent, 'U'), (priority.important, 'I')]
         .iter()
         .filter(|(on, _)| *on)
         .map(|(_, c)| *c)
@@ -110,25 +109,31 @@ fn markers(task: &Task) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Duration, TaskStatus};
+    use crate::models::{Duration, Task, TaskStatus};
     use chrono::NaiveDateTime;
 
-    fn task(name: &str, start: Option<&str>, minutes: Option<i64>) -> (String, Task) {
+    fn task(name: &str, start: Option<&str>, minutes: Option<i64>) -> Card {
         let mut t = Task::template(1, String::new(), TaskStatus::Queue);
         t.name = name.to_string();
         t.start_time =
             start.map(|s| NaiveDateTime::parse_from_str(s, START_TIME_FMT).expect("valid"));
         t.duration = minutes.map(Duration);
-        (format!("p/{name}"), t)
+        Card {
+            label: format!("p/{name}"),
+            task: t,
+            priority: Priority::default(),
+        }
     }
 
     #[test]
     fn agenda_orders_by_start_and_lists_unscheduled_last() {
         let mut late = task("late", Some("2026-09-29 10:00"), Some(90));
-        late.1.urgency = true;
-        late.1.importance = true;
+        late.priority = Priority {
+            urgent: true,
+            important: true,
+        };
         let mut done = task("done", Some("2026-09-27 08:00"), None);
-        done.1.status = TaskStatus::Done;
+        done.task.status = TaskStatus::Done;
         let out = render_agenda(&[
             late,
             task("early", Some("2026-09-28 23:30"), Some(60)),

@@ -1,13 +1,19 @@
-use crate::config::ProjectDefaults;
-use crate::models::{Organization, default_branch_template, default_true, main_branch};
+use crate::models::{
+    Configured, Organization, Settings, default_branch_template, default_true, main_branch,
+};
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
 /// A project: a base directory of work, optionally backed by a git repo,
 /// with its own tasks. `id` is `None` for a not-yet-created project (the
 /// blank template opened in the editor); it's filled in once inserted.
-#[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
-#[table(name = "projects", order_by = "name")]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Table, MarkdownBody)]
+#[table(
+    name = "projects",
+    order_by = "name",
+    kind = "project",
+    check = "check"
+)]
 pub struct Project {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<i64>,
@@ -90,20 +96,17 @@ impl Project {
     /// carrying the config file's project defaults -- which is where a
     /// user who always wants, say, `github: true` sets it once instead of
     /// flipping it in every buffer.
-    pub fn template(defaults: &ProjectDefaults) -> Self {
-        Project {
-            id: None,
-            organization_id: None,
-            board_id: None,
-            name: String::new(),
-            description: String::new(),
-            base_path: String::new(),
-            github: defaults.github,
-            tmux: defaults.tmux,
-            auto_branch: defaults.auto_branch,
-            branch_template: defaults.branch_template.clone(),
-            default_branch: defaults.default_branch.clone(),
-            github_project: defaults.github_project.clone(),
+    pub fn template(defaults: &Settings) -> Self {
+        let mut project = Project::default();
+        project.set_settings(defaults.clone());
+        project
+    }
+
+    /// Beyond a name: a `base_path` -- a project is a place on disk.
+    fn check(&mut self) -> crate::error::Result<()> {
+        match self.base_path.trim().is_empty() {
+            true => Err(crate::error::IterError::EmptyBasePath),
+            false => Ok(()),
         }
     }
 
@@ -115,28 +118,6 @@ impl Project {
     /// membership.
     pub fn inherit_from(&mut self, organization: &Organization) {
         self.organization_id = organization.id;
-        self.github = organization.github;
-        self.tmux = organization.tmux;
-        self.auto_branch = organization.auto_branch;
-        self.branch_template = organization.branch_template.clone();
-        self.default_branch = organization.default_branch.clone();
-        self.github_project = organization.github_project.clone();
-    }
-}
-
-impl crate::models::Named for Project {
-    const KIND: &'static str = "project";
-
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// A name, and a `base_path` -- a project is a place on disk.
-    fn validate(&mut self) -> crate::error::Result<()> {
-        crate::models::require_name(Self::KIND, &self.name)?;
-        match self.base_path.trim().is_empty() {
-            true => Err(crate::error::IterError::EmptyBasePath),
-            false => Ok(()),
-        }
+        self.set_settings(organization.settings());
     }
 }

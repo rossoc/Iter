@@ -8,6 +8,7 @@
 //! one per request instead of sharing one.
 
 mod board;
+mod edit;
 mod forms;
 mod guard;
 mod layout;

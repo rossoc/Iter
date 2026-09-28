@@ -5,9 +5,12 @@
 //! `organization_id`, ids) is carried through untouched -- the same rule
 //! the YAML editor follows in `commands`.
 
+use super::edit::EditForm;
+use crate::db::Db;
 use crate::error::{IterError, Result};
 use crate::models::{
-    Duration, Named, Organization, Project, Task, TaskStatus, parse_start_time, require_name,
+    Configured, Duration, Named, Organization, Project, Settings, Tag, Task, TaskStatus,
+    parse_start_time, require_name,
 };
 use serde::Deserialize;
 
@@ -53,35 +56,62 @@ fn optional<T>(
     Ok(())
 }
 
+/// The six [`Settings`] fields as a form submits them -- flattened into
+/// both the organization and the project form.
 #[derive(Deserialize)]
-pub struct OrgForm {
-    pub name: String,
-    pub description: String,
+pub struct SettingsForm {
     pub github: Option<String>,
     pub tmux: Option<String>,
     pub auto_branch: Option<String>,
     pub branch_template: String,
     pub default_branch: String,
     pub github_project: String,
+}
+
+impl SettingsForm {
+    fn settings(&self) -> Settings {
+        Settings {
+            github: checked(&self.github),
+            tmux: checked(&self.tmux),
+            auto_branch: checked(&self.auto_branch),
+            branch_template: self.branch_template.trim().to_string(),
+            default_branch: self.default_branch.trim().to_string(),
+            github_project: self.github_project.trim().to_string(),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct OrgForm {
+    pub name: String,
+    pub description: String,
+    #[serde(flatten)]
+    pub settings: SettingsForm,
     /// Project names, comma-separated.
     pub projects: String,
 }
 
-impl OrgForm {
-    /// `org` with the submission applied, and whether that submission is
-    /// acceptable (see `Named::validate`). The row is filled in even when it
-    /// isn't, so the form can be shown again with what the user typed.
-    pub fn apply(&self, mut org: Organization) -> (Organization, Result<()>) {
+impl EditForm for OrgForm {
+    type Row = Organization;
+
+    fn saved(id: i64) -> String {
+        format!("/org/{id}")
+    }
+
+    fn apply(&self, mut org: Organization) -> (Organization, Result<()>) {
         org.name = self.name.trim().to_string();
         org.description = text(&self.description);
-        org.github = checked(&self.github);
-        org.tmux = checked(&self.tmux);
-        org.auto_branch = checked(&self.auto_branch);
-        org.branch_template = self.branch_template.trim().to_string();
-        org.default_branch = self.default_branch.trim().to_string();
-        org.github_project = self.github_project.trim().to_string();
+        org.set_settings(self.settings.settings());
         let valid = org.validate();
         (org, valid)
+    }
+
+    /// The roster too. Resolved before anything is written, so an unknown
+    /// name leaves the organization untouched.
+    fn save(&self, db: &Db, id: i64, org: &Organization) -> Result<()> {
+        let project_ids = db.ids_by_name::<Project>(&names(&self.projects))?;
+        db.update(id, org)?;
+        db.set_projects::<Organization>(id, &project_ids)
     }
 }
 
@@ -92,27 +122,23 @@ pub struct ProjectForm {
     pub base_path: String,
     /// The organization's id, or empty for none.
     pub organization: String,
-    pub github: Option<String>,
-    pub tmux: Option<String>,
-    pub auto_branch: Option<String>,
-    pub branch_template: String,
-    pub default_branch: String,
-    pub github_project: String,
+    #[serde(flatten)]
+    pub settings: SettingsForm,
 }
 
-impl ProjectForm {
-    /// See [`OrgForm::apply`].
-    pub fn apply(&self, mut project: Project) -> (Project, Result<()>) {
+impl EditForm for ProjectForm {
+    type Row = Project;
+
+    fn saved(id: i64) -> String {
+        format!("/project/{id}")
+    }
+
+    fn apply(&self, mut project: Project) -> (Project, Result<()>) {
         project.name = self.name.trim().to_string();
         project.description = text(&self.description);
         project.base_path = self.base_path.trim().to_string();
         project.organization_id = self.organization.trim().parse().ok();
-        project.github = checked(&self.github);
-        project.tmux = checked(&self.tmux);
-        project.auto_branch = checked(&self.auto_branch);
-        project.branch_template = self.branch_template.trim().to_string();
-        project.default_branch = self.default_branch.trim().to_string();
-        project.github_project = self.github_project.trim().to_string();
+        project.set_settings(self.settings.settings());
         let valid = project.validate();
         (project, valid)
     }
@@ -126,8 +152,6 @@ pub struct TaskForm {
     pub github_issue: String,
     pub status: String,
     pub branch_prefix: String,
-    pub urgency: Option<String>,
-    pub importance: Option<String>,
     /// `yyyy-mm-dd hh:mm`, or empty for unscheduled.
     pub start_time: String,
     /// `hh:mm`, or empty for none.
@@ -136,10 +160,16 @@ pub struct TaskForm {
     pub tags: String,
 }
 
-impl TaskForm {
-    /// See [`OrgForm::apply`]. A field that doesn't parse keeps the row's old
-    /// value; the first such error is the one reported.
-    pub fn apply(&self, mut task: Task) -> (Task, Result<()>) {
+impl EditForm for TaskForm {
+    type Row = Task;
+
+    fn saved(id: i64) -> String {
+        format!("/task/{id}")
+    }
+
+    /// A field that doesn't parse keeps the row's old value; the first such
+    /// error is the one reported.
+    fn apply(&self, mut task: Task) -> (Task, Result<()>) {
         let mut valid = require_name("task", &self.name);
         valid = valid.and(optional(
             &mut task.github_issue,
@@ -167,19 +197,24 @@ impl TaskForm {
             Duration::parse,
             |raw| IterError::CommandFailed(format!("invalid duration '{raw}', expected hh:mm")),
         ));
-        task.urgency = checked(&self.urgency);
-        task.importance = checked(&self.importance);
         task.name = self.name.trim().to_string();
         task.description = text(&self.description);
         task.branch_prefix = self.branch_prefix.trim().to_string();
         (task, valid)
+    }
+
+    /// The tags too, resolved first so an unknown name writes nothing.
+    fn save(&self, db: &Db, id: i64, task: &Task) -> Result<()> {
+        let tag_ids = db.ids_by_name::<Tag>(&names(&self.tags))?;
+        db.update(id, task)?;
+        db.set_task_tags(id, &tag_ids)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::ProjectDefaults;
+    use crate::models::Settings;
 
     fn task_form(name: &str, issue: &str, status: &str) -> TaskForm {
         TaskForm {
@@ -188,8 +223,6 @@ mod tests {
             github_issue: issue.into(),
             status: status.into(),
             branch_prefix: "feat/".into(),
-            urgency: None,
-            importance: None,
             start_time: String::new(),
             duration: String::new(),
             tags: String::new(),
@@ -198,6 +231,32 @@ mod tests {
 
     fn task() -> Task {
         Task::template(7, String::new(), TaskStatus::Queue)
+    }
+
+    /// The settings arrive flattened among the form's own fields, decoded
+    /// the way topcoat decodes a real submission: an unticked box is simply
+    /// absent.
+    #[test]
+    fn a_submission_decodes_its_flattened_settings() {
+        let body = "name=acme&description=&github=on&branch_template=fix%2F%7Btask%7D\
+                    &default_branch=dev&github_project=Roadmap&projects=a%2C+b";
+        let topcoat::router::content::Form(form) =
+            topcoat::router::content::Form::<OrgForm>::from_bytes(body.as_bytes())
+                .expect("decodes");
+        let (org, valid) = form.apply(Organization::default());
+        assert!(valid.is_ok());
+        assert_eq!(
+            org.settings(),
+            Settings {
+                github: true,
+                tmux: false,
+                auto_branch: false,
+                branch_template: "fix/{task}".into(),
+                default_branch: "dev".into(),
+                github_project: "Roadmap".into(),
+            }
+        );
+        assert_eq!(names(&form.projects), ["a", "b"]);
     }
 
     #[test]
@@ -233,13 +292,11 @@ mod tests {
     #[test]
     fn task_form_sets_flags_schedule_and_tags() {
         let mut form = task_form("x", "", "queue");
-        form.urgency = Some("on".into());
         form.start_time = "2026-09-28 09:30".into();
         form.duration = "01:45".into();
         form.tags = " Urgent, ,work ".into();
         let (t, valid) = form.apply(task());
         assert!(valid.is_ok());
-        assert!(t.urgency && !t.importance);
         assert_eq!(t.duration, Some(Duration(105)));
         assert!(t.start_time.is_some());
         assert_eq!(names(&form.tags), ["Urgent", "work"]);
@@ -258,14 +315,16 @@ mod tests {
             description: String::new(),
             base_path: path.into(),
             organization: org.into(),
-            github: Some("on".into()),
-            tmux: None,
-            auto_branch: None,
-            branch_template: "feat/".into(),
-            default_branch: "main".into(),
-            github_project: String::new(),
+            settings: SettingsForm {
+                github: Some("on".into()),
+                tmux: None,
+                auto_branch: None,
+                branch_template: "feat/".into(),
+                default_branch: "main".into(),
+                github_project: String::new(),
+            },
         };
-        let base = Project::template(&ProjectDefaults::default());
+        let base = Project::template(&Settings::default());
         let apply = |org: &str, path: &str| form(org, path).apply(base.clone());
         let (p, valid) = apply("3", "/tmp/p");
         assert!(valid.is_ok());

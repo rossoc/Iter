@@ -15,11 +15,17 @@ use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input};
 /// `crate::db::Column`, which is where the SQL conversions live.
 ///
 /// `order_by` is optional, and supplies the trailing clause for a bare
-/// `Repository::list`; without it the listing order is SQLite's.
+/// `Db::list`; without it the listing order is SQLite's.
+///
+/// `kind` is optional too: naming what messages call one of these (`kind =
+/// "project"`) also implements `crate::models::Named` over the struct's
+/// `name` field. Its `validate` requires a name, and -- with `check =
+/// "method"` -- then runs that inherent `fn(&mut self) -> Result<()>` for
+/// the type's own rules.
 ///
 /// ```ignore
 /// #[derive(Table)]
-/// #[table(name = "projects", order_by = "name")]
+/// #[table(name = "projects", order_by = "name", kind = "project", check = "check")]
 /// pub struct Project {
 ///     pub id: Option<i64>,
 ///     pub name: String,
@@ -43,14 +49,18 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         .ok_or_else(|| {
             syn::Error::new(ty.span(), r#"missing `#[table(name = "...")]` attribute"#)
         })?;
-    let (mut name, mut order_by) = (None, None);
+    let (mut name, mut order_by, mut kind, mut check) = (None, None, None, None);
     attr.parse_nested_meta(|meta| {
         let target = if meta.path.is_ident("name") {
             &mut name
         } else if meta.path.is_ident("order_by") {
             &mut order_by
+        } else if meta.path.is_ident("kind") {
+            &mut kind
+        } else if meta.path.is_ident("check") {
+            &mut check
         } else {
-            return Err(meta.error("expected `name` or `order_by`"));
+            return Err(meta.error("expected `name`, `order_by`, `kind` or `check`"));
         };
         *target = Some(meta.value()?.parse::<LitStr>()?);
         Ok(())
@@ -84,7 +94,38 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     }
     let column_names = columns.iter().map(|field| field.to_string());
 
+    let named = match (kind, check) {
+        (None, None) => quote! {},
+        (None, Some(check)) => {
+            return Err(syn::Error::new_spanned(check, "`check` needs a `kind`"));
+        }
+        (Some(kind), check) => {
+            let validate = check.map(|check| {
+                let check = syn::Ident::new(&check.value(), check.span());
+                quote! {
+                    fn validate(&mut self) -> crate::error::Result<()> {
+                        crate::models::require_name(#kind, &self.name)?;
+                        self.#check()
+                    }
+                }
+            });
+            quote! {
+                impl crate::models::Named for #ty {
+                    const KIND: &'static str = #kind;
+
+                    fn name(&self) -> &str {
+                        &self.name
+                    }
+
+                    #validate
+                }
+            }
+        }
+    };
+
     Ok(quote! {
+        #named
+
         impl crate::db::Table for #ty {
             const NAME: &'static str = #name;
             const COLUMNS: &'static [&'static str] = &[#(#column_names),*];
@@ -120,6 +161,10 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 /// needs the same two accessors. They are the same two accessors every
 /// time, which is what this derive is for.
 ///
+/// Every *other* `#[serde(skip)]` field is one the buffer doesn't carry at
+/// all (a foreign key such as `project_id`), so the derive also writes
+/// `carry_over`, copying those back from the item that was opened.
+///
 /// ```ignore
 /// #[derive(MarkdownBody)]
 /// pub struct Task {
@@ -130,15 +175,21 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 pub fn derive_markdown_body(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ty = &input.ident;
-    let has_description = match &input.data {
-        Data::Struct(data) => data.fields.iter().any(|field| {
-            field
-                .ident
-                .as_ref()
-                .is_some_and(|name| name == "description")
-        }),
-        _ => false,
+    let fields: Vec<&syn::Field> = match &input.data {
+        Data::Struct(data) => data.fields.iter().collect(),
+        _ => Vec::new(),
     };
+    let has_description = fields.iter().any(|field| {
+        field
+            .ident
+            .as_ref()
+            .is_some_and(|name| name == "description")
+    });
+    let hidden = fields
+        .iter()
+        .filter(|field| serde_skipped(field))
+        .filter_map(|field| field.ident.as_ref())
+        .filter(|name| *name != "description");
     if !has_description {
         return syn::Error::new(
             ty.span(),
@@ -156,7 +207,31 @@ pub fn derive_markdown_body(input: TokenStream) -> TokenStream {
             fn set_description(&mut self, description: ::std::string::String) {
                 self.description = description;
             }
+
+            fn carry_over(&mut self, original: &Self) {
+                #( self.#hidden = ::std::clone::Clone::clone(&original.#hidden); )*
+            }
         }
     }
     .into()
+}
+
+/// Whether `field` carries `#[serde(skip)]`.
+fn serde_skipped(field: &syn::Field) -> bool {
+    field.attrs.iter().any(|attr| {
+        let mut skip = false;
+        if attr.path().is_ident("serde") {
+            let _ = attr.parse_nested_meta(|meta| {
+                skip |= meta.path.is_ident("skip");
+                // Consume a `= value` or `(...)` so the other keys parse.
+                if meta.input.peek(syn::Token![=]) {
+                    meta.value()?.parse::<syn::Expr>()?;
+                } else if meta.input.peek(syn::token::Paren) {
+                    meta.parse_nested_meta(|_| Ok(()))?;
+                }
+                Ok(())
+            });
+        }
+        skip
+    })
 }

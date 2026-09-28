@@ -1,27 +1,28 @@
 use crate::db::Table;
 use crate::error::{IterError, Result};
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 mod board;
 mod organization;
 mod project;
 mod session;
 mod session_config;
+mod settings;
 mod tag;
 mod task;
 
-pub use board::Board;
-pub use organization::{Organization, OrganizationEdit};
+pub use board::{Board, Card};
+pub use organization::Organization;
 pub use project::Project;
 pub use session::Session;
 pub use session_config::SessionConfig;
-pub use tag::Tag;
-#[cfg(feature = "web")]
-pub use tag::{IMPORTANT_TAG, URGENT_TAG};
-pub use task::{Duration, START_TIME_FMT, Task, TaskStatus};
+pub(crate) use settings::Configured;
+pub use settings::Settings;
+pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};
 #[cfg(feature = "web")]
 pub use task::parse_start_time;
+pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus};
 
 /// The fallback settings a project uses when it inherits none -- i.e. when
 /// it belongs to no organization. Shared by `Project` and `Organization`,
@@ -50,6 +51,11 @@ pub(crate) fn main_branch() -> String {
 pub trait MarkdownBody {
     fn description(&self) -> &str;
     fn set_description(&mut self, description: String);
+
+    /// Copies from `original` -- the item the editor was opened on -- every
+    /// field the buffer doesn't carry, so an edit can't lose them. The
+    /// derive writes this for every other `#[serde(skip)]` field.
+    fn carry_over(&mut self, _original: &Self) {}
 }
 
 /// Everything the editor round trip needs of a type: written out as YAML,
@@ -63,7 +69,8 @@ impl<T: Serialize + DeserializeOwned + MarkdownBody> Editable for T {}
 /// the CLI addresses it by, what `Db::resolve` looks it up by, what shell
 /// completion offers and what `iter <entity> list` prints. Everything that
 /// is "the same for every named entity" hangs off this one trait instead of
-/// being written once per entity.
+/// being written once per entity. Implemented by `#[derive(Table)]` given a
+/// `kind` -- see the derive for how a type adds rules to `validate`.
 ///
 /// Deliberately not implemented for [`Task`]: a task's name is unique only
 /// within its project (`UNIQUE (project_id, name)`), so a bare task name
@@ -84,20 +91,6 @@ pub(crate) trait Named: Table {
     }
 }
 
-/// Implements [`Named`] for a type with a `name: String` field.
-macro_rules! named {
-    ($ty:ty, $kind:literal) => {
-        impl crate::models::Named for $ty {
-            const KIND: &'static str = $kind;
-
-            fn name(&self) -> &str {
-                &self.name
-            }
-        }
-    };
-}
-pub(crate) use named;
-
 /// A named container of projects -- a board or an organization. A project
 /// belongs to at most one of each, through a nullable foreign key on
 /// `projects` that is `ON DELETE SET NULL`, so deleting the container only
@@ -114,6 +107,35 @@ pub(crate) trait ProjectGroup: Named {
 
     /// The id of the container `project` is in, if any.
     fn group_of(project: &Project) -> Option<i64>;
+}
+
+/// What `iter board edit`/`iter organization edit` open in the editor: the
+/// group plus the names of the projects in it. The roster isn't a column --
+/// it's each project's foreign key -- so it rides alongside the row rather
+/// than on it, and saving it moves projects in and out.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GroupEdit<G> {
+    #[serde(flatten)]
+    pub group: G,
+
+    /// Project names. Listing one that's in another group moves it here;
+    /// leaving one off moves it out to none.
+    #[serde(default)]
+    pub projects: Vec<String>,
+}
+
+impl<G: MarkdownBody> MarkdownBody for GroupEdit<G> {
+    fn description(&self) -> &str {
+        self.group.description()
+    }
+
+    fn set_description(&mut self, description: String) {
+        self.group.set_description(description);
+    }
+
+    fn carry_over(&mut self, original: &Self) {
+        self.group.carry_over(&original.group);
+    }
 }
 
 /// The one "must have a name" check, for named entities and tasks alike.

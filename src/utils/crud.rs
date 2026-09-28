@@ -6,7 +6,7 @@
 use crate::db::Db;
 use crate::error::Result;
 use crate::md_edit::edited;
-use crate::models::{Editable, Named, ProjectGroup};
+use crate::models::{Editable, GroupEdit, Named, Project, ProjectGroup};
 
 /// `iter <entity> new`: opens `template`, validates what comes back and
 /// inserts it.
@@ -32,6 +32,32 @@ pub(crate) fn update<T: Named + Editable>(
         item.validate()?;
         db.update(id, &item)?;
         Ok(format!("updated {} '{}'", T::KIND, item.name()))
+    })
+}
+
+/// `iter board edit`/`iter organization edit`: edits the group and its
+/// roster together -- the buffer lists the projects in it by name, and
+/// saving makes that list the membership.
+pub(crate) fn update_group<G: ProjectGroup + Editable>(db: &Db, existing: G) -> Result<()> {
+    let id = existing.id();
+    let projects = db
+        .projects_in::<G>(id)?
+        .into_iter()
+        .map(|p| p.name)
+        .collect();
+    let template = GroupEdit {
+        group: existing,
+        projects,
+    };
+    edited(&template, G::KIND, "updated", |edit| {
+        let mut group = edit.group;
+        group.validate()?;
+        // Resolved before anything is written, so an unknown name leaves
+        // the group untouched.
+        let project_ids = db.ids_by_name::<Project>(&edit.projects)?;
+        db.update(id, &group)?;
+        db.set_projects::<G>(id, &project_ids)?;
+        Ok(format!("updated {} '{}'", G::KIND, group.name()))
     })
 }
 

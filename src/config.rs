@@ -9,7 +9,7 @@
 //! the two live together and moving the directory moves both.
 
 use crate::error::{IterError, Result};
-use crate::models::{TaskStatus, default_branch_template, default_true, main_branch};
+use crate::models::{Settings, TaskStatus};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -34,50 +34,6 @@ fn default_pause_gap_minutes() -> i64 {
 
 fn default_editor() -> String {
     DEFAULT_EDITOR.to_string()
-}
-
-/// The settings a new project or organization starts from, before the
-/// editor opens -- an organization's fields *are* the defaults its projects
-/// inherit, so `iter organization new` starts from this same block.
-///
-/// These are only the starting point of a `new`: they're written into the
-/// buffer as ordinary front matter and can be changed there, and they never
-/// touch a project that already exists.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct ProjectDefaults {
-    pub github: bool,
-    pub tmux: bool,
-    pub auto_branch: bool,
-    pub branch_template: String,
-
-    /// The branch `iter task done --save` merges finished work into.
-    /// Worth setting here for anyone whose repos all call their trunk the
-    /// same thing; anyone with a mix sets it per project (or on the
-    /// organization) instead.
-    pub default_branch: String,
-
-    /// The GitHub Project board new issues get filed under, by title.
-    /// Empty -- the default -- files them nowhere. Worth setting here for
-    /// anyone whose boards are named the same across repos; anyone whose
-    /// aren't sets it per project (or on the organization) instead.
-    pub github_project: String,
-}
-
-impl Default for ProjectDefaults {
-    fn default() -> Self {
-        // Deliberately the same fallbacks serde fills a missing front
-        // matter field with, so "left out of the config" and "left out of
-        // the editor buffer" can't come to mean two different things.
-        ProjectDefaults {
-            github: false,
-            tmux: default_true(),
-            auto_branch: default_true(),
-            branch_template: default_branch_template(),
-            default_branch: main_branch(),
-            github_project: String::new(),
-        }
-    }
 }
 
 /// The settings a new task starts from. `branch_prefix` isn't here: it's
@@ -106,7 +62,7 @@ pub struct Config {
     #[serde(default = "default_editor")]
     pub editor: String,
 
-    pub project: ProjectDefaults,
+    pub project: Settings,
     pub task: TaskDefaults,
 }
 
@@ -116,7 +72,7 @@ impl Default for Config {
             db_path: None,
             pause_gap_minutes: default_pause_gap_minutes(),
             editor: default_editor(),
-            project: ProjectDefaults::default(),
+            project: Settings::default(),
             task: TaskDefaults::default(),
         }
     }
@@ -285,7 +241,7 @@ mod tests {
         let project = crate::models::Project::template(&config.project);
         assert_eq!(project.github_project, "Roadmap");
         assert_eq!(
-            crate::models::Project::template(&ProjectDefaults::default()).github_project,
+            crate::models::Project::template(&Settings::default()).github_project,
             ""
         );
     }

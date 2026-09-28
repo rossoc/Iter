@@ -93,7 +93,12 @@ pub fn edit_in_editor<T: Serialize + DeserializeOwned + MarkdownBody>(
     // An unsaved buffer is the untouched template, so there is nothing to
     // read back off it.
     let outcome = match saved {
-        true => read_edited(&path, &original),
+        true => read_edited(&path, &original).map(|item: Option<T>| {
+            item.map(|mut item| {
+                item.carry_over(template);
+                item
+            })
+        }),
         false => Ok(None),
     };
 
@@ -223,39 +228,84 @@ mod tests {
         );
     }
 
-    /// `OrganizationEdit` flattens the organization into the front matter
+    /// `GroupEdit` flattens the organization into the front matter
     /// next to its `projects` list; both have to survive the round trip,
     /// and a buffer with no `projects` key at all means "none".
     #[test]
     fn an_organization_edit_round_trips_its_projects() {
-        use crate::config::ProjectDefaults;
-        use crate::models::{Organization, OrganizationEdit};
+        use crate::models::Settings;
+        use crate::models::{GroupEdit, Organization};
 
-        let mut organization = Organization::template(&ProjectDefaults::default());
+        let mut organization = Organization::template(&Settings::default());
         organization.id = Some(7);
         organization.name = "acme".to_string();
         organization.description = "notes".to_string();
-        let edit = OrganizationEdit {
-            organization,
+        let edit = GroupEdit {
+            group: organization,
             projects: vec!["one".to_string(), "two".to_string()],
         };
         let rendered = render_template(&edit).unwrap();
         assert!(rendered.contains("projects:\n- one\n- two\n"), "{rendered}");
 
-        let back = resolve_edit::<OrganizationEdit>("", &rendered)
+        let back = resolve_edit::<GroupEdit<Organization>>("", &rendered)
             .unwrap()
             .unwrap();
         assert_eq!(back.projects, ["one", "two"]);
-        assert_eq!(back.organization.id, Some(7));
-        assert_eq!(back.organization.name, "acme");
-        assert_eq!(back.organization.description, "notes");
-        assert_eq!(back.organization.tmux, edit.organization.tmux);
+        assert_eq!(back.group.id, Some(7));
+        assert_eq!(back.group.name, "acme");
+        assert_eq!(back.group.description, "notes");
+        assert_eq!(back.group.tmux, edit.group.tmux);
 
         let without = rendered.replace("projects:\n- one\n- two\n", "");
-        let back = resolve_edit::<OrganizationEdit>("", &without)
+        let back = resolve_edit::<GroupEdit<Organization>>("", &without)
             .unwrap()
             .unwrap();
         assert!(back.projects.is_empty());
+    }
+
+    /// Foreign keys aren't in the buffer, so what comes back lacks them;
+    /// `carry_over` puts back exactly those, and nothing that was edited.
+    #[test]
+    fn carry_over_restores_only_the_fields_the_buffer_hides() {
+        use crate::models::Project;
+        use crate::models::Settings;
+
+        let mut original = Project::template(&Settings::default());
+        original.organization_id = Some(3);
+        original.board_id = Some(4);
+        original.name = "before".to_string();
+        let rendered = render_template(&original).unwrap();
+        let edited = rendered.replace("name: before", "name: after");
+
+        let mut back = resolve_edit::<Project>(&rendered, &edited)
+            .unwrap()
+            .unwrap();
+        assert_eq!((back.organization_id, back.board_id), (None, None));
+        back.carry_over(&original);
+        assert_eq!((back.organization_id, back.board_id), (Some(3), Some(4)));
+        assert_eq!(back.name, "after");
+    }
+
+    /// The task buffer lists the task's tags next to its fields, and the
+    /// task's own foreign key survives the trip.
+    #[test]
+    fn a_task_edit_round_trips_its_tags() {
+        use crate::models::{Task, TaskEdit, TaskStatus};
+
+        let mut task = Task::template(9, String::new(), TaskStatus::Queue);
+        task.name = "t".to_string();
+        let edit = TaskEdit {
+            task,
+            tags: vec!["Urgent".to_string()],
+        };
+        let rendered = render_template(&edit).unwrap();
+        assert!(rendered.contains("tags:\n- Urgent\n"), "{rendered}");
+        let mut back = resolve_edit::<TaskEdit>("", &rendered).unwrap().unwrap();
+        back.carry_over(&edit);
+        assert_eq!(
+            (back.task.project_id, back.tags),
+            (9, vec!["Urgent".to_string()])
+        );
     }
 
     #[test]

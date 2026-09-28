@@ -82,14 +82,6 @@ pub struct Task {
     #[serde(default)]
     pub branch_prefix: String,
 
-    /// Eisenhower "urgent" flag -- something is waiting on this task.
-    #[serde(default)]
-    pub urgency: bool,
-
-    /// Eisenhower "important" flag -- this task moves a goal forward.
-    #[serde(default)]
-    pub importance: bool,
-
     /// Whether the task has been dropped onto the board's Eisenhower
     /// matrix. Flags alone can't say: a task with neither flag is either
     /// waiting in the matrix's side list or sitting in the gray quadrant.
@@ -189,6 +181,34 @@ impl<'de> Deserialize<'de> for Duration {
     }
 }
 
+/// What `iter task new`/`edit` open in the editor: the task plus the names
+/// of its tags -- which is also how a task is marked urgent or important
+/// (see [`crate::models::Priority`]). Tags are rows of their own, so they
+/// ride alongside the task rather than on it.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TaskEdit {
+    #[serde(flatten)]
+    pub task: Task,
+
+    /// Tag names; each must already exist (`iter tag new`).
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+impl crate::models::MarkdownBody for TaskEdit {
+    fn description(&self) -> &str {
+        &self.task.description
+    }
+
+    fn set_description(&mut self, description: String) {
+        self.task.description = description;
+    }
+
+    fn carry_over(&mut self, original: &Self) {
+        self.task.carry_over(&original.task);
+    }
+}
+
 impl Task {
     /// When the scheduled slot ends: `start_time + duration`, if both are set.
     pub fn end_time(&self) -> Option<NaiveDateTime> {
@@ -223,8 +243,6 @@ impl Task {
             github_issue: None,
             status,
             branch_prefix,
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,
@@ -284,18 +302,15 @@ mod tests {
     #[test]
     fn scheduling_fields_default_when_absent() {
         let task: Task = serde_yaml::from_str("name: t\n").expect("front matter parses");
-        assert!(!task.urgency && !task.importance);
         assert_eq!(task.start_time, None);
         assert_eq!(task.duration, None);
     }
 
     #[test]
     fn scheduling_fields_round_trip_in_the_editor_format() {
-        let task: Task = serde_yaml::from_str(
-            "name: t\nurgency: true\nimportance: true\nstart_time: 2026-09-28 09:30\nduration: 01:45\n",
-        )
-        .expect("front matter parses");
-        assert!(task.urgency && task.importance);
+        let task: Task =
+            serde_yaml::from_str("name: t\nstart_time: 2026-09-28 09:30\nduration: 01:45\n")
+                .expect("front matter parses");
         assert_eq!(task.duration, Some(Duration(105)));
         let yaml = serde_yaml::to_string(&task).expect("a task serializes");
         assert!(yaml.contains("2026-09-28 09:30"), "{yaml}");

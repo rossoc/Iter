@@ -1,7 +1,8 @@
 use crate::config::config;
 use crate::error::{IterError, Result};
 use crate::models::{
-    Duration, Named, Project, ProjectGroup, Session, SessionConfig, Tag, Task, TaskStatus,
+    Board, Card, Duration, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Session,
+    SessionConfig, Tag, Task, TaskStatus, URGENT_TAG, task_ref,
 };
 use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Value, ValueRef};
@@ -175,7 +176,37 @@ impl Db {
         Ok(db)
     }
 
+    /// Brings the schema up to date. `PRAGMA user_version` records how many
+    /// of [`Self::MIGRATIONS`] have run, so an up-to-date database costs one
+    /// pragma read to open -- which matters to `iter serve`, opening one per
+    /// request, and to shell completion, opening one per TAB. Each step runs
+    /// in its own transaction together with bumping the version, so a step
+    /// either lands whole or runs again next time.
     fn migrate(&self) -> Result<()> {
+        let done: i64 = self
+            .conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))?;
+        let done = usize::try_from(done).unwrap_or(0);
+        for (version, step) in Self::MIGRATIONS.iter().enumerate().skip(done) {
+            let tx = self.conn.unchecked_transaction()?;
+            step(self)?;
+            tx.execute_batch(&format!("PRAGMA user_version = {}", version + 1))?;
+            tx.commit()?;
+        }
+        Ok(())
+    }
+
+    /// The schema's history, oldest first. Append a step; never edit one
+    /// that has shipped.
+    const MIGRATIONS: &[fn(&Db) -> Result<()>] = &[Self::baseline, Self::flags_to_tags];
+
+    /// Everything from before versioning: idempotent, since a database
+    /// that predates it could be at any point in that history.
+    ///
+    /// The `CREATE TABLE`s hold each table's original columns; every column
+    /// added later is declared once, in [`Self::add_missing_columns`], which
+    /// a fresh database runs too.
+    fn baseline(&self) -> Result<()> {
         self.rename_legacy_tables()?;
         self.conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS boards (
@@ -196,22 +227,17 @@ impl Db {
                 github          INTEGER NOT NULL DEFAULT 0,
                 tmux            INTEGER NOT NULL DEFAULT 1,
                 auto_branch     INTEGER NOT NULL DEFAULT 1,
-                branch_template TEXT NOT NULL DEFAULT 'feat/{task}',
-                default_branch  TEXT NOT NULL DEFAULT 'main',
-                github_project  TEXT NOT NULL DEFAULT ''
+                branch_template TEXT NOT NULL DEFAULT 'feat/{task}'
              );
              CREATE TABLE IF NOT EXISTS projects (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
                 name            TEXT NOT NULL UNIQUE,
                 description     TEXT NOT NULL DEFAULT '',
                 base_path       TEXT NOT NULL,
                 github          INTEGER NOT NULL DEFAULT 0,
                 tmux            INTEGER NOT NULL DEFAULT 1,
                 auto_branch     INTEGER NOT NULL DEFAULT 1,
-                branch_template TEXT NOT NULL DEFAULT 'feat/{task}',
-                default_branch  TEXT NOT NULL DEFAULT 'main',
-                github_project  TEXT NOT NULL DEFAULT ''
+                branch_template TEXT NOT NULL DEFAULT 'feat/{task}'
              );
              CREATE TABLE IF NOT EXISTS tasks (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -220,12 +246,6 @@ impl Db {
                 description   TEXT NOT NULL DEFAULT '',
                 github_issue  INTEGER,
                 status        TEXT NOT NULL DEFAULT 'queue' CHECK (status IN ('queue', 'wip', 'done')),
-                branch_prefix TEXT NOT NULL DEFAULT '',
-                urgency       INTEGER NOT NULL DEFAULT 0,
-                importance    INTEGER NOT NULL DEFAULT 0,
-                matrix_placed INTEGER NOT NULL DEFAULT 0,
-                start_time    TEXT,
-                duration      INTEGER,
                 UNIQUE (project_id, name)
              );
              CREATE TABLE IF NOT EXISTS task_tags (
@@ -254,6 +274,90 @@ impl Db {
         Ok(())
     }
 
+    /// Urgent/important moved from two `tasks` columns onto the two
+    /// built-in tags (see [`Priority`]): each set flag becomes a tag row, and
+    /// the column goes. A database that never had the columns has nothing
+    /// to move.
+    fn flags_to_tags(&self) -> Result<()> {
+        for (column, tag) in [("urgency", URGENT_TAG), ("importance", IMPORTANT_TAG)] {
+            if !self.column_exists("tasks", column)? {
+                continue;
+            }
+            self.conn.execute(
+                &format!(
+                    "INSERT OR IGNORE INTO task_tags (task_id, tag_id)
+                     SELECT t.id, g.id FROM tasks t, tags g
+                     WHERE g.name = ?1 AND t.{column} != 0"
+                ),
+                params![tag],
+            )?;
+            self.conn
+                .execute_batch(&format!("ALTER TABLE tasks DROP COLUMN {column};"))?;
+        }
+        Ok(())
+    }
+
+    /// Every task on board `id`'s projects as a [`Card`], ordered by
+    /// project, then task. Three queries however big the board.
+    pub fn cards(&self, board_id: i64) -> Result<Vec<Card>> {
+        let priorities = self.priorities()?;
+        Ok(self
+            .tasks_in::<Board>(board_id)?
+            .into_iter()
+            .map(|(project, task)| Card {
+                label: task_ref(&project, &task.name),
+                priority: priorities.get(&task.id()).copied().unwrap_or_default(),
+                task,
+            })
+            .collect())
+    }
+
+    /// Every task's [`Priority`], by task id -- one query for a listing of
+    /// many. A task missing from the map has neither flag.
+    pub fn priorities(&self) -> Result<HashMap<i64, Priority>> {
+        let mut stmt = self.conn.prepare_cached(
+            "SELECT tt.task_id, g.name FROM task_tags tt JOIN tags g ON g.id = tt.tag_id
+             WHERE g.name IN (?1, ?2)",
+        )?;
+        let rows = stmt.query_map(params![URGENT_TAG, IMPORTANT_TAG], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+        })?;
+        let mut out: HashMap<i64, Priority> = HashMap::new();
+        for row in rows {
+            let (task_id, tag) = row?;
+            let priority = out.entry(task_id).or_default();
+            match tag == URGENT_TAG {
+                true => priority.urgent = true,
+                false => priority.important = true,
+            }
+        }
+        Ok(out)
+    }
+
+    /// Makes `task_id`'s flags `priority`, by adding or removing the tags.
+    #[cfg(any(test, feature = "web"))]
+    pub fn set_priority(&self, task_id: i64, priority: Priority) -> Result<()> {
+        for (tag, on) in [
+            (URGENT_TAG, priority.urgent),
+            (IMPORTANT_TAG, priority.important),
+        ] {
+            let sql = match on {
+                true => {
+                    "INSERT OR IGNORE INTO task_tags (task_id, tag_id)
+                     SELECT ?1, id FROM tags WHERE name = ?2"
+                }
+                false => {
+                    "DELETE FROM task_tags
+                     WHERE task_id = ?1 AND tag_id = (SELECT id FROM tags WHERE name = ?2)"
+                }
+            };
+            self.conn
+                .prepare_cached(sql)?
+                .execute(params![task_id, tag])?;
+        }
+        Ok(())
+    }
+
     /// The two tags every database has: the ones the board views colour the
     /// Eisenhower flags with. `INSERT OR IGNORE` on the unique name, so a
     /// user's recolouring survives and re-running this is a no-op.
@@ -267,7 +371,6 @@ impl Db {
         Ok(())
     }
 
-    #[cfg(feature = "web")]
     /// Every tag attached to `task_id`, in name order.
     pub fn tags_for_task(&self, task_id: i64) -> Result<Vec<Tag>> {
         self.find_all(
@@ -276,7 +379,6 @@ impl Db {
         )
     }
 
-    #[cfg(feature = "web")]
     /// Replaces the tags on `task_id` with exactly `tag_ids`, in one
     /// transaction.
     pub fn set_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
@@ -335,10 +437,8 @@ impl Db {
     /// already allowed to be in. `board_id` follows the same rule: a board
     /// is a container, so deleting one just unbinds its projects.
     fn add_missing_columns(&self) -> Result<()> {
-        const ADDED: [(&str, &str, &str); 12] = [
+        const ADDED: [(&str, &str, &str); 10] = [
             ("tasks", "matrix_placed", "INTEGER NOT NULL DEFAULT 0"),
-            ("tasks", "urgency", "INTEGER NOT NULL DEFAULT 0"),
-            ("tasks", "importance", "INTEGER NOT NULL DEFAULT 0"),
             ("tasks", "start_time", "TEXT"),
             ("tasks", "duration", "INTEGER"),
             (
@@ -791,8 +891,8 @@ impl<T: Column> Column for Option<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::ProjectDefaults;
-    use crate::models::{Board, Organization};
+    use crate::models::Organization;
+    use crate::models::Settings;
 
     fn day(s: &str) -> NaiveDate {
         NaiveDate::parse_from_str(s, "%Y-%m-%d")
@@ -802,6 +902,13 @@ mod tests {
     fn dt(s: &str) -> NaiveDateTime {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
             .unwrap_or_else(|e| panic!("bad test fixture datetime '{s}': {e}"))
+    }
+
+    /// Runs every migration again, as on a database from before versioning
+    /// -- what the tests that hand-build an old schema need.
+    fn remigrate(db: &Db) -> Result<()> {
+        db.conn.execute_batch("PRAGMA user_version = 0")?;
+        db.migrate()
     }
 
     /// A fresh, empty, migrated database held entirely in memory.
@@ -839,13 +946,109 @@ mod tests {
             github_issue: Some(7),
             status: TaskStatus::Wip,
             branch_prefix: "fix/".to_string(),
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,
         };
         db.insert(&task).expect("task inserts")
+    }
+
+    /// A database from before urgent/important were tags carries them as
+    /// two columns; migrating turns each set flag into the tag and drops
+    /// the columns, leaving tasks with neither flag untagged.
+    #[test]
+    fn migrating_moves_the_flag_columns_onto_the_builtin_tags() {
+        let db = db();
+        let project = insert_project(&db, "p");
+        let (both, urgent, neither) = (
+            insert_task(&db, project, "both"),
+            insert_task(&db, project, "urgent"),
+            insert_task(&db, project, "neither"),
+        );
+        db.conn
+            .execute_batch(&format!(
+                "ALTER TABLE tasks ADD COLUMN urgency INTEGER NOT NULL DEFAULT 0;
+                 ALTER TABLE tasks ADD COLUMN importance INTEGER NOT NULL DEFAULT 0;
+                 UPDATE tasks SET urgency = 1 WHERE id IN ({both}, {urgent});
+                 UPDATE tasks SET importance = 1 WHERE id = {both};"
+            ))
+            .expect("legacy columns");
+
+        remigrate(&db).expect("migrates");
+
+        assert!(!db.column_exists("tasks", "urgency").expect("check"));
+        assert!(!db.column_exists("tasks", "importance").expect("check"));
+        let flags = db.priorities().expect("priorities");
+        let of = |id| flags.get(&id).copied().unwrap_or_default();
+        assert_eq!(
+            of(both),
+            Priority {
+                urgent: true,
+                important: true
+            }
+        );
+        assert_eq!(
+            of(urgent),
+            Priority {
+                urgent: true,
+                important: false
+            }
+        );
+        assert_eq!(of(neither), Priority::default());
+    }
+
+    /// Setting a priority adds and removes only the two built-in tags; a
+    /// task's other tags are left alone, and they show up on its cards.
+    #[test]
+    fn set_priority_toggles_only_the_builtin_tags() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("board");
+        let project = insert_project(&db, "p");
+        db.set_projects::<Board>(work, &[project]).expect("roster");
+        let task = insert_task(&db, project, "t");
+        let other = db
+            .insert(&Tag {
+                name: "home".to_string(),
+                ..Tag::template()
+            })
+            .expect("tag");
+        db.set_task_tags(task, &[other]).expect("tags");
+
+        let flags = Priority {
+            urgent: true,
+            important: false,
+        };
+        db.set_priority(task, flags).expect("set");
+        let cards = db.cards(work).expect("cards");
+        assert_eq!((cards[0].label.as_str(), cards[0].priority), ("p/t", flags));
+
+        db.set_priority(task, Priority::default()).expect("clear");
+        let names: Vec<String> = db
+            .tags_for_task(task)
+            .expect("tags")
+            .into_iter()
+            .map(|t| t.name)
+            .collect();
+        assert_eq!(names, ["home"]);
+    }
+
+    /// A migrated database records its version, and opening it again runs
+    /// nothing: a step that would fail if re-run (here, a table the baseline
+    /// would recreate is gone) shows it was skipped.
+    #[test]
+    fn an_up_to_date_database_skips_every_migration() {
+        let db = db();
+        let version: i64 = db
+            .conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("version");
+        assert_eq!(version, Db::MIGRATIONS.len() as i64);
+
+        db.conn.execute_batch("DROP TABLE boards").expect("drop");
+        db.migrate().expect("nothing to do");
+        assert!(!db.table_exists("boards").expect("check"));
+        remigrate(&db).expect("from scratch");
+        assert!(db.table_exists("boards").expect("check"));
     }
 
     /// The date window is half-open on the upper end, so the boundaries
@@ -977,8 +1180,6 @@ mod tests {
                 github_issue: None,
                 status,
                 branch_prefix: String::new(),
-                urgency: false,
-                importance: false,
                 matrix_placed: false,
                 start_time: None,
                 duration: None,
@@ -1048,8 +1249,6 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Queue,
             branch_prefix: String::new(),
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,
@@ -1179,7 +1378,7 @@ mod tests {
             );
         }
         check(&project("alpha"));
-        check(&Organization::template(&ProjectDefaults::default()));
+        check(&Organization::template(&Settings::default()));
         check(&Task {
             id: None,
             project_id: 1,
@@ -1188,8 +1387,6 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Queue,
             branch_prefix: String::new(),
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,
@@ -1292,7 +1489,7 @@ mod tests {
                  );",
             )
             .expect("the old schema is created");
-        db.migrate().expect("migrating adds the column");
+        remigrate(&db).expect("migrating adds the column");
 
         let project_id = insert_project(&db, "alpha");
         let id = insert_task(&db, project_id, "build it");
@@ -1337,7 +1534,7 @@ mod tests {
                  );",
             )
             .expect("the old schema is created");
-        db.migrate().expect("migrating adds the columns");
+        remigrate(&db).expect("migrating adds the columns");
 
         let id = insert_project(&db, "alpha");
         let loaded = db
@@ -1441,8 +1638,6 @@ mod tests {
             github_issue: None,
             status: TaskStatus::Queue,
             branch_prefix: String::new(),
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,
@@ -1607,7 +1802,7 @@ mod tests {
     }
 
     fn insert_organization(db: &Db, name: &str) -> i64 {
-        let mut organization = Organization::template(&ProjectDefaults::default());
+        let mut organization = Organization::template(&Settings::default());
         organization.name = name.to_string();
         organization.github = true;
         organization.tmux = false;
@@ -1756,7 +1951,7 @@ mod tests {
             .expect("pre-organization schema is created");
         assert!(!db.column_exists("projects", "organization_id").unwrap());
 
-        db.migrate().expect("migration succeeds");
+        remigrate(&db).expect("migration succeeds");
 
         assert!(db.column_exists("projects", "organization_id").unwrap());
         // ...and the column is usable, defaulting to "no organization".
@@ -1794,7 +1989,7 @@ mod tests {
             )
             .expect("legacy schema is created");
 
-        db.migrate().expect("migration succeeds");
+        remigrate(&db).expect("migration succeeds");
 
         assert!(db.table_exists("session_configs").expect("check succeeds"));
         assert!(db.table_exists("sessions").expect("check succeeds"));
@@ -2024,7 +2219,6 @@ mod tests {
         let project_id = insert_project(&db, "alpha");
         let mut task = Task::template(project_id, String::new(), TaskStatus::Queue);
         task.name = "scheduled".to_string();
-        task.urgency = true;
         task.start_time = Some(dt("2026-09-28 09:30"));
         task.duration = Some(Duration(90));
         db.insert(&task).expect("insert");
@@ -2032,7 +2226,6 @@ mod tests {
             .find_task(project_id, "scheduled")
             .expect("lookup")
             .expect("exists");
-        assert!(found.urgency && !found.importance);
         assert_eq!(found.start_time, Some(dt("2026-09-28 09:30")));
         assert_eq!(found.duration, Some(Duration(90)));
 
@@ -2052,7 +2245,7 @@ mod tests {
             .expect("legacy schema");
         }
         let db = Db::open(path.to_str().expect("utf8 path")).expect("migrates");
-        for column in ["urgency", "importance", "start_time", "duration"] {
+        for column in ["start_time", "duration"] {
             assert!(
                 db.column_exists("tasks", column).expect("check"),
                 "{column}"

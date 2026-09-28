@@ -6,10 +6,9 @@ use crate::commands::Run;
 use crate::config::config;
 use crate::db::Table;
 use crate::error::Result;
-use crate::md_edit::edited;
-use crate::models::{Named, Organization, OrganizationEdit, Project};
+use crate::models::Organization;
 use crate::reporting::{Header, OrganizationInfo, Report, settings_of};
-use crate::utils::crud::{create, delete_group};
+use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
 use crate::utils::report::{project_reports, resolve_range, total_minutes};
 use crate::utils::resolve::resolve_group_or_current;
@@ -18,43 +17,18 @@ impl Run for OrganizationCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
             Self::New => create(&app.db, &Organization::template(&config().project)),
-            Self::Edit { name } => organization_edit(app, name.as_deref()),
-            Self::Delete { name } => {
-                let organization: Organization =
-                    resolve_group_or_current(&app.db, name.as_deref())?;
-                delete_group(&app.db, &organization)
-            }
+            Self::Edit { name } => update_group(&app.db, organization(app, name)?),
+            Self::Delete { name } => delete_group(&app.db, &organization(app, name)?),
             Self::Info { name, report } => organization_info(app, name.as_deref(), report),
             Self::List => list_names::<Organization>(&app.db),
         }
     }
 }
 
-/// Edits the organization and its roster together: the buffer lists the
-/// projects in it by name, and saving makes that list the membership.
-fn organization_edit(app: &App, name: Option<&str>) -> Result<()> {
-    let db = &app.db;
-    let existing: Organization = resolve_group_or_current(db, name)?;
-    let id = existing.id();
-    let projects = db
-        .projects_in::<Organization>(id)?
-        .into_iter()
-        .map(|p| p.name)
-        .collect();
-    let template = OrganizationEdit {
-        organization: existing,
-        projects,
-    };
-    edited(&template, Organization::KIND, "updated", |edit| {
-        let mut organization = edit.organization;
-        organization.validate()?;
-        // Resolved before anything is written, so an unknown name leaves
-        // the organization untouched.
-        let project_ids = db.ids_by_name::<Project>(&edit.projects)?;
-        db.update(id, &organization)?;
-        db.set_projects::<Organization>(id, &project_ids)?;
-        Ok(format!("updated organization '{}'", organization.name))
-    })
+/// An explicit organization name, or -- when none is given -- the one the
+/// tmux session's project is in.
+fn organization(app: &App, name: &Option<String>) -> Result<Organization> {
+    resolve_group_or_current(&app.db, name.as_deref())
 }
 
 /// The organization's report for a period: every project that was worked

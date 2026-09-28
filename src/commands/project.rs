@@ -41,8 +41,6 @@ fn create_project_interactively(
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
     edited(template, Project::KIND, "created", |mut project| {
-        project.organization_id = template.organization_id; // never carried through the YAML
-        project.board_id = template.board_id;
         project.validate()?;
         // Absolutised here, once, for every path a project can arrive by. A
         // relative `base_path` names a different directory from every place
@@ -186,24 +184,19 @@ fn project_edit(
     no_board: bool,
 ) -> Result<()> {
     let db = &app.db;
-    let existing = resolve_project_or_current(db, name)?;
+    let mut existing = resolve_project_or_current(db, name)?;
     // `--organization` moves the project; without it, membership (or the
     // lack of it) is carried through untouched.
-    let organization_id = match organization {
-        Some(name) => db.resolve::<Organization>(name)?.id,
-        None => existing.organization_id,
-    };
+    if let Some(name) = organization {
+        existing.organization_id = db.resolve::<Organization>(name)?.id;
+    }
     // Same for the board; `--no-board` is the one way to leave it.
-    let board_id = match (board, no_board) {
-        (Some(name), _) => db.resolve::<Board>(name)?.id,
-        (None, true) => None,
-        (None, false) => existing.board_id,
-    };
-    update(db, &existing, |project| {
-        project.organization_id = organization_id; // never carried through the YAML
-        project.board_id = board_id;
-        Ok(())
-    })
+    match (board, no_board) {
+        (Some(name), _) => existing.board_id = db.resolve::<Board>(name)?.id,
+        (None, true) => existing.board_id = None,
+        (None, false) => {}
+    }
+    update(db, &existing, |_| Ok(()))
 }
 
 fn project_delete(app: &App, name: Option<&str>) -> Result<()> {

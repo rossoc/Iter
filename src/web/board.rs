@@ -3,13 +3,14 @@
 //! dropped task and where it landed to the two `POST` routes below, and
 //! reloads.
 
+use super::edit::{EditForm, Loaded, load, submit};
 use super::forms::text;
 use super::layout::{Nav, Sel, cls, description, error_box, field, form_actions, shell, textarea};
 use super::open_db;
 use crate::db::{Db, Table};
 use crate::models::{
-    Board, Duration, IMPORTANT_TAG, Named, Project, START_TIME_FMT, Tag, Task, TaskStatus,
-    URGENT_TAG, parse_start_time, task_ref,
+    Board, Card, Duration, IMPORTANT_TAG, Named, Priority, Project, START_TIME_FMT, Tag, Task,
+    TaskStatus, URGENT_TAG, parse_start_time,
 };
 use crate::reporting::fmt_date;
 use crate::utils::report::parse_day;
@@ -21,7 +22,7 @@ use topcoat::{
     router::{
         RouterBuilder,
         content::{Form, Json},
-        error::{RouterErrorExt, bad_request, see_other},
+        error::{RouterErrorExt, bad_request},
         page, path_param, query_params, route,
     },
     view::{View, component, view},
@@ -48,19 +49,11 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
 
 // ---- data -------------------------------------------------------------------
 
-/// A task as a board shows it: a card carrying what it needs to be drawn,
-/// sorted and dropped.
-#[derive(Clone)]
-struct Card {
-    /// `<project>/<task>`, the same way the CLI names it.
-    label: String,
-    task: Task,
-}
-
+/// How the web board draws a [`Card`].
 impl Card {
     /// The colour class: `ui` (both flags), `u`, `i`, or none.
     fn class(&self) -> &'static str {
-        match (self.task.urgency, self.task.importance) {
+        match (self.priority.urgent, self.priority.important) {
             (true, true) => "card ui",
             (true, false) => "card u",
             (false, true) => "card i",
@@ -92,21 +85,9 @@ fn colors_style(db: &Db) -> crate::error::Result<String> {
 
 /// Every unfinished task on the board's projects, urgent first, then by name.
 fn cards(db: &Db, board_id: i64) -> crate::error::Result<Vec<Card>> {
-    let mut out: Vec<Card> = db
-        .tasks_in::<Board>(board_id)?
-        .into_iter()
-        .filter(|(_, task)| task.status != TaskStatus::Done)
-        .map(|(project, task)| Card {
-            label: task_ref(&project, &task.name),
-            task,
-        })
-        .collect();
-    out.sort_by(|a, b| {
-        b.task
-            .urgency
-            .cmp(&a.task.urgency)
-            .then_with(|| a.label.cmp(&b.label))
-    });
+    let mut out = db.cards(board_id)?;
+    out.retain(|c| c.task.status != TaskStatus::Done);
+    out.sort_by(|a, b| (b.priority.urgent, &a.label).cmp(&(a.priority.urgent, &b.label)));
     Ok(out)
 }
 
@@ -140,29 +121,35 @@ fn schedule(task: &mut Task, target: &str) -> std::result::Result<(), String> {
 }
 
 /// The matrix's quadrants: the drop target `board.js` posts, the flags it
-/// stands for (urgent, important), and its heading.
-const QUADRANTS: [(&str, bool, bool, &str); 4] = [
-    ("both", true, true, "Important and urgent"),
-    ("important", false, true, "Important, not urgent"),
-    ("urgent", true, false, "Urgent, not important"),
-    ("neither", false, false, "Not urgent, not important"),
+/// stands for, and its heading.
+const QUADRANTS: [(&str, Priority, &str); 4] = [
+    ("both", priority(true, true), "Important and urgent"),
+    ("important", priority(false, true), "Important, not urgent"),
+    ("urgent", priority(true, false), "Urgent, not important"),
+    (
+        "neither",
+        priority(false, false),
+        "Not urgent, not important",
+    ),
 ];
 
+const fn priority(urgent: bool, important: bool) -> Priority {
+    Priority { urgent, important }
+}
+
 /// Applies a matrix drop. `target` is `left` (back to the side list, flags
-/// untouched) or a quadrant, which sets the flags to match.
-fn place(task: &mut Task, target: &str) -> std::result::Result<(), String> {
+/// untouched) or a quadrant, whose flags the task then gets.
+fn place(task: &mut Task, target: &str) -> std::result::Result<Option<Priority>, String> {
     if target == "left" {
         task.matrix_placed = false;
-        return Ok(());
+        return Ok(None);
     }
-    let &(_, urgent, important, _) = QUADRANTS
+    let &(_, flags, _) = QUADRANTS
         .iter()
         .find(|q| q.0 == target)
         .ok_or_else(|| format!("unknown quadrant '{target}'"))?;
-    task.urgency = urgent;
-    task.importance = important;
     task.matrix_placed = true;
-    Ok(())
+    Ok(Some(flags))
 }
 
 #[derive(Deserialize)]
@@ -172,11 +159,11 @@ struct Drop {
 }
 
 /// Loads the dropped task, checks it is one of this board's, and stores what
-/// `apply` makes of it.
+/// `apply` makes of it -- including new flags, when it returns some.
 fn drop_on(
     board_id: i64,
     drop: &Drop,
-    apply: fn(&mut Task, &str) -> std::result::Result<(), String>,
+    apply: impl FnOnce(&mut Task, &str) -> std::result::Result<Option<Priority>, String>,
 ) -> Result<Json<bool>> {
     let db = open_db()?;
     let mut task = db.get::<Task>(drop.task_id)?.ok_or_not_found()?;
@@ -184,14 +171,19 @@ fn drop_on(
     (project.board_id == Some(board_id))
         .then_some(())
         .ok_or_not_found()?;
-    apply(&mut task, &drop.target).map_err(bad_request)?;
+    let flags = apply(&mut task, &drop.target).map_err(bad_request)?;
     db.update(drop.task_id, &task)?;
+    if let Some(flags) = flags {
+        db.set_priority(drop.task_id, flags)?;
+    }
     Ok(Json(true))
 }
 
 #[route(POST "/board/{id}/schedule")]
 async fn schedule_task(cx: &Cx, Form(drop): Form<Drop>) -> Result<Json<bool>> {
-    drop_on(*path_param::<Id>(cx)?, &drop, schedule)
+    drop_on(*path_param::<Id>(cx)?, &drop, |task, target| {
+        schedule(task, target).map(|()| None)
+    })
 }
 
 #[route(POST "/board/{id}/matrix")]
@@ -269,8 +261,12 @@ async fn agenda_page(cx: &Cx) -> Result<impl View> {
         let board = db.get::<Board>(id)?.ok_or_not_found()?;
         (Nav::load(&db)?, board, colors_style(&db)?, cards(&db, id)?)
     };
-    let important = pick(&all, |c| c.task.start_time.is_none() && c.task.importance);
-    let other = pick(&all, |c| c.task.start_time.is_none() && !c.task.importance);
+    let important = pick(&all, |c| {
+        c.task.start_time.is_none() && c.priority.important
+    });
+    let other = pick(&all, |c| {
+        c.task.start_time.is_none() && !c.priority.important
+    });
     let hours: Vec<(String, String, Vec<Card>)> = (0..24)
         .map(|h| {
             let slot = day.and_hms_opt(h, 0, 0).expect("hour is in range");
@@ -330,10 +326,8 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
     let waiting = pick(&all, |c| !c.task.matrix_placed);
     let quadrants: Vec<(&str, String, &str, Vec<Card>)> = QUADRANTS
         .iter()
-        .map(|&(target, urgent, important, title)| {
-            let here = pick(&all, |c| {
-                c.task.matrix_placed && c.task.urgency == urgent && c.task.importance == important
-            });
+        .map(|&(target, flags, title)| {
+            let here = pick(&all, |c| c.task.matrix_placed && c.priority == flags);
             (target, format!("q-{target}"), title, here)
         })
         .collect();
@@ -392,14 +386,26 @@ impl BoardForm {
                 .collect(),
         }
     }
+}
 
-    /// `board` with the name and description applied, and whether the name
-    /// is acceptable.
+impl EditForm for BoardForm {
+    type Row = Board;
+
+    fn saved(id: i64) -> String {
+        format!("/board/{id}/info")
+    }
+
     fn apply(&self, mut board: Board) -> (Board, crate::error::Result<()>) {
         board.name = self.name.trim().to_string();
         board.description = self.description.clone();
         let valid = board.validate();
         (board, valid)
+    }
+
+    /// The projects on the board too.
+    fn save(&self, db: &Db, id: i64, board: &Board) -> crate::error::Result<()> {
+        db.update(id, board)?;
+        db.set_projects::<Board>(id, &self.projects)
     }
 }
 
@@ -497,38 +503,19 @@ async fn info_page(cx: &Cx) -> Result<impl View> {
 #[page("/board/{id}/edit")]
 async fn edit_page(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, board, choices) = {
-        let db = open_db()?;
-        let board = db.get::<Board>(id)?.ok_or_not_found()?;
-        (Nav::load(&db)?, board, choices(&db, id, None)?)
-    };
-    Ok(view! { shell(nav: &nav, sel: Sel::Board, board_form(board: &board, choices: &choices)) })
+    let page: Loaded<Board, _> = load(id, |db| choices(db, id, None))?;
+    Ok(view! {
+        shell(nav: &page.nav, sel: Sel::Board, board_form(board: &page.row, choices: &page.extra))
+    })
 }
 
 #[page(POST "/board/{id}/edit")]
 async fn save_page(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let form = BoardForm::parse(&pairs);
-    let (nav, board, choices, error) = {
-        let db = open_db()?;
-        let existing = db.get::<Board>(id)?.ok_or_not_found()?;
-        let (board, valid) = form.apply(existing);
-        let saved = valid.and_then(|()| {
-            db.update(id, &board)?;
-            db.set_projects::<Board>(id, &form.projects)
-        });
-        match saved {
-            Ok(()) => return Err(see_other(format!("/board/{id}/info")).into()),
-            Err(e) => (
-                Nav::load(&db)?,
-                board,
-                choices(&db, id, Some(&form.projects))?,
-                e.to_string(),
-            ),
-        }
-    };
+    let (page, error) = submit(id, &form, |db| choices(db, id, Some(&form.projects)))?;
     Ok(view! {
-        shell(nav: &nav, sel: Sel::Board, board_form(board: &board, choices: &choices, error: Some(error)))
+        shell(nav: &page.nav, sel: Sel::Board, board_form(board: &page.row, choices: &page.extra, error: Some(error)))
     })
 }
 
@@ -601,14 +588,13 @@ mod tests {
     #[test]
     fn quadrants_set_the_flags_and_the_side_list_only_unplaces() {
         let mut t = task();
-        place(&mut t, "both").expect("known quadrant");
-        assert!((t.urgency, t.importance, t.matrix_placed) == (true, true, true));
-        place(&mut t, "urgent").expect("known quadrant");
-        assert!((t.urgency, t.importance) == (true, false));
-        place(&mut t, "left").expect("side list");
-        assert!(!t.matrix_placed && t.urgency);
-        place(&mut t, "neither").expect("known quadrant");
-        assert!((t.urgency, t.importance, t.matrix_placed) == (false, false, true));
+        assert_eq!(place(&mut t, "both"), Ok(Some(priority(true, true))));
+        assert!(t.matrix_placed);
+        assert_eq!(place(&mut t, "urgent"), Ok(Some(priority(true, false))));
+        assert_eq!(place(&mut t, "left"), Ok(None));
+        assert!(!t.matrix_placed);
+        assert_eq!(place(&mut t, "neither"), Ok(Some(priority(false, false))));
+        assert!(t.matrix_placed);
         assert!(place(&mut t, "nowhere").is_err());
     }
 }

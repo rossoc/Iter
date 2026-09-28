@@ -6,13 +6,23 @@ pub const URGENT_TAG: &str = "Urgent";
 /// The tag that colours a task's important flag, and the colour it starts as.
 pub const IMPORTANT_TAG: &str = "Important";
 
+/// A task's Eisenhower flags: whether it carries the [`URGENT_TAG`] and the
+/// [`IMPORTANT_TAG`]. The tags are the only record of them -- there are no
+/// flag columns to fall out of step with -- so the flags and the colours the
+/// board draws them in are one thing.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Priority {
+    pub urgent: bool,
+    pub important: bool,
+}
+
 /// A coloured label. Tags belong to no project or organization: one set is
 /// shared by every task in the database.
 ///
 /// The two seeded tags, [`URGENT_TAG`] and [`IMPORTANT_TAG`], are also what
 /// the board views colour the Eisenhower flags with.
 #[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
-#[table(name = "tags", order_by = "name")]
+#[table(name = "tags", order_by = "name", kind = "tag", check = "check")]
 pub struct Tag {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<i64>,
@@ -52,6 +62,17 @@ impl Tag {
         ]
     }
 
+    /// Beyond a name: trims it, lowercases the colour, and holds the colour
+    /// to `#rrggbb`.
+    fn check(&mut self) -> crate::error::Result<()> {
+        self.name = self.name.trim().to_string();
+        self.color = self.color.trim().to_lowercase();
+        match is_hex_color(&self.color) {
+            true => Ok(()),
+            false => Err(crate::error::IterError::InvalidTagColor(self.color.clone())),
+        }
+    }
+
     /// Whether this is one of the seeded tags the board views rely on.
     pub fn is_builtin(&self) -> bool {
         self.name == URGENT_TAG || self.name == IMPORTANT_TAG
@@ -61,26 +82,6 @@ impl Tag {
 /// `#` followed by exactly six hex digits.
 pub fn is_hex_color(s: &str) -> bool {
     s.len() == 7 && s.starts_with('#') && s[1..].chars().all(|c| c.is_ascii_hexdigit())
-}
-
-impl crate::models::Named for Tag {
-    const KIND: &'static str = "tag";
-
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Trims the name, lowercases the colour, and holds the colour to
-    /// `#rrggbb`.
-    fn validate(&mut self) -> crate::error::Result<()> {
-        self.name = self.name.trim().to_string();
-        self.color = self.color.trim().to_lowercase();
-        crate::models::require_name(Self::KIND, &self.name)?;
-        match is_hex_color(&self.color) {
-            true => Ok(()),
-            false => Err(crate::error::IterError::InvalidTagColor(self.color.clone())),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -119,9 +120,9 @@ mod tests {
     /// A project is a place on disk, so it needs a path as well as a name.
     #[test]
     fn a_project_needs_a_name_and_a_base_path() {
-        use crate::config::ProjectDefaults;
         use crate::models::Project;
-        let mut p = Project::template(&ProjectDefaults::default());
+        use crate::models::Settings;
+        let mut p = Project::template(&Settings::default());
         assert!(matches!(p.validate(), Err(IterError::EmptyName("project"))));
         p.name = "p".to_string();
         assert!(matches!(p.validate(), Err(IterError::EmptyBasePath)));

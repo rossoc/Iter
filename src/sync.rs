@@ -185,8 +185,6 @@ mod tests {
             github_issue,
             status,
             branch_prefix: String::new(),
-            urgency: false,
-            importance: false,
             matrix_placed: false,
             start_time: None,
             duration: None,

@@ -3,25 +3,22 @@
 //! only then builds its view, so no database connection lives across
 //! rendering.
 
-use super::forms::{OrgForm, ProjectForm, TaskForm, joined, names};
+use super::edit::{Loaded, load, submit};
+use super::forms::{OrgForm, ProjectForm, TaskForm, joined};
 use super::layout::{
     self, Nav, Sel, check, cls, description, error_box, field, form_actions, shell, textarea,
 };
 use super::open_db;
 use crate::db::{Db, Table};
 use crate::models::{
-    Duration, Organization, Project, ProjectGroup, START_TIME_FMT, Session, Tag, Task, TaskStatus,
+    Configured, Duration, Organization, Project, ProjectGroup, START_TIME_FMT, Session, Settings,
+    Task, TaskStatus,
 };
 use chrono::{Local, NaiveDateTime};
 use topcoat::{
     Result,
     context::Cx,
-    router::{
-        RouterBuilder,
-        content::Form,
-        error::{RouterErrorExt, see_other},
-        page, path_param, query_params,
-    },
+    router::{RouterBuilder, content::Form, error::RouterErrorExt, page, path_param, query_params},
     view::{View, component, view},
 };
 
@@ -93,23 +90,29 @@ async fn row(label: &str, value: &str) -> Result<impl View> {
 
 /// The branch/tool settings an organization and a project share.
 #[component]
-async fn settings(
-    github: bool,
-    tmux: bool,
-    auto_branch: bool,
-    branch_template: &str,
-    default_branch: &str,
-    github_project: &str,
-) -> Result<impl View> {
+async fn settings(s: Settings) -> Result<impl View> {
     Ok(view! {
         <dl>
-            row(label: "github", value: yes_no(github))
-            row(label: "tmux", value: yes_no(tmux))
-            row(label: "auto branch", value: yes_no(auto_branch))
-            row(label: "branch template", value: branch_template)
-            row(label: "default branch", value: default_branch)
-            row(label: "github project", value: github_project)
+            row(label: "github", value: yes_no(s.github))
+            row(label: "tmux", value: yes_no(s.tmux))
+            row(label: "auto branch", value: yes_no(s.auto_branch))
+            row(label: "branch template", value: &s.branch_template)
+            row(label: "default branch", value: &s.default_branch)
+            row(label: "github project", value: &s.github_project)
         </dl>
+    })
+}
+
+/// The inputs a `SettingsForm` reads back.
+#[component]
+async fn settings_fields(s: Settings) -> Result<impl View> {
+    Ok(view! {
+        check(name: "github", label: "github", on: s.github)
+        check(name: "tmux", label: "tmux", on: s.tmux)
+        check(name: "auto_branch", label: "auto branch", on: s.auto_branch)
+        field(name: "branch_template", label: "Branch template", value: &s.branch_template)
+        field(name: "default_branch", label: "Default branch", value: &s.default_branch)
+        field(name: "github_project", label: "GitHub project", value: &s.github_project)
     })
 }
 
@@ -204,14 +207,7 @@ async fn org_page(cx: &Cx) -> Result<impl View> {
             tabs(base: &base, tab: tab)
             if tab == Tab::Info {
                 description(text: &org.description)
-                settings(
-                    github: org.github,
-                    tmux: org.tmux,
-                    auto_branch: org.auto_branch,
-                    branch_template: &org.branch_template,
-                    default_branch: &org.default_branch,
-                    github_project: &org.github_project,
-                )
+                settings(s: org.settings())
                 <h3>"Projects"</h3>
                 if projects.is_empty() {
                     <p class="empty">"No projects."</p>
@@ -240,12 +236,7 @@ async fn org_form(
         <form method="post" action=(format!("/org/{}/edit", org.id()))>
             field(name: "name", label: "Name", value: &org.name)
             textarea(text: &org.description)
-            check(name: "github", label: "github", on: org.github)
-            check(name: "tmux", label: "tmux", on: org.tmux)
-            check(name: "auto_branch", label: "auto branch", on: org.auto_branch)
-            field(name: "branch_template", label: "Branch template", value: &org.branch_template)
-            field(name: "default_branch", label: "Default branch", value: &org.default_branch)
-            field(name: "github_project", label: "GitHub project", value: &org.github_project)
+            settings_fields(s: org.settings())
             field(name: "projects", label: "Projects (comma-separated)", value: projects)
             form_actions(cancel: format!("/org/{}", org.id()))
         </form>
@@ -255,35 +246,19 @@ async fn org_form(
 #[page("/org/{id}/edit")]
 async fn org_edit(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, org, projects) = {
-        let db = open_db()?;
-        let org = db.get::<Organization>(id)?.ok_or_not_found()?;
-        let projects = joined(&db.projects_in::<Organization>(id)?);
-        (Nav::load(&db)?, org, projects)
-    };
-    Ok(view! { shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org, projects: &projects)) })
+    let page: Loaded<Organization, _> =
+        load(id, |db| Ok(joined(&db.projects_in::<Organization>(id)?)))?;
+    Ok(view! {
+        shell(nav: &page.nav, sel: Sel::Org(id), org_form(org: &page.row, projects: &page.extra))
+    })
 }
 
 #[page(POST "/org/{id}/edit")]
 async fn org_save(cx: &Cx, Form(form): Form<OrgForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, org, error) = {
-        let db = open_db()?;
-        let existing = db.get::<Organization>(id)?.ok_or_not_found()?;
-        let (org, valid) = form.apply(existing);
-        let saved = valid
-            .and_then(|()| db.ids_by_name::<Project>(&names(&form.projects)))
-            .and_then(|ids| {
-                db.update(id, &org)?;
-                db.set_projects::<Organization>(id, &ids)
-            });
-        match saved {
-            Ok(()) => return Err(see_other(format!("/org/{id}")).into()),
-            Err(e) => (Nav::load(&db)?, org, e.to_string()),
-        }
-    };
+    let (page, error) = submit(id, &form, |_| Ok(()))?;
     Ok(view! {
-        shell(nav: &nav, sel: Sel::Org(id), org_form(org: &org, projects: &form.projects, error: Some(error)))
+        shell(nav: &page.nav, sel: Sel::Org(id), org_form(org: &page.row, projects: &form.projects, error: Some(error)))
     })
 }
 
@@ -315,14 +290,7 @@ async fn project_page(cx: &Cx) -> Result<impl View> {
             if tab == Tab::Info {
                 description(text: &project.description)
                 <dl>row(label: "base path", value: &project.base_path)</dl>
-                settings(
-                    github: project.github,
-                    tmux: project.tmux,
-                    auto_branch: project.auto_branch,
-                    branch_template: &project.branch_template,
-                    default_branch: &project.default_branch,
-                    github_project: &project.github_project,
-                )
+                settings(s: project.settings())
             } else {
                 task_table(rows: &tasks, with_project: false)
             }
@@ -353,12 +321,7 @@ async fn project_form(
                     </option>
                 }
             </select>
-            check(name: "github", label: "github", on: project.github)
-            check(name: "tmux", label: "tmux", on: project.tmux)
-            check(name: "auto_branch", label: "auto branch", on: project.auto_branch)
-            field(name: "branch_template", label: "Branch template", value: &project.branch_template)
-            field(name: "default_branch", label: "Default branch", value: &project.default_branch)
-            field(name: "github_project", label: "GitHub project", value: &project.github_project)
+            settings_fields(s: project.settings())
             form_actions(cancel: format!("/project/{}", project.id()))
         </form>
     })
@@ -367,38 +330,21 @@ async fn project_form(
 #[page("/project/{id}/edit")]
 async fn project_edit(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, project, orgs) = {
-        let db = open_db()?;
-        let project = db.get::<Project>(id)?.ok_or_not_found()?;
-        (Nav::load(&db)?, project, db.list::<Organization>()?)
-    };
-    Ok(
-        view! { shell(nav: &nav, sel: Sel::Project(id), project_form(project: &project, orgs: &orgs)) },
-    )
+    let page: Loaded<Project, _> = load(id, |db| db.list::<Organization>())?;
+    Ok(view! {
+        shell(nav: &page.nav, sel: Sel::Project(id), project_form(project: &page.row, orgs: &page.extra))
+    })
 }
 
 #[page(POST "/project/{id}/edit")]
 async fn project_save(cx: &Cx, Form(form): Form<ProjectForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, project, orgs, error) = {
-        let db = open_db()?;
-        let existing = db.get::<Project>(id)?.ok_or_not_found()?;
-        let (project, valid) = form.apply(existing);
-        match valid.and_then(|()| db.update(id, &project)) {
-            Ok(()) => return Err(see_other(format!("/project/{id}")).into()),
-            Err(e) => (
-                Nav::load(&db)?,
-                project,
-                db.list::<Organization>()?,
-                e.to_string(),
-            ),
-        }
-    };
+    let (page, error) = submit(id, &form, |db| db.list::<Organization>())?;
     Ok(view! {
         shell(
-            nav: &nav,
+            nav: &page.nav,
             sel: Sel::Project(id),
-            project_form(project: &project, orgs: &orgs, error: Some(error))
+            project_form(project: &page.row, orgs: &page.extra, error: Some(error))
         )
     })
 }
@@ -465,8 +411,6 @@ async fn task_page(cx: &Cx) -> Result<impl View> {
                 row(label: "status", value: task.status.label())
                 row(label: "github issue", value: &issue_text)
                 row(label: "branch prefix", value: &task.branch_prefix)
-                row(label: "urgent", value: yes_no(task.urgency))
-                row(label: "important", value: yes_no(task.importance))
                 row(label: "start", value: &start_text)
                 row(label: "duration", value: &duration_text)
                 <dt>"tags"</dt>
@@ -499,11 +443,9 @@ async fn task_form(task: &Task, tags: &str, #[default] error: Option<String>) ->
             </select>
             field(name: "github_issue", label: "GitHub issue number", value: &issue_number)
             field(name: "branch_prefix", label: "Branch prefix", value: &task.branch_prefix)
-            check(name: "urgency", label: "Urgent", on: task.urgency)
-            check(name: "importance", label: "Important", on: task.importance)
             field(name: "start_time", label: "Start (yyyy-mm-dd hh:mm)", value: &start)
             field(name: "duration", label: "Duration (hh:mm)", value: &duration)
-            field(name: "tags", label: "Tags (comma-separated)", value: tags)
+            field(name: "tags", label: "Tags (comma-separated -- Urgent and Important flag the task)", value: tags)
             form_actions(cancel: format!("/task/{}", task.id()))
         </form>
     })
@@ -512,36 +454,17 @@ async fn task_form(task: &Task, tags: &str, #[default] error: Option<String>) ->
 #[page("/task/{id}/edit")]
 async fn task_edit(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, task, tags) = {
-        let db = open_db()?;
-        let task = db.get::<Task>(id)?.ok_or_not_found()?;
-        let tags = joined(&db.tags_for_task(id)?);
-        (Nav::load(&db)?, task, tags)
-    };
-    Ok(
-        view! { shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task, tags: &tags)) },
-    )
+    let page: Loaded<Task, _> = load(id, |db| Ok(joined(&db.tags_for_task(id)?)))?;
+    Ok(view! {
+        shell(nav: &page.nav, sel: Sel::Project(page.row.project_id), task_form(task: &page.row, tags: &page.extra))
+    })
 }
 
 #[page(POST "/task/{id}/edit")]
 async fn task_save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, task, error) = {
-        let db = open_db()?;
-        let existing = db.get::<Task>(id)?.ok_or_not_found()?;
-        let (task, valid) = form.apply(existing);
-        let saved = valid
-            .and_then(|()| db.ids_by_name::<Tag>(&names(&form.tags)))
-            .and_then(|ids| {
-                db.update(id, &task)?;
-                db.set_task_tags(id, &ids)
-            });
-        match saved {
-            Ok(()) => return Err(see_other(format!("/task/{id}")).into()),
-            Err(e) => (Nav::load(&db)?, task, e.to_string()),
-        }
-    };
+    let (page, error) = submit(id, &form, |_| Ok(()))?;
     Ok(view! {
-        shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task, tags: &form.tags, error: Some(error)))
+        shell(nav: &page.nav, sel: Sel::Project(page.row.project_id), task_form(task: &page.row, tags: &form.tags, error: Some(error)))
     })
 }
