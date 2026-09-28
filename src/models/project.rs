@@ -22,6 +22,14 @@ pub struct Project {
     #[serde(skip)]
     pub organization_id: Option<i64>,
 
+    /// The board this project is bound to, or `None`. A board is a
+    /// container of projects, so a project sits on at most one.
+    ///
+    /// Not part of the editor's view, for the same reason as
+    /// `organization_id`: it's set from `--board`.
+    #[serde(skip)]
+    pub board_id: Option<i64>,
+
     pub name: String,
 
     /// Free-form markdown notes. Edited as the markdown body below the
@@ -86,6 +94,7 @@ impl Project {
         Project {
             id: None,
             organization_id: None,
+            board_id: None,
             name: String::new(),
             description: String::new(),
             base_path: String::new(),

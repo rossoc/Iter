@@ -12,7 +12,7 @@
 
 use crate::db::{Db, open_db};
 use crate::error::Result;
-use crate::models::{Organization, Project, TaskStatus, task_ref};
+use crate::models::{Board, Organization, Project, TaskStatus, task_ref};
 use clap_complete::engine::CompletionCandidate;
 
 /// The candidates a completer offers, out of the names `names` produces.
@@ -41,6 +41,11 @@ fn candidates(
 /// `task new --project`).
 pub(crate) fn project_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     candidates(current, Db::names::<Project>)
+}
+
+/// Dynamic completer for arguments naming a board.
+pub(crate) fn board_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+    candidates(current, Db::names::<Board>)
 }
 
 /// Dynamic completer for arguments naming an organization.

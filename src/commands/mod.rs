@@ -4,6 +4,7 @@
 //! handles, so the crate root reaches a whole family of commands through
 //! one name and everything else in the file stays private to it.
 
+pub mod board;
 pub mod misc;
 pub mod organization;
 pub mod project;

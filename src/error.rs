@@ -74,6 +74,12 @@ pub enum IterError {
     #[error("invalid status '{0}', expected queue, wip, or done")]
     InvalidStatus(String),
 
+    #[error("no such board '{0}'")]
+    BoardNotFound(String),
+
+    #[error("board name cannot be empty")]
+    EmptyBoardName,
+
     #[error("organization name cannot be empty")]
     EmptyOrganizationName,
 
@@ -112,6 +118,12 @@ pub enum IterError {
 
     #[error("project for this task no longer exists")]
     OrphanTaskProject,
+
+    #[error("board for this project no longer exists")]
+    OrphanProjectBoard,
+
+    #[error("project '{0}' isn't bound to a board")]
+    ProjectHasNoBoard(String),
 
     #[error("organization for this project no longer exists")]
     OrphanProjectOrganization,

@@ -42,9 +42,17 @@ iter organization delete acme       # deletes only the grouping; its projects ar
 iter organization info acme         # what the whole organization spent that day, per project and per task
 iter organization list
 
+# boards
+iter board new                      # opens a blank board in nvim; save & quit to create it
+iter board edit work
+iter board delete work              # deletes only the board; its projects are kept, unbound
+iter board info work                # description and the projects bound to it
+iter board list
+
 # projects
-iter project new [-o acme]          # opens a blank project in nvim; save & quit to create it
-iter project edit myproj [-o acme]  # same, pre-filled; -o moves it into that organization
+iter project new [-o acme] [-b work] # opens a blank project in nvim; save & quit to create it
+iter project edit myproj [-o acme] [-b work | --no-board]
+                                    # same, pre-filled; -o moves it into that organization, -b binds it to a board
 iter project delete myproj
 iter project info myproj [--date d] # name, description, time spent that day (union of all its tasks)
 iter project list
@@ -308,6 +316,18 @@ organizations existed simply have none, and keep working unchanged; `iter
 project edit myproj -o acme` moves one in. Deleting an organization deletes
 only the grouping -- every project, task and session survives, and the
 projects go back to belonging to none.
+
+## Boards
+
+A board is a calendar that holds projects. It has a name and a description,
+and nothing else: its granularity -- one board per project, per organization,
+per person -- is simply which projects you bind to it, and any project in the
+database can go on any board.
+
+`iter project new -b work` or `iter project edit myproj -b work` binds a
+project; `iter project edit myproj --no-board` unbinds it. A project is on at
+most one board, and binding is optional. Deleting a board deletes only the
+board: every project survives, unbound.
 
 ## How a project gets created
 

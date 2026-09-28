@@ -1,5 +1,5 @@
 use crate::completion::{
-    organization_completer, project_completer, queued_task_completer, task_completer,
+    board_completer, organization_completer, project_completer, queued_task_completer, task_completer,
     task_name_completer,
 };
 use crate::reporting::Format;
@@ -80,6 +80,12 @@ pub enum Command {
         organization: Option<String>,
     },
 
+    /// Manage boards: calendars that hold projects
+    Board {
+        #[clap(subcommand)]
+        action: BoardCommand,
+    },
+
     /// Manage organizations: groups of projects that share defaults
     #[clap(visible_alias = "org")]
     Organization {
@@ -139,6 +145,10 @@ pub enum ProjectCommand {
         #[clap(long = "organization", short = 'o',
                add = ArgValueCompleter::new(organization_completer))]
         organization: Option<String>,
+
+        /// Board to bind the project to (optional)
+        #[clap(long, short = 'b', add = ArgValueCompleter::new(board_completer))]
+        board: Option<String>,
     },
 
     /// Edit an existing project in nvim; saving & quitting updates it
@@ -152,6 +162,15 @@ pub enum ProjectCommand {
         #[clap(long = "organization", short = 'o',
                add = ArgValueCompleter::new(organization_completer))]
         organization: Option<String>,
+
+        /// Bind the project to this board (its current board, if any, is
+        /// kept when this isn't given)
+        #[clap(long, short = 'b', add = ArgValueCompleter::new(board_completer))]
+        board: Option<String>,
+
+        /// Unbind the project from its board
+        #[clap(long, conflicts_with = "board")]
+        no_board: bool,
     },
 
     /// Delete a project (and its tasks, session-configs and sessions)
@@ -173,6 +192,36 @@ pub enum ProjectCommand {
     },
 
     /// List every project
+    List,
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum BoardCommand {
+    /// Open a blank board in nvim; saving & quitting creates it
+    New,
+
+    /// Edit an existing board in nvim; saving & quitting updates it
+    Edit {
+        /// Default: the board of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(board_completer))]
+        name: Option<String>,
+    },
+
+    /// Delete a board; its projects are kept, no longer bound to one
+    Delete {
+        /// Default: the board of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(board_completer))]
+        name: Option<String>,
+    },
+
+    /// A board's description and the projects bound to it
+    Info {
+        /// Default: the board of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(board_completer))]
+        name: Option<String>,
+    },
+
+    /// List every board
     List,
 }
 

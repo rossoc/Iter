@@ -1,9 +1,11 @@
+mod board;
 mod organization;
 mod project;
 mod session;
 mod session_config;
 mod task;
 
+pub use board::Board;
 pub use organization::Organization;
 pub use project::Project;
 pub use session::Session;

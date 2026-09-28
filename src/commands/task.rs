@@ -289,6 +289,7 @@ mod tests {
         let project = Project {
             id: None,
             organization_id: None,
+            board_id: None,
             name: "proj".to_string(),
             description: String::new(),
             base_path: "/tmp/proj".to_string(),

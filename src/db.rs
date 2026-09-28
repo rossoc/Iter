@@ -175,7 +175,12 @@ impl Db {
     fn migrate(&self) -> Result<()> {
         self.rename_legacy_tables()?;
         self.conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS organizations (
+            "CREATE TABLE IF NOT EXISTS boards (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                name            TEXT NOT NULL UNIQUE,
+                description     TEXT NOT NULL DEFAULT ''
+             );
+             CREATE TABLE IF NOT EXISTS organizations (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                 name            TEXT NOT NULL UNIQUE,
                 description     TEXT NOT NULL DEFAULT '',
@@ -253,6 +258,10 @@ impl Db {
             "CREATE INDEX IF NOT EXISTS idx_projects_organization
                 ON projects(organization_id);",
         );
+        let _ = self.conn.execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_projects_board
+                ON projects(board_id);",
+        );
     }
 
     /// Columns added to a table after it was first created. `CREATE TABLE
@@ -265,9 +274,10 @@ impl Db {
     /// organization is a grouping, so deleting one must not take its
     /// projects -- and every task and session under them -- down with it.
     /// They simply stop belonging to one, which is a state every project is
-    /// already allowed to be in.
+    /// already allowed to be in. `board_id` follows the same rule: a board
+    /// is a container, so deleting one just unbinds its projects.
     fn add_missing_columns(&self) -> Result<()> {
-        const ADDED: [(&str, &str, &str); 6] = [
+        const ADDED: [(&str, &str, &str); 7] = [
             (
                 "projects",
                 "organization_id",
@@ -285,6 +295,11 @@ impl Db {
                 "organizations",
                 "default_branch",
                 "TEXT NOT NULL DEFAULT 'main'",
+            ),
+            (
+                "projects",
+                "board_id",
+                "INTEGER REFERENCES boards(id) ON DELETE SET NULL",
             ),
         ];
         for (table, column, decl) in ADDED {
@@ -379,6 +394,12 @@ impl Db {
             "WHERE organization_id = ?1 ORDER BY name",
             params![organization_id],
         )
+    }
+
+    /// Every project bound to `board_id`, in name order -- the roster a
+    /// board is a container of.
+    pub fn projects_for_board(&self, board_id: i64) -> Result<Vec<Project>> {
+        self.find_all("WHERE board_id = ?1 ORDER BY name", params![board_id])
     }
 
     pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
@@ -665,6 +686,7 @@ mod tests {
         Project {
             id: None,
             organization_id: None,
+            board_id: None,
             name: name.to_string(),
             description: "notes".to_string(),
             base_path: format!("/tmp/{name}"),
@@ -1077,6 +1099,7 @@ mod tests {
                  CREATE TABLE projects (
                     id              INTEGER PRIMARY KEY AUTOINCREMENT,
                     organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
+                    board_id        INTEGER REFERENCES boards(id) ON DELETE SET NULL,
                     name            TEXT NOT NULL UNIQUE,
                     description     TEXT NOT NULL DEFAULT '',
                     base_path       TEXT NOT NULL,
@@ -1156,6 +1179,7 @@ mod tests {
                  CREATE TABLE projects (
                     id              INTEGER PRIMARY KEY AUTOINCREMENT,
                     organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
+                    board_id        INTEGER REFERENCES boards(id) ON DELETE SET NULL,
                     name            TEXT NOT NULL UNIQUE,
                     description     TEXT NOT NULL DEFAULT '',
                     base_path       TEXT NOT NULL,
@@ -1588,5 +1612,83 @@ mod tests {
         assert!(db.table_exists("session_configs").expect("check succeeds"));
         assert!(db.table_exists("sessions").expect("check succeeds"));
         assert!(!db.table_exists("records").expect("check succeeds"));
+    }
+
+    fn board(name: &str) -> crate::models::Board {
+        crate::models::Board {
+            id: None,
+            name: name.to_string(),
+            description: String::new(),
+        }
+    }
+
+    /// Binding is the whole point of a board: a project put on one shows
+    /// up in `projects_for_board`, and a project on another board or none
+    /// does not.
+    #[test]
+    fn projects_for_board_returns_only_the_projects_bound_to_it() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("insert board");
+        let home = db.insert(&board("home")).expect("insert board");
+        let (a, b, c) = (
+            insert_project(&db, "a"),
+            insert_project(&db, "b"),
+            insert_project(&db, "c"),
+        );
+        for (id, board_id) in [(a, Some(work)), (b, Some(home)), (c, None)] {
+            let mut p = db.get::<Project>(id).expect("get").expect("exists");
+            p.board_id = board_id;
+            db.update(id, &p).expect("update");
+        }
+
+        let names: Vec<String> = db
+            .projects_for_board(work)
+            .expect("query")
+            .into_iter()
+            .map(|p| p.name)
+            .collect();
+        assert_eq!(names, ["a"]);
+    }
+
+    /// A board is a container, not an owner: deleting one must unbind its
+    /// projects rather than delete them.
+    #[test]
+    fn deleting_a_board_keeps_its_projects_and_unbinds_them() {
+        let db = db();
+        let board_id = db.insert(&board("work")).expect("insert board");
+        let id = insert_project(&db, "a");
+        let mut p = db.get::<Project>(id).expect("get").expect("exists");
+        p.board_id = Some(board_id);
+        db.update(id, &p).expect("update");
+
+        db.delete::<crate::models::Board>(board_id).expect("delete");
+
+        let p = db.get::<Project>(id).expect("get").expect("project kept");
+        assert_eq!(p.board_id, None);
+    }
+
+    /// Databases created before boards existed have a `projects` table
+    /// without `board_id`; opening one must add it.
+    #[test]
+    fn migration_adds_board_id_to_a_projects_table_that_lacks_it() {
+        let dir = std::env::temp_dir().join(format!("iter-board-mig-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("iter.db");
+        let _ = std::fs::remove_file(&path);
+        {
+            let conn = Connection::open(&path).expect("open");
+            conn.execute_batch(
+                "CREATE TABLE projects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    base_path TEXT NOT NULL
+                 );
+                 INSERT INTO projects (name, base_path) VALUES ('old', '/tmp/old');",
+            )
+            .expect("legacy schema");
+        }
+        let db = Db::open(path.to_str().expect("utf8 path")).expect("migrates");
+        assert!(db.column_exists("projects", "board_id").expect("check"));
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

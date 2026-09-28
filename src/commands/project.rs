@@ -18,7 +18,7 @@ use crate::models::Project;
 use crate::reporting::{Header, ProjectInfo, Report, settings_of};
 use crate::utils::output::list_names;
 use crate::utils::report::{resolve_range, task_reports, total_minutes};
-use crate::utils::resolve::{resolve_organization, resolve_project_or_current};
+use crate::utils::resolve::{resolve_board, resolve_organization, resolve_project_or_current};
 use crate::utils::workspace::teardown_session_config;
 use crate::{git, scaffold, tmux};
 
@@ -41,6 +41,7 @@ fn create_project_interactively(
 ) -> Result<()> {
     edited(template, "project", "created", |mut project| {
         project.organization_id = template.organization_id; // never carried through the YAML
+        project.board_id = template.board_id;
         if project.name.trim().is_empty() {
             return Err(IterError::EmptyProjectName);
         }
@@ -149,10 +150,21 @@ pub(crate) fn clone_cmd(app: &App, source: &str, organization: Option<&str>) -> 
 impl Run for ProjectCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
-            Self::New { organization } => project_new(app, organization.as_deref()),
-            Self::Edit { name, organization } => {
-                project_edit(app, name.as_deref(), organization.as_deref())
+            Self::New { organization, board } => {
+                project_new(app, organization.as_deref(), board.as_deref())
             }
+            Self::Edit {
+                name,
+                organization,
+                board,
+                no_board,
+            } => project_edit(
+                app,
+                name.as_deref(),
+                organization.as_deref(),
+                board.as_deref(),
+                *no_board,
+            ),
             Self::Delete { name } => project_delete(app, name.as_deref()),
             Self::Info { name, report } => project_info(app, name.as_deref(), report),
             Self::List => project_list(app),
@@ -160,13 +172,22 @@ impl Run for ProjectCommand {
     }
 }
 
-fn project_new(app: &App, organization: Option<&str>) -> Result<()> {
+fn project_new(app: &App, organization: Option<&str>, board: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let template = new_project_template(db, organization)?;
+    let mut template = new_project_template(db, organization)?;
+    if let Some(name) = board {
+        template.board_id = resolve_board(db, name)?.id;
+    }
     create_project_interactively(db, &template, None, |_| Ok(()))
 }
 
-fn project_edit(app: &App, name: Option<&str>, organization: Option<&str>) -> Result<()> {
+fn project_edit(
+    app: &App,
+    name: Option<&str>,
+    organization: Option<&str>,
+    board: Option<&str>,
+    no_board: bool,
+) -> Result<()> {
     let db = &app.db;
     let existing = resolve_project_or_current(db, name)?;
     let id = existing.id();
@@ -176,8 +197,15 @@ fn project_edit(app: &App, name: Option<&str>, organization: Option<&str>) -> Re
         Some(name) => resolve_organization(db, name)?.id,
         None => existing.organization_id,
     };
+    // Same for the board; `--no-board` is the one way to leave it.
+    let board_id = match (board, no_board) {
+        (Some(name), _) => resolve_board(db, name)?.id,
+        (None, true) => None,
+        (None, false) => existing.board_id,
+    };
     edited(&existing, "project", "updated", |mut project| {
         project.organization_id = organization_id; // never carried through the YAML
+        project.board_id = board_id;
         db.update(id, &project)?;
         Ok(format!("updated project '{}'", project.name))
     })
