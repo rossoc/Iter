@@ -78,6 +78,16 @@ pub enum Command {
         #[clap(long = "organization", short = 'o',
                add = ArgValueCompleter::new(organization_completer))]
         organization: Option<String>,
+
+        /// Bind the new project to this board (when cloning a project, the
+        /// clone otherwise lands on that project's board, if any)
+        #[clap(long, short = 'b', add = ArgValueCompleter::new(board_completer))]
+        board: Option<String>,
+
+        /// Leave the new project on no board, even if the project it was
+        /// cloned from is on one
+        #[clap(long, conflicts_with = "board")]
+        no_board: bool,
     },
 
     /// Manage tags: coloured labels shared by every task
@@ -463,14 +473,32 @@ pub enum SessionCommand {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum InternalCommand {
-    /// Called by a tmux hook. `event` is client-session-changed /
-    /// client-detached / session-closed; `tmux_session` is the session it
-    /// fired for, and `previous` -- only sent for client-session-changed --
-    /// is the session the client just left. See `tmux::HOOKS` for which
-    /// format variable names the session on which event.
+    /// Called by a tmux hook; see `tmux::HOOKS` for which format variable
+    /// fills which argument
     Hook {
-        event: String,
-        tmux_session: String,
+        #[clap(subcommand)]
+        event: HookEvent,
+    },
+
+    /// Stops the clock of every task with a tmux session, then kills the
+    /// tmux server -- tmux has no hook of its own for the server exiting
+    KillServer,
+}
+
+/// The tmux events `iter` tracks time on, each with exactly the arguments
+/// that name the sessions it concerns.
+#[derive(clap::Subcommand, Debug)]
+pub enum HookEvent {
+    /// `client` now shows `session`, having left `previous` (empty on a
+    /// first attach)
+    ClientSessionChanged {
+        client: String,
+        session: String,
         previous: Option<String>,
     },
+    /// `client` is gone; which session it was on is what `iter` recorded
+    /// the last time it changed
+    ClientDetached { client: String },
+    /// `session` no longer exists
+    SessionClosed { session: String },
 }

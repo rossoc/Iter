@@ -9,7 +9,11 @@ use std::path::{Path, PathBuf};
 /// into an absolute string suitable for storing as a project's
 /// `base_path` -- so it stays valid however/wherever `iter` is next run
 /// from, unlike a relative path that only meant something from today's cwd.
+///
+/// A leading `~` is expanded first: a path typed into the editor buffer or
+/// a web form never went through a shell that would have done it.
 pub fn absolute_path(path: &str) -> Result<String> {
+    let path = crate::config::expand_home(path);
     Ok(std::path::absolute(path)?.to_string_lossy().to_string())
 }
 

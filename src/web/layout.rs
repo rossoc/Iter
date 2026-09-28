@@ -2,6 +2,8 @@
 //! (organizations, with their projects below) and the main pane a page
 //! fills.
 
+use std::collections::HashMap;
+
 use crate::db::{Db, Table};
 use crate::models::{Organization, Project};
 use topcoat::{
@@ -34,26 +36,26 @@ pub struct Nav {
 
 impl Nav {
     pub fn load(db: &Db) -> crate::error::Result<Nav> {
-        // Two queries, grouped here, rather than one per organization.
-        let projects = db.list::<Project>()?;
-        let members = |id: Option<i64>| -> Vec<Project> {
-            projects
-                .iter()
-                .filter(|p| p.organization_id == id)
-                .cloned()
-                .collect()
-        };
+        // Two queries, grouped here in one pass rather than one query -- or
+        // one scan of every project -- per organization.
+        let mut members: HashMap<Option<i64>, Vec<Project>> = HashMap::new();
+        for project in db.list::<Project>()? {
+            members
+                .entry(project.organization_id)
+                .or_default()
+                .push(project);
+        }
         let orgs = db
             .list::<Organization>()?
             .into_iter()
             .map(|org| {
-                let mine = members(org.id);
+                let mine = members.remove(&org.id).unwrap_or_default();
                 (org, mine)
             })
             .collect();
         Ok(Nav {
             orgs,
-            loose: members(None),
+            loose: members.remove(&None).unwrap_or_default(),
         })
     }
 }

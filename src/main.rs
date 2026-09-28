@@ -46,7 +46,15 @@ fn main() -> ExitCode {
         Command::Clone {
             source,
             organization,
-        } => project::clone_cmd(app, source, organization.as_deref()),
+            board,
+            no_board,
+        } => project::clone_cmd(
+            app,
+            source,
+            organization.as_deref(),
+            board.as_deref(),
+            *no_board,
+        ),
         Command::Board { action } => action.run(app),
         Command::Tag { action } => action.run(app),
         Command::Organization { action } => action.run(app),
@@ -76,19 +84,3 @@ fn main() -> ExitCode {
         }
     }
 }
-
-// ---- sessions: shared by manual start/stop and tmux hooks -----------------
-
-// ---- init / new / clone ---------------------------------------------------
-
-// ---- editing ---------------------------------------------------------
-
-// ---- organization ----------------------------------------------------
-
-// ---- project ---------------------------------------------------------
-
-// ---- task --------------------------------------------------------------
-
-// ---- session -------------------------------------------------------------
-
-// ---- comment / t / internal hook -----------------------------------------

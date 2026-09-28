@@ -56,20 +56,27 @@ pub(crate) fn start_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> 
 /// Closes the open session of whatever task `tmux_session` belongs to,
 /// carrying over a message left in the tmux option by whatever detached
 /// (see `tmux::DETACH_MESSAGE_OPTION`) so a note typed on the way out lands
-/// on the session it belongs to.
-///
-/// A tmux session can have several clients on it -- a second terminal, or
-/// someone pairing -- and it's still being worked as long as one of them is
-/// there, so only the last one out stops the clock. The client that fired
-/// this hook is already off tmux's list by now, so what's left on it is
-/// exactly what "still being worked" means.
+/// on the session it belongs to. A name `iter` doesn't know is ignored, as
+/// in [`start_for_tmux_session`].
 pub(crate) fn stop_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     let Some(session_config) = db.find_session_config_by_tmux_name(tmux_session)? else {
         return Ok(()); // not one of ours -- ignore
     };
+    let message = tmux::take_detach_message(tmux_session);
+    close_open_session(db, session_config.task_id, message.as_deref())
+}
+
+/// A client has left `tmux_session` (detached, or switched elsewhere):
+/// stops its clock if that was the last client on it.
+///
+/// A tmux session can have several clients on it -- a second terminal, or
+/// someone pairing -- and it's still being worked as long as one of them is
+/// there. The client that left is already off tmux's list by the time the
+/// hook runs, so what's left on it is exactly what "still being worked"
+/// means.
+pub(crate) fn client_left_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     if tmux::any_client_attached(tmux_session) {
         return Ok(()); // somebody else is still in there
     }
-    let message = tmux::take_detach_message(tmux_session);
-    close_open_session(db, session_config.task_id, message.as_deref())
+    stop_for_tmux_session(db, tmux_session)
 }

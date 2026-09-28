@@ -34,6 +34,18 @@ pub fn session_exists(name: &str) -> bool {
     Tmux.succeeds(&["has-session", "-t", name])
 }
 
+/// The names of every session on the server; empty when there is no server.
+pub fn list_sessions() -> Vec<String> {
+    Tmux.output(&["list-sessions", "-F", "#{session_name}"])
+        .map(|names| names.lines().map(str::to_string).collect())
+        .unwrap_or_default()
+}
+
+/// Kills the tmux server, and with it every session and client on it.
+pub fn kill_server() -> Result<()> {
+    Tmux.run(&["kill-server"])
+}
+
 /// Whether any client is still attached to `session`.
 ///
 /// One tmux session can have several clients on it -- a second terminal, or
@@ -42,12 +54,9 @@ pub fn session_exists(name: &str) -> bool {
 /// working in it, and every minute after that goes unrecorded.
 ///
 /// This is only usable from a hook because of *when* the hook runs.
-/// Measured on tmux 3.6: by the time `client-detached` fires, the client
-/// that left is already off the list, so what this counts is exactly the
-/// clients that remain. (`#{client_name}`, which would be the obvious way
-/// to name the one leaving, is no help -- on `client-detached` it names a
-/// *surviving* client, the same kind of trap [`HOOKS`] documents for
-/// `#{hook_session_name}`.)
+/// Measured on tmux 3.6: by the time `client-detached` or
+/// `client-session-changed` fires, the client that left is already off the
+/// session's list, so what this counts is exactly the clients that remain.
 ///
 /// Any failure is a `false` -- no tmux, or a session that's already gone,
 /// which is exactly the `session-closed` case -- so the caller closes the
@@ -70,6 +79,38 @@ pub fn current_session_name() -> Option<String> {
     Tmux.output_trimmed(&["display-message", "-p", "#S"])
 }
 
+/// The prefix of the server-wide tmux option that records which session a
+/// client is on, e.g. `@iter_client_session_/dev/pts/3`.
+///
+/// It exists because `client-detached` can't name the session the client
+/// left: measured on tmux 3.6, `#{session_name}` there is whichever session
+/// is most recently active -- often one another client is still working in
+/// -- and the client itself is already gone, so it can't be asked.
+/// `#{hook_client}` does still name it, so the session is recorded under
+/// that name on every `client-session-changed`, which *is* told the
+/// session, and looked up again on the way out.
+const CLIENT_SESSION_OPTION_PREFIX: &str = "@iter_client_session_";
+
+fn client_session_option(client: &str) -> String {
+    format!("{CLIENT_SESSION_OPTION_PREFIX}{client}")
+}
+
+/// Records that `client` now shows `session`, for [`take_client_session`]
+/// to read back when it detaches.
+pub fn remember_client_session(client: &str, session: &str) -> Result<()> {
+    Tmux.run(&["set-option", "-g", &client_session_option(client), session])
+}
+
+/// The session `client` was last recorded on, consumed so a later client
+/// that reuses the same tty starts from nothing. `None` for a client that
+/// attached before the hooks were installed.
+pub fn take_client_session(client: &str) -> Option<String> {
+    let option = client_session_option(client);
+    let session = Tmux.output_trimmed(&["show-options", "-gv", &option])?;
+    let _ = Tmux.run(&["set-option", "-gu", &option]);
+    Some(session)
+}
+
 /// The session-scoped tmux option a detach message is left in: something
 /// bound to `detach-client` sets it just before detaching, and the
 /// `client-detached` hook takes it back off again and stores it on the
@@ -77,38 +118,33 @@ pub fn current_session_name() -> Option<String> {
 /// interface, not an internal one -- a `bind` in `tmux.conf` writes it.
 pub const DETACH_MESSAGE_OPTION: &str = "@iter_detach_message";
 
-/// The hooks `iter` drives, each with the format string naming the session
-/// it fired for -- and, for `client-session-changed`, the session being
-/// left.
+/// The hooks `iter` drives, each with the format variables it's passed.
 ///
-/// The variable differs per event, and getting it wrong fails *silently*:
-/// the hook still runs, it just names no session `iter` knows, so the
-/// handler ignores it. Measured on tmux 3.6:
+/// Which variable is right differs per event, and getting it wrong fails
+/// *silently* -- the hook still runs, it just names the wrong session or
+/// none at all. Measured on tmux 3.6:
 ///
-/// | event                   | `hook_session_name` | `session_name` |
-/// |-------------------------|---------------------|----------------|
-/// | `client-session-changed` | empty               | the new session|
-/// | `client-detached`        | empty               | the session    |
-/// | `session-closed`         | the session         | *another one*  |
+/// | event                    | `hook_client` | `session_name`    | `hook_session_name` |
+/// |--------------------------|---------------|-------------------|---------------------|
+/// | `client-session-changed` | the client    | the new session   | empty               |
+/// | `client-detached`        | the client    | *some other one*  | empty               |
+/// | `session-closed`         | --            | *some other one*  | the session         |
 ///
-/// So `#{session_name}` is the only usable one for the client hooks, and
-/// on `session-closed` it's actively wrong -- it names whatever session the
-/// client is on now, not the one that just closed.
+/// `#{client_name}` is no substitute for `#{hook_client}`: on a
+/// `switch-client` it can name a different client entirely. And since
+/// `client-detached` can't name its session, it's only passed the client,
+/// and the session comes from what `client-session-changed` recorded (see
+/// [`remember_client_session`]).
 ///
 /// `client-session-changed` rather than `client-attached` is what starts a
 /// session: it fires on a plain attach *and* on `switch-client`, so hopping
-/// between two tasks inside tmux is seen. `client-attached` fires only on
-/// the former, and would leave the task you switched away from running.
-///
-/// Which client fired the hook is deliberately *not* passed: `#{client_name}`
-/// doesn't name the one that left (see [`any_client_attached`], which is
-/// how "the last client out" is told from "one of several" instead).
+/// between two tasks inside tmux is seen.
 const HOOKS: [(&str, &str); 3] = [
     (
         "client-session-changed",
-        "\"#{session_name}\" \"#{client_last_session}\"",
+        "\"#{hook_client}\" \"#{session_name}\" \"#{client_last_session}\"",
     ),
-    ("client-detached", "\"#{session_name}\""),
+    ("client-detached", "\"#{hook_client}\""),
     // The backstop for a session torn down another way (`tmux kill-session`,
     // the shell in it exiting) while still attached.
     ("session-closed", "\"#{hook_session_name}\""),
@@ -208,27 +244,31 @@ mod tests {
         hook_action("/usr/bin/iter", event, args)
     }
 
-    /// The bug this guards: every hook was installed with
-    /// `#{hook_session_name}`, which tmux leaves empty on the client hooks
-    /// -- so a detach named no session and silently closed nothing.
+    /// Both client hooks are told the client by `#{hook_client}`: it's the
+    /// only name `client-detached` has to find its session by, and
+    /// `#{client_name}` can name a different client on a switch.
     #[test]
-    fn the_client_hooks_are_told_the_session_by_session_name() {
+    fn the_client_hooks_are_told_the_client_by_hook_client() {
         for event in ["client-session-changed", "client-detached"] {
             let action = action_for(event);
-            assert!(
-                action.contains("\"#{session_name}\""),
-                "{event} must use #{{session_name}}: {action}"
-            );
-            assert!(
-                !action.contains("hook_session_name"),
-                "{event} is empty under #{{hook_session_name}}: {action}"
-            );
+            assert!(action.contains("\"#{hook_client}\""), "{event}: {action}");
+            assert!(!action.contains("client_name"), "{event}: {action}");
         }
     }
 
-    /// ...and the mirror image: on `session-closed` it's `#{session_name}`
-    /// that's wrong, naming whatever session the client moved to rather
-    /// than the one that closed.
+    /// The bug this guards: `client-detached` was told `#{session_name}`,
+    /// which names the most recently active session -- so one client
+    /// detaching stopped the clock of a session another client was still in.
+    #[test]
+    fn client_detached_is_not_told_a_session() {
+        assert_eq!(
+            format_variables(&action_for("client-detached")),
+            vec!["#{hook_client}"]
+        );
+    }
+
+    /// On `session-closed` it's `#{session_name}` that's wrong, naming
+    /// whatever session the client moved to rather than the one that closed.
     #[test]
     fn session_closed_is_told_the_session_by_hook_session_name() {
         let action = action_for("session-closed");
@@ -236,12 +276,19 @@ mod tests {
         assert!(!action.contains("\"#{session_name}\""), "{action}");
     }
 
-    /// `client-session-changed` closes the session being left, so it needs
-    /// that second argument -- without it a switch leaks an open session.
+    /// `client-session-changed` records the session and closes the one being
+    /// left, so it needs both -- without the second a switch leaks an open
+    /// session.
     #[test]
-    fn client_session_changed_is_also_told_the_session_being_left() {
-        let action = action_for("client-session-changed");
-        assert!(action.contains("\"#{client_last_session}\""), "{action}");
+    fn client_session_changed_is_told_the_session_and_the_one_left() {
+        assert_eq!(
+            format_variables(&action_for("client-session-changed")),
+            vec![
+                "#{hook_client}",
+                "#{session_name}",
+                "#{client_last_session}"
+            ]
+        );
     }
 
     /// A `tmux.conf` hook naming a stable path and quoting the variables
@@ -254,7 +301,7 @@ mod tests {
             .find(|(name, _)| *name == "client-session-changed")
             .expect("the hook is installed");
         let from_conf = "run-shell \"~/bin/iter internal hook client-session-changed \
-                         '#{session_name}' '#{client_last_session}'\"";
+                         '#{hook_client}' '#{session_name}' '#{client_last_session}'\"";
         assert_eq!(format_variables(from_conf), format_variables(args));
     }
 
@@ -266,7 +313,7 @@ mod tests {
             .iter()
             .find(|(name, _)| *name == "client-detached")
             .expect("the hook is installed");
-        let stale = "run-shell '/old/iter internal hook client-detached \"#{hook_session_name}\"'";
+        let stale = "run-shell '/old/iter internal hook client-detached \"#{session_name}\"'";
         assert_ne!(format_variables(stale), format_variables(args));
     }
 
@@ -283,17 +330,7 @@ mod tests {
     fn a_hook_action_invokes_the_internal_subcommand() {
         assert_eq!(
             action_for("client-detached"),
-            "run-shell '/usr/bin/iter internal hook client-detached \"#{session_name}\"'"
+            "run-shell '/usr/bin/iter internal hook client-detached \"#{hook_client}\"'"
         );
-    }
-
-    /// `#{client_name}` names a client that is still attached, not the one
-    /// the hook fired for, so passing it would read as "somebody else is
-    /// still here" on the very detach that should close the session.
-    #[test]
-    fn no_hook_passes_a_client_name() {
-        for (event, _) in HOOKS {
-            assert!(!action_for(event).contains("client_name"), "{event}");
-        }
     }
 }

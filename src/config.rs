@@ -184,6 +184,11 @@ fn var(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
 }
 
+/// [`expand_tilde`] against the user's home directory.
+pub(crate) fn expand_home(path: &str) -> PathBuf {
+    expand_tilde(path, home_dir().as_deref())
+}
+
 /// Expands a leading `~` (the shell would have done it for a path typed on
 /// the command line, but not for one written in a config file). Anything
 /// else -- including a `~` mid-path -- is left alone.
