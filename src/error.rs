@@ -80,6 +80,18 @@ pub enum IterError {
     #[error("board name cannot be empty")]
     EmptyBoardName,
 
+    #[error("no such tag '{0}'")]
+    TagNotFound(String),
+
+    #[error("tag name cannot be empty")]
+    EmptyTagName,
+
+    #[error("invalid tag color '{0}' (expected #rrggbb)")]
+    InvalidTagColor(String),
+
+    #[error("tag '{0}' is built in and can't be renamed or deleted")]
+    BuiltinTag(String),
+
     #[error("organization name cannot be empty")]
     EmptyOrganizationName,
 

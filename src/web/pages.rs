@@ -7,7 +7,7 @@ use super::forms::{OrgForm, ProjectForm, TaskForm};
 use super::layout::{self, Nav, Sel, shell};
 use super::open_db;
 use crate::db::{Db, Table};
-use crate::models::{Organization, Project, Session, Task, TaskStatus};
+use crate::models::{Organization, Project, START_TIME_FMT, Session, Tag, Task, TaskStatus};
 use chrono::{Local, NaiveDateTime};
 use topcoat::{
     Result,
@@ -32,6 +32,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder
         .layout(layout::root)
         .route(layout::stylesheet)
+        .route(layout::board_script)
         .page(home)
         .page(org_page)
         .page(org_edit)
@@ -479,7 +480,7 @@ async fn sessions_table(sessions: &[Session]) -> Result<impl View> {
 #[page("/task/{id}")]
 async fn task_page(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, task, project, org, sessions) = {
+    let (nav, task, project, org, sessions, tags) = {
         let db = open_db()?;
         let task = db.get::<Task>(id)?.ok_or_not_found()?;
         let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
@@ -488,9 +489,15 @@ async fn task_page(cx: &Cx) -> Result<impl View> {
             None => None,
         };
         let sessions = db.sessions_for_task(id)?;
-        (Nav::load(&db)?, task, project, org, sessions)
+        let tags = db.tags_for_task(id)?;
+        (Nav::load(&db)?, task, project, org, sessions, tags)
     };
     let issue_text = issue(task.github_issue);
+    let start_text = task
+        .start_time
+        .map(|t| t.format(START_TIME_FMT).to_string())
+        .unwrap_or_default();
+    let duration_text = task.duration.map(|d| d.to_string()).unwrap_or_default();
     Ok(view! {
         shell(
             nav: &nav,
@@ -510,16 +517,48 @@ async fn task_page(cx: &Cx) -> Result<impl View> {
                 row(label: "status", value: task.status.label())
                 row(label: "github issue", value: &issue_text)
                 row(label: "branch prefix", value: &task.branch_prefix)
+                row(label: "urgent", value: yes_no(task.urgency))
+                row(label: "important", value: yes_no(task.importance))
+                row(label: "start", value: &start_text)
+                row(label: "duration", value: &duration_text)
+                <dt>"tags"</dt>
+                <dd>
+                    for t in tags.iter() {
+                        <span class="chip" style=(format!("background:{}", t.color))>(t.name.clone())</span>
+                    }
+                </dd>
             </dl>
             sessions_table(sessions: &sessions)
         )
     })
 }
 
+fn tag_list(tags: &[Tag]) -> String {
+    tags.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ")
+}
+
+/// The ids of the tags named `names`; an unknown name is an error rather
+/// than a new tag, so a typo can't quietly mint one.
+fn tag_ids(db: &Db, names: &[String]) -> crate::error::Result<Vec<i64>> {
+    names
+        .iter()
+        .map(|n| {
+            db.find_by_name::<Tag>(n)?
+                .map(|t| t.id())
+                .ok_or_else(|| crate::error::IterError::TagNotFound(n.clone()))
+        })
+        .collect()
+}
+
 #[component]
-async fn task_form(task: &Task, #[default] error: Option<String>) -> Result<impl View> {
+async fn task_form(task: &Task, tags: &str, #[default] error: Option<String>) -> Result<impl View> {
     let statuses = [TaskStatus::Queue, TaskStatus::Wip, TaskStatus::Done];
     let issue_number = task.github_issue.map(|n| n.to_string()).unwrap_or_default();
+    let start = task
+        .start_time
+        .map(|t| t.format(START_TIME_FMT).to_string())
+        .unwrap_or_default();
+    let duration = task.duration.map(|d| d.to_string()).unwrap_or_default();
     Ok(view! {
         <h1>"Edit task"</h1>
         error_box(error: &error)
@@ -534,6 +573,11 @@ async fn task_form(task: &Task, #[default] error: Option<String>) -> Result<impl
             </select>
             field(name: "github_issue", label: "GitHub issue number", value: &issue_number)
             field(name: "branch_prefix", label: "Branch prefix", value: &task.branch_prefix)
+            check(name: "urgency", label: "Urgent", on: task.urgency)
+            check(name: "importance", label: "Important", on: task.importance)
+            field(name: "start_time", label: "Start (yyyy-mm-dd hh:mm)", value: &start)
+            field(name: "duration", label: "Duration (hh:mm)", value: &duration)
+            field(name: "tags", label: "Tags (comma-separated)", value: tags)
             form_actions(cancel: format!("/task/{}", task.id()))
         </form>
     })
@@ -542,12 +586,13 @@ async fn task_form(task: &Task, #[default] error: Option<String>) -> Result<impl
 #[page("/task/{id}/edit")]
 async fn task_edit(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let (nav, task) = {
+    let (nav, task, tags) = {
         let db = open_db()?;
         let task = db.get::<Task>(id)?.ok_or_not_found()?;
-        (Nav::load(&db)?, task)
+        let tags = tag_list(&db.tags_for_task(id)?);
+        (Nav::load(&db)?, task, tags)
     };
-    Ok(view! { shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task)) })
+    Ok(view! { shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task, tags: &tags)) })
 }
 
 #[page(POST "/task/{id}/edit")]
@@ -557,12 +602,18 @@ async fn task_save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
         let db = open_db()?;
         let existing = db.get::<Task>(id)?.ok_or_not_found()?;
         let (task, valid) = form.apply(existing);
-        match valid.and_then(|()| db.update(id, &task)) {
+        let saved = valid
+            .and_then(|()| tag_ids(&db, &form.tag_names()))
+            .and_then(|ids| {
+                db.update(id, &task)?;
+                db.set_task_tags(id, &ids)
+            });
+        match saved {
             Ok(()) => return Err(see_other(format!("/task/{id}")).into()),
             Err(e) => (Nav::load(&db)?, task, e.to_string()),
         }
     };
     Ok(view! {
-        shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task, error: Some(error)))
+        shell(nav: &nav, sel: Sel::Project(task.project_id), task_form(task: &task, tags: &form.tags, error: Some(error)))
     })
 }

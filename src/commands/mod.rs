@@ -10,6 +10,7 @@ pub mod organization;
 pub mod project;
 pub mod session;
 pub mod sync;
+pub mod tag;
 pub mod task;
 
 use crate::app::App;

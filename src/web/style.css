@@ -34,3 +34,35 @@ form textarea{min-height:160px;font-family:ui-monospace,monospace}
 button{margin-top:18px;padding:6px 16px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
 .error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);padding:8px 12px;border-radius:6px;margin-bottom:12px}
 .empty{color:var(--muted)}
+header.top{display:flex;gap:4px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--side)}
+header.top a{padding:10px 14px;border-bottom:2px solid transparent;color:var(--muted)}
+header.top a.sel{border-color:var(--accent);color:var(--fg)}
+.app{min-height:calc(100vh - 42px)}
+main:has(.board){max-width:none}
+ul.boards{padding-left:18px}
+.board{--both:#22c55e;--neither:#9ca3af;display:flex;gap:20px;align-items:flex-start}
+.board .lists{width:280px;flex:none;display:flex;flex-direction:column;gap:12px}
+.zone{border:1px dashed var(--line);border-radius:8px;padding:8px;min-height:60px}
+.zone.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.zone h3{margin:0 0 6px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.card{display:flex;justify-content:space-between;gap:8px;padding:4px 8px;margin:4px 0;border-radius:6px;border:1px solid var(--line);background:var(--side);cursor:grab}
+.card a{color:var(--fg)}
+.card .slot{color:var(--muted);font-size:12px;white-space:nowrap}
+.card.u{background:color-mix(in srgb,var(--urgent) 35%,var(--bg))}
+.card.i{background:color-mix(in srgb,var(--important) 35%,var(--bg))}
+.card.ui{background:color-mix(in srgb,var(--both) 35%,var(--bg))}
+.agenda{flex:1;min-width:0}
+.days{display:flex;gap:16px;align-items:center;margin-bottom:8px}
+.days a{padding:2px 10px;border:1px solid var(--line);border-radius:6px}
+.hour{display:flex;gap:8px;align-items:stretch}
+.hour .label{width:48px;flex:none;color:var(--muted);font-size:12px;padding-top:6px}
+.hour .zone{flex:1;min-height:36px;padding:2px 6px;border-style:solid;border-color:var(--line);border-radius:0}
+.hour .zone h3{display:none}
+.matrix{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.matrix .axis{text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase}
+.matrix .zone{min-height:200px;border-style:solid;border-color:transparent}
+.q-both{background:color-mix(in srgb,var(--both) 25%,var(--bg))}
+.q-important{background:color-mix(in srgb,var(--important) 25%,var(--bg))}
+.q-urgent{background:color-mix(in srgb,var(--urgent) 25%,var(--bg))}
+.q-neither{background:color-mix(in srgb,var(--neither) 25%,var(--bg))}
+.chip{font-size:12px;padding:1px 8px;border-radius:99px;color:#111;margin-right:4px}

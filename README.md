@@ -478,7 +478,34 @@ Click an organization or project for its info; the **Info | Tasks** switch
 above it shows its tasks instead -- for an organization, those of all its
 projects; for a project, only its own. A task opens on its own page with its
 sessions. **Edit** on any of the three opens a form and saves straight back
-to the database.
+to the database. A task's form also sets its urgent/important flags, start
+time, duration and tags (comma-separated names of existing tags).
+
+The top bar switches between **Home** (the above) and **Board**, a list of
+boards. A board opens on its **agenda** for today (`<` / `>` change the day):
+on the left the unscheduled tasks -- important ones above, the rest below,
+urgent first in both -- and on the right the day by the hour. Drag a task onto
+an hour to schedule it (it gets an hour if it had no duration), or back to a
+list on the left to unschedule it; several tasks can share an hour. The
+**Eisenhower matrix** tab shows the same tasks in four quadrants -- green
+important and urgent, blue important, yellow urgent, gray neither -- with the
+tasks not yet placed on the left. Dropping a task on a quadrant sets its
+urgent/important flags to match; dropping it back on the left only takes it
+out of the matrix. Finished tasks aren't shown. The **Info** tab shows the
+board's description and projects; **Edit** changes its name and description
+and ticks which projects are on it (ticking one that's on another board moves
+it).
+
+## Tags
+
+```sh
+iter tag new | edit <tag> | delete <tag> | info <tag> | list
+```
+
+A tag has a name, a `#rrggbb` color and a description, and is shared by every
+project and organization. `Urgent` (yellow) and `Important` (blue) exist from
+the start: the board views use their colors for the two flags, so recolor
+them freely but they can't be renamed or deleted.
 
 The server listens on `127.0.0.1` only, refuses requests whose `Host` isn't
 a loopback name, and refuses form submissions whose `Origin` isn't itself, so

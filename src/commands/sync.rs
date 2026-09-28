@@ -100,6 +100,7 @@ pub(crate) fn task_pull(
                     branch_prefix: branch_prefix.clone(),
                     urgency: false,
                     importance: false,
+                    matrix_placed: false,
                     start_time: None,
                     duration: None,
                 };

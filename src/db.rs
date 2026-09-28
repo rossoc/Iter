@@ -1,6 +1,6 @@
 use crate::config::config;
 use crate::error::Result;
-use crate::models::{Duration, Named, Project, Session, SessionConfig, Task, TaskStatus};
+use crate::models::{Duration, Named, Project, Session, SessionConfig, Tag, Task, TaskStatus};
 use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::{Connection, OptionalExtension, Params, Row, params, params_from_iter};
@@ -180,6 +180,12 @@ impl Db {
                 name            TEXT NOT NULL UNIQUE,
                 description     TEXT NOT NULL DEFAULT ''
              );
+             CREATE TABLE IF NOT EXISTS tags (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                name            TEXT NOT NULL UNIQUE,
+                color           TEXT NOT NULL,
+                description     TEXT NOT NULL DEFAULT ''
+             );
              CREATE TABLE IF NOT EXISTS organizations (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                 name            TEXT NOT NULL UNIQUE,
@@ -214,9 +220,15 @@ impl Db {
                 branch_prefix TEXT NOT NULL DEFAULT '',
                 urgency       INTEGER NOT NULL DEFAULT 0,
                 importance    INTEGER NOT NULL DEFAULT 0,
+                matrix_placed INTEGER NOT NULL DEFAULT 0,
                 start_time    TEXT,
                 duration      INTEGER,
                 UNIQUE (project_id, name)
+             );
+             CREATE TABLE IF NOT EXISTS task_tags (
+                task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                tag_id  INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+                PRIMARY KEY (task_id, tag_id)
              );
              CREATE TABLE IF NOT EXISTS session_configs (
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -234,7 +246,44 @@ impl Db {
              );",
         )?;
         self.add_missing_columns()?;
+        self.seed_tags()?;
         self.create_indexes();
+        Ok(())
+    }
+
+    /// The two tags every database has: the ones the board views colour the
+    /// Eisenhower flags with. `INSERT OR IGNORE` on the unique name, so a
+    /// user's recolouring survives and re-running this is a no-op.
+    fn seed_tags(&self) -> Result<()> {
+        for tag in Tag::defaults() {
+            self.conn.execute(
+                "INSERT OR IGNORE INTO tags (name, color, description) VALUES (?1, ?2, ?3)",
+                params![tag.name, tag.color, tag.description],
+            )?;
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "web")]
+    /// Every tag attached to `task_id`, in name order.
+    pub fn tags_for_task(&self, task_id: i64) -> Result<Vec<Tag>> {
+        self.find_all(
+            "WHERE id IN (SELECT tag_id FROM task_tags WHERE task_id = ?1) ORDER BY name",
+            params![task_id],
+        )
+    }
+
+    #[cfg(feature = "web")]
+    /// Replaces the tags on `task_id` with exactly `tag_ids`.
+    pub fn set_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM task_tags WHERE task_id = ?1", params![task_id])?;
+        for tag_id in tag_ids {
+            self.conn.execute(
+                "INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)",
+                params![task_id, tag_id],
+            )?;
+        }
         Ok(())
     }
 
@@ -281,7 +330,8 @@ impl Db {
     /// already allowed to be in. `board_id` follows the same rule: a board
     /// is a container, so deleting one just unbinds its projects.
     fn add_missing_columns(&self) -> Result<()> {
-        const ADDED: [(&str, &str, &str); 11] = [
+        const ADDED: [(&str, &str, &str); 12] = [
+            ("tasks", "matrix_placed", "INTEGER NOT NULL DEFAULT 0"),
             ("tasks", "urgency", "INTEGER NOT NULL DEFAULT 0"),
             ("tasks", "importance", "INTEGER NOT NULL DEFAULT 0"),
             ("tasks", "start_time", "TEXT"),
@@ -733,6 +783,7 @@ mod tests {
             branch_prefix: "fix/".to_string(),
             urgency: false,
             importance: false,
+            matrix_placed: false,
             start_time: None,
             duration: None,
         };
@@ -870,6 +921,7 @@ mod tests {
                 branch_prefix: String::new(),
                 urgency: false,
                 importance: false,
+                matrix_placed: false,
                 start_time: None,
                 duration: None,
             };
@@ -940,6 +992,7 @@ mod tests {
             branch_prefix: String::new(),
             urgency: false,
             importance: false,
+            matrix_placed: false,
             start_time: None,
             duration: None,
         };
@@ -1079,6 +1132,7 @@ mod tests {
             branch_prefix: String::new(),
             urgency: false,
             importance: false,
+            matrix_placed: false,
             start_time: None,
             duration: None,
         });
@@ -1331,6 +1385,7 @@ mod tests {
             branch_prefix: String::new(),
             urgency: false,
             importance: false,
+            matrix_placed: false,
             start_time: None,
             duration: None,
         };
@@ -1687,6 +1742,46 @@ mod tests {
             .map(|p| p.name)
             .collect();
         assert_eq!(names, ["a"]);
+    }
+
+    /// Every database starts with the two tags the board views colour the
+    /// Eisenhower flags with, and re-running the migration neither
+    /// duplicates them nor undoes a recolouring.
+    #[test]
+    fn urgent_and_important_tags_are_seeded_once() {
+        let db = db();
+        let mut urgent = db.find_by_name::<Tag>("Urgent").expect("find").expect("seeded");
+        let important = db.find_by_name::<Tag>("Important").expect("find").expect("seeded");
+        assert_eq!((urgent.color.as_str(), important.color.as_str()), ("#facc15", "#3b82f6"));
+
+        urgent.color = "#ff0000".into();
+        db.update(urgent.id(), &urgent).expect("recolor");
+        db.seed_tags().expect("reseed");
+        assert_eq!(db.list::<Tag>().expect("list").len(), 2);
+        let urgent = db.find_by_name::<Tag>("Urgent").expect("find").expect("seeded");
+        assert_eq!(urgent.color, "#ff0000");
+    }
+
+    /// Tags are shared: setting replaces, and deleting a task or a tag
+    /// drops only the link.
+    #[test]
+    fn task_tags_replace_and_cascade() {
+        let db = db();
+        let project = insert_project(&db, "a");
+        let task = insert_task(&db, project, "t");
+        let urgent = db.find_by_name::<Tag>("Urgent").expect("find").expect("seeded").id();
+        let important = db.find_by_name::<Tag>("Important").expect("find").expect("seeded").id();
+
+        db.set_task_tags(task, &[urgent, important]).expect("set");
+        assert_eq!(db.tags_for_task(task).expect("tags").len(), 2);
+        db.set_task_tags(task, &[important]).expect("replace");
+        let tags = db.tags_for_task(task).expect("tags");
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "Important");
+
+        db.delete::<Tag>(important).expect("delete tag");
+        assert!(db.tags_for_task(task).expect("tags").is_empty());
+        assert!(db.find_by_name::<Tag>("Urgent").expect("find").is_some());
     }
 
     /// A board is a container, not an owner: deleting one must unbind its

@@ -1,11 +1,12 @@
-//! The page frame: the sidebar (organizations, with their projects below)
-//! and the main pane a page fills.
+//! The page frame: the top navbar (Home | Board), the sidebar
+//! (organizations, with their projects below) and the main pane a page
+//! fills.
 
 use crate::db::{Db, Table};
 use crate::models::{Organization, Project};
 use topcoat::{
     Result,
-    router::{Slot, content::Css, layout, route},
+    router::{Slot, content::{Css, Js}, layout, route},
     view::{Child, View, component, view},
 };
 
@@ -15,6 +16,9 @@ pub enum Sel {
     None,
     Org(i64),
     Project(i64),
+    /// Any board page. Boards are their own section, so the sidebar of
+    /// organizations and projects steps aside for them.
+    Board,
 }
 
 /// The sidebar's contents, loaded up front so rendering needs no database.
@@ -48,7 +52,12 @@ fn cls(on: bool) -> &'static str {
 #[component]
 pub async fn shell(nav: &Nav, sel: Sel, child: Child<'_>) -> Result<impl View> {
     Ok(view! {
+        <header class="top">
+            <a class=(cls(sel != Sel::Board)) href="/">"Home"</a>
+            <a class=(cls(sel == Sel::Board)) href="/boards">"Board"</a>
+        </header>
         <div class="app">
+            if sel != Sel::Board {
             <nav class="side">
                 <h2>"Organizations"</h2>
                 <ul>
@@ -77,6 +86,7 @@ pub async fn shell(nav: &Nav, sel: Sel, child: Child<'_>) -> Result<impl View> {
                     }
                 </ul>
             </nav>
+            }
             <main>(child)</main>
         </div>
     })
@@ -96,6 +106,11 @@ pub async fn root(slot: Slot<'_>) -> Result<impl View> {
             <body>(slot)</body>
         </html>
     })
+}
+
+#[route(GET "/board.js")]
+pub async fn board_script() -> Result<Js<&'static str>> {
+    Ok(Js(include_str!("board.js")))
 }
 
 #[route(GET "/style.css")]

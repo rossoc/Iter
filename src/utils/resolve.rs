@@ -8,7 +8,7 @@
 
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::models::{Board, Organization, Project, Task, split_task_ref, task_ref};
+use crate::models::{Board, Tag, Organization, Project, Task, split_task_ref, task_ref};
 use crate::{git, tmux};
 
 /// How a task is named everywhere the CLI speaks about one: the exact
@@ -71,6 +71,11 @@ pub(crate) fn resolve_project_or_current(db: &Db, name: Option<&str>) -> Result<
 pub(crate) fn resolve_board(db: &Db, name: &str) -> Result<Board> {
     db.find_by_name::<Board>(name)?
         .ok_or_else(|| IterError::BoardNotFound(name.to_string()))
+}
+
+pub(crate) fn resolve_tag(db: &Db, name: &str) -> Result<Tag> {
+    db.find_by_name::<Tag>(name)?
+        .ok_or_else(|| IterError::TagNotFound(name.to_string()))
 }
 
 pub(crate) fn resolve_organization(db: &Db, name: &str) -> Result<Organization> {

@@ -1,5 +1,5 @@
 use crate::completion::{
-    board_completer, organization_completer, project_completer, queued_task_completer, task_completer,
+    board_completer, organization_completer, project_completer, queued_task_completer, tag_completer, task_completer,
     task_name_completer,
 };
 use crate::reporting::Format;
@@ -78,6 +78,12 @@ pub enum Command {
         #[clap(long = "organization", short = 'o',
                add = ArgValueCompleter::new(organization_completer))]
         organization: Option<String>,
+    },
+
+    /// Manage tags: coloured labels shared by every task
+    Tag {
+        #[clap(subcommand)]
+        action: TagCommand,
     },
 
     /// Manage boards: calendars that hold projects
@@ -205,6 +211,33 @@ pub enum ProjectCommand {
     },
 
     /// List every project
+    List,
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum TagCommand {
+    /// Open a blank tag in nvim; saving & quitting creates it
+    New,
+
+    /// Edit an existing tag in nvim; saving & quitting updates it
+    Edit {
+        #[arg(add = ArgValueCompleter::new(tag_completer))]
+        name: String,
+    },
+
+    /// Delete a tag; it's removed from every task that had it
+    Delete {
+        #[arg(add = ArgValueCompleter::new(tag_completer))]
+        name: String,
+    },
+
+    /// A tag's color and description
+    Info {
+        #[arg(add = ArgValueCompleter::new(tag_completer))]
+        name: String,
+    },
+
+    /// List every tag
     List,
 }
 

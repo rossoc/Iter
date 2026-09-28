@@ -6,7 +6,8 @@
 //! the YAML editor follows in `commands`.
 
 use crate::error::{IterError, Result};
-use crate::models::{Organization, Project, Task, TaskStatus};
+use crate::models::{Duration, Organization, Project, START_TIME_FMT, Task, TaskStatus};
+use chrono::NaiveDateTime;
 use serde::Deserialize;
 
 /// A checkbox is present in the submission (as `on`) only when ticked.
@@ -100,9 +101,26 @@ pub struct TaskForm {
     pub github_issue: String,
     pub status: String,
     pub branch_prefix: String,
+    pub urgency: Option<String>,
+    pub importance: Option<String>,
+    /// `yyyy-mm-dd hh:mm`, or empty for unscheduled.
+    pub start_time: String,
+    /// `hh:mm`, or empty for none.
+    pub duration: String,
+    /// Tag names, comma-separated.
+    pub tags: String,
 }
 
 impl TaskForm {
+    /// The tag names typed into the form, trimmed and without blanks.
+    pub fn tag_names(&self) -> Vec<String> {
+        self.tags
+            .split(',')
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect()
+    }
+
     /// See [`OrgForm::apply`]. An unparseable issue number or status keeps
     /// the row's old value.
     pub fn apply(&self, mut task: Task) -> (Task, Result<()>) {
@@ -129,6 +147,36 @@ impl TaskForm {
             None if valid.is_ok() => valid = Err(IterError::InvalidStatus(self.status.clone())),
             None => {}
         }
+        task.urgency = checked(&self.urgency);
+        task.importance = checked(&self.importance);
+        let start = self.start_time.trim();
+        if start.is_empty() {
+            task.start_time = None;
+        } else {
+            match NaiveDateTime::parse_from_str(start, START_TIME_FMT) {
+                Ok(t) => task.start_time = Some(t),
+                Err(_) if valid.is_ok() => {
+                    valid = Err(IterError::CommandFailed(format!(
+                        "invalid start time '{start}', expected yyyy-mm-dd hh:mm"
+                    )));
+                }
+                Err(_) => {}
+            }
+        }
+        let duration = self.duration.trim();
+        if duration.is_empty() {
+            task.duration = None;
+        } else {
+            match Duration::parse(duration) {
+                Some(d) => task.duration = Some(d),
+                None if valid.is_ok() => {
+                    valid = Err(IterError::CommandFailed(format!(
+                        "invalid duration '{duration}', expected hh:mm"
+                    )));
+                }
+                None => {}
+            }
+        }
         task.name = self.name.trim().to_string();
         task.description = text(&self.description);
         task.branch_prefix = self.branch_prefix.trim().to_string();
@@ -148,6 +196,11 @@ mod tests {
             github_issue: issue.into(),
             status: status.into(),
             branch_prefix: "feat/".into(),
+            urgency: None,
+            importance: None,
+            start_time: String::new(),
+            duration: String::new(),
+            tags: String::new(),
         }
     }
 
@@ -173,6 +226,27 @@ mod tests {
         assert!(matches!(valid, Err(IterError::InvalidStatus(_))));
         assert_eq!((t.name.as_str(), t.status), ("x", TaskStatus::Queue));
         assert_eq!(bad("x", "", "done").0.github_issue, None);
+    }
+
+    #[test]
+    fn task_form_sets_flags_schedule_and_tags() {
+        let mut form = task_form("x", "", "queue");
+        form.urgency = Some("on".into());
+        form.start_time = "2026-09-28 09:30".into();
+        form.duration = "01:45".into();
+        form.tags = " Urgent, ,work ".into();
+        let (t, valid) = form.apply(task());
+        assert!(valid.is_ok());
+        assert!(t.urgency && !t.importance);
+        assert_eq!(t.duration, Some(Duration(105)));
+        assert!(t.start_time.is_some());
+        assert_eq!(form.tag_names(), ["Urgent", "work"]);
+
+        form.duration = "1h".into();
+        assert!(form.apply(task()).1.is_err());
+        form.duration = String::new();
+        form.start_time = "tomorrow".into();
+        assert!(form.apply(task()).1.is_err());
     }
 
     #[test]

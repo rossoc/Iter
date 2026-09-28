@@ -86,6 +86,12 @@ pub struct Task {
     #[serde(default)]
     pub importance: bool,
 
+    /// Whether the task has been dropped onto the board's Eisenhower
+    /// matrix. Flags alone can't say: a task with neither flag is either
+    /// waiting in the matrix's side list or sitting in the gray quadrant.
+    #[serde(default)]
+    pub matrix_placed: bool,
+
     /// When the task is scheduled to begin, as `yyyy-mm-dd hh:mm`. Together
     /// with `duration` this places the task on the board's agenda.
     #[serde(default, with = "datetime_opt")]
@@ -192,6 +198,7 @@ impl Task {
             branch_prefix,
             urgency: false,
             importance: false,
+            matrix_placed: false,
             start_time: None,
             duration: None,
         }

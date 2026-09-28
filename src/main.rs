@@ -48,6 +48,7 @@ fn main() -> ExitCode {
             organization,
         } => project::clone_cmd(app, source, organization.as_deref()),
         Command::Board { action } => action.run(app),
+        Command::Tag { action } => action.run(app),
         Command::Organization { action } => action.run(app),
         // No subcommand is exactly `project list`, so the default stands in
         // for the variant rather than being a separate arm.

@@ -7,6 +7,7 @@
 //! `rusqlite::Connection` isn't `Sync`, which is the other reason to open
 //! one per request instead of sharing one.
 
+mod board;
 mod forms;
 mod guard;
 mod layout;
@@ -24,7 +25,7 @@ fn open_db() -> topcoat::Result<Db> {
 
 fn router() -> Router {
     let builder = Router::builder().layer(guard::local_only);
-    pages::register(builder).build()
+    board::register(pages::register(builder)).build()
 }
 
 /// Serves until interrupted, optionally opening the browser first.

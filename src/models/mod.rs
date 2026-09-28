@@ -3,6 +3,7 @@ mod organization;
 mod project;
 mod session;
 mod session_config;
+mod tag;
 mod task;
 
 pub use board::Board;
@@ -10,6 +11,9 @@ pub use organization::Organization;
 pub use project::Project;
 pub use session::Session;
 pub use session_config::SessionConfig;
+#[cfg(feature = "web")]
+pub use tag::{IMPORTANT_TAG, URGENT_TAG};
+pub use tag::{Tag, is_hex_color};
 pub use task::{Duration, START_TIME_FMT, Task, TaskStatus};
 
 /// The fallback settings a project uses when it inherits none -- i.e. when
