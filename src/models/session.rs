@@ -20,6 +20,17 @@ pub struct Session {
 }
 
 impl Session {
+    /// The shortest stretch of work worth keeping. Anything shorter is an
+    /// attach/detach blip -- a quick look at a tmux session, a start undone
+    /// by a stop -- not work, and is never stored (see
+    /// `utils::clock::close_open_session`).
+    pub const MIN_SECONDS: i64 = 60;
+
+    /// Whether this session, ended at `end`, is too short to keep.
+    pub fn too_short(&self, end: NaiveDateTime) -> bool {
+        (end - self.start).num_seconds() < Self::MIN_SECONDS
+    }
+
     /// Whether this session is still open, i.e. has no `end` recorded yet.
     pub fn is_ongoing(&self) -> bool {
         self.end.is_none()

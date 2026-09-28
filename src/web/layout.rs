@@ -165,7 +165,7 @@ pub async fn shell(nav: &Nav, sel: Sel, child: Child<'_>) -> Result<impl View> {
 pub async fn root(slot: Slot<'_>) -> Result<impl View> {
     Ok(view! {
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">

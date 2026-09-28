@@ -9,6 +9,8 @@ use super::layout::{
     self, Nav, Sel, check, cls, description, error_box, field, form_actions, shell, textarea,
 };
 use super::open_db;
+use super::org;
+use super::v2::compare;
 use crate::db::{Db, Table};
 use crate::models::{
     Configured, Duration, Organization, Project, ProjectGroup, START_TIME_FMT, Session, Settings,
@@ -27,6 +29,11 @@ path_param!(id: i64, error = bad_request);
 #[query_params(error = bad_request)]
 struct TabQuery {
     tab: Option<String>,
+    /// `old` renders a redesigned page's old design (see `v2.rs`).
+    design: Option<String>,
+    /// The organization report's period (`org::load_report`).
+    from: Option<String>,
+    to: Option<String>,
 }
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -34,7 +41,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .layout(layout::root)
         .route(layout::stylesheet)
         .route(layout::board_script)
-        .page(home)
         .page(org_page)
         .page(org_edit)
         .page(org_save)
@@ -167,60 +173,88 @@ async fn org_crumb(org: &Option<Organization>) -> Result<impl View> {
     })
 }
 
-// ---- home -------------------------------------------------------------------
-
-#[page("/")]
-async fn home() -> Result<impl View> {
-    let nav = Nav::load(&open_db()?)?;
-    Ok(view! {
-        shell(
-            nav: &nav,
-            sel: Sel::None,
-            <p class="empty">"Select an organization or a project."</p>
-        )
-    })
-}
-
 // ---- organizations ----------------------------------------------------------
 
 #[page("/org/{id}")]
 async fn org_page(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let tab = Tab::of(cx)?;
-    let (nav, org, projects, tasks) = {
+    let query = query_params::<TabQuery>(cx)?;
+    let old = super::v2::is_old(&query.design);
+    // The Report tab is the proposal's own; the old design shows Info there.
+    let section = match query.tab.as_deref() {
+        Some("report") if !old => org::Section::Report,
+        _ if tab == Tab::Tasks => org::Section::Tasks,
+        _ => org::Section::Info,
+    };
+    let now = Local::now().naive_local();
+    let (nav, org, projects, tasks, report) = {
         let db = open_db()?;
         let org = db.get::<Organization>(id)?.ok_or_not_found()?;
         let projects = db.projects_in::<Organization>(id)?;
-        let tasks = match tab {
-            Tab::Tasks => db.tasks_in::<Organization>(id)?,
-            Tab::Info => Vec::new(),
+        // The proposal counts them on its Tasks tab, so it needs them on both.
+        let tasks = if tab == Tab::Tasks || !old {
+            db.tasks_in::<Organization>(id)?
+        } else {
+            Vec::new()
         };
-        (Nav::load(&db)?, org, projects, tasks)
+        let report = match section {
+            org::Section::Report => Some(org::load_report(
+                &db,
+                id,
+                query.from.as_deref(),
+                query.to.as_deref(),
+                now,
+            )?),
+            _ => None,
+        };
+        (Nav::load(&db)?, org, projects, tasks, report)
     };
     let base = format!("/org/{id}");
+    // The page this is, as the proposal sees it -- built from the query,
+    // not from `section`, so the old design (which has no Report tab)
+    // still switches back to the report it came from.
+    let here = match query.tab.as_deref() {
+        Some("report") => match (&query.from, &query.to) {
+            (None, None) => format!("{base}?tab=report"),
+            (from, to) => format!(
+                "{base}?tab=report&from={}&to={}",
+                from.as_deref().unwrap_or_default(),
+                to.as_deref().unwrap_or_default()
+            ),
+        },
+        _ if tab == Tab::Tasks => format!("{base}?tab=tasks"),
+        _ => base.clone(),
+    };
     Ok(view! {
-        shell(
-            nav: &nav,
-            sel: Sel::Org(id),
-            <div class="crumbs">"Organization"</div>
-            <h1>(org.name.clone())</h1>
-            tabs(base: &base, tab: tab)
-            if tab == Tab::Info {
-                description(text: &org.description)
-                settings(s: org.settings())
-                <h3>"Projects"</h3>
-                if projects.is_empty() {
-                    <p class="empty">"No projects."</p>
-                }
-                <ul>
-                    for p in projects.iter() {
-                        <li><a href=(format!("/project/{}", p.id()))>(p.name.clone())</a></li>
+        if old {
+            shell(
+                nav: &nav,
+                sel: Sel::Org(id),
+                <div class="crumbs">"Organization"</div>
+                <h1>(org.name.clone())</h1>
+                tabs(base: &base, tab: tab)
+                if tab == Tab::Info {
+                    description(text: &org.description)
+                    settings(s: org.settings())
+                    <h3>"Projects"</h3>
+                    if projects.is_empty() {
+                        <p class="empty">"No projects."</p>
                     }
-                </ul>
-            } else {
-                task_table(rows: &tasks, with_project: true)
-            }
-        )
+                    <ul>
+                        for p in projects.iter() {
+                            <li><a href=(format!("/project/{}", p.id()))>(p.name.clone())</a></li>
+                        }
+                    </ul>
+                } else {
+                    task_table(rows: &tasks, with_project: true)
+                }
+                compare(old: true, here: here.clone())
+            )
+        } else {
+            org::proposal(org: &org, projects: &projects, tasks: &tasks, section: section, report: &report, today: now.date())
+            compare(old: false, here: here.clone())
+        }
     })
 }
 

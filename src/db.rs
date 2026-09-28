@@ -198,7 +198,11 @@ impl Db {
 
     /// The schema's history, oldest first. Append a step; never edit one
     /// that has shipped.
-    const MIGRATIONS: &[fn(&Db) -> Result<()>] = &[Self::baseline, Self::flags_to_tags];
+    const MIGRATIONS: &[fn(&Db) -> Result<()>] = &[
+        Self::baseline,
+        Self::flags_to_tags,
+        Self::drop_short_sessions,
+    ];
 
     /// Everything from before versioning: idempotent, since a database
     /// that predates it could be at any point in that history.
@@ -294,6 +298,25 @@ impl Db {
             self.conn
                 .execute_batch(&format!("ALTER TABLE tasks DROP COLUMN {column};"))?;
         }
+        Ok(())
+    }
+
+    /// Closed sessions under [`Session::MIN_SECONDS`] were stored before
+    /// closing learned to drop them; they go now. Measured in whole seconds
+    /// (`strftime('%s')`): `julianday` differences carry float error that
+    /// puts an exact minute at 59.99... Open sessions are left alone. A
+    /// table without the two columns has no durations to measure.
+    fn drop_short_sessions(&self) -> Result<()> {
+        if !self.column_exists("sessions", "start")? || !self.column_exists("sessions", "end")? {
+            return Ok(());
+        }
+        self.conn.execute(
+            "DELETE FROM sessions
+             WHERE end IS NOT NULL
+               AND CAST(strftime('%s', end) AS INTEGER)
+                 - CAST(strftime('%s', start) AS INTEGER) < ?1",
+            params![Session::MIN_SECONDS],
+        )?;
         Ok(())
     }
 
@@ -1725,6 +1748,41 @@ mod tests {
         assert_eq!(found.id, Some(open_id));
         assert!(found.is_ongoing());
         assert_eq!(found.start, dt("2026-09-01 11:00"));
+    }
+
+    /// The migration drops closed sessions under a minute -- 59 seconds
+    /// goes, exactly 60 stays -- and never an open one, however recent.
+    #[test]
+    fn short_closed_sessions_are_dropped_by_the_migration() {
+        let db = db();
+        let project_id = insert_project(&db, "alpha");
+        let task_id = insert_task(&db, project_id, "build it");
+        let at = |h, m, s| day("2026-09-01").and_hms_opt(h, m, s).expect("valid time");
+        let session = |start, end| Session {
+            id: None,
+            task_id,
+            start,
+            end,
+            message: None,
+        };
+        db.insert(&session(at(9, 0, 0), Some(at(9, 0, 59))))
+            .expect("59s");
+        db.insert(&session(at(10, 0, 0), Some(at(10, 0, 0))))
+            .expect("0s");
+        let minute = db
+            .insert(&session(at(11, 0, 0), Some(at(11, 1, 0))))
+            .expect("60s");
+        let open = db.insert(&session(at(12, 0, 0), None)).expect("open");
+
+        db.drop_short_sessions().expect("migration runs");
+
+        let left: Vec<_> = db
+            .sessions_for_task(task_id)
+            .expect("lookup")
+            .into_iter()
+            .map(|s| s.id)
+            .collect();
+        assert_eq!(left, [Some(minute), Some(open)]);
     }
 
     #[test]

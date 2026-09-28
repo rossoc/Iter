@@ -81,6 +81,7 @@ pub(crate) fn task_reports(
         };
         let total_minutes = total_minutes(&sessions, now);
         reports.push(TaskReport::new(
+            task.id(),
             task.name,
             task.status,
             total_minutes,
@@ -110,6 +111,7 @@ pub(crate) fn project_reports(
             continue;
         }
         reports.push(ProjectReport {
+            id: project.id(),
             name: project.name,
             total: crate::reporting::Total::new(total_minutes(&sessions, now)),
             description: non_empty(&project.description),

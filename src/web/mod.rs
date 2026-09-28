@@ -11,8 +11,11 @@ mod board;
 mod edit;
 mod forms;
 mod guard;
+mod home;
 mod layout;
+mod org;
 mod pages;
+mod v2;
 
 use crate::config::config;
 use crate::db::Db;
@@ -26,7 +29,10 @@ fn open_db() -> topcoat::Result<Db> {
 
 fn router() -> Router {
     let builder = Router::builder().layer(guard::local_only);
-    board::register(pages::register(builder)).build()
+    org::register(v2::register(home::register(board::register(
+        pages::register(builder),
+    ))))
+    .build()
 }
 
 /// Serves until interrupted, optionally opening the browser first.
