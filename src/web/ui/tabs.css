@@ -1,0 +1,22 @@
+/* tabs: one underline at a time. It sits under the current tab; hovering
+   (or keyboard-focusing) another one moves it there -- the current line
+   slides out to the right while the new one slides in from the left, the
+   same motion as the links' sliding line (v2.css .u). */
+.v2 .tabs{display:flex;flex-wrap:wrap;column-gap:24px;margin:0 0 var(--head-gap);border-bottom:1px solid var(--line)}
+.v2 .tabs a{position:relative;display:inline-flex;align-items:center;gap:8px;padding:10px 0 12px;color:var(--muted);font-weight:500;
+  transition:color var(--fast) var(--ease-out)}
+.v2 .tabs a::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:var(--line-w);background:var(--accent);
+  transform:scaleX(0);transform-origin:right;transition:transform var(--slow) var(--ease-out)}
+.v2 .tabs a[aria-current],.v2 .tabs a:hover,.v2 .tabs a:focus-visible{color:var(--fg)}
+.v2 .tabs a[aria-current]::after,.v2 .tabs a:hover::after,.v2 .tabs a:focus-visible::after{transform:scaleX(1);transform-origin:left}
+/* another tab has the pointer or focus: the current one lets go of the line */
+.v2 .tabs:has(a:hover,a:focus-visible) a[aria-current]:not(:hover,:focus-visible){color:var(--muted)}
+.v2 .tabs:has(a:hover,a:focus-visible) a[aria-current]:not(:hover,:focus-visible)::after{transform:scaleX(0);transform-origin:right}
+/* forced colors drop backgrounds, so the current tab is underlined text and
+   the line is a border, which stays; it is shown or hidden, not slid */
+@media (forced-colors:active){
+  .v2 .tabs a[aria-current]{text-decoration:underline;text-underline-offset:6px}
+  .v2 .tabs a::after{height:0;background:none;border-bottom:var(--line-w) solid Highlight;transform:none;opacity:0;transition:none}
+  .v2 .tabs a[aria-current]::after,.v2 .tabs a:hover::after,.v2 .tabs a:focus-visible::after{opacity:1}
+  .v2 .tabs:has(a:hover,a:focus-visible) a[aria-current]:not(:hover,:focus-visible)::after{opacity:0}
+}

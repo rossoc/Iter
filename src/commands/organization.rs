@@ -43,7 +43,12 @@ fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result
     let now = app.now;
     let range = resolve_range(opts, now)?;
 
-    let (projects, all_sessions) = project_reports(db, organization_id, range, now)?;
+    let (projects, all_sessions) = project_reports(
+        db,
+        &db.projects_in::<Organization>(organization_id)?,
+        range,
+        now,
+    )?;
 
     // The union across every project, so an hour spent switching between
     // two of them isn't counted twice at the organization level either.

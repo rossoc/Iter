@@ -1,0 +1,31 @@
+/* a text control (input, select, textarea): one border (3:1, --control-line),
+   radius, surface and focus ring for every form. The ring is a real outline,
+   so forced-colors mode keeps it. */
+.v2 .control{box-sizing:border-box;margin:0;padding:8px 12px;background:var(--bg-2);color:var(--fg);font:inherit;
+  border:1px solid var(--control-line);border-radius:var(--r-md)}
+/* a control the form's error is about: a 2px danger border (padding gives
+   the pixel back, so nothing shifts). Forced colors keeps the width, which
+   is the cue there; the label says "Fix this" too (field.rs). Before
+   :focus, so a focused control still shows the accent. */
+.v2 .control[aria-invalid=true]{padding:7px 11px;border-width:2px;border-color:var(--danger)}
+.v2 .control:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.v2 textarea.control{min-height:9rem;resize:vertical}
+
+/* date fields (Chromium): the part under the pointer turns accent, since
+   that's what a click selects -- one of month/day/year, or, over the
+   calendar icon, the whole date (the .whole class, set by the page's script
+   from the pointer's position; CSS can't reach from the icon to the text).
+   The icon is Lucide's calendar (ISC) as a mask, so it can take a color.
+   The part a click selects stays in Chrome's own blue: it paints that
+   highlight over any author style (tested: :focus, !important, ::selection). */
+.v2 input[type=date]::-webkit-calendar-picker-indicator{width:14px;height:14px;margin:0 0 0 8px;padding:0;cursor:pointer;
+  background:var(--muted);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v3M16 2v3'/%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M3 9h18'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v3M16 2v3'/%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M3 9h18'/%3E%3C/svg%3E") center/contain no-repeat;
+  transition:background-color var(--fast) var(--ease-out)}
+.v2 input[type=date]::-webkit-datetime-edit{transition:color var(--fast) var(--ease-out)}
+.v2 input[type=date]::-webkit-datetime-edit-month-field,.v2 input[type=date]::-webkit-datetime-edit-day-field,
+.v2 input[type=date]::-webkit-datetime-edit-year-field{transition:color var(--fast) var(--ease-out)}
+.v2 input[type=date]::-webkit-datetime-edit-month-field:hover,.v2 input[type=date]::-webkit-datetime-edit-day-field:hover,
+.v2 input[type=date]::-webkit-datetime-edit-year-field:hover{color:var(--accent)}
+.v2 input[type=date].whole::-webkit-datetime-edit,.v2 input[type=date].whole::-webkit-datetime-edit-month-field,
+.v2 input[type=date].whole::-webkit-datetime-edit-day-field,.v2 input[type=date].whole::-webkit-datetime-edit-year-field{color:var(--accent)}
+.v2 input[type=date].whole::-webkit-calendar-picker-indicator{background:var(--accent)}

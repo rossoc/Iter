@@ -5,7 +5,7 @@ use crate::args::BoardCommand;
 use crate::commands::Run;
 use crate::db::Table;
 use crate::error::Result;
-use crate::models::{Board, Card, Priority, Project, START_TIME_FMT, TaskStatus};
+use crate::models::{Board, Card, Priority, Project, START_TIME_FMT, TaskStatus, end_text};
 use crate::reporting::non_empty;
 use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
@@ -71,12 +71,7 @@ fn render_agenda(cards: &[Card]) -> String {
         let start = card.task.start_time.expect("partitioned on start_time");
         let mut slot = start.format(START_TIME_FMT).to_string();
         if let Some(end) = card.task.end_time() {
-            let end_fmt = if end.date() == start.date() {
-                "%H:%M"
-            } else {
-                START_TIME_FMT
-            };
-            slot.push_str(&format!("-{}", end.format(end_fmt)));
+            slot.push_str(&format!("-{}", end_text(start, end)));
         }
         out.push_str(&format!(
             "  {slot}  {}{}\n",

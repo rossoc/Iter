@@ -1,0 +1,32 @@
+/* a task on a board. The left edge is the priority color (the board's
+   Urgent and Important tag colors, set on the board root); the flags are
+   also chips with words, so color is never the only cue. The text sits on
+   --bg-2, not on those colors. */
+.v2 .tcard{position:relative;display:flex;flex-direction:column;gap:6px;
+  padding:10px 12px 10px calc(var(--edge-w) + 14px);background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md);
+  box-shadow:var(--shadow)}
+.v2 .tcard::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:var(--edge-w);border-radius:var(--r-md) 0 0 var(--r-md);
+  background:linear-gradient(var(--q1) 50%,var(--q2) 50%)}
+.v2 .tcard-title{font-weight:550;line-height:1.35;overflow-wrap:anywhere}
+.v2 .tcard-title:hover{color:var(--accent)}
+.v2 .tcard-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:.8125rem;color:var(--muted)}
+/* the card's own link: at least 24px tall (28 here, 44 for a finger) */
+.v2 .tcard-act{margin-left:auto;padding:4px 8px;border-radius:var(--r-sm);text-decoration:underline;text-decoration-color:var(--control-line);
+  text-underline-offset:.2em;transition:color var(--fast) var(--ease-out),text-decoration-color var(--fast) var(--ease-out)}
+.v2 .tcard-act:hover{color:var(--accent);text-decoration-color:currentColor}
+@media (pointer:coarse){.v2 .tcard-act{padding-block:12px}}
+/* only a page with script drags (board.js sets .can-drag on the board) */
+.v2 .can-drag .tcard{cursor:grab}
+.v2 .tcard.dragging{opacity:.45}
+/* being moved (the pick mode): a --bg-3 fill and a dashed accent border, the words "Being moved",
+   so it is not mistaken for the focus ring (a solid outline) and needs no color to be seen */
+.v2 .tcard[aria-current]{background:var(--bg-3);border:2px dashed var(--accent);padding:9px 11px 9px calc(var(--edge-w) + 13px);box-shadow:none}
+.v2 .tcard[aria-current]::before{left:-2px;top:-2px;bottom:-2px}
+/* --muted on --bg-3 is 4.33:1 in light */
+.v2 .tcard[aria-current] .tcard-meta{color:var(--fg)}
+.v2 .tcard-moving{font-weight:600}
+@media (forced-colors:active){.v2 .tcard[aria-current]{border-color:Highlight}}
+@media (prefers-reduced-motion:no-preference){
+  .v2 .tcard{transition:box-shadow var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
+  .v2 .tcard:hover{transform:translateY(-1px);box-shadow:var(--shadow-lift)}
+}

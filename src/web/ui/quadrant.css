@@ -1,0 +1,16 @@
+/* a hairline box with a top edge in the cards' edge colors (edge.css). The
+   numeral's width (--num-w) is also the label's indent, so the rule lines up
+   with the name. The inner list is a hairline, not a box: dashed only when it
+   is empty or a card is over it. */
+.v2 .quad{--num-w:24px;--head-gap:10px;--pad-x:4px;position:relative;min-width:0;display:flex;flex-direction:column;gap:2px;
+  padding:16px 12px 12px;border:1px solid var(--line);border-radius:var(--r-lg)}
+.v2 .quad::before{content:"";position:absolute;left:-1px;right:-1px;top:-1px;height:var(--edge-w);border-radius:var(--r-lg) var(--r-lg) 0 0;
+  background:linear-gradient(90deg,var(--q1) 50%,var(--q2) 50%)}
+.v2 .quad-head{display:flex;align-items:center;gap:var(--head-gap);margin:0;padding:0 var(--pad-x);font-size:1.0625rem;font-weight:600;letter-spacing:-.015em}
+.v2 .quad-num{display:inline-flex;align-items:center;justify-content:center;width:var(--num-w);height:var(--num-w);flex:none;
+  border:1px solid var(--control-line);border-radius:var(--r-pill);color:var(--muted);font-weight:500}
+.v2 .quad>.label{margin:0 0 8px;padding:0 var(--pad-x) 0 calc(var(--pad-x) + var(--num-w) + var(--head-gap))}
+.v2 .quad .drop-list{flex:1;min-height:88px;padding:4px;border-radius:var(--r-md)}
+.v2 .can-drag .quad .drop-list:has(.tcard):not(.over){border-color:transparent}
+@media (forced-colors:active){.v2 .quad{border-top-width:4px}.v2 .quad::before{display:none}
+  .v2 .can-drag .quad .drop-list:has(.tcard):not(.over){border-color:Canvas}}

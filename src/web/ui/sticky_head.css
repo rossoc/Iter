@@ -1,0 +1,4 @@
+/* under the top bar (--bar-h); what it holds is the page's own business. The
+   heights the anchors must clear (--sticky-h) are the tokens in v2.css. */
+.v2 .sticky-head{position:sticky;top:var(--bar-h);z-index:5;background:var(--bg)}
+@media (max-width:900px),(max-height:600px){.v2 .sticky-head{position:static}}

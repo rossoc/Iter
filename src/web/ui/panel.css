@@ -1,0 +1,11 @@
+.v2 .panel{position:sticky;top:var(--stick-top);padding:18px 20px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-lg)}
+.v2 .panel .label{margin-bottom:10px}
+.v2 .panel dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 16px;margin:4px 0 0}
+.v2 .panel dt{color:var(--muted);font-size:.875rem}
+.v2 .panel .chips{justify-content:flex-end}  /* values sit on the right */
+.v2 .panel dd{margin:0;text-align:right;overflow-wrap:anywhere}
+.v2 .flag{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;font-size:.8125rem;color:var(--muted)}
+.v2 .flag.on{color:var(--accent);font-weight:500}
+.v2 .unset{color:var(--muted)}
+/* not sticky when the panel could outgrow the screen: narrow, or short (a landscape phone) */
+@media (max-width:900px),(max-height:600px){.v2 .panel{position:static}}

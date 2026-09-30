@@ -94,6 +94,21 @@ pub(crate) fn stop_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     Ok(())
 }
 
+/// A client has left `tmux_session` (detached, or switched elsewhere):
+/// stops its clock if that was the last client on it.
+///
+/// A tmux session can have several clients on it -- a second terminal, or
+/// someone pairing -- and it's still being worked as long as one of them is
+/// there. The client that left is already off tmux's list by the time the
+/// hook runs, so what's left on it is exactly what "still being worked"
+/// means.
+pub(crate) fn client_left_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
+    if tmux::any_client_attached(tmux_session) {
+        return Ok(()); // somebody else is still in there
+    }
+    stop_for_tmux_session(db, tmux_session)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,19 +196,4 @@ mod tests {
         assert_eq!(again, Closed::Nothing);
         assert_eq!(db.sessions_for_task(task_id).expect("lookup").len(), 1);
     }
-}
-
-/// A client has left `tmux_session` (detached, or switched elsewhere):
-/// stops its clock if that was the last client on it.
-///
-/// A tmux session can have several clients on it -- a second terminal, or
-/// someone pairing -- and it's still being worked as long as one of them is
-/// there. The client that left is already off tmux's list by the time the
-/// hook runs, so what's left on it is exactly what "still being worked"
-/// means.
-pub(crate) fn client_left_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
-    if tmux::any_client_attached(tmux_session) {
-        return Ok(()); // somebody else is still in there
-    }
-    stop_for_tmux_session(db, tmux_session)
 }

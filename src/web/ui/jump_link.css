@@ -1,0 +1,7 @@
+.v2 .jump{display:inline-block;margin:10px 0 0;padding:4px 0;font-size:.8125rem;color:var(--muted);
+  text-decoration:underline;text-underline-offset:.2em}
+.v2 .jump:hover{color:var(--accent)}
+/* wide: the part is beside the day, so the link is only for the keyboard */
+@media (min-width:901px){
+  .v2 .jump:not(:focus){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}

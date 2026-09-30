@@ -1,0 +1,26 @@
+/* sessions table: the report and the task page */
+.v2 .sessions{width:100%;border-collapse:collapse;font-size:.875rem}
+.v2 .sessions th{padding:0 10px 6px}  /* look: the shared th rule (v2.css) */
+.v2 .sessions td{padding:7px 10px;border-bottom:1px dashed var(--line);vertical-align:top}
+.v2 .sessions th:first-child,.v2 .sessions td:first-child{padding-left:0}
+.v2 .sessions td.mono{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+.v2 .sessions .note{width:100%;color:var(--fg);overflow-wrap:anywhere;white-space:pre-line}  /* a note keeps its line breaks */
+/* an open session: a dot that breathes three times, next to its duration or the word "ongoing" */
+.v2 .live{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);vertical-align:1px}
+.v2 .sessions td:not(.end) .live{margin-left:8px}
+.v2 .sessions td.end .live{margin-right:8px}
+.v2 .sessions .ongoing{color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.v2 .live{animation:breathe 2s ease-in-out 3}}
+@keyframes breathe{50%{opacity:.6}}  /* never dimmer than 3:1 */
+@media (forced-colors:active){.v2 .live{background:CanvasText}}
+
+/* narrow screens: session rows stack -- times on one line, the note below;
+   the header row is hidden, so the end says "to" with an arrow */
+@media (max-width:600px){
+  .v2 .sessions thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .v2 .sessions tr{display:flex;flex-wrap:wrap;gap:2px 12px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .v2 .sessions td{display:block;padding:0;border:0}
+  .v2 .sessions td.end::before{content:"\2192" / "";margin-right:8px;color:var(--muted)}
+  .v2 .sessions .note{flex-basis:100%}
+  .v2 .sessions .note:empty{display:none}
+}

@@ -1,0 +1,8 @@
+/* info: body on the left, aside on the right. A body alone (`.info-body`)
+   keeps the width the body has beside the aside: main's --main-w less its
+   padding (--main-pad-max a side at most), the aside and the gap. */
+.v2{--info-aside:320px;--info-gap:48px;--info-body:calc(var(--main-w) - 2*var(--main-pad-max) - var(--info-aside) - var(--info-gap))}
+.v2 .info{display:grid;grid-template-columns:minmax(0,1fr) var(--info-aside);gap:var(--info-gap);align-items:start}
+.v2 .info-body{max-width:var(--info-body)}
+/* stacked, the two parts sit closer than side by side */
+@media (max-width:900px){.v2 .info{grid-template-columns:minmax(0,1fr);gap:28px}}

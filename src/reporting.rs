@@ -153,6 +153,7 @@ pub struct Total {
     /// The exact figure the two above are rounded from -- for the web
     /// report's bars; not part of the printed report.
     #[serde(skip)]
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub minutes: i64,
 }
 
@@ -295,7 +296,7 @@ pub fn session_rows(sessions: &[Session], now: NaiveDateTime, dated: bool) -> Ve
             date: dated.then(|| fmt_date(s.start.date())),
             start: s.start.format("%H:%M").to_string(),
             end: s.end.map(|e| e.format("%H:%M").to_string()),
-            duration: Duration(s.duration_minutes(now)).to_string(),
+            duration: s.duration_text(now),
             message: s.message.as_deref().and_then(non_empty),
         })
         .collect()
@@ -308,6 +309,7 @@ pub struct TaskReport {
     /// The task's row id -- for the web report's links; not part of the
     /// printed report.
     #[serde(skip)]
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub id: i64,
     pub name: String,
     /// Serializes as `queue`/`wip`/`done`, as the plain string it replaced
@@ -356,6 +358,7 @@ pub struct ProjectReport {
     /// The project's row id -- for the web report's links; not part of the
     /// printed report.
     #[serde(skip)]
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub id: i64,
     pub name: String,
     #[serde(flatten)]

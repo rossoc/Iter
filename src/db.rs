@@ -10,8 +10,40 @@ use rusqlite::{
     Connection, OptionalExtension, Params, Row, Transaction, TransactionBehavior, params,
     params_from_iter,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+
+/// How many names one `ids_by_name` query binds (older SQLite builds allow
+/// 999 bound variables).
+const NAME_CHUNK: usize = 500;
+
+/// The condition of the unfinished tasks (a task is finished when `done`).
+const NOT_DONE: &str = "status <> 'done'";
+
+/// The write error `error` to table `table` is: a `UNIQUE` violation (by
+/// SQLite's extended result code, not its message) on one of the tables with
+/// a unique name is [`IterError::NameTaken`]; anything else is a database
+/// error.
+fn write_error(error: rusqlite::Error, table: &str) -> IterError {
+    let unique = matches!(
+        &error,
+        rusqlite::Error::SqliteFailure(e, _)
+            if e.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE
+    );
+    let kind = match table {
+        "organizations" => "organization",
+        "projects" => "project",
+        "tasks" => "task",
+        "boards" => "board",
+        "tags" => "tag",
+        _ => return error.into(),
+    };
+    if unique {
+        IterError::NameTaken { kind }
+    } else {
+        error.into()
+    }
+}
 
 const DATETIME_FMT: &str = "%Y-%m-%d %H:%M:%S";
 
@@ -22,6 +54,15 @@ fn dt_to_str(dt: NaiveDateTime) -> String {
 fn str_to_dt(s: &str) -> NaiveDateTime {
     NaiveDateTime::parse_from_str(s, DATETIME_FMT)
         .unwrap_or_else(|_| panic!("bad datetime in db: {s}"))
+}
+
+/// `ids` as a JSON array, for a `json_each` subquery: one bound variable
+/// however many ids there are.
+fn json_ids(ids: &[i64]) -> String {
+    format!(
+        "[{}]",
+        ids.iter().map(i64::to_string).collect::<Vec<_>>().join(",")
+    )
 }
 
 /// The half-open `[from 00:00:00, to+1day 00:00:00)` window a date range
@@ -364,9 +405,29 @@ impl Db {
     /// Every task on board `id`'s projects as a [`Card`], ordered by
     /// project, then task. Three queries however big the board.
     pub fn cards(&self, board_id: i64) -> Result<Vec<Card>> {
-        let priorities = self.priorities_in::<Board>(board_id)?;
-        Ok(self
-            .tasks_in::<Board>(board_id)?
+        let mut tasks = self.tasks_of::<Board>(board_id, false)?;
+        Self::sort_by_project(&mut tasks);
+        self.with_priorities(board_id, tasks, false)
+    }
+
+    /// [`Self::cards`] of the unfinished tasks only (`status <> 'done'`
+    /// is in the SQL, so finished work is never read), in no particular
+    /// order: the caller sorts once, its own way.
+    #[cfg(feature = "web")]
+    pub fn cards_unfinished(&self, board_id: i64) -> Result<Vec<Card>> {
+        let tasks = self.tasks_of::<Board>(board_id, true)?;
+        self.with_priorities(board_id, tasks, true)
+    }
+
+    /// `tasks` as cards: one query for the flags of the whole board.
+    fn with_priorities(
+        &self,
+        board_id: i64,
+        tasks: Vec<(String, Task)>,
+        unfinished: bool,
+    ) -> Result<Vec<Card>> {
+        let priorities = self.priorities_of::<Board>(board_id, unfinished)?;
+        Ok(tasks
             .into_iter()
             .map(|(project, task)| Card {
                 label: task_ref(&project, &task.name),
@@ -376,18 +437,49 @@ impl Db {
             .collect())
     }
 
+    /// The colors of the Urgent and Important tags, in that order, in one
+    /// query. Both tags are seeded, so a missing one is an error.
+    #[cfg(feature = "web")]
+    pub fn priority_colors(&self) -> Result<(String, String)> {
+        let rows: HashMap<String, String> = self
+            .query_all(
+                "SELECT name, color FROM tags WHERE name IN (?1, ?2)",
+                params![URGENT_TAG, IMPORTANT_TAG],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )?
+            .into_iter()
+            .collect();
+        let color = |name: &str| {
+            rows.get(name).cloned().ok_or_else(|| IterError::NotFound {
+                kind: Tag::KIND,
+                name: name.to_string(),
+            })
+        };
+        Ok((color(URGENT_TAG)?, color(IMPORTANT_TAG)?))
+    }
+
     /// The [`Priority`] of every task in group `id`, by task id -- one
     /// query for a listing of many, reading only that group's tag rows. A
     /// task missing from the map has neither flag.
-    pub fn priorities_in<G: ProjectGroup>(&self, id: i64) -> Result<HashMap<i64, Priority>> {
+    /// Finished tasks are left out when `unfinished`.
+    fn priorities_of<G: ProjectGroup>(
+        &self,
+        id: i64,
+        unfinished: bool,
+    ) -> Result<HashMap<i64, Priority>> {
         let rows = self.query_all(
             &format!(
                 "SELECT tt.task_id, g.name FROM task_tags tt
                  JOIN tags g ON g.id = tt.tag_id
                  JOIN tasks t ON t.id = tt.task_id
                  JOIN projects p ON p.id = t.project_id
-                 WHERE g.name IN (?1, ?2) AND p.{} = ?3",
-                G::MEMBER_COLUMN
+                 WHERE g.name IN (?1, ?2) AND p.{} = ?3{}",
+                G::MEMBER_COLUMN,
+                if unfinished {
+                    format!(" AND t.{NOT_DONE}")
+                } else {
+                    String::new()
+                }
             ),
             params![URGENT_TAG, IMPORTANT_TAG, id],
             |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
@@ -401,6 +493,20 @@ impl Db {
             }
         }
         Ok(out)
+    }
+
+    /// Stores `task` as row `id` and, when `priority` is some, makes its
+    /// flags that, in one transaction: a board's drop changes both or
+    /// neither (never a task placed with the old flags).
+    #[cfg(any(test, feature = "web"))]
+    pub fn update_placed(&self, id: i64, task: &Task, priority: Option<Priority>) -> Result<()> {
+        self.atomically(|| {
+            self.update(id, task)?;
+            match priority {
+                Some(priority) => self.set_priority(id, priority),
+                None => Ok(()),
+            }
+        })
     }
 
     /// Makes `task_id`'s flags `priority`, by adding or removing the tags.
@@ -451,16 +557,41 @@ impl Db {
     /// Replaces the tags on `task_id` with exactly `tag_ids`, in one
     /// transaction.
     pub fn set_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
-        let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM task_tags WHERE task_id = ?1", params![task_id])?;
-        let mut insert =
-            tx.prepare("INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)")?;
+        self.atomically(|| self.replace_task_tags(task_id, tag_ids))
+    }
+
+    /// [`Self::set_task_tags`] without its own transaction, for a caller
+    /// that has one open.
+    fn replace_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM task_tags WHERE task_id = ?1", params![task_id])?;
+        let mut insert = self
+            .conn
+            .prepare_cached("INSERT OR IGNORE INTO task_tags (task_id, tag_id) VALUES (?1, ?2)")?;
         for tag_id in tag_ids {
             insert.execute(params![task_id, tag_id])?;
         }
-        drop(insert);
-        tx.commit()?;
         Ok(())
+    }
+
+    /// Writes `task` with exactly `tag_ids`, in one transaction: a new row
+    /// when `id` is `None`, else over row `id`. Returns the task's id. A new
+    /// task without tags skips the tag write altogether.
+    #[cfg(feature = "web")]
+    pub fn save_task(&self, id: Option<i64>, task: &Task, tag_ids: &[i64]) -> Result<i64> {
+        self.atomically(|| {
+            let saved = match id {
+                Some(id) => {
+                    self.update(id, task)?;
+                    id
+                }
+                None => self.insert(task)?,
+            };
+            if id.is_some() || !tag_ids.is_empty() {
+                self.replace_task_tags(saved, tag_ids)?;
+            }
+            Ok(saved)
+        })
     }
 
     /// The indexes the lookups above would otherwise scan whole tables for.
@@ -649,13 +780,35 @@ impl Db {
         })
     }
 
-    /// The ids of the `T`s named `names`, all or nothing: an unknown name
-    /// is an error before anything is written, so a typo can't half-apply
-    /// a roster.
+    /// The ids of the `T`s named `names` (each once, in the order first
+    /// listed), all or nothing: an unknown name is an error before anything
+    /// is written, so a typo can't half-apply a roster. One query per
+    /// [`NAME_CHUNK`] names (`name` is `UNIQUE`, so it is indexed), which
+    /// keeps a long list under SQLite's limit on bound variables.
     pub fn ids_by_name<T: Named>(&self, names: &[String]) -> Result<Vec<i64>> {
-        names
+        let mut seen = HashSet::new();
+        let wanted: Vec<&str> = names
             .iter()
-            .map(|n| Ok(self.resolve::<T>(n)?.id()))
+            .map(String::as_str)
+            .filter(|n| seen.insert(*n))
+            .collect();
+        let mut found: HashMap<String, i64> = HashMap::with_capacity(wanted.len());
+        for chunk in wanted.chunks(NAME_CHUNK) {
+            let marks = vec!["?"; chunk.len()].join(",");
+            found.extend(self.query_all(
+                &format!("SELECT name, id FROM {} WHERE name IN ({marks})", T::NAME),
+                params_from_iter(chunk),
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
+            )?);
+        }
+        wanted
+            .iter()
+            .map(|n| {
+                found.get(*n).copied().ok_or_else(|| IterError::NotFound {
+                    kind: T::KIND,
+                    name: n.to_string(),
+                })
+            })
             .collect()
     }
 
@@ -667,46 +820,117 @@ impl Db {
         )
     }
 
+    /// Every project's id, name and the id of the `G` it is in, in name
+    /// order: the three columns a checklist of projects needs, not whole rows.
+    #[cfg(feature = "web")]
+    pub fn project_owners<G: ProjectGroup>(&self) -> Result<Vec<(i64, String, Option<i64>)>> {
+        self.query_all(
+            &format!(
+                "SELECT id, name, {} FROM projects ORDER BY name",
+                G::MEMBER_COLUMN
+            ),
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+    }
+
     /// Makes `project_ids` exactly the projects in group `id`: the ones
     /// listed move in (out of whichever group they were in), the ones left
     /// off move out to none. Only membership changes -- a project keeps its
     /// own settings either way.
+    #[cfg(test)]
     pub fn set_projects<G: ProjectGroup>(&self, id: i64, project_ids: &[i64]) -> Result<()> {
+        self.atomically(|| self.assign_projects::<G>(id, project_ids))
+    }
+
+    /// The membership write, for a caller that has a transaction open. Two
+    /// set-based statements that touch only the rows that change; the ids
+    /// travel as one JSON array (`json_each`), so a roster of any length is
+    /// one bound variable, and a repeated or unknown id is harmless.
+    fn assign_projects<G: ProjectGroup>(&self, id: i64, project_ids: &[i64]) -> Result<()> {
         let column = G::MEMBER_COLUMN;
-        let tx = self.conn.unchecked_transaction()?;
-        tx.execute(
-            &format!("UPDATE projects SET {column} = NULL WHERE {column} = ?1"),
-            params![id],
-        )?;
-        let mut join = tx.prepare(&format!("UPDATE projects SET {column} = ?1 WHERE id = ?2"))?;
-        for project_id in project_ids {
-            join.execute(params![id, project_id])?;
-        }
-        drop(join);
-        tx.commit()?;
+        let ids = json_ids(project_ids);
+        self.conn
+            .prepare_cached(&format!(
+                "UPDATE projects SET {column} = NULL WHERE {column} = ?1
+                 AND id NOT IN (SELECT value FROM json_each(?2))"
+            ))?
+            .execute(params![id, ids])?;
+        self.conn
+            .prepare_cached(&format!(
+                "UPDATE projects SET {column} = ?1 WHERE {column} IS NOT ?1
+                 AND id IN (SELECT value FROM json_each(?2))"
+            ))?
+            .execute(params![id, ids])?;
         Ok(())
+    }
+
+    /// Writes `group` (a board, an organization) over row `id` and makes
+    /// `project_ids` exactly its projects, in one transaction: a refused
+    /// name leaves the projects as they were.
+    pub fn save_group<G: ProjectGroup + Table>(
+        &self,
+        id: i64,
+        group: &G,
+        project_ids: &[i64],
+    ) -> Result<()> {
+        self.atomically(|| {
+            self.update(id, group)?;
+            self.assign_projects::<G>(id, project_ids)
+        })
     }
 
     /// Every task of every project in group `id`, paired with its project's
     /// name and ordered by project, then task. Two queries however many
     /// projects the group holds.
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub fn tasks_in<G: ProjectGroup>(&self, id: i64) -> Result<Vec<(String, Task)>> {
+        let mut tasks = self.tasks_of::<G>(id, false)?;
+        Self::sort_by_project(&mut tasks);
+        Ok(tasks)
+    }
+
+    fn sort_by_project(tasks: &mut [(String, Task)]) {
+        tasks.sort_by(|(a, x), (b, y)| (a, &x.name).cmp(&(b, &y.name)));
+    }
+
+    /// [`Self::tasks_in`] in no order, leaving out finished tasks when
+    /// `unfinished` (in the SQL).
+    fn tasks_of<G: ProjectGroup>(&self, id: i64, unfinished: bool) -> Result<Vec<(String, Task)>> {
         let names: HashMap<i64, String> = self
             .projects_in::<G>(id)?
             .into_iter()
             .map(|p| (p.id(), p.name))
             .collect();
         let tail = format!(
-            "WHERE project_id IN (SELECT id FROM projects WHERE {} = ?1)",
-            G::MEMBER_COLUMN
+            "WHERE project_id IN (SELECT id FROM projects WHERE {} = ?1){}",
+            G::MEMBER_COLUMN,
+            if unfinished {
+                format!(" AND {NOT_DONE}")
+            } else {
+                String::new()
+            }
         );
-        let mut tasks: Vec<(String, Task)> = self
+        Ok(self
             .find_all::<Task>(&tail, params![id])?
             .into_iter()
             .map(|t| (names.get(&t.project_id).cloned().unwrap_or_default(), t))
-            .collect();
-        tasks.sort_by(|(a, x), (b, y)| (a, &x.name).cmp(&(b, &y.name)));
-        Ok(tasks)
+            .collect())
+    }
+
+    /// How many tasks the projects in group `id` hold: [`Self::tasks_in`]
+    /// without reading them, for a badge.
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
+    pub fn count_tasks_in<G: ProjectGroup>(&self, id: i64) -> Result<usize> {
+        let sql = format!(
+            "SELECT COUNT(*) FROM tasks WHERE project_id IN (SELECT id FROM projects WHERE {} = ?1)",
+            G::MEMBER_COLUMN
+        );
+        let n: i64 = self
+            .conn
+            .prepare_cached(&sql)?
+            .query_row(params![id], |row| row.get(0))?;
+        Ok(n as usize)
     }
 
     pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
@@ -716,8 +940,29 @@ impl Db {
         )
     }
 
+    /// How many tasks project `project_id` holds, without reading them (a
+    /// tab badge).
+    #[cfg(feature = "web")]
+    pub fn count_tasks_for_project(&self, project_id: i64) -> Result<usize> {
+        let n: i64 = self
+            .conn
+            .prepare_cached("SELECT COUNT(*) FROM tasks WHERE project_id = ?1")?
+            .query_row(params![project_id], |row| row.get(0))?;
+        Ok(n as usize)
+    }
+
     pub fn tasks_for_project(&self, project_id: i64) -> Result<Vec<Task>> {
         self.find_all("WHERE project_id = ?1 ORDER BY name", params![project_id])
+    }
+
+    /// Every task of any of `project_ids`, by project then name -- one query
+    /// for a whole set of projects (the ids travel as one JSON array, as in
+    /// `assign_projects`).
+    pub fn tasks_for_projects(&self, project_ids: &[i64]) -> Result<Vec<Task>> {
+        self.find_all(
+            "WHERE project_id IN (SELECT value FROM json_each(?1)) ORDER BY project_id, name",
+            params![json_ids(project_ids)],
+        )
     }
 
     pub fn find_session_config_by_task(&self, task_id: i64) -> Result<Option<SessionConfig>> {
@@ -769,15 +1014,27 @@ impl Db {
         from: Option<NaiveDate>,
         to: NaiveDate,
     ) -> Result<Vec<Session>> {
+        self.sessions_for_projects_in_range(&[project_id], from, to)
+    }
+
+    /// The same for a whole set of projects at once: one query, oldest
+    /// first, each row carrying its `task_id` for the caller to group by.
+    pub fn sessions_for_projects_in_range(
+        &self,
+        project_ids: &[i64],
+        from: Option<NaiveDate>,
+        to: NaiveDate,
+    ) -> Result<Vec<Session>> {
         let (lower, upper) = range_bounds(from, to);
         // Written out rather than built by `select_sql`: the join puts an
         // `id` column on both sides, so the select list has to qualify it.
         self.query_all(
             "SELECT s.id, s.task_id, s.start, s.end, s.message
              FROM sessions s JOIN tasks t ON t.id = s.task_id
-             WHERE t.project_id = ?1 AND s.start >= ?2 AND s.start < ?3
-             ORDER BY s.start",
-            params![project_id, lower, upper],
+             WHERE t.project_id IN (SELECT value FROM json_each(?1))
+               AND s.start >= ?2 AND s.start < ?3
+             ORDER BY s.start, s.id",
+            params![json_ids(project_ids), lower, upper],
             Session::from_row,
         )
     }
@@ -847,6 +1104,16 @@ impl Db {
         )
     }
 
+    /// Runs `writes` as one transaction that commits only if it succeeds:
+    /// an error rolls everything it wrote back. `writes` must not open a
+    /// transaction of its own.
+    pub fn atomically<R>(&self, writes: impl FnOnce() -> Result<R>) -> Result<R> {
+        let tx = self.conn.unchecked_transaction()?;
+        let done = writes()?;
+        tx.commit()?;
+        Ok(done)
+    }
+
     /// Runs `writes` as one transaction, so a burst of row writes costs one
     /// commit (and one fsync) rather than one each. Whatever `writes` got
     /// done is committed even when it then fails -- this batches commits,
@@ -865,7 +1132,8 @@ impl Db {
     pub fn insert<T: Table>(&self, item: &T) -> Result<i64> {
         self.conn
             .prepare_cached(&insert_sql::<T>())?
-            .execute(params_from_iter(item.values()))?;
+            .execute(params_from_iter(item.values()))
+            .map_err(|e| write_error(e, T::NAME))?;
         Ok(self.conn.last_insert_rowid())
     }
 
@@ -875,7 +1143,8 @@ impl Db {
         values.push(id.into());
         self.conn
             .prepare_cached(&update_sql::<T>())?
-            .execute(params_from_iter(values))?;
+            .execute(params_from_iter(values))
+            .map_err(|e| write_error(e, T::NAME))?;
         Ok(())
     }
 
@@ -891,6 +1160,7 @@ impl Db {
     }
 
     /// Every row of `T`, in `T::LIST_TAIL` order.
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub fn list<T: Table>(&self) -> Result<Vec<T>> {
         self.find_all(T::LIST_TAIL, [])
     }
@@ -1168,6 +1438,74 @@ mod tests {
             .map(|t| t.name)
             .collect();
         assert_eq!(names, ["home"]);
+    }
+
+    /// A drop stores the task and its new flags together; with no flags
+    /// (an unplace) only the task.
+    #[test]
+    fn a_placement_stores_the_task_and_its_flags() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("board");
+        let project = insert_project(&db, "p");
+        db.set_projects::<Board>(work, &[project]).expect("roster");
+        let id = insert_task(&db, project, "t");
+        let mut task = db.get::<Task>(id).expect("get").expect("task");
+        task.matrix_placed = true;
+        let flags = Priority {
+            urgent: true,
+            important: true,
+        };
+        db.update_placed(id, &task, Some(flags)).expect("place");
+        let card = db.cards(work).expect("cards").remove(0);
+        assert_eq!(card.priority, flags);
+        assert!(card.task.matrix_placed);
+        task.matrix_placed = false;
+        db.update_placed(id, &task, None).expect("unplace");
+        let card = db.cards(work).expect("cards").remove(0);
+        assert_eq!(card.priority, flags, "flags untouched");
+        assert!(!card.task.matrix_placed);
+    }
+
+    /// The unfinished cards leave finished tasks (and their flags) out in the
+    /// SQL, and the colors of both priority tags come from one query.
+    #[cfg(feature = "web")]
+    #[test]
+    fn unfinished_cards_leave_out_done_tasks() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("board");
+        let project = insert_project(&db, "p");
+        db.set_projects::<Board>(work, &[project]).expect("roster");
+        let open = insert_task(&db, project, "open");
+        let done = insert_task(&db, project, "done");
+        let mut finished = db.get::<Task>(done).expect("get").expect("exists");
+        finished.status = TaskStatus::Done;
+        db.update(done, &finished).expect("update");
+        let urgent = Priority {
+            urgent: true,
+            important: false,
+        };
+        db.set_priority(open, urgent).expect("flag");
+        db.set_priority(done, urgent).expect("flag");
+
+        let cards = db.cards_unfinished(work).expect("cards");
+        assert_eq!(
+            cards.iter().map(|c| c.label.as_str()).collect::<Vec<_>>(),
+            ["p/open"]
+        );
+        assert_eq!(cards[0].priority, urgent);
+        // the CLI's list still has both, in project then task order
+        let all = db.cards(work).expect("cards");
+        assert_eq!(all.len(), 2);
+        assert!(
+            db.priorities_of::<Board>(work, false)
+                .expect("map")
+                .contains_key(&done)
+        );
+
+        assert_eq!(
+            db.priority_colors().expect("seeded"),
+            ("#facc15".to_string(), "#3b82f6".to_string())
+        );
     }
 
     /// A migrated database records its version, and opening it again runs
@@ -2179,6 +2517,13 @@ mod tests {
             [b, a]
         );
         assert!(db.ids_by_name::<Project>(&names(&["a", "typo"])).is_err());
+        // Repeats collapse, and nothing is nothing.
+        assert_eq!(
+            db.ids_by_name::<Project>(&names(&["b", "a", "b"]))
+                .expect("ids"),
+            [b, a]
+        );
+        assert!(db.ids_by_name::<Project>(&[]).expect("none").is_empty());
         assert_eq!(
             db.ids_by_name::<Tag>(&names(&["Urgent"]))
                 .expect("seeded")
@@ -2208,6 +2553,113 @@ mod tests {
         );
     }
 
+    /// The group row and its projects are written together, for a board and
+    /// for an organization: a taken name leaves the roster as it was.
+    #[test]
+    fn save_group_writes_the_row_and_its_projects_together() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("insert board");
+        let home = db.insert(&board("home")).expect("insert board");
+        let (a, b) = (insert_project(&db, "a"), insert_project(&db, "b"));
+        db.set_projects::<Board>(work, &[a]).expect("roster");
+        let mut renamed = db.get::<Board>(work).expect("get").expect("board");
+        renamed.name = "job".into();
+        db.save_group(work, &renamed, &[b]).expect("saved");
+        let names = |ps: Vec<Project>| ps.into_iter().map(|p| p.name).collect::<Vec<_>>();
+        assert_eq!(names(db.projects_in::<Board>(work).expect("work")), ["b"]);
+        renamed.name = "home".into();
+        assert!(matches!(
+            db.save_group(work, &renamed, &[a]),
+            Err(IterError::NameTaken { kind: "board" })
+        ));
+        assert_eq!(names(db.projects_in::<Board>(work).expect("work")), ["b"]);
+        assert!(db.projects_in::<Board>(home).expect("home").is_empty());
+
+        let acme = insert_organization(&db, "acme");
+        let beta = insert_organization(&db, "beta");
+        let mut org = db.get::<Organization>(acme).expect("get").expect("org");
+        db.save_group(acme, &org, &[a, b]).expect("org saved");
+        assert_eq!(
+            names(db.projects_in::<Organization>(acme).expect("acme")),
+            ["a", "b"]
+        );
+        org.name = "beta".into();
+        assert!(db.save_group(acme, &org, &[a]).is_err());
+        assert_eq!(
+            names(db.projects_in::<Organization>(acme).expect("acme")),
+            ["a", "b"]
+        );
+        assert!(
+            db.projects_in::<Organization>(beta)
+                .expect("beta")
+                .is_empty()
+        );
+    }
+
+    /// The roster write moves projects between boards, ignores unknown and
+    /// repeated ids, leaves the rest alone, and takes a list longer than one
+    /// statement could bind.
+    #[test]
+    fn assign_projects_moves_only_what_changes() {
+        let db = db();
+        let (work, home) = (
+            db.insert(&board("work")).expect("board"),
+            db.insert(&board("home")).expect("board"),
+        );
+        let (a, b, c) = (
+            insert_project(&db, "a"),
+            insert_project(&db, "b"),
+            insert_project(&db, "c"),
+        );
+        db.set_projects::<Board>(work, &[a, b]).expect("roster");
+        db.set_projects::<Board>(home, &[c]).expect("roster");
+        db.set_projects::<Board>(work, &[b, c, c, 9999])
+            .expect("moved");
+        let names = |id| {
+            db.projects_in::<Board>(id)
+                .expect("in")
+                .into_iter()
+                .map(|p| p.name)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(names(work), ["b", "c"]);
+        assert!(names(home).is_empty());
+        db.set_projects::<Board>(work, &[]).expect("emptied");
+        assert!(names(work).is_empty());
+
+        let all: Vec<i64> = (0..1200)
+            .map(|i| insert_project(&db, &format!("p{i}")))
+            .collect();
+        db.set_projects::<Board>(home, &all).expect("long roster");
+        assert_eq!(names(home).len(), 1200);
+    }
+
+    /// The narrow project listing pairs each project with its board's id.
+    #[cfg(feature = "web")]
+    #[test]
+    fn project_owners_lists_id_name_and_group() {
+        let db = db();
+        let work = db.insert(&board("work")).expect("board");
+        let (b, a) = (insert_project(&db, "b"), insert_project(&db, "a"));
+        db.set_projects::<Board>(work, &[b]).expect("roster");
+        assert_eq!(
+            db.project_owners::<Board>().expect("owners"),
+            [(a, "a".to_string(), None), (b, "b".to_string(), Some(work))]
+        );
+    }
+
+    /// An error inside `atomically` rolls its writes back.
+    #[test]
+    fn atomically_rolls_back_on_error() {
+        let db = db();
+        let out: Result<()> = db.atomically(|| {
+            db.insert(&board("gone"))?;
+            Err(IterError::CommandFailed("stop".into()))
+        });
+        assert!(out.is_err());
+        assert!(db.list::<Board>().expect("list").is_empty());
+    }
+
     /// The tasks of a group come back with their project's name, ordered by
     /// project then task, and only from that group's projects.
     #[test]
@@ -2233,6 +2685,81 @@ mod tests {
             [("a", "x"), ("a", "z"), ("b", "y")].map(|(p, t)| (p.to_string(), t.to_string()));
         assert_eq!(got, want);
         assert!(db.tasks_in::<Organization>(1).expect("query").is_empty());
+    }
+
+    /// A long list of names stays under SQLite's limit on bound variables,
+    /// and an unknown name at the far end is still found out.
+    #[test]
+    fn ids_by_name_handles_more_names_than_one_query_binds() {
+        let db = db();
+        let all: Vec<String> = (0..1200).map(|i| format!("p{i}")).collect();
+        let ids: Vec<i64> = all.iter().map(|n| insert_project(&db, n)).collect();
+        assert_eq!(db.ids_by_name::<Project>(&all).expect("ids"), ids);
+        let mut typo = all.clone();
+        typo.push("nope".into());
+        assert!(db.ids_by_name::<Project>(&typo).is_err());
+    }
+
+    /// One call creates or rewrites a task with its tags; a task without
+    /// tags gets none.
+    #[cfg(feature = "web")]
+    #[test]
+    fn save_task_writes_the_row_and_its_tags_together() {
+        let db = db();
+        let project = insert_project(&db, "a");
+        let urgent = db.ids_by_name::<Tag>(&["Urgent".to_string()]).expect("tag");
+        let mut task = Task::template(project, String::new(), TaskStatus::Queue);
+        task.name = "x".into();
+        let id = db.save_task(None, &task, &urgent).expect("create");
+        assert_eq!(db.tags_for_task(id).expect("tags").len(), 1);
+        task.name = "y".into();
+        db.save_task(Some(id), &task, &[]).expect("edit");
+        assert!(db.tags_for_task(id).expect("tags").is_empty());
+        assert_eq!(db.get::<Task>(id).expect("get").expect("row").name, "y");
+        task.name = "z".into();
+        let bare = db.save_task(None, &task, &[]).expect("bare");
+        assert!(db.tags_for_task(bare).expect("tags").is_empty());
+        // A duplicate name is refused and leaves nothing behind.
+        assert!(db.save_task(None, &task, &urgent).is_err());
+    }
+
+    /// The badge count matches the rows `tasks_for_project` reads.
+    #[cfg(feature = "web")]
+    #[test]
+    fn a_project_counts_its_tasks_without_reading_them() {
+        let db = db();
+        let (a, b) = (insert_project(&db, "a"), insert_project(&db, "b"));
+        assert_eq!(db.count_tasks_for_project(a).expect("count"), 0);
+        for (project, name) in [(a, "x"), (a, "y"), (b, "z")] {
+            insert_task(&db, project, name);
+        }
+        assert_eq!(db.count_tasks_for_project(a).expect("count"), 2);
+        assert_eq!(db.tasks_for_project(a).expect("rows").len(), 2);
+    }
+
+    /// A taken name is a typed error, from the constraint's result code:
+    /// on insert and on update, per entity; a task's name only clashes
+    /// within its project.
+    #[test]
+    fn a_taken_name_is_a_typed_error() {
+        let db = db();
+        let (a, b) = (insert_project(&db, "a"), insert_project(&db, "b"));
+        assert!(matches!(
+            db.insert(&project("a")),
+            Err(IterError::NameTaken { kind: "project" })
+        ));
+        assert!(matches!(
+            db.update(b, &project("a")),
+            Err(IterError::NameTaken { kind: "project" })
+        ));
+        insert_task(&db, a, "t");
+        insert_task(&db, b, "t");
+        let mut same = Task::template(a, String::new(), TaskStatus::Queue);
+        same.name = "t".into();
+        assert!(matches!(
+            db.insert(&same),
+            Err(IterError::NameTaken { kind: "task" })
+        ));
     }
 
     fn board(name: &str) -> crate::models::Board {

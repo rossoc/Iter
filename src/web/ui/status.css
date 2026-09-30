@@ -1,0 +1,4 @@
+.v2 .status{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 7px;border:1px solid var(--line-2);border-radius:var(--r-pill);
+  font-size:.8125rem;color:var(--muted);white-space:nowrap}
+.v2 .status.wip{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent);background:var(--accent-tint)}
+.v2 .status.done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}

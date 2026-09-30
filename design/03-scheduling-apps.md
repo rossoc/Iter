@@ -56,11 +56,11 @@ These tokens come from Linear's shipped CSS. Worth studying:
 | **Tasks and calendar side by side**; drag a task into a time slot (timeboxing) | Sunsama, Akiflow, Motion, Amie, Notion Calendar | The board's `lists` + `agenda`. This is already the right shape. |
 | **Days as columns** with the task cards for each day | Sunsama, Tweek | A week view for the agenda |
 | **A daily ritual**: plan in the morning, shut down in the evening with a "time spent" review | Sunsama | A "Today" page: sessions logged today, a planned vs. actual bar |
-| **Color-coded events**, soft fills and a strong left edge | Amie, Notion Calendar, Morgen | `.card` with a 3px left border in the quadrant color rather than a full fill |
+| **Color-coded events**, soft fills and a strong left edge | Amie, Notion Calendar, Morgen | `.card` with a 4px left border in the quadrant color rather than a full fill |
 | **Duration on the card** (`30m`, `1h`) | Sunsama, Motion | Iter's `duration` field, shown in mono with tabular-nums |
 | **"Now" line** across the agenda | Notion Calendar, Amie, Cal.com | A 1px accent line at the current hour, with a dot |
 | **Status as a small glyph**, not a word (circle → half → check) | Linear, Things | `queue` ○, `wip` ◐, `done` ✓ as inline SVG |
-| **Eisenhower matrix** with quiet quadrants | (Iter's own) | Keep the 2×2, number the quadrants `01–04`, tint only on hover or drop |
+| **Eisenhower matrix** with quiet quadrants | (Iter's own) | Keep the 2×2, number the quadrants `1–4` (Do first, Plan, Delegate, Eliminate), a 4px top edge in the priority colors instead of fills, tint only on drop |
 | **Command-first, keyboard hints** (`⌘K`, `<kbd>`) | Linear, Akiflow | A `<kbd>` style for any shortcuts Iter adds later |
 | **Empty states with personality** | Things, Sunsama | One line of friendly copy plus an icon, not "No items" |
 

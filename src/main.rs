@@ -1,3 +1,8 @@
+// The organization report view (`web/org.rs`) nests several components; the
+// compiler's `Send` check on the resulting future needs more than the
+// default depth of 128.
+#![recursion_limit = "256"]
+
 mod app;
 mod args;
 mod commands;

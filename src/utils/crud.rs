@@ -3,7 +3,7 @@
 //! check beyond [`Named::validate`] -- and the editor round trip, the write
 //! and the message come from here.
 
-use crate::db::Db;
+use crate::db::{Db, Table};
 use crate::error::Result;
 use crate::md_edit::{edit_in_editor, edited, no_changes};
 use crate::models::{Editable, GroupEdit, Named, Project, ProjectGroup};
@@ -50,7 +50,7 @@ pub(crate) fn update<T: Named + Editable + Clone>(
 /// `iter board edit`/`iter organization edit`: edits the group and its
 /// roster together -- the buffer lists the projects in it by name, and
 /// saving makes that list the membership.
-pub(crate) fn update_group<G: ProjectGroup + Editable>(db: &Db, existing: G) -> Result<()> {
+pub(crate) fn update_group<G: ProjectGroup + Table + Editable>(db: &Db, existing: G) -> Result<()> {
     let id = existing.id();
     let projects = db
         .projects_in::<G>(id)?
@@ -67,8 +67,7 @@ pub(crate) fn update_group<G: ProjectGroup + Editable>(db: &Db, existing: G) -> 
         // Resolved before anything is written, so an unknown name leaves
         // the group untouched.
         let project_ids = db.ids_by_name::<Project>(&edit.projects)?;
-        db.update(id, &group)?;
-        db.set_projects::<G>(id, &project_ids)?;
+        db.save_group(id, &group, &project_ids)?;
         Ok(format!("updated {} '{}'", G::KIND, group.name()))
     })
 }

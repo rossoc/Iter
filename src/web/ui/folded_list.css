@@ -1,0 +1,4 @@
+.v2 .folded{border:1px solid var(--line);border-radius:var(--r-lg);padding:10px 12px}
+.v2 .folded summary{cursor:pointer;padding:2px 0}
+.v2 .folded summary .label{margin:0;display:inline}
+.v2 .folded-body{display:flex;flex-direction:column;gap:8px;margin-top:10px}

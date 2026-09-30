@@ -1,0 +1,6 @@
+/* empty state: a dashed box, an icon and a hint */
+.v2 .empty{display:flex;align-items:center;gap:14px;max-width:560px;padding:20px 22px;color:var(--muted);
+  border:1px dashed var(--line-2);border-radius:var(--r-lg)}
+.v2 .empty .i{width:28px;height:28px;color:var(--faint);stroke-width:1.5}
+.v2 .empty p{margin:0}
+.v2 .empty code{color:var(--fg)}  /* --muted on the code chip's --bg-3 is 4.33:1 in light */

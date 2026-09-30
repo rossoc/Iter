@@ -1,0 +1,3 @@
+/* the button that adds a task: above the table, on the right; under "No tasks." when empty */
+.v2 .tab-actions{display:flex;justify-content:flex-end;margin:0 0 16px}
+.v2 .empty-line+.tab-actions{justify-content:flex-start;margin-top:16px}

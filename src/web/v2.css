@@ -1,103 +1,93 @@
-/* The proposed design, shared by every redesigned page: tokens, themes, the
-   top bar, links, the compare switch. Every rule is scoped under .v2 (or is
-   the .compare switch), so this file leaves the old design alone. Page-only
-   rules live in that page's own file (home.css, org.css). */
+/* The design shared by every page: tokens, themes, the links, focus, motion.
+   Rules are scoped under .v2 (the page wrapper `frame` writes). Component rules live next to
+   their component in ui/*.css and are concatenated into /v2.css (ui/mod.rs);
+   page-only rules in that page's own file (org.css, ...). */
 
+/* the tokens that carry no color.
+   Breakpoints stay literal (a media query cannot read a token), all of
+   them one of: max-width 900px (two columns become one, sticky parts turn
+   static; min-width 901px is its other side), max-width 600px (tables turn
+   into stacked rows, the hour label narrows), max-height 600px (a landscape
+   phone, as the 900px), pointer:coarse (a finger needs --touch). */
+.v2{
+  --r-sm:4px;--r-md:8px;--r-lg:12px;--r-pill:999px;
+  --ease-out:cubic-bezier(.22,1,.36,1);--fast:150ms;--med:250ms;--slow:350ms;
+  --touch:44px;                 /* the least a finger target is high */
+  --main-w:1180px;--main-pad-max:72px;--main-pad:clamp(20px,5vw,var(--main-pad-max));  /* main: its width and side padding */
+  --measure:68ch                /* a line of prose */
+}
+/* the page color, on the root because the body (outside .v2) paints it too */
+:root{--bg:#fbfaf8}
 .v2{
   color-scheme:light dark;
-  --bg:#fbfaf8;--bg-2:#f4f2ee;--bg-3:#ebe8e2;--line:#e4e0d8;--line-2:#d3cec4;
-  --fg:#1d1c1a;--muted:#6f6b64;--faint:#76716a;  /* faint: 4.6:1, the least that passes for small text */
-  --accent:#3b5bdb;--ok:#15803d;--accent-tint:color-mix(in oklab,var(--accent) 12%,var(--bg));--on-accent:#fff;
+  --bg-2:#f4f2ee;--bg-3:#ebe8e2;--line:#e4e0d8;--line-2:#d3cec4;
+  --control-line:#857f76;  /* the border of a form control: 3.5:1 on --bg-2 (1.4.11) */
+  --fg:#1d1c1a;--muted:#6f6b64;--faint:#76716a;  /* decoration only (separators, icons): text is --muted, 4.7:1 on --bg-2 */
+  --accent:#3b5bdb;--ok:#14783a;--danger:#b42318;--accent-tint:color-mix(in oklab,var(--accent) 12%,var(--bg));--on-accent:#fff;
   --font:"Inter","InterVariable",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace;
-  --r-sm:4px;--r-md:8px;--r-lg:12px;
   --shadow:0 1px 0 rgb(0 0 0/.03),0 1px 3px rgb(0 0 0/.06);
   --shadow-lift:0 10px 28px -12px rgb(0 0 0/.22);
-  --ease-out:cubic-bezier(.22,1,.36,1);--fast:150ms;
   min-height:100vh;background:var(--bg);color:var(--fg);
   font:15px/1.55 var(--font);font-feature-settings:"cv11","ss01";
   -webkit-font-smoothing:antialiased
 }
 /* dark: Tokyo Night, matching the terminal (~/.config/alacritty/alacritty.toml) */
-@media (prefers-color-scheme:dark){.v2{
-  --bg:#24283b;          /* primary.background */
+@media (prefers-color-scheme:dark){:root{--bg:#24283b}  /* primary.background */
+.v2{
   --bg-2:#1f2335;--bg-3:#292e42;
   --line:#32344a;        /* normal.black */
   --line-2:#444b6a;      /* bright.black */
+  --control-line:#737aa2;  /* 3.5:1 on --bg-2 */
   --fg:#a9b1d6;          /* primary.foreground */
   --muted:#9699a8;       /* normal.white */
-  --faint:#8c90a3;       /* 4.6:1 on the background, the least that passes for small text */
+  --faint:#8c90a3;       /* decoration only, as above */
   --accent:#ff9e64;      /* bright.yellow, the orange */
   --on-accent:#24283b;
   --ok:#9ece6a;          /* normal.green */
+  --danger:#f7768e;      /* Tokyo Night red */
   --shadow:none;--shadow-lift:0 10px 28px -12px rgb(0 0 0/.55)
 }}
-body:has(.v2){background:#fbfaf8}
-@media (prefers-color-scheme:dark){body:has(.v2){background:#24283b}}
+*{box-sizing:border-box}
+/* the page behind .v2 (overscroll, short pages) */
+body{margin:0;background:var(--bg)}
 
 .v2 a{color:inherit;text-decoration:none}
 .v2 ::selection{background:var(--accent-tint)}
 .v2 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
 .v2 .i{width:1em;height:1em;flex:none;vertical-align:-.125em;fill:none;stroke:currentColor;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.v2 .label{margin:0;font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+/* the small-caps recipe: eyebrows, breadcrumbs, section labels, table headers */
+.v2 .label,.v2 th{margin:0;font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.v2 th{text-align:left;border-bottom:1px solid var(--line)}
 .v2 .mono{font-family:var(--mono);font-size:.8125rem}
 .v2 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-/* form fields sit on the darker surface */
-.v2 input,.v2 select,.v2 textarea{background:var(--bg-2)}
-/* date fields (Chromium): the part under the pointer turns accent, since
-   that's what a click selects -- one of month/day/year, or, over the
-   calendar icon, the whole date (the .whole class, set by the page's script
-   from the pointer's position; CSS can't reach from the icon to the text).
-   The icon is Lucide's calendar (ISC) as a mask, so it can take a color.
-   The part a click selects stays in Chrome's own blue: it paints that
-   highlight over any author style (tested: :focus, !important, ::selection). */
-.v2 input[type=date]::-webkit-calendar-picker-indicator{width:14px;height:14px;margin:0 0 0 8px;padding:0;cursor:pointer;
-  background:var(--muted);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v3M16 2v3'/%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M3 9h18'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v3M16 2v3'/%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M3 9h18'/%3E%3C/svg%3E") center/contain no-repeat;
-  transition:background-color var(--fast) var(--ease-out)}
-.v2 input[type=date]::-webkit-datetime-edit{transition:color var(--fast) var(--ease-out)}
-.v2 input[type=date]::-webkit-datetime-edit-month-field,.v2 input[type=date]::-webkit-datetime-edit-day-field,
-.v2 input[type=date]::-webkit-datetime-edit-year-field{transition:color var(--fast) var(--ease-out)}
-.v2 input[type=date]::-webkit-datetime-edit-month-field:hover,.v2 input[type=date]::-webkit-datetime-edit-day-field:hover,
-.v2 input[type=date]::-webkit-datetime-edit-year-field:hover{color:var(--accent)}
-.v2 input[type=date].whole::-webkit-datetime-edit,.v2 input[type=date].whole::-webkit-datetime-edit-month-field,
-.v2 input[type=date].whole::-webkit-datetime-edit-day-field,.v2 input[type=date].whole::-webkit-datetime-edit-year-field{color:var(--accent)}
-.v2 input[type=date].whole::-webkit-calendar-picker-indicator{background:var(--accent)}
 .v2 code{font:.85em var(--mono);background:var(--bg-3);padding:1px 6px;border-radius:var(--r-sm)}
 
-/* top bar: sticky, frosted */
-.v2 .bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:24px;height:52px;padding:0 20px;
-  border-bottom:1px solid var(--line);
-  background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:saturate(1.4) blur(12px)}
-.v2 .brand{display:flex;align-items:center;gap:8px;font-weight:650;font-size:1.0625rem;letter-spacing:-.02em}
-.v2 .brand .mark{width:24px;height:24px;padding:4px;border-radius:7px;background:var(--accent);color:var(--on-accent);stroke-width:2.5}
-.v2 .bar nav{display:flex;gap:4px}
-.v2 .bar nav a{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;color:var(--muted);
-  font-size:.875rem;font-weight:500;transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
-.v2 .bar nav a:hover{background:var(--bg-2);color:var(--fg)}
-.v2 .bar nav a.on{background:var(--accent-tint);color:var(--accent)}
+/* layout tokens, on html because scroll-padding-top can only be set there:
+   --bar-h the sticky top bar; --sticky-h what a page keeps sticky under it (a
+   .sticky-head: --sticky-head-h, its heading; --pickbar-h while a banner is
+   in it; none when the screen is narrow or short, where it is plain);
+   --stick-top where a sticky aside sits. A link to a fragment lands clear of
+   all of it. */
+html:has(.v2){--bar-h:52px;--sticky-head-h:76px;--pickbar-h:164px;--sticky-h:0px;--stick-top:calc(var(--bar-h) + 24px);
+  scroll-padding-top:calc(var(--bar-h) + var(--sticky-h) + 16px)}
+html:has(.sticky-head){--sticky-h:var(--sticky-head-h)}
+html:has(.pickbar){--sticky-h:var(--pickbar-h)}
+@media (max-width:900px),(max-height:600px){html:has(.sticky-head),html:has(.pickbar){--sticky-h:0px}}
 
-/* main */
-.v2 main{max-width:1180px;margin:0 auto;padding:64px clamp(20px,5vw,72px) 96px}
-.v2 main h1{margin:10px 0 6px;font-size:clamp(2rem,1.4rem + 2vw,3rem);font-weight:650;line-height:1.1;
-  letter-spacing:-.035em;text-wrap:balance}
-.v2 .lede{margin:0 0 40px;color:var(--muted);font-size:1.0625rem}
-
-/* links: an accent line slides in from the left on hover and out to the
-   right on leave (the size animates; the anchor side flips) */
+/* links in the content: a 1px line at rest (--control-line, 3:1), so they
+   read as links without hover. On hover or focus an accent line slides in
+   from the left over it, 2px, and on leave out to the right (the size
+   animates; the anchor side flips). The nav bar and breadcrumb have no .u. */
 .v2{--line-w:2px}  /* whole pixels: a fractional width rounds differently per link */
-.v2 .u{background:linear-gradient(var(--accent),var(--accent)) no-repeat right bottom/0 var(--line-w);padding-bottom:2px;
-  transition:background-size 350ms var(--ease-out),color var(--fast) var(--ease-out)}
-.v2 a:hover .u,.v2 a.u:hover,.v2 a:focus-visible .u,.v2 a.u:focus-visible{background-size:100% var(--line-w);background-position:left bottom}
+.v2 .u{background:linear-gradient(var(--control-line),var(--control-line)) no-repeat left bottom/100% 1px,
+    linear-gradient(var(--accent),var(--accent)) no-repeat right bottom/0 var(--line-w);padding-bottom:2px;
+  transition:background-size var(--slow) var(--ease-out),color var(--fast) var(--ease-out)}
+.v2 a:hover .u,.v2 a.u:hover,.v2 a:focus-visible .u,.v2 a.u:focus-visible{background-position:left bottom,left bottom;background-size:100% 1px,100% var(--line-w)}
 .v2 a.u:hover,.v2 a:hover>.u{color:var(--accent)}
+/* forced colors drop backgrounds, so the gradient line is gone: underline */
+@media (forced-colors:active){.v2 .u{text-decoration:underline}}
 
-@media (max-width:900px){.v2 main{padding-top:32px}}
 @media (prefers-reduced-motion:reduce){.v2 *,.v2 *::before,.v2 *::after{transition-duration:0s!important}}
 
-/* the Before | Proposal switch, shown on both designs */
-.compare{position:fixed;left:16px;bottom:16px;z-index:100;display:flex;padding:3px;gap:2px;border-radius:999px;
-  font:500 12px/1 system-ui,sans-serif;background:#1d1c1a;box-shadow:0 8px 24px -8px rgb(0 0 0/.45)}
-.compare a{padding:7px 12px;border-radius:999px;color:#a19c93;text-decoration:none;transition:background .15s,color .15s}
-.compare a:hover{color:#fff;text-decoration:none}
-.compare a.on{background:#fbfaf8;color:#1d1c1a}
-@media (prefers-color-scheme:dark){.compare{background:#1f2335;box-shadow:0 0 0 1px #444b6a,0 8px 24px -8px rgb(0 0 0/.6)}.compare a{color:#9699a8}.compare a:hover{color:#a9b1d6}.compare a.on{background:#ff9e64;color:#24283b}}

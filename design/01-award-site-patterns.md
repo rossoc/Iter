@@ -13,21 +13,21 @@ Counts are "number of sites whose HTML+CSS contains the feature", out of 69.
 
 ## 1. Foundations nearly everyone uses
 
-| Feature | Sites | Takeaway for Iter |
-|---|---|---|
-| CSS custom properties | 69 | Tokens are universal. We have them; grow the set. |
-| `display: grid` | 65 | Grid is the layout primitive. Flex is for rows of items. |
-| `text-transform: uppercase` | 64 | Small uppercase labels are everywhere (we already use them for `h2`). |
+| Feature                             | Sites   | Takeaway for Iter                                                          |
+| ----------------------------------- | ------- | -------------------------------------------------------------------------- |
+| CSS custom properties               | 69      | Tokens are universal. We have them; grow the set.                          |
+| `display: grid`                     | 65      | Grid is the layout primitive. Flex is for rows of items.                   |
+| `text-transform: uppercase`         | 64      | Small uppercase labels are everywhere (we already use them for `h2`).      |
 | `@font-face` + `font-display: swap` | 64 / 59 | Custom type is the norm. We can use a local system stack instead (see 04). |
-| `cubic-bezier(...)` | 63 | Nobody uses plain `ease`. Custom easing is a signature. |
-| `aspect-ratio` | 62 | Media and cards keep their proportions. |
-| `clip-path` | 59 | Used for reveals and masks, and for the visually-hidden pattern. |
-| `svh` / `dvh` units | 58 | Full-height layouts that behave on mobile. |
-| Negative `letter-spacing` | 54 | Headings get tightened. This is the most visible "designed" signal. |
-| 1px hairline borders | 54 | Structure comes from hairlines, not heavy boxes. |
-| `position: sticky` | 50 | Sticky headers, sidebars and section labels. |
-| `@media (hover: hover)` | 46 | Hover effects only where a pointer exists. |
-| `backdrop-filter` | 47 | Frosted translucent headers and overlays. |
+| `cubic-bezier(...)`                 | 63      | Nobody uses plain `ease`. Custom easing is a signature.                    |
+| `aspect-ratio`                      | 62      | Media and cards keep their proportions.                                    |
+| `clip-path`                         | 59      | Used for reveals and masks, and for the visually-hidden pattern.           |
+| `svh` / `dvh` units                 | 58      | Full-height layouts that behave on mobile.                                 |
+| Negative `letter-spacing`           | 54      | Headings get tightened. This is the most visible "designed" signal.        |
+| 1px hairline borders                | 54      | Structure comes from hairlines, not heavy boxes.                           |
+| `position: sticky`                  | 50      | Sticky headers, sidebars and section labels.                               |
+| `@media (hover: hover)`             | 46      | Hover effects only where a pointer exists.                                 |
+| `backdrop-filter`                   | 47      | Frosted translucent headers and overlays.                                  |
 
 ## 2. Modern CSS they reach for
 

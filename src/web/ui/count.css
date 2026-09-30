@@ -1,0 +1,5 @@
+/* the count badge of a tab or a section heading (tabs.rs, labelled.rs) */
+.v2 .count{font:500 .75rem var(--mono);padding:0 6px;border:1px solid transparent;border-radius:var(--r-pill);background:var(--bg-3);color:var(--fg);
+  font-variant-numeric:tabular-nums}
+/* forced colors paint transparent borders, but with no background the pill needs a line */
+@media (forced-colors:active){.v2 .count{border-color:CanvasText}}

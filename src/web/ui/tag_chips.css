@@ -1,0 +1,7 @@
+/* tag chips: the tag's own color as the background, the ink (black or white) chosen for contrast in ink.rs */
+.v2 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+/* pill-shaped for one line (half its 26px height); a fixed radius, not var(--r-pill), so a long name that wraps stays a rounded box, not a blob */
+/* the border is the chip's ink at 35%: a hairline that shows on a light or a dark chip and on the page behind it */
+.v2 .tag{display:inline-block;padding:2px 10px;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:14px;text-align:left;
+  background:var(--bg-3);color:var(--fg);font-size:.8125rem;font-weight:500;overflow-wrap:anywhere}
+@media (forced-colors:active){.v2 .tag{border-color:CanvasText}}

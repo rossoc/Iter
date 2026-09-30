@@ -1,0 +1,6 @@
+/* two columns when each gets --quad-min, else one: the basis is half the row
+   (less half the gap), at least --quad-min, so three never fit on a row (no
+   breakpoint: the matrix sits beside a list at some widths, so the viewport
+   is the wrong measure) */
+.v2 .quad-grid{--quad-gap:16px;--quad-min:240px;display:flex;flex-wrap:wrap;gap:var(--quad-gap)}
+.v2 .quad-grid>.quad{flex:1 1 max(var(--quad-min),calc(50% - var(--quad-gap)/2))}

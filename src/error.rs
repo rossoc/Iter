@@ -82,13 +82,19 @@ pub enum IterError {
     #[error("tag '{0}' is built in and can't be renamed or deleted")]
     BuiltinTag(String),
 
-    #[error("base_path cannot be empty")]
+    #[error("base path cannot be empty")]
     EmptyBasePath,
 
     /// Project and tag names travel comma-separated in the web forms'
     /// roster and tag fields, so a comma inside one can't round-trip.
     #[error("{kind} name '{name}' cannot contain a comma")]
     CommaInName { kind: &'static str, name: String },
+
+    /// A `UNIQUE` name refused on write (see `Db::insert`): `kind` is the
+    /// entity, "project", "task", ... A task's name is unique within its
+    /// project, the others' across the database.
+    #[error("{} {kind} with this name already exists{}", article(.kind), name_scope(.kind))]
+    NameTaken { kind: &'static str },
 
     #[error("'{0}' already has a session")]
     SessionAlreadyExists(String),
@@ -153,6 +159,24 @@ pub enum IterError {
     },
 }
 
+/// "a" or "an" for `kind`.
+fn article(kind: &str) -> &'static str {
+    if kind.starts_with(['a', 'e', 'i', 'o', 'u']) {
+        "an"
+    } else {
+        "a"
+    }
+}
+
+/// Where a name must be unique, for [`IterError::NameTaken`]'s message.
+fn name_scope(kind: &str) -> &'static str {
+    if kind == "task" {
+        " in this project"
+    } else {
+        ""
+    }
+}
+
 pub type Result<T> = std::result::Result<T, IterError>;
 
 #[cfg(test)]
@@ -178,6 +202,21 @@ mod tests {
                 },
                 "no such tag 'x'",
             ),
+            (
+                IterError::NameTaken { kind: "project" },
+                "a project with this name already exists",
+            ),
+            (
+                IterError::NameTaken {
+                    kind: "organization",
+                },
+                "an organization with this name already exists",
+            ),
+            (
+                IterError::NameTaken { kind: "task" },
+                "a task with this name already exists in this project",
+            ),
+            (IterError::EmptyBasePath, "base path cannot be empty"),
             (IterError::EmptyName("board"), "board name cannot be empty"),
             (IterError::EmptyName("task"), "task name cannot be empty"),
             (

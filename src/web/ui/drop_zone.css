@@ -1,0 +1,8 @@
+/* a drop target. Only a page with script can drop, so the affordance (the
+   dashed line on an empty place, a list's box) waits for board.js to mark the
+   board (.can-drag). `over` is set by board.js while a card is dragged above. */
+.v2 .drop{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:var(--touch);border:1px dashed transparent;border-radius:var(--r-md)}
+.v2 .drop-list{padding:8px;border-radius:var(--r-lg)}
+.v2 .can-drag .drop-list,.v2 .can-drag .drop:not(:has(.tcard)){border-color:var(--line-2)}
+.v2 .drop.over,.v2 .can-drag .drop.over{border-color:var(--accent);background:var(--accent-tint)}
+@media (forced-colors:active){.v2 .drop.over{border-style:solid;outline:2px solid Highlight}}

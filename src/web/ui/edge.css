@@ -1,0 +1,8 @@
+/* the colored edge a card (left) and a quadrant (top) share: the width and the
+   two colors (--q1 first half, --q2 second; neutral by default). Each
+   component draws the geometry (its ::before). Classes come from Edge::modifier. */
+.v2 .edge{--edge-w:4px;--q1:var(--line-2);--q2:var(--line-2)}
+/* (not .u / .i: those are the link line and the icon) */
+.v2 .edge-urgent{--q1:var(--urgent,var(--muted));--q2:var(--urgent,var(--muted))}
+.v2 .edge-important{--q1:var(--important,var(--muted));--q2:var(--important,var(--muted))}
+.v2 .edge-both{--q1:var(--urgent,var(--muted));--q2:var(--important,var(--muted))}

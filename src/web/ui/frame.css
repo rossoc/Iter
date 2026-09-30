@@ -1,0 +1,25 @@
+/* top bar: sticky, frosted */
+.v2 .bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:24px;height:var(--bar-h);padding:0 20px;
+  border-bottom:1px solid var(--line);
+  background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:saturate(1.4) blur(12px)}
+.v2 .brand{display:flex;align-items:center;gap:8px;font-weight:650;font-size:1.0625rem;letter-spacing:-.02em}
+.v2 .brand .mark{width:24px;height:24px;padding:4px;border-radius:var(--r-md);background:var(--accent);color:var(--on-accent);stroke-width:2.5}
+.v2 .bar nav{display:flex;gap:4px}
+.v2 .bar nav a{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:var(--r-pill);color:var(--muted);
+  font-size:.875rem;font-weight:500;transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
+.v2 .bar nav a:hover{background:var(--bg-2);color:var(--fg)}
+.v2 .bar nav a[aria-current]{background:var(--accent-tint);color:var(--accent)}
+
+@media (forced-colors:active){.v2 .bar nav a[aria-current]{text-decoration:underline;text-underline-offset:6px;outline:2px solid Highlight;outline-offset:-2px}}
+
+/* skip link: off screen until it has focus */
+.v2 .skip{position:absolute;left:12px;top:-64px;z-index:20;padding:8px 14px;border-radius:var(--r-md);background:var(--accent);
+  color:var(--on-accent);font-weight:500}
+.v2 .skip:focus{top:8px}
+
+/* main */
+.v2 main{max-width:var(--main-w);margin:0 auto;padding:64px var(--main-pad) 96px}
+.v2 main:focus{outline:none}  /* the skip link's target, not a control */
+.v2 main h1{margin:10px 0 6px;font-size:clamp(2rem,1.4rem + 2vw,3rem);font-weight:650;line-height:1.1;
+  letter-spacing:-.035em;text-wrap:balance}
+@media (max-width:900px){.v2 main{padding-top:32px}}

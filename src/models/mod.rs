@@ -19,10 +19,12 @@ pub use session::Session;
 pub use session_config::SessionConfig;
 pub(crate) use settings::Configured;
 pub use settings::Settings;
+#[cfg(feature = "web")]
+pub use tag::is_hex_color;
 pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};
 #[cfg(feature = "web")]
 pub use task::parse_start_time;
-pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus};
+pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus, end_text};
 
 /// The fallback settings a project uses when it inherits none -- i.e. when
 /// it belongs to no organization. Shared by `Project` and `Organization`,

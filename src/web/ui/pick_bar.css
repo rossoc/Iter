@@ -1,0 +1,7 @@
+/* the banner: an accent edge (4px, a shape as well as a color; the verb is
+   the words), and the mode's own accent */
+.v2 .pickbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;
+  margin:0 0 8px;border-left-width:4px}
+.v2 .pickbar[data-mode="moving"]{border-color:var(--ok)}
+.v2 .pickbar p{margin:0;min-width:0}
+.v2 .pick-actions{display:flex;flex-wrap:wrap;gap:8px}

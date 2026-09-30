@@ -1,0 +1,10 @@
+/* header: kicker + name, actions on the right. Whatever follows (a lede,
+   tabs, a form, an empty state) sits --head-gap below. */
+.v2{--head-gap:36px}
+.v2 .head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px;margin-bottom:var(--head-gap)}
+.v2 .head>div{min-width:0}
+.v2 .head h1{margin-bottom:0;overflow-wrap:anywhere}
+.v2 .head-actions:empty{display:none}
+/* the lede sits 6px under the title and carries the gap itself */
+.v2 .head:has(+.lede){margin-bottom:0}
+.v2 .lede{margin:6px 0 var(--head-gap);color:var(--muted);font-size:1.0625rem}

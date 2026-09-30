@@ -1,5 +1,8 @@
 # Organization page redesign (`/org/{id}`)
 
+> Superseded (final cleanup, `doc/web_cleanup.md`): the compare switch and `?design=old` were removed; the pages render the current design only. References below to the old design, the switch or `proposal` (now `screen`) describe how it was built, not how it is.
+
+
 Scope: the organization page (both tabs). The edit form stays for later.
 It builds on the finished homepage (`doc/web_homepage.md`).
 
@@ -15,7 +18,7 @@ It builds on the finished homepage (`doc/web_homepage.md`).
 
 ### Proposal
 5. Header: an "Organization" eyebrow, the name as `h1`, and an **Edit** button with a pencil icon on the right. The pencil icon is new to the icon set.
-6. Tabs: **Info** and **Tasks**, with a count on Tasks *(small change: tasks are now loaded on both tabs to get the count)*. The active tab has an accent underline.
+6. Tabs: **Info**, **Tasks** (with a count) and **Report**. The count comes from one `COUNT` query; the task list is loaded only on the Tasks tab. The active tab has an accent underline.
 7. Info tab, in two columns (one below 900px):
    - Left: the description in a readable column with its line breaks kept, then **Projects** as rows (name, then its path in mono), like the homepage cards.
    - Right: a **Settings** panel. Yes/no values show as an "on" (check icon, accent) or "off" (muted) marker; text values in mono, with "—" when empty.

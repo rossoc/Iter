@@ -1,125 +1,71 @@
-//! The home page, in two designs side by side while the new one is being
-//! reviewed: `/` is the proposal, `/?design=old` the page as it was (see
-//! `v2.rs`). The proposal's own rules are in `/home.css`.
+//! The home page (`/`): a grid of the organizations with their projects. It
+//! has no rules of its own.
 
-use super::layout::{Nav, Sel, shell};
+use super::load::{Grouped, grouped};
+use super::notes::first_line;
 use super::open_db;
-use super::v2::{ARROW, FOLDER, compare, frame, icon, is_old, tilde};
+use super::project_rows::project_items;
+use super::ui::FOLDER;
+use super::ui::empty_state::empty_state;
+use super::ui::frame::frame;
+use super::ui::group_card::{NO_PROJECTS, card_grid, group_card};
+use super::ui::page_header::{Kicker, lede, page_header};
+use super::url::org_url;
 use crate::db::Table;
 use crate::models::{Organization, Project};
 use topcoat::{
     Result,
-    context::Cx,
-    router::{RouterBuilder, content::Css, page, query_params, route},
+    router::{RouterBuilder, page},
     view::{View, component, view},
 };
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.page(home).route(home_stylesheet)
-}
-
-#[route(GET "/home.css")]
-async fn home_stylesheet() -> Result<Css<&'static str>> {
-    Ok(Css(include_str!("home.css")))
-}
-
-#[query_params(error = bad_request)]
-struct DesignQuery {
-    design: Option<String>,
+    builder.page(home)
 }
 
 #[page("/")]
-async fn home(cx: &Cx) -> Result<impl View> {
-    let old = is_old(&query_params::<DesignQuery>(cx)?.design);
-    let nav = Nav::load(&open_db()?)?;
-    Ok(view! {
-        if old {
-            shell(
-                nav: &nav,
-                sel: Sel::None,
-                <p class="empty">"Select an organization or a project."</p>
-                compare(old: true, here: "/")
-            )
-        } else {
-            proposal(nav: &nav)
-            compare(old: false, here: "/")
-        }
-    })
-}
-
-// ---- the proposal -------------------------------------------------------------
-
-/// The first line of an organization's markdown notes, as a one-line summary.
-fn summary(text: &str) -> String {
-    text.lines()
-        .map(|l| l.trim().trim_start_matches('#').trim())
-        .find(|l| !l.is_empty())
-        .unwrap_or_default()
-        .to_string()
+async fn home() -> Result<impl View> {
+    let Grouped { groups, loose } = grouped::<Organization>(&open_db()?)?;
+    Ok(view! { overview(orgs: &groups, loose: &loose) })
 }
 
 /// One card of the overview grid.
 #[component]
-async fn group_card(org: Option<&Organization>, projects: &[Project]) -> Result<impl View> {
-    let (title, href, note) = match org {
-        Some(o) => (
-            o.name.clone(),
-            format!("/org/{}", o.id()),
-            summary(&o.description),
-        ),
-        None => ("No organization".to_string(), String::new(), String::new()),
-    };
+async fn org_card(org: Option<&Organization>, projects: &[Project]) -> Result<impl View> {
+    let items = project_items(projects);
     Ok(view! {
-        <article class="group">
-            <header>
-                if href.is_empty() {
-                    <h2>(title.clone())</h2>
-                } else {
-                    <h2><a href=(href.clone())><span class="u">(title.clone())</span> (icon(ARROW))</a></h2>
-                }
-            </header>
-            if !note.is_empty() {
-                <p class="note">(note.clone())</p>
-            }
-            if projects.is_empty() {
-                <p class="none">"No projects yet."</p>
-            } else {
-                <ul>
-                    for p in projects.iter() {
-                        <li>
-                            <a class="u" href=(format!("/project/{}", p.id()))>(p.name.clone())</a>
-                            <span class="path"><bdi>(tilde(&p.base_path))</bdi></span>
-                        </li>
-                    }
-                </ul>
-            }
-        </article>
+        group_card(
+            title: org.map_or("No organization", |o| o.name.as_str()),
+            href: org.map(|o| org_url(o.id())),
+            note: org.map_or("", |o| first_line(&o.description)),
+            items: &items,
+            none: NO_PROJECTS
+        )
     })
 }
 
 #[component]
-async fn proposal(nav: &Nav) -> Result<impl View> {
-    let empty = nav.orgs.is_empty() && nav.loose.is_empty();
+async fn overview(orgs: &[(Organization, Vec<Project>)], loose: &[Project]) -> Result<impl View> {
+    let empty = orgs.is_empty() && loose.is_empty();
     Ok(view! {
         frame(
-            css: Some("/home.css"),
-            <p class="label">"Home"</p>
-            <h1>"Where to next?"</h1>
-            <p class="lede">"Select an organization or a project."</p>
+            title: &[],
+            page_header(title: "Where to next?", kicker: Kicker::Eyebrow("Home"))
+            lede("Select an organization or a project.")
             if empty {
-                <div class="empty">
-                    (icon(FOLDER))
-                    <p>"Nothing here yet. Create a project with "<code>"iter init"</code>" or "<code>"iter new <path>"</code>"."</p>
-                </div>
+                empty_state(
+                    svg: FOLDER,
+                    "No projects yet. Create one with "<code>"iter init"</code>" or "<code>"iter new <path>"</code>"."
+                )
             } else {
-                <section class="grid">
-                    for (org, projects) in nav.orgs.iter() {
-                        group_card(org: Some(org), projects: projects)
+                card_grid(
+                    for (org, projects) in orgs.iter() {
+                        org_card(org: Some(org), projects: projects)
                     }
-                    if !nav.loose.is_empty() {
-                        group_card(org: None, projects: &nav.loose)
+                    if !loose.is_empty() {
+                        org_card(org: None, projects: loose)
                     }
-                </section>
+                )
             }
         )
     })

@@ -1,0 +1,9 @@
+/* a boxed message; .error is the --danger variant. Long unbroken text (a
+   path, a name) wraps.
+   The error also has a thicker left edge: a cue that is not a color, which
+   forced-colors mode (one border color) would lose. */
+.v2 .notice{margin:0 0 20px;padding:10px 14px;border-radius:var(--r-md);border:1px solid var(--accent);background:var(--accent-tint);
+  color:var(--fg);font-size:.875rem;overflow-wrap:anywhere}
+.v2 .notice.error{border-color:var(--danger);border-left-width:5px;background:color-mix(in srgb,var(--danger) 10%,var(--bg))}
+.v2 .notice:focus{outline:2px solid var(--accent);outline-offset:2px}
+@media (forced-colors:active){.v2 .notice.error{border-left-width:8px}}

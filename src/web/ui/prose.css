@@ -1,0 +1,2 @@
+/* a description: readable measure, line breaks kept, a long word wraps (also at 320px) */
+.v2 .desc{max-width:var(--measure);margin:0 0 40px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:1rem;line-height:1.65}

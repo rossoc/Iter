@@ -7,31 +7,97 @@
 //! `rusqlite::Connection` isn't `Sync`, which is the other reason to open
 //! one per request instead of sharing one.
 
-mod board;
+mod agenda;
+mod agenda_cards;
+mod agenda_day;
+mod agenda_drop;
+mod agenda_pick;
+mod assets;
+mod blocking;
+mod board_cards;
+mod board_edit;
+mod board_header;
+mod board_info;
+mod board_page;
+mod boards;
+mod crumbs;
+mod drop;
 mod edit;
+mod edit_page;
+mod errors;
 mod forms;
 mod guard;
 mod home;
 mod layout;
+mod load;
+mod matrix;
+mod notes;
 mod org;
-mod pages;
-mod v2;
+mod org_edit;
+mod org_report;
+mod pick;
+mod project;
+mod project_edit;
+mod project_options;
+mod project_rows;
+mod quadrants;
+mod sections;
+mod session_lines;
+mod settings_fields;
+mod settings_panel;
+mod task;
+mod task_edit;
+mod task_fields;
+mod task_new;
+mod task_panel;
+mod task_rows;
+mod ui;
+mod url;
 
 use crate::config::config;
 use crate::db::Db;
 use crate::error::Result;
-use topcoat::router::Router;
+use topcoat::router::{Router, path_param};
+
+// The `{id}` of every route with one: a number, else a 400.
+path_param!(id: i64, error = bad_request);
 
 /// A connection for the duration of one request.
 fn open_db() -> topcoat::Result<Db> {
     Ok(Db::open(config().db_path()?)?)
 }
 
+/// The local time now: what every page measures "today" and open sessions
+/// against.
+fn now() -> chrono::NaiveDateTime {
+    chrono::Local::now().naive_local()
+}
+
 fn router() -> Router {
-    let builder = Router::builder().layer(guard::local_only);
-    org::register(v2::register(home::register(board::register(
-        pages::register(builder),
-    ))))
+    let builder = Router::builder()
+        .layer(blocking::off_the_workers)
+        .layer(guard::local_only)
+        .layer(errors::error_pages);
+    [
+        layout::register,
+        home::register,
+        ui::register,
+        org::register,
+        project::register,
+        task::register,
+        org_edit::register,
+        project_edit::register,
+        task_edit::register,
+        task_new::register,
+        boards::register,
+        matrix::register,
+        agenda::register,
+        agenda_drop::register,
+        board_info::register,
+        board_edit::register,
+    ]
+    .into_iter()
+    .fold(builder, |builder, register| register(builder))
     .build()
 }
 

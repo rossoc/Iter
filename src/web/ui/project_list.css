@@ -1,0 +1,20 @@
+/* project rows highlight like the task table's rows, with the same inset.
+   A row is the name with its whole path under it, left-aligned: nothing is
+   cut, so a long name breaks anywhere and a long path wraps (after a `/`
+   when it can), and nothing forces a horizontal scroll at 320px or with
+   large text. */
+.v2 .project-list{list-style:none;margin:0;padding:0;border-bottom:1px solid var(--line)}
+.v2 .project-list li{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px 10px 4px;border-top:1px solid var(--line);
+  transition:background var(--fast) var(--ease-out)}
+.v2 .project-list li:hover{background:var(--bg-2)}
+.v2 .project-list a{min-width:0;max-width:100%;overflow-wrap:anywhere}
+/* the last segment is what tells projects apart: strong; the directories
+   before it stay muted */
+.v2 .path{min-width:0;max-width:100%;overflow-wrap:anywhere;text-align:left;font:.75rem var(--mono);color:var(--muted)}
+.v2 .path .leaf{color:var(--fg);font-weight:600}
+/* inside a card: no highlight, dashed separators, tighter */
+.v2 .project-list.compact{border-bottom:0}
+.v2 .project-list.compact li{padding:5px 0;border-top:1px dashed var(--line)}
+.v2 .project-list.compact li:first-child{border-top:0}
+.v2 .project-list.compact li:hover{background:none}
+.v2 .project-list.compact a{font-size:.9375rem}

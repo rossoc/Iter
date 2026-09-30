@@ -16,6 +16,16 @@ impl TaskStatus {
     #[cfg(any(test, feature = "web"))]
     pub const ALL: [TaskStatus; 3] = [TaskStatus::Queue, TaskStatus::Wip, TaskStatus::Done];
 
+    /// `(value, label)` of every status, in workflow order: the options of
+    /// a status `<select>`.
+    #[cfg(feature = "web")]
+    pub fn options() -> Vec<(String, String)> {
+        Self::ALL
+            .iter()
+            .map(|s| (s.as_str().to_string(), s.label().to_string()))
+            .collect()
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             TaskStatus::Queue => "queue",
@@ -103,6 +113,18 @@ pub struct Task {
 /// The format `start_time` is typed and shown in. chrono's own serde form is
 /// ISO 8601 with a `T`, which is not what anyone edits by hand.
 pub const START_TIME_FMT: &str = "%Y-%m-%d %H:%M";
+
+/// When a span that started at `start` ended, as shown: just the time on the
+/// start's day, the full [`START_TIME_FMT`] otherwise. The one rule for the
+/// board agenda and the task page's sessions.
+pub fn end_text(start: NaiveDateTime, end: NaiveDateTime) -> String {
+    let fmt = if end.date() == start.date() {
+        "%H:%M"
+    } else {
+        START_TIME_FMT
+    };
+    end.format(fmt).to_string()
+}
 
 /// Reads a [`START_TIME_FMT`] timestamp -- the one parser for every place a
 /// start time is typed (the editor, the web form, a board drop).
@@ -262,6 +284,14 @@ impl Task {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn an_end_on_the_start_day_is_only_the_time() {
+        let at = |s| parse_start_time(s).unwrap();
+        let start = at("2026-09-28 23:30");
+        assert_eq!(end_text(start, at("2026-09-28 23:45")), "23:45");
+        assert_eq!(end_text(start, at("2026-09-29 01:00")), "2026-09-29 01:00");
+    }
+
     #[test]
     fn a_slot_ends_after_its_duration_and_only_when_both_are_set() {
         let mut t = Task::template(1, String::new(), TaskStatus::Queue);

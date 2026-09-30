@@ -1,3 +1,4 @@
+use crate::models::Duration;
 use chrono::NaiveDateTime;
 use iter_macros::Table;
 
@@ -41,5 +42,37 @@ impl Session {
     pub fn duration_minutes(&self, now: NaiveDateTime) -> i64 {
         let end = self.end.unwrap_or(now);
         (end - self.start).num_minutes().max(0)
+    }
+
+    /// [`Self::duration_minutes`] as `hh:mm`: the one way a session's length
+    /// is written (reports, the task page).
+    pub fn duration_text(&self, now: NaiveDateTime) -> String {
+        Duration(self.duration_minutes(now)).to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::START_TIME_FMT;
+
+    fn at(text: &str) -> NaiveDateTime {
+        NaiveDateTime::parse_from_str(text, START_TIME_FMT).unwrap()
+    }
+
+    #[test]
+    fn duration_text_is_hhmm_and_open_sessions_count_to_now() {
+        let mut s = Session {
+            id: None,
+            task_id: 1,
+            start: at("2025-03-03 09:00"),
+            end: Some(at("2025-03-03 10:30")),
+            message: None,
+        };
+        assert_eq!(s.duration_text(at("2025-03-09 00:00")), "01:30");
+        s.end = None;
+        assert_eq!(s.duration_text(at("2025-03-03 09:05")), "00:05");
+        // Never negative.
+        assert_eq!(s.duration_text(at("2025-03-03 08:00")), "00:00");
     }
 }

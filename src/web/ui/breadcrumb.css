@@ -1,0 +1,9 @@
+/* breadcrumb: Organization / Project, the last one is the current page.
+   The small-caps look is .label's (v2.css). */
+.v2 .crumbs ol{display:flex;flex-wrap:wrap;align-items:center;gap:2px 0;padding:0;list-style:none}
+/* the separator is decoration: the second `content` value (alt text, where
+   supported) is empty, so screen readers skip it */
+.v2 .crumbs li+li::before{content:"/";content:"/" / "";margin:0 8px;color:var(--faint);font-weight:400}
+.v2 .crumbs a{overflow-wrap:anywhere}
+.v2 .crumbs a:hover{color:var(--accent)}
+.v2 .crumbs [aria-current]{color:var(--fg)}

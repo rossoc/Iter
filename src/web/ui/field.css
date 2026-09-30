@@ -1,0 +1,18 @@
+/* a label above its control, and a checkbox beside its label */
+.v2 .field{display:grid;gap:6px;margin:0}
+.v2 .field label{margin:0;padding:0;color:var(--fg);font-size:.875rem;font-weight:500}
+.v2 .field .req{margin-left:3px;color:var(--muted)}
+.v2 .field .control{width:100%}
+.v2 .field .hint{margin:0;color:var(--muted);font-size:.8125rem}
+/* a checkbox row: a tap-sized row (padding, not margins), the box on the first
+   line, a long unbroken name wrapping inside the row; the note is secondary
+   text and stays muted on hover */
+.v2 .check{display:flex;align-items:flex-start;gap:10px;min-height:2rem;margin:0;padding:6px 0;box-sizing:border-box;color:var(--fg);font-size:.875rem;font-weight:500;cursor:pointer;
+  transition:color var(--fast) var(--ease-out)}
+.v2 .check:hover{color:var(--accent)}
+.v2 .check input{flex:none;width:1rem;height:1rem;margin:calc((1lh - 1rem) / 2) 0 0;accent-color:var(--accent);cursor:pointer}
+.v2 .check-text{min-width:0;overflow-wrap:anywhere}
+.v2 .check .note{color:var(--muted);font-size:.8125rem;font-weight:400}
+/* the cue that the form's error is about a control (field.rs invalid_cue): text, not only colour */
+.v2 .field-head{display:flex;align-items:baseline;gap:8px}
+.v2 .bad{color:var(--fg);font-size:.8125rem;font-weight:600}

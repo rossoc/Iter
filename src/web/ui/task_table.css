@@ -1,0 +1,19 @@
+/* tasks table */
+.v2 .tasks{width:100%;border-collapse:collapse}
+.v2 .tasks th{padding:0 14px 10px}  /* look: the shared th rule (v2.css) */
+.v2 .tasks td{padding:12px 14px;border-bottom:1px solid var(--line)}
+.v2 .tasks td:first-child{overflow-wrap:anywhere}  /* a long name wraps, also at 320px */
+.v2 .tasks th:first-child,.v2 .tasks td:first-child{padding-left:4px}
+.v2 .tasks tbody tr{transition:background var(--fast) var(--ease-out)}
+.v2 .tasks tbody tr:hover{background:var(--bg-2)}
+.v2 .tasks .muted{color:var(--muted)}
+
+/* narrow screens: each task row stacks -- the name, then project, status and issue */
+@media (max-width:600px){
+  .v2 .tasks thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .v2 .tasks tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:4px 12px;
+    padding:10px 4px;border-bottom:1px solid var(--line)}
+  .v2 .tasks td{display:block;padding:0;border:0}
+  .v2 .tasks td:first-child{grid-column:1/-1;padding:0}
+  .v2 .tasks td.project{font-size:.875rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}

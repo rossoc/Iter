@@ -1,0 +1,6 @@
+/* an edit form: one column of fields, the error box on top, actions below */
+/* --form-gap is the space between the controls of a form, and group.css
+   derives from it (its own gap, the closer checkbox rows) */
+.v2 .form{--form-gap:18px;display:grid;gap:var(--form-gap);max-width:640px}
+.v2 .form .notice,.v2 .form .required-note{margin:0}
+.v2 .required-note{color:var(--muted);font-size:.8125rem}

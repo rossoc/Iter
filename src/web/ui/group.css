@@ -1,0 +1,11 @@
+/* a titled group of controls (fieldset): the title is a .label, then its
+   hint, then the controls: fields spaced like the form's own, checkbox rows
+   by their own padding (field.css). Everything derives from --form-gap
+   (form.css). Named .fieldgroup: group_card.css has .group (an overview card). */
+.v2 .fieldgroup{min-width:0;margin:calc(var(--form-gap) * .75) 0 calc(var(--form-gap) / 3);padding:0;border:0}
+.v2 .fieldgroup legend{padding:0;font-size:.8125rem}  /* the .label recipe, larger than a panel heading: it names controls */
+.v2 .fieldgroup legend,.v2 .fieldgroup .hint,.v2 .fieldgroup legend+.bad{margin-bottom:calc(var(--form-gap) / 4)}
+.v2 .fieldgroup legend+.bad{display:block}
+.v2 .fieldgroup .hint{margin-top:0;color:var(--muted);font-size:.8125rem}
+.v2 .fieldgroup-body{display:grid}
+.v2 .fieldgroup-body>.field{margin-block:calc(var(--form-gap) / 2)}
