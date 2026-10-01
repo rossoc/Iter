@@ -21,6 +21,29 @@
 // keyboard lands on the moved card (the #card-<task> fragment) and the
 // status region says "Moved <task> to <place>". One that failed says so and
 // leaves the page as it is.
+// The agenda's convenience, only when the page has the piece: the day's
+// title opens the browser's date picker (a change goes to that day). Without
+// script the date is a plain field with a hidden submit button. (The Not
+// scheduled column folds with a link, ?side=off: the server draws it.)
+(function () {
+  var input = document.getElementById("day-input");
+  var label = document.querySelector(".day-label");
+  if (input && label) {
+    label.addEventListener("click", function (e) {
+      if (typeof input.showPicker !== "function") return;
+      e.preventDefault();
+      try {
+        input.showPicker();
+      } catch (_) {
+        input.focus();
+      }
+    });
+    input.addEventListener("change", function () {
+      if (input.value && input.form) input.form.submit();
+    });
+  }
+})();
+
 (function () {
   var board = document.querySelector("[data-post]");
   if (!board) return;

@@ -4,5 +4,11 @@
 .v2 .drop{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:var(--touch);border:1px dashed transparent;border-radius:var(--r-md)}
 .v2 .drop-list{padding:8px;border-radius:var(--r-lg)}
 .v2 .can-drag .drop-list,.v2 .can-drag .drop:not(:has(.tcard)){border-color:var(--line-2)}
+/* a list inside the aside's box has no outline of its own: the zone shows
+   itself only while a card is over it */
+.v2 .side .drop-list{padding:0}
+.v2 .can-drag .side .drop-list:not(.over){border-color:transparent}
 .v2 .drop.over,.v2 .can-drag .drop.over{border-color:var(--accent);background:var(--accent-tint)}
+/* an hour is a row, not a box: its empty place is drawn by the pick mode's slot */
+.v2 .can-drag .hour>.drop:not(.over){border-color:transparent}
 @media (forced-colors:active){.v2 .drop.over{border-style:solid;outline:2px solid Highlight}}

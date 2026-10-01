@@ -15,6 +15,16 @@
   text-underline-offset:.2em;transition:color var(--fast) var(--ease-out),text-decoration-color var(--fast) var(--ease-out)}
 .v2 .tcard-act:hover{color:var(--accent);text-decoration-color:currentColor}
 @media (pointer:coarse){.v2 .tcard-act{padding-block:12px}}
+/* on a big screen with a mouse the link waits for the pointer or the keyboard
+   (hidden by opacity only, so it stays reachable by Tab); small screens and
+   touch always show it */
+@media (hover:hover) and (pointer:fine) and (min-width:901px){
+  .v2 .tcard-act{opacity:0}
+  .v2 .tcard:hover .tcard-act,.v2 .tcard:focus-within .tcard-act,.v2 .tcard-act:focus-visible{opacity:1}
+}
+/* the card takes focus (tabindex -1) when a link lands on it (#card-7, after
+   Cancel or a move): that is not a control, its links carry their own ring */
+.v2 .tcard:focus{outline:none}
 /* only a page with script drags (board.js sets .can-drag on the board) */
 .v2 .can-drag .tcard{cursor:grab}
 .v2 .tcard.dragging{opacity:.45}

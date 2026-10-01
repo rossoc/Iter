@@ -3,7 +3,7 @@
 //! file's `project:` block is the default when there's no organization.
 
 use crate::models::{default_branch_template, default_true, main_branch};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// The settings a new project or organization starts from, before the
 /// editor opens -- an organization's fields *are* the defaults its projects
@@ -12,7 +12,7 @@ use serde::Deserialize;
 /// These are only the starting point of a `new`: they're written into the
 /// buffer as ordinary front matter and can be changed there, and they never
 /// touch a project that already exists.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub github: bool,

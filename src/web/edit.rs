@@ -1,6 +1,6 @@
 //! The shape every edit page shares. `GET` loads a row plus whatever else
 //! its form shows; `POST` applies the submitted form to the row, saves it
-//! (or, for a new one, `create`s it) and redirects -- or shows the form again with the error, filled in with
+//! (or, for a new one, inserts it: `create_to`) and redirects -- or shows the form again with the error, filled in with
 //! what was typed.
 
 use super::forms::NAME;
@@ -118,21 +118,30 @@ pub(super) fn submit<F: EditForm, X>(
 ) -> topcoat::Result<Refused<F::Row, X>> {
     let db = open_db()?;
     let existing = db.get::<F::Row>(id)?.ok_or_not_found()?;
-    settle(&db, form, existing, extra, |db, row| {
-        form.save(db, id, row)?;
-        Ok(id)
-    })
+    settle(
+        &db,
+        form,
+        existing,
+        extra,
+        |db, row| {
+            form.save(db, id, row)?;
+            Ok(id)
+        },
+        F::saved,
+    )
 }
 
 /// The create twin of [`submit`]: `start` gives the row the form starts from
 /// (the template) and what it read to build it (`S`), over the request's one
 /// connection. The form is applied and written by the same hooks, and the
-/// browser goes to [`EditForm::saved`] of the new id. A refusal comes back
-/// with the template as `stored`; `extra` runs only then, given `S`.
-pub(super) fn create<F: EditForm, S, X>(
+/// browser goes where `land` says, given the new id (a form that adds a row
+/// from a list goes back to it). A refusal comes back with the template as
+/// `stored`; `extra` runs only then, given `S`.
+pub(super) fn create_to<F: EditForm, S, X>(
     form: &F,
     start: impl FnOnce(&Db) -> topcoat::Result<(F::Row, S)>,
     extra: impl FnOnce(&Db, S) -> topcoat::Result<X>,
+    land: impl FnOnce(i64) -> String,
 ) -> topcoat::Result<Refused<F::Row, X>> {
     let db = open_db()?;
     let (template, seed) = start(&db)?;
@@ -142,6 +151,7 @@ pub(super) fn create<F: EditForm, S, X>(
         template,
         |db, _| extra(db, seed),
         |db, row| form.insert(db, row),
+        land,
     )
 }
 
@@ -154,10 +164,11 @@ fn settle<F: EditForm, X>(
     stored: F::Row,
     extra: impl FnOnce(&Db, &F::Row) -> topcoat::Result<X>,
     write: impl FnOnce(&Db, &F::Row) -> crate::error::Result<i64>,
+    land: impl FnOnce(i64) -> String,
 ) -> topcoat::Result<Refused<F::Row, X>> {
     let (row, valid) = form.apply(stored.clone());
     match valid.and_then(|()| write(db, &row)) {
-        Ok(id) => Err(see_other(F::saved(id)).into()),
+        Ok(id) => Err(see_other(land(id)).into()),
         Err(error) => Ok(Refused {
             extra: extra(db, &stored)?,
             row,

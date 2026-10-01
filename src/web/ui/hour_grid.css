@@ -3,7 +3,9 @@
 .v2 .hours{list-style:none;margin:0;padding:0}
 .v2 .hour{--label-w:3.75rem;--dot:8px;position:relative;display:grid;grid-template-columns:var(--label-w) minmax(0,1fr);gap:8px;
   min-height:var(--touch);padding:4px 0;border-bottom:1px solid var(--line)}
-.v2 .hour .drop{min-height:36px}
+/* cards of fixed width, side by side, wrapping to the next row */
+.v2 .hour .drop{min-height:36px;flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+.v2 .hour .tcard{flex:0 0 var(--card-w);max-width:100%}
 .v2 .hour-label{padding-top:6px;color:var(--muted);font-variant-numeric:tabular-nums}
 /* the now line: an accent line (--line-w) and a dot, at the fraction the server worked out */
 .v2 .now{position:absolute;left:var(--label-w);right:0;top:calc(var(--at)*100%);height:var(--line-w);margin-top:calc(var(--line-w)/-2);
@@ -11,4 +13,4 @@
 .v2 .now::before{content:"";position:absolute;left:calc(var(--dot)/-2);top:calc((var(--line-w) - var(--dot))/2);width:var(--dot);height:var(--dot);
   border-radius:50%;background:var(--accent)}
 @media (forced-colors:active){.v2 .now,.v2 .now::before{background:Highlight}}
-@media (max-width:600px){.v2 .hour{--label-w:3.25rem;gap:6px}}
+@media (max-width:600px){.v2 .hour{--label-w:3.25rem;gap:6px}.v2 .hour .tcard{flex-basis:100%}}

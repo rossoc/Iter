@@ -1,0 +1,32 @@
+/* the search box above a list */
+/* at most 40rem (the field takes what the buttons leave), never wider than
+   the row: the "?"'s tip is anchored to its right edge and kept inside it */
+.v2 .filter{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;width:min(100%,40rem);margin:0 0 16px}
+.v2 .filter .control{flex:1 1 12rem;min-width:0;min-height:38px;padding-block:6px}
+.v2 .filter .button{min-height:38px}
+.v2 .filter-clear{font-size:.875rem;color:var(--muted)}
+@media (pointer:coarse){.v2 .filter .control,.v2 .filter .button{min-height:var(--touch)}}
+/* the "?" beside Filter: the syntax shows on hover, and stays while the "?"
+   (or the tip itself) has focus -- a click pins it, a click elsewhere drops it.
+   The tip hangs from the search bar's right edge, under the "?", and grows to
+   the left over whatever is there; at most the bar's width, so it never
+   leaves the screen on either side. */
+.v2 .filter-help{display:inline-flex}
+.v2 .filter-help-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin:0;padding:0;
+  border:1px solid var(--control-line);border-radius:var(--r-pill);background:var(--bg-2);color:var(--muted);
+  font:600 .875rem/1 var(--font);cursor:help;transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out)}
+.v2 .filter-help:hover .filter-help-btn,.v2 .filter-help:focus-within .filter-help-btn{border-color:var(--accent);color:var(--accent)}
+.v2 .filter-help:focus-within .filter-help-btn{background:var(--accent-tint)}
+@media (pointer:coarse){.v2 .filter-help-btn{width:var(--touch);height:var(--touch)}}
+.v2 .filter-tip{display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:20;width:max-content;max-width:min(26rem,100%);
+  padding:12px 14px;background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-md);box-shadow:var(--shadow-lift);
+  font-size:.8125rem;color:var(--muted);cursor:auto}
+.v2 .filter-tip:focus{outline:none}
+/* a bridge over the gap, so the pointer can move from the "?" into the tip */
+.v2 .filter-tip::before{content:"";position:absolute;left:0;right:0;top:-9px;height:9px}
+.v2 .filter-help:hover .filter-tip,.v2 .filter-help:focus-within .filter-tip{display:block}
+.v2 .filter-tip dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 16px;margin:0}
+.v2 .filter-tip dt code{color:var(--fg)}
+.v2 .filter-tip dd{margin:0}
+@media (forced-colors:active){.v2 .filter-tip{border:2px solid CanvasText}}
+.v2 .filter-count{margin:0 0 12px;font-size:.875rem;color:var(--muted)}

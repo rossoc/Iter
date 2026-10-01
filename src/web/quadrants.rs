@@ -98,6 +98,9 @@ pub fn split(cards: Vec<Card>) -> Matrix {
             out.waiting.push(card);
         }
     }
+    // the tasks in progress first (stable: the rest keeps its order)
+    out.waiting
+        .sort_by_key(|c| c.task.status != crate::models::TaskStatus::Wip);
     out
 }
 
@@ -148,6 +151,18 @@ mod tests {
         }
         let targets: Vec<_> = QUADRANTS.iter().map(|q| q.target).collect();
         assert_eq!(targets, ["both", "important", "urgent", "neither"]);
+    }
+
+    #[test]
+    fn the_waiting_list_puts_work_in_progress_first() {
+        let mut started = card("started", false, false, false);
+        started.task.status = crate::models::TaskStatus::Wip;
+        let out = split(vec![
+            card("a", false, true, true),
+            started,
+            card("b", false, false, false),
+        ]);
+        assert_eq!(labels(&out.waiting), ["started", "a", "b"]);
     }
 
     #[test]

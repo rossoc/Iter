@@ -1,8 +1,10 @@
-//! Projects as rows: the name (a link), then its whole path in mono under it,
-//! left-aligned. The last segment is what tells projects apart, so it is the
-//! strong one and the directories before it are muted. Nothing is cut: a long
-//! path wraps, preferably after a `/`.
+//! Projects as rows: the name (a link), then its path in mono on the same
+//! line. The last segment is what tells projects apart, so it is the strong
+//! one and the directories before it are muted; a path too long for the row
+//! loses its start ("…/src/app"), never its end. The whole path is the
+//! tooltip.
 
+use super::{PLUS, icon};
 use topcoat::{
     Result,
     view::{View, component, view},
@@ -25,23 +27,28 @@ pub struct ProjectItem<'a> {
 }
 
 /// `compact` is the variant for inside a card. (Not called `card`: `task_card`
-/// and `group_card` are the cards.)
+/// and `group_card` are the cards.) `add` is where the first row leads, when
+/// the list has one: the whole row is a link ("New project…") that opens the
+/// New project pop-up (`modal.rs`).
 #[component]
 pub async fn project_list(
     items: &[ProjectItem<'_>],
     #[default] compact: bool,
+    #[default] add: Option<String>,
 ) -> Result<impl View> {
     Ok(view! {
         <ul class=(if compact { "project-list compact" } else { "project-list" })>
+            if let Some(href) = &add {
+                <li class="add"><a class="add-link" href=(href.as_str())>(icon(PLUS)) "New project\u{2026}"</a></li>
+            }
             for p in items.iter() {
                 let (dirs, leaf) = split_leaf(&p.path);
                 <li>
                     <a class="u" href=(p.href.as_str())>(p.name)</a>
-                    <span class="path">
-                        for dir in dirs.split_inclusive('/') {
-                            (dir)<wbr>
-                        }
-                        <b class="leaf">(leaf)</b>
+                    // the outer span is right-to-left so an overflow cuts
+                    // the start; the inner one keeps the path's own order
+                    <span class="path" title=(p.path.as_str())>
+                        <span class="path-in">(dirs)<b class="leaf">(leaf)</b></span>
                     </span>
                 </li>
             }

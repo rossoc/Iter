@@ -3,6 +3,10 @@
 .v2 .field label{margin:0;padding:0;color:var(--fg);font-size:.875rem;font-weight:500}
 .v2 .field .req{margin-left:3px;color:var(--muted)}
 .v2 .field .control{width:100%}
+/* a control with a button on its line (`field(beside)`): the input takes the rest */
+.v2 .field-row{display:flex;gap:8px;align-items:stretch}
+.v2 .field-row .control{flex:1 1 auto;min-width:0}
+.v2 .field-row .button{flex:none}
 .v2 .field .hint{margin:0;color:var(--muted);font-size:.8125rem}
 /* a checkbox row: a tap-sized row (padding, not margins), the box on the first
    line, a long unbroken name wrapping inside the row; the note is secondary

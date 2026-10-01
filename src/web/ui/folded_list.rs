@@ -1,5 +1,6 @@
-//! A titled list that starts folded (a `<details>`): what is worth knowing
-//! is there, but it does not take the screen until asked. Not a drop zone.
+//! A titled list that can be folded (a `<details>`, drawn like the heading
+//! of `unplaced_list`'s collapsible lists): what is worth knowing is there,
+//! but it does not take the screen when folded. Not a drop zone.
 
 use super::count::count_badge;
 use topcoat::{
@@ -18,9 +19,11 @@ pub async fn folded_list(
     child: Child<'_>,
 ) -> Result<impl View> {
     Ok(view! {
-        <details class="folded" if open { open="" }>
-            <summary><span id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</span></summary>
-            <div class="folded-body">(child)</div>
-        </details>
+        <section class="labelled" aria-labelledby=(id)>
+            <details class="collapsible" if open { open="" }>
+                <summary><h2 id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</h2></summary>
+                <div class="folded-body">(child)</div>
+            </details>
+        </section>
     })
 }

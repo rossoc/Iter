@@ -15,7 +15,9 @@ use topcoat::{
 /// `empty` the line shown when `count` is 0; the child nodes are the cards.
 /// `target` is the drop's target (empty on the agenda: unschedule). It is a
 /// labelled region, unless it is `alone` in an aside that is labelled itself
-/// (the matrix's Not placed): one landmark, not two of the same name.
+/// (the matrix's Backlog): one landmark, not two of the same name.
+/// `collapsible` makes the heading a toggle (a `<details>`, open, no script):
+/// the list folds away to its heading and count.
 #[component]
 pub async fn unplaced_list(
     id: &str,
@@ -24,17 +26,30 @@ pub async fn unplaced_list(
     count: usize,
     #[default] target: &str,
     #[default] alone: bool,
+    #[default] collapsible: bool,
     child: Child<'_>,
 ) -> Result<impl View> {
     Ok(view! {
         <section class="labelled" if !alone { aria-labelledby=(id) }>
-            <h2 id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</h2>
-            drop_zone(target: target, class: "drop-list",
-                if count == 0 {
-                    empty_line((empty))
-                }
-                (child)
-            )
+            if collapsible {
+                <details class="collapsible" open="">
+                    <summary><h2 id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</h2></summary>
+                    drop_zone(target: target, class: "drop-list",
+                        if count == 0 {
+                            empty_line((empty))
+                        }
+                        (child)
+                    )
+                </details>
+            } else {
+                <h2 id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</h2>
+                drop_zone(target: target, class: "drop-list",
+                    if count == 0 {
+                        empty_line((empty))
+                    }
+                    (child)
+                )
+            }
         </section>
     })
 }

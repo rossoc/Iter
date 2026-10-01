@@ -8,7 +8,7 @@ use topcoat::{
 };
 
 /// `id` is the anchor of the link that skips here; `label` names the aside
-/// ("Not scheduled").
+/// ("Backlog").
 #[component]
 pub async fn side_lists(id: &str, label: &str, child: Child<'_>) -> Result<impl View> {
     Ok(view! { <aside id=(id) class="side" aria-label=(label) tabindex="-1">(child)</aside> })

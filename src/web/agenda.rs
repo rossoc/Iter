@@ -5,7 +5,7 @@
 //! the side lists `agenda_cards.rs`. Nothing here has rules of its own: it is
 //! all shared components (`ui/`). The loading is here too.
 
-use super::agenda_cards::{Cards, NOT_SCHEDULED, side};
+use super::agenda_cards::{Cards, Fold, NOT_SCHEDULED, side};
 use super::agenda_day::{Day, hour_label, hour_target, neighbours, split};
 use super::agenda_pick::{day_url, links};
 use super::board_cards::{CLOCK_FMT, CardCtx};
@@ -23,7 +23,7 @@ use super::ui::pick_bar::pick_bar;
 use super::ui::pick_here::pick_here;
 use super::ui::sticky_head::sticky_head;
 use super::ui::task_card::task_card;
-use super::url::{BOARDS, board_day_url, board_schedule_url};
+use super::url::{BOARDS, board_day_url, board_schedule_url, board_url, with_side};
 use super::{Id, now};
 use crate::db::Table;
 use crate::reporting::fmt_date;
@@ -46,6 +46,8 @@ struct AgendaQuery {
     pick: Option<String>,
     /// The task that was just moved (the note says so).
     moved: Option<String>,
+    /// `off`: the Unscheduled column is folded into its rail.
+    side: Option<String>,
 }
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -64,9 +66,10 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let now = now();
     let day = day_from(query.date.as_deref(), now.date());
     let page = load_board(id, query.pick.as_deref(), query.moved.as_deref(), |cards| {
-        split(cards, day)
+        split(cards, day, now.date())
     })?;
-    let model = Model::of(&page, day, now);
+    let folded = query.side.as_deref() == Some("off");
+    let model = Model::of(&page, day, now, folded);
     Ok(view! {
         screen(page: &page, model: &model, day: day, now: now)
     })
@@ -83,7 +86,11 @@ fn now_line(now: NaiveDateTime, day: NaiveDate, h: usize) -> Option<Now> {
 
 /// The Today link: the current hour when nothing is picked (`#now`), else
 /// the banner (the pick mode goes along).
-fn today_url(id: i64, today: NaiveDate, picked: Option<i64>) -> String {
+fn today_url(id: i64, today: NaiveDate, picked: Option<i64>, folded: bool) -> String {
+    with_side(today_link(id, today, picked), folded)
+}
+
+fn today_link(id: i64, today: NaiveDate, picked: Option<i64>) -> String {
     match picked {
         Some(_) => day_url(id, today, picked),
         None => format!("{}#now", board_day_url(id, today)),
@@ -94,7 +101,7 @@ fn today_url(id: i64, today: NaiveDate, picked: Option<i64>) -> String {
 /// lists.
 fn moved_to(task: &Picked) -> String {
     match task.state() {
-        state if state.is_empty() => "Not scheduled".to_string(),
+        state if state.is_empty() => "Unscheduled".to_string(),
         state => state,
     }
 }
@@ -123,13 +130,14 @@ struct Model {
     is_today: bool,
     /// The task being moved, if any.
     pick: Option<i64>,
-    /// A task scheduled on another day sits in the folded list: it is open
-    /// when that is the task being moved.
-    open_elsewhere: bool,
+    /// The Unscheduled column is folded into its rail.
+    folded: bool,
+    /// The links that fold and unfold it.
+    fold: Fold,
 }
 
 impl Model {
-    fn of(page: &BoardPage<Day>, day: NaiveDate, now: NaiveDateTime) -> Model {
+    fn of(page: &BoardPage<Day>, day: NaiveDate, now: NaiveDateTime, folded: bool) -> Model {
         let BoardPage {
             board,
             colors,
@@ -146,7 +154,7 @@ impl Model {
         let short = day.format("%a %-d %b").to_string();
         let (before, after) = neighbours(day);
         let step = |to: NaiveDate, what: &str| DayLink {
-            href: day_url(id, to, pick),
+            href: with_side(day_url(id, to, pick), folded),
             label: format!("{what} day, {}", to.format("%A %-d %B")),
         };
         Model {
@@ -169,12 +177,14 @@ impl Model {
             labels: (0..24).map(hour_label).collect(),
             previous: step(before, "Previous"),
             next: step(after, "Next"),
-            today: today_url(id, now.date(), pick),
+            today: today_url(id, now.date(), pick, folded),
             is_today: day == now.date(),
             pick,
-            open_elsewhere: picked
-                .as_ref()
-                .is_some_and(|p| p.start.is_some_and(|s| s.date() != day)),
+            folded,
+            fold: Fold {
+                fold: with_side(day_url(id, day, pick), true),
+                unfold: day_url(id, day, pick),
+            },
         }
     }
 }
@@ -188,7 +198,6 @@ async fn screen(
 ) -> Result<impl View> {
     let BoardPage {
         board,
-        colors,
         picked,
         data: split,
         ..
@@ -208,15 +217,14 @@ async fn screen(
         today,
         is_today,
         pick,
-        open_elsewhere,
+        folded,
+        fold,
     } = model;
     let ctx = Cards {
         board: id,
         day,
-        ctx: CardCtx {
-            colors,
-            picked: *pick,
-        },
+        folded: *folded,
+        ctx: CardCtx { picked: *pick },
     };
     let title: Vec<&str> = title.iter().map(String::as_str).collect();
     Ok(view! {
@@ -225,7 +233,7 @@ async fn screen(
             current: BOARDS,
             board_header(board: board, section: BoardSection::Agenda)
             board_root(post: schedule.as_str(), style: style, note: note,
-                info_columns(
+                info_columns(class: if *folded { "side-folded" } else { "" },
                     <div>
                         sticky_head(
                             if let Some(p) = picked {
@@ -239,20 +247,23 @@ async fn screen(
                                 id: DAY_TITLE,
                                 title: heading,
                                 iso: date,
+                                action: board_url(id),
+                                pick: *pick,
+                                folded: *folded,
                                 prev: previous.clone(),
                                 next: next.clone(),
                                 today: today.clone(),
-                                is_today: *is_today
+                                is_today: *is_today,
                             )
                         )
-                        if !split.is_empty() {
-                            jump_link(target: format!("#{NOT_SCHEDULED}"), "Skip to tasks not scheduled")
+                        if !split.is_empty() && !*folded {
+                            jump_link(target: format!("#{NOT_SCHEDULED}"), "Skip to unscheduled tasks")
                         }
                         hour_grid(label_id: DAY_TITLE,
                             for (h, cards) in split.hours.iter().enumerate() {
                                 hour_slot(label: &labels[h], target: hour_target(day, h), now: now_line(now, day, h),
                                     if let Some(p) = picked {
-                                        pick_here(action: schedule.as_str(), fields: pick_fields(p.id, &hour_target(day, h), Some(("date", date))), verb: p.words().action, at: &labels[h])
+                                        pick_here(action: schedule.as_str(), fields: pick_fields(p.id, &hour_target(day, h), Some(("date", date))), verb: p.words().action, at: &labels[h], slot: true)
                                     }
                                     for card in cards.iter() {
                                         task_card(card: ctx.view(card), draggable: true)
@@ -261,7 +272,7 @@ async fn screen(
                             }
                         )
                     </div>
-                    side(split: split, ctx: &ctx, open_elsewhere: *open_elsewhere)
+                    side(split: split, ctx: &ctx, to: fold)
                 )
             )
         )
@@ -302,10 +313,17 @@ mod tests {
     #[test]
     fn the_today_link_lands_on_the_hour_or_keeps_the_pick() {
         let day = at("2026-09-29 00:00").date();
-        assert_eq!(today_url(2, day, None), "/board/2?date=2026-09-29#now");
         assert_eq!(
-            today_url(2, day, Some(7)),
+            today_url(2, day, None, false),
+            "/board/2?date=2026-09-29#now"
+        );
+        assert_eq!(
+            today_url(2, day, Some(7), false),
             "/board/2?date=2026-09-29&pick=7#pick"
+        );
+        assert_eq!(
+            today_url(2, day, None, true),
+            "/board/2?date=2026-09-29&side=off#now"
         );
     }
 
@@ -318,7 +336,7 @@ mod tests {
             placed: false,
             priority: Default::default(),
         };
-        assert_eq!(moved_to(&task), "Not scheduled");
+        assert_eq!(moved_to(&task), "Unscheduled");
         task.start = parse_start_time("2026-09-30 09:00");
         assert_eq!(
             moved_note(&task.title, &moved_to(&task)),

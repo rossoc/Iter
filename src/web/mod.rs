@@ -25,6 +25,9 @@ mod drop;
 mod edit;
 mod edit_page;
 mod errors;
+mod folder_picker;
+mod folders;
+mod footer;
 mod forms;
 mod guard;
 mod home;
@@ -38,11 +41,13 @@ mod org_report;
 mod pick;
 mod project;
 mod project_edit;
+mod project_new;
 mod project_options;
 mod project_rows;
 mod quadrants;
 mod sections;
 mod session_lines;
+mod settings;
 mod settings_fields;
 mod settings_panel;
 mod task;
@@ -50,6 +55,7 @@ mod task_edit;
 mod task_fields;
 mod task_new;
 mod task_panel;
+mod task_query;
 mod task_rows;
 mod ui;
 mod url;
@@ -87,6 +93,8 @@ fn router() -> Router {
         task::register,
         org_edit::register,
         project_edit::register,
+        project_new::register,
+        folders::register,
         task_edit::register,
         task_new::register,
         boards::register,
@@ -95,6 +103,7 @@ fn router() -> Router {
         agenda_drop::register,
         board_info::register,
         board_edit::register,
+        settings::register,
     ]
     .into_iter()
     .fold(builder, |builder, register| register(builder))

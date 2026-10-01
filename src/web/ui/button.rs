@@ -27,16 +27,18 @@ pub async fn add_button(#[into] href: String, label: &str) -> Result<impl View> 
 
 /// A button that posts `fields` (hidden inputs) to `action`: a state change
 /// that needs no script (the pick mode's "Schedule here"). `small` is the
-/// compact size for rows.
+/// compact size for rows; `class` is a variant of the form (`slot`, see
+/// `pick_here`).
 #[component]
 pub async fn post_button(
     #[into] action: String,
     fields: Vec<(&'static str, String)>,
     #[default] small: bool,
+    #[default] class: &str,
     child: Child<'_>,
 ) -> Result<impl View> {
     Ok(view! {
-        <form class="post-form" method="post" action=(action.as_str())>
+        <form class=(format!("post-form {class}")) method="post" action=(action.as_str())>
             for (name, value) in fields.iter() {
                 <input type="hidden" name=(*name) value=(value.as_str())>
             }

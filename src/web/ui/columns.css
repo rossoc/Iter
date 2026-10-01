@@ -4,5 +4,8 @@
 .v2{--info-aside:320px;--info-gap:48px;--info-body:calc(var(--main-w) - 2*var(--main-pad-max) - var(--info-aside) - var(--info-gap))}
 .v2 .info{display:grid;grid-template-columns:minmax(0,1fr) var(--info-aside);gap:var(--info-gap);align-items:start}
 .v2 .info-body{max-width:var(--info-body)}
+/* the aside folded into its rail (the agenda): the body takes the width */
+.v2{--rail-w:44px}
+.v2 .info.side-folded{grid-template-columns:minmax(0,1fr) var(--rail-w);gap:16px}
 /* stacked, the two parts sit closer than side by side */
-@media (max-width:900px){.v2 .info{grid-template-columns:minmax(0,1fr);gap:28px}}
+@media (max-width:900px){.v2 .info,.v2 .info.side-folded{grid-template-columns:minmax(0,1fr);gap:28px}}

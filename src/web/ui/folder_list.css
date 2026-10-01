@@ -1,0 +1,10 @@
+/* folders to go into: rows like the project list, the name in mono */
+.v2 .folder-list{list-style:none;margin:0 0 12px;padding:0;border-bottom:1px solid var(--line)}
+.v2 .folder-list li{border-top:1px solid var(--line)}
+.v2 .folder-list a{display:block;padding:10px 14px 10px 4px;font:.875rem var(--mono);overflow-wrap:anywhere;
+  transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
+.v2 .folder-list a:hover,.v2 .folder-list a:focus-visible{background:var(--bg-2);color:var(--accent)}
+.v2 .folder-list .muted{font-family:var(--font);color:var(--muted)}
+.v2 .folder-none{margin:0 0 12px;color:var(--muted);font-size:.875rem}
+.v2 .folder-use{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin:0 0 24px}
+.v2 .folder-use .control{min-width:14rem}

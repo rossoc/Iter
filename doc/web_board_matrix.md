@@ -10,7 +10,7 @@ Scope: the board's Eisenhower matrix (page 10 of `doc/web.md`). The info and edi
 ### Page
 1. `ui::frame` with `current: BOARDS`, title "Eisenhower matrix - {board} - iter", no sidebar (`Nav::load` only for `?design=old`).
 2. Top: `board_header(board, Matrix)` (crumbs `Boards / Eisenhower matrix`, board name, Edit, tabs Agenda | **Eisenhower matrix** | Info).
-3. Body in `info_columns` as on the agenda: the matrix on the left (the hero), the **Not placed** list on the right (`side_lists`, sticky, drop target `left`). Under 900px one column: the matrix first, in reading order 1-4, then Not placed; a `jump_link` "Skip to tasks not placed" (visible when narrow, focus-only when wide) reaches the list.
+3. Body in `info_columns` as on the agenda: the matrix on the left (the hero), the **Backlog** list on the right (`side_lists`, sticky, drop target `left`). Under 900px one column: the matrix first, in reading order 1-4, then Backlog; a `jump_link` "Skip to the backlog" (visible when narrow, focus-only when wide) reaches the list.
 4. **Four quadrants**, numbered, in reading order (row by row):
 
    | # | Name | Rule (shown) | Flags a drop sets | Drop target |
@@ -22,19 +22,19 @@ Scope: the board's Eisenhower matrix (page 10 of `doc/web.md`). The info and edi
 
    Each quadrant is a section named by its heading (numeral, name, count; the rule is its description), holding a drop zone with cards or a quiet line ("Nothing to do first.", "Nothing to plan.", "Nothing to delegate.", "Nothing to eliminate."). Two columns (1 2 / 3 4) when there is room, one column when the matrix is narrower than about 500px (`flex-wrap`, no breakpoint: the matrix sits beside a list at some widths, so the viewport is the wrong measure).
 5. **Color is meaning only, never the only cue.** A quadrant has a 4px top edge in the board's own priority colors, the same as the cards' left edge (`edge-*`): Do first = Urgent and Important side by side, Plan = Important, Delegate = Urgent, Eliminate = neutral. The numeral, the name and the rule are text, so the edge is decoration. Text is on `--bg`, never on those colors (13:1 and up). No new colors, no fills at rest; a dragged card over a quadrant gets the drop zone's dashed accent outline and tint.
-6. **Cards** are `task_card`: in Not placed they keep their chips (the flags are what the card brings along); in a quadrant the chips are left off (the quadrant says it, as the Important chip on the agenda's Important list). Link "Place" (Not placed) / "Move" (placed).
+6. **Cards** are `task_card`: in Backlog they keep their chips (the flags are what the card brings along); in a quadrant the chips are left off (the quadrant says it, as the Important chip on the agenda's Important list). Link "Place" (Backlog) / "Move" (placed).
 7. Colors from board settings: `board_root` (`--urgent`, `--important`, only `#rrggbb`).
 8. `?design=old` shows the previous matrix (`compared`, GET only) with the switch, keeping `?pick=`.
 9. Empty board (no unfinished task): `empty_state` instead of the matrix, as on the agenda.
 
 ### Placing without a mouse (accessibility)
 10. Drag and drop is progressive enhancement: `board.js` (unchanged) posts to `/board/{id}/matrix` and reloads; a failed drop says so in the `role=alert` note and does not reload.
-11. **Pick mode, no script**: a card's **Place** / **Move** link (hidden text: the task) opens `?pick={task}#pick`. `pick_bar`, in a `sticky_head`: "Moving {task} (now Do first). Choose a quadrant." (a task not placed yet: "Placing {task}. Choose a quadrant."; the verbs and the `moving` accent are the agenda's) with **Cancel** (back to the card) and, when the task is placed, **Unplace** (back to Not placed). Every quadrant gets a **Place here** (**Move here**) button, first in it (before the cards, so it is the first tab stop after the banner) (hidden text " at Do first"), a `post_button` form with `task_id` and `target`; none in the quadrant the task is already in. The picked card is marked "Being moved" (words, dashed border).
+11. **Pick mode, no script**: a card's **Place** / **Move** link (hidden text: the task) opens `?pick={task}#pick`. `pick_bar`, in a `sticky_head`: "Moving {task} (now Do first). Choose a quadrant." (a task not placed yet: "Placing {task}. Choose a quadrant."; the verbs and the `moving` accent are the agenda's) with **Cancel** (back to the card) and, when the task is placed, **Unplace** (back to Backlog). Every quadrant gets a **Place here** (**Move here**) button, first in it (before the cards, so it is the first tab stop after the banner) (hidden text " at Do first"), a `post_button` form with `task_id` and `target`; none in the quadrant the task is already in. The picked card is marked "Being moved" (words, dashed border).
 12. **Endpoint**: `POST /board/{id}/matrix` behaves as before (`task_id`, `target`; answers `true` as JSON; unknown quadrant 400; a task of another board 404; same-origin guard `guard::local_only`). New and optional: a `form` field, sent by the pick forms only (a page without script has no `board.js` to reload); when present the route answers `303` (`back_or`, as the agenda) to `/board/{id}/matrix#card-{task}`, a URL built from the ids, never from the request. Focus lands on the moved card (the fragment; `board.js` does it after a drop's reload).
 13. `prefers-reduced-motion`: nothing new moves (the card lift is already behind `no-preference`); forced colors: the top edge (a background) becomes a 4px `CanvasText` border, `.over` keeps its outline.
 
 ### Speed
-14. Queries: the board (one lookup), the two tag colors (one query), the unfinished cards (`Db::cards_unfinished`, three queries however many tasks), sorted once (`load::unfinished`). One pass (`split`) puts each card in Not placed or in its quadrant by an index computed from its two flags (`quadrant_index`, O(1), no scan of the table): O(n). The picked card is found once. No sidebar for the proposal.
+14. Queries: the board (one lookup), the two tag colors (one query), the unfinished cards (`Db::cards_unfinished`, three queries however many tasks), sorted once (`load::unfinished`). One pass (`split`) puts each card in Backlog or in its quadrant by an index computed from its two flags (`quadrant_index`, O(1), no scan of the table): O(n). The picked card is found once. No sidebar for the proposal.
 
 ### Components
 Reused: `frame`, `board_header`, `board_root`, `info_columns`, `sticky_head`, `pick_bar`, `pick_here`, `post_button`, `jump_link`, `side_lists`, `unplaced_list` (with `target: "left"`), `drop_zone`, `task_card`, `count_badge`, `empty_line`, `empty_state`, `compared`, `page_url`, board URL helpers, `board.js`.
@@ -58,10 +58,10 @@ Changed: `Edge::modifier` (the class part shared by cards and quadrants); `pick_
 |---|---|---|---|
 | 1 | Frame, Board highlighted, title, no sidebar | done; title "Eisenhower matrix - Daily - iter"; `Nav::load` only for `?design=old` | `matrix.rs` |
 | 2 | `board_header(Matrix)` | done | `board_header.rs` |
-| 3 | `info_columns`, Not placed on the right, jump link when narrow | done (jump link visible at 320px) | `matrix.rs` |
+| 3 | `info_columns`, Backlog on the right, jump link when narrow | done (jump link visible at 320px) | `matrix.rs` |
 | 4 | Four numbered quadrants, 2 columns / 1 | done; 2 columns at 1280 and 900, 1 at 320; order 1-4 | `ui/quadrant.*`, `ui/matrix_grid.*`, `quadrants.rs` |
 | 5 | Meaning-only color, text cues | done; forced colors: 4px border top (checked) | `ui/quadrant.css` |
-| 6 | Cards: chips only in Not placed; Place / Move | done | `matrix.rs` `Cards` |
+| 6 | Cards: chips only in Backlog; Place / Move | done | `matrix.rs` `Cards` |
 | 7 | Colors from board settings | done (`board_root`) | `matrix.rs` |
 | 8 | `?design=old` | done; still shows the old matrix | `board::old_matrix` |
 | 9 | Empty board | done (`empty_state`) | `matrix.rs` |
@@ -73,7 +73,7 @@ Changed: `Edge::modifier` (the class part shared by cards and quadrants); `pick_
 
 Verified (throwaway DB copy via `XDG_CONFIG_HOME`, own ports): matrix default, pick (unplaced and placed task), bad `pick`, empty board, at 1280, 900 and 320px, light and dark: axe 0 violations, no horizontal scroll. Agenda, info and edit still answer (their old axe findings predate this). `cargo fmt --check`, `cargo clippy --features web`, `cargo test --features web` (250), `cargo test --no-default-features` (174).
 
-Open issues: dragging a card to a quadrant changes its flags (as before), so a task dragged back to Not placed keeps the new flags; after "Place here" the page returns to the card, not to the top; HTML drag and drop is unreliable on touch browsers, the pick mode is the fallback; the old matrix (`?design=old`) has legacy axe findings.
+Open issues: dragging a card to a quadrant changes its flags (as before), so a task dragged back to Backlog keeps the new flags; after "Place here" the page returns to the card, not to the top; HTML drag and drop is unreliable on touch browsers, the pick mode is the fallback; the old matrix (`?design=old`) has legacy axe findings.
 
 ## Review
 
@@ -104,3 +104,7 @@ Five reviewers (accessibility, complexity, composability, DRY, design). Each fin
 | S5 stale docs | fixed: `doc/web_components.md` (frame signature, "shared by the agenda and the matrix", the `Drop` form, `board.js` contract), `doc/web.md` |
 
 Verified again (throwaway DB copy, own port): axe 0 violations and no horizontal scroll on matrix default, pick (placed, unplaced, bad id), empty board, agenda default, pick (scheduled, unscheduled) and empty board, at 1280, 900 and 320px, light and dark. Mouse drag between quadrants and back, and on the agenda: status message, focus on the card. Simulated 500: alert, no reload. Keyboard pick on both pages: banner name, tab order, verbs, messages. Reduced motion (transition 0s) and forced colors checked; `?design=old`, info, edit, boards, home, project and task pages answer 200. `cargo fmt --check`, `cargo clippy --features web`, `cargo test --features web` (257), `cargo test --no-default-features` (175).
+
+## Update: same card as the agenda
+
+Quadrant and "Backlog" cards call `CardCtx::view` like the agenda's: no flag chips (the edge and a hidden priority phrase carry the priority), start time only when scheduled. The pick slot stays the small button (the big dashed slot is the agenda's).

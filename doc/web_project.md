@@ -92,3 +92,11 @@ Five reviewers (accessibility, complexity, composability, DRY, design). Each cla
 | S4 kicker, Edit button | kept as is until page 5 |
 
 Verified: axe 0 violations on the project (Info, Tasks, empty, with and without organization), new task, Org and Org edit, 1280px and 320px, light and dark, no horizontal scroll; keyboard order; titles; refused submits (bad issue, empty name, unknown tag, bad start, bad duration) keep every typed value and mark the right field; create with and without tags; `?design=old` renders (its own old-design axe issues predate this work). Not fixed, outside scope: a duplicate task name shows the raw database message.
+
+## Update: task search and quick add
+
+The Tasks tab has the same search box and quick-add row as the organization's (see `doc/web_org.md`); the row posts `project` as a hidden field and the browser returns to `/project/{id}?tab=tasks` (with `q` kept). The "New task" button (the full form) stays.
+
+## Update: New task pop-up
+
+The full-page New task form, the "New task" button and the quick-add row are gone: the Tasks table's first row ("+ New task…") opens the New task pop-up over the list (`?tab=tasks&new=task`, `POST /task/new`), with every field the page had. `GET /project/{id}/task/new` redirects to it. See `doc/web_components.md`, "Pop-ups and the "?" syntax help".

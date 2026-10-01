@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(
             labels(&trail(&None, Some(&project), Crumb::here("New task"))),
             [
-                ("app", Some("/project/4?tab=tasks"), false),
+                ("app", Some("/project/4?tab=tasks&q=is%3Aopen"), false),
                 ("New task", None, true)
             ]
         );
@@ -107,7 +107,7 @@ mod tests {
             labels(&edit_trail(&org, Some(&project), "fix", "/task/9")),
             [
                 ("acme", Some("/org/2"), false),
-                ("app", Some("/project/4?tab=tasks"), false),
+                ("app", Some("/project/4?tab=tasks&q=is%3Aopen"), false),
                 ("fix", Some("/task/9"), false),
                 ("Edit", None, true)
             ]

@@ -1,12 +1,11 @@
 //! One task on a board, as a card: the title (a link to the task), when it
-//! is (or how long), its priority flags, its status when work is under way,
+//! is (its start), its status when work is under way,
 //! and one small link to act on it. The card is what `board.js` drags: a
 //! draggable card carries `data-task` (the script makes it draggable and
 //! shows the grab cursor; without script it is a plain card). What a card says is the caller's business (see
 //! `web/board_cards.rs`); this only lays it out.
 
 use super::status::status;
-use super::tag_chips::{Chip, tag_chips};
 use crate::models::{Priority, TaskStatus};
 use topcoat::{
     Result,
@@ -14,7 +13,7 @@ use topcoat::{
 };
 
 /// The colored left edge: what the card's priority looks like at a glance.
-/// Never the only cue (the flags are also chips with their names).
+/// Never the only cue (a hidden phrase says the priority too).
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Edge {
     None,
@@ -48,6 +47,19 @@ impl Edge {
     }
 }
 
+impl Edge {
+    /// The priority in words, for a screen reader (the edge is a color, never
+    /// the only cue); `None` when there is no flag.
+    pub fn words(self) -> Option<&'static str> {
+        match self {
+            Edge::None => None,
+            Edge::Urgent => Some("Urgent"),
+            Edge::Important => Some("Important"),
+            Edge::Both => Some("Urgent, important"),
+        }
+    }
+}
+
 /// The card's own link ("Schedule"). `label` is followed by the card's title
 /// as hidden text, so the link's purpose is clear on its own.
 pub struct CardAction<'a> {
@@ -60,10 +72,10 @@ pub struct CardView<'a> {
     pub id: i64,
     pub href: String,
     pub title: &'a str,
-    /// `09:00-10:00`, a duration, or empty.
+    /// A date ("Tue 29 Sep") for an overdue card, else empty: a card has no
+    /// time (the hour row it sits in says it).
     pub time: String,
     pub edge: Edge,
-    pub flags: Vec<Chip<'a>>,
     /// Only shown for work in progress (the others are the default).
     pub status: Option<TaskStatus>,
     pub action: Option<CardAction<'a>>,
@@ -90,15 +102,15 @@ pub async fn task_card(card: CardView<'_>, #[default] draggable: bool) -> Result
             if draggable { data-task=(card.id.to_string()) }
             if card.picked { aria-current="true" }>
             <a id=(title_id.as_str()) class="tcard-title" href=(card.href.as_str())>(card.title)</a>
+            if let Some(words) = card.edge.words() {
+                <span class="sr">(words)</span>
+            }
             <div class="tcard-meta">
                 if card.picked {
                     <span class="tcard-moving">"Being moved"</span>
                 }
                 if !card.time.is_empty() {
                     <span class="mono">(card.time.as_str())</span>
-                }
-                if !card.flags.is_empty() {
-                    tag_chips(chips: &card.flags)
                 }
                 if let Some(state) = card.status {
                     status(state: state)
@@ -127,6 +139,8 @@ mod tests {
         assert_eq!(of(false, false), Edge::None);
         assert_eq!(Edge::Both.modifier(), "edge edge-both");
         assert_eq!(Edge::None.modifier(), "edge");
+        assert_eq!(Edge::Both.words(), Some("Urgent, important"));
+        assert_eq!(Edge::None.words(), None);
     }
 
     #[test]

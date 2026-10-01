@@ -1,0 +1,25 @@
+/* the folded column: a strip as tall as the aside would be, sticky like it.
+   Narrow, it lies down as a bar above the lists' place. */
+.v2 .side-rail{position:sticky;top:var(--stick-top);align-items:center;gap:12px;padding:12px 0;min-height:160px;
+  width:var(--rail-w);box-sizing:border-box;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-lg);
+  color:var(--muted);text-decoration:none;font-size:.8125rem;
+  transition:background var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
+.v2 .side-rail:hover{background:var(--accent-tint);border-color:var(--accent);color:var(--accent)}
+.v2 .side-rail:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.v2 .rail-text{writing-mode:vertical-rl;white-space:nowrap;font-weight:500}
+.v2 .rail-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.v2 .can-drag .side-rail{border-style:dashed}
+.v2 .side-rail.over{border-style:solid}
+/* the button that folds the open column, at its top right */
+/* the button that folds the column sits on the first heading's row, at the
+   right (out of the flow, so the first list starts at the top of the box) */
+.v2 .side-head{position:absolute;top:7px;right:12px;z-index:1}
+.v2 .side-head+.labelled>.collapsible>summary{padding-right:40px}
+/* a plain heading (the matrix's) is as tall as a folding one */
+.v2 .side-head+.labelled>.label{display:flex;align-items:center;min-height:29px;padding:2px 40px 2px 0;box-sizing:border-box}
+.v2 .side-fold{justify-content:center;min-width:32px;min-height:32px;padding:0}
+@media (pointer:coarse){.v2 .side-fold{min-width:var(--touch);min-height:var(--touch)}}
+@media (max-width:900px),(max-height:600px){
+  .v2 .side-rail{position:static;flex-direction:row;width:auto;min-height:var(--touch);padding:0 14px}
+  .v2 .rail-text{writing-mode:horizontal-tb}
+}

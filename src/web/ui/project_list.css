@@ -1,20 +1,38 @@
 /* project rows highlight like the task table's rows, with the same inset.
-   A row is the name with its whole path under it, left-aligned: nothing is
-   cut, so a long name breaks anywhere and a long path wraps (after a `/`
-   when it can), and nothing forces a horizontal scroll at 320px or with
-   large text. */
+   A row is the name, then the path on the same line. The name wraps when it
+   must (it breaks anywhere); the path never wraps: when it does not fit, its
+   start is cut with an ellipsis (a right-to-left box, the path isolated
+   inside it in its own order), so the last segment always shows. */
 .v2 .project-list{list-style:none;margin:0;padding:0;border-bottom:1px solid var(--line)}
-.v2 .project-list li{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px 10px 4px;border-top:1px solid var(--line);
+.v2 .project-list li{display:flex;align-items:baseline;gap:12px;padding:10px 14px 10px 4px;border-top:1px solid var(--line);
   transition:background var(--fast) var(--ease-out)}
 .v2 .project-list li:hover{background:var(--bg-2)}
-.v2 .project-list a{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.v2 .project-list a{flex:0 1 auto;min-width:0;max-width:70%;overflow-wrap:anywhere}
 /* the last segment is what tells projects apart: strong; the directories
    before it stay muted */
-.v2 .path{min-width:0;max-width:100%;overflow-wrap:anywhere;text-align:left;font:.75rem var(--mono);color:var(--muted)}
+.v2 .path{flex:1 1 0;min-width:3rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left;
+  font:.75rem var(--mono);color:var(--muted)}
+.v2 .path-in{direction:ltr;unicode-bidi:isolate}
 .v2 .path .leaf{color:var(--fg);font-weight:600}
+/* with a mouse, the path shows only on the row under it (or holding focus);
+   its space stays reserved, so nothing moves. Touch screens always show it. */
+@media (hover:hover){
+  .v2 .project-list .path{opacity:0;transition:opacity var(--fast) var(--ease-out)}
+  .v2 .project-list li:hover .path,.v2 .project-list li:focus-within .path{opacity:1}
+}
 /* inside a card: no highlight, dashed separators, tighter */
 .v2 .project-list.compact{border-bottom:0}
 .v2 .project-list.compact li{padding:5px 0;border-top:1px dashed var(--line)}
 .v2 .project-list.compact li:first-child{border-top:0}
 .v2 .project-list.compact li:hover{background:none}
 .v2 .project-list.compact a{font-size:.9375rem}
+/* the row that opens New project: the whole row is the link (the ::after
+   covers it), muted until hovered */
+.v2 .project-list li.add{position:relative;border-top:0;border-bottom:1px dashed var(--line-2);padding:0}
+.v2 .project-list .add-link{display:flex;flex-direction:row;align-items:center;gap:8px;padding:10px 14px 10px 4px;color:var(--muted);font-weight:500;
+  transition:color var(--fast) var(--ease-out)}
+.v2 .project-list .add-link::after{content:"";position:absolute;inset:0}
+.v2 .project-list li.add:hover .add-link{color:var(--accent)}
+.v2 .project-list .add-link:focus-visible{outline:none}
+.v2 .project-list li.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.v2 .project-list li.add + li{border-top:0}

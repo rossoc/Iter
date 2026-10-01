@@ -91,6 +91,17 @@ mod tests {
     }
 
     #[test]
+    fn a_folded_column_is_kept_before_the_fragment() {
+        let url = || day_url(2, day(), Some(7));
+        assert_eq!(with_side(url(), false), url());
+        assert_eq!(
+            with_side(url(), true),
+            "/board/2?date=2026-09-29&pick=7&side=off#pick"
+        );
+        assert_eq!(with_side("/board/2".into(), true), "/board/2?side=off");
+    }
+
+    #[test]
     fn leaving_the_mode_and_a_move_land_on_the_card() {
         assert_eq!(links(2, day()).cancel(7), "/board/2?date=2026-09-29#card-7");
         assert_eq!(

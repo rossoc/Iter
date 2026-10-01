@@ -1,0 +1,28 @@
+/* the footer: outside the frame's .v2 wrapper, so it is a .v2 itself, and the
+   frame's full-height rule is reset. The browser skips its layout until it is
+   near the viewport. */
+.v2.site-foot{min-height:0;border-top:1px solid var(--line);background:var(--bg-2);
+  content-visibility:auto;contain-intrinsic-size:auto 640px}
+.v2 .foot-inner{max-width:var(--main-w);margin:0 auto;padding:72px var(--main-pad) 56px;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3.2fr);gap:48px}
+.v2 .foot-mark{display:inline-block;font-size:clamp(3.5rem,2rem + 6vw,6.5rem);font-weight:650;letter-spacing:-.05em;line-height:.95}
+.v2 .foot-mark:hover{color:var(--accent)}
+.v2 .foot-brand p{margin:14px 0 0;max-width:18ch;color:var(--muted)}
+.v2 .foot-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(12.5rem,1fr));gap:40px 0}
+/* hairlines between the columns */
+.v2 .foot-col{min-width:0;padding:0 24px;border-left:1px solid var(--line)}
+.v2 .foot-col .label{margin-bottom:14px}
+.v2 .site-foot ul{list-style:none;margin:0;padding:0}
+.v2 .site-foot li{margin:0 0 8px;overflow-wrap:anywhere}
+.v2 .foot-orgs>li{margin-bottom:16px}
+.v2 .foot-sub{margin:6px 0 0 2px}
+.v2 .foot-sub li{margin:0 0 3px;font-size:.875rem}
+.v2 .foot-sub a{color:var(--muted);transition:color var(--fast) var(--ease-out)}
+.v2 .foot-sub a:hover,.v2 .foot-sub a:focus-visible{color:var(--accent)}
+.v2 .foot-none,.v2 .foot-note{margin:0;font-size:.875rem;color:var(--muted)}
+.v2 .foot-note{margin-top:12px;overflow-wrap:anywhere}
+@media (max-width:900px){
+  .v2 .foot-inner{grid-template-columns:minmax(0,1fr);gap:32px;padding-top:48px}
+  .v2 .foot-col{padding:0 0 0 16px}
+  .v2 .foot-cols{grid-template-columns:minmax(0,1fr)}
+}

@@ -10,9 +10,9 @@
 
 use crate::error::{IterError, Result};
 use crate::models::{Settings, TaskStatus};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 
 /// The config directory's name under the platform's config home, and the
 /// two files `iter` keeps in it.
@@ -39,19 +39,20 @@ fn default_editor() -> String {
 /// The settings a new task starts from. `branch_prefix` isn't here: it's
 /// read off the owning project's `branch_template`, which is the project
 /// default that already covers it.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TaskDefaults {
     pub status: TaskStatus,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
     /// Where the SQLite file lives. `None` -- the default -- means
     /// `iter.db` beside the config file. A leading `~` is expanded; a
     /// relative path is left as it is, resolved against the current
     /// directory the way any other relative path would be.
+    #[serde(skip_serializing_if = "Option::is_none")]
     db_path: Option<String>,
 
     /// See [`DEFAULT_PAUSE_GAP_MINUTES`].
@@ -102,6 +103,24 @@ impl Config {
         })
     }
 
+    /// Writes the config file (creating its directory): every key, so what
+    /// the file did not say becomes explicit. Comments in the file are not
+    /// kept. The database path is written back as it was read.
+    #[cfg(feature = "web")]
+    pub fn save(&self) -> Result<()> {
+        let path = config_file()?;
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        let body = serde_yaml::to_string(self)
+            .map_err(|e| IterError::CommandFailed(format!("could not write the config: {e}")))?;
+        let text = format!(
+            "# iter's config. Saved from the settings page; comments are not kept.\n{body}"
+        );
+        std::fs::write(&path, text)?;
+        Ok(())
+    }
+
     /// The database file to open: `db_path` if it's set, and otherwise
     /// `iter.db` in the config directory.
     pub fn db_path(&self) -> Result<PathBuf> {
@@ -124,7 +143,10 @@ fn parse(text: &str) -> std::result::Result<Config, serde_yaml::Error> {
     Ok(serde_yaml::from_str::<Option<Config>>(text)?.unwrap_or_default())
 }
 
-static CONFIG: OnceLock<Config> = OnceLock::new();
+/// The process's config. Behind a lock so the settings page can replace it
+/// (`replace`); each value is leaked once, so `config()` can hand out a
+/// `&'static` as it always has (a few hundred bytes per save).
+static CONFIG: OnceLock<RwLock<&'static Config>> = OnceLock::new();
 
 /// The process's config, read from disk the first time it's asked for and
 /// held from then on -- every command, and every completion callback the
@@ -132,12 +154,24 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 /// here rather than propagated: nothing downstream can do anything useful
 /// without knowing where the database is.
 pub fn config() -> &'static Config {
-    CONFIG.get_or_init(|| {
-        Config::load().unwrap_or_else(|e| {
+    let cell = CONFIG.get_or_init(|| {
+        let config = Config::load().unwrap_or_else(|e| {
             eprintln!("error: {e}");
             std::process::exit(1);
-        })
-    })
+        });
+        RwLock::new(Box::leak(Box::new(config)))
+    });
+    *cell.read().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Makes `new` the process's config (after the settings page saved it), so
+/// what a server already running does next follows the file.
+#[cfg(feature = "web")]
+pub fn replace(new: Config) {
+    config();
+    if let Some(cell) = CONFIG.get() {
+        *cell.write().unwrap_or_else(|e| e.into_inner()) = Box::leak(Box::new(new));
+    }
 }
 
 /// `iter`'s own config directory, `<config home>/iter`.
@@ -320,5 +354,26 @@ mod tests {
             DEFAULT_PAUSE_GAP_MINUTES
         );
         assert_eq!(from_yaml("").editor, DEFAULT_EDITOR);
+    }
+
+    #[test]
+    fn a_config_written_reads_back_the_same() {
+        let mut config = Config {
+            editor: "vim".into(),
+            pause_gap_minutes: 30,
+            ..Config::default()
+        };
+        config.task.status = TaskStatus::Wip;
+        config.project.github = true;
+        let text = serde_yaml::to_string(&config).expect("writes");
+        let back = parse(&text).expect("reads");
+        assert_eq!(back.editor, "vim");
+        assert_eq!(back.pause_gap_minutes, 30);
+        assert_eq!(back.task.status, TaskStatus::Wip);
+        assert_eq!(back.project, config.project);
+        assert!(
+            !text.contains("db_path"),
+            "an unset database path is not written"
+        );
     }
 }

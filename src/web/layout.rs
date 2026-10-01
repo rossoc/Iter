@@ -1,8 +1,9 @@
-//! The document every page shares (`<html>`, the viewport, the language) and
-//! the script the board pages load. The stylesheet is linked by the page's
+//! The document every page shares (`<html>`, the viewport, the language, the
+//! footer after the page) and the script the board pages load. The stylesheet is linked by the page's
 //! `frame` (`ui/frame.rs`), which knows which extra sheets it needs.
 
 use super::assets::Asset;
+use super::footer::site_footer_for;
 use topcoat::{
     Result,
     context::Cx,
@@ -25,7 +26,7 @@ async fn root(slot: Slot<'_>) -> Result<impl View> {
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
             </head>
-            <body>(slot)</body>
+            <body>(slot) site_footer_for()</body>
         </html>
     })
 }

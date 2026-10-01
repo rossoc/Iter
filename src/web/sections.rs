@@ -12,6 +12,25 @@ pub struct TabQuery {
     pub tab: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
+    /// The Tasks tab's search (see `task_query.rs`), or the Info tab's
+    /// project search.
+    pub q: Option<String>,
+    /// The pop-up open over the page: `task` (New task, on Tasks) or
+    /// `project` (New project, on Info).
+    pub new: Option<String>,
+    /// What New project starts with, when the folder browser sends it back.
+    pub name: Option<String>,
+    pub base_path: Option<String>,
+}
+
+/// The query of a page that is only a search (`?q=`): a board's Info.
+#[query_params(error = bad_request)]
+pub struct InfoQuery {
+    pub q: Option<String>,
+    /// As on [`TabQuery`]: `project` opens New project.
+    pub new: Option<String>,
+    pub name: Option<String>,
+    pub base_path: Option<String>,
 }
 
 /// The tabs of an organization or project page. A project has no Report.
@@ -106,7 +125,7 @@ mod tests {
         assert!(!items[0].is_current() && items[1].is_current());
         assert_eq!(
             (items[1].href(), items[1].badge()),
-            ("/project/1?tab=tasks", Some(4))
+            ("/project/1?tab=tasks&q=is%3Aopen", Some(4))
         );
         assert_eq!(
             section_tabs("/org/1", Section::Info, 0, Some("/r".into())).len(),

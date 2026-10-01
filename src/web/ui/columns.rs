@@ -13,8 +13,9 @@ pub async fn info_body(child: Child<'_>) -> Result<impl View> {
     Ok(view! { <div class="info-body">(child)</div> })
 }
 
-/// The child nodes are the body (a `<div>`) followed by the aside.
+/// The child nodes are the body (a `<div>`) followed by the aside. `class`
+/// is a variant (`side-folded`: the aside is a narrow rail).
 #[component]
-pub async fn info_columns(child: Child<'_>) -> Result<impl View> {
-    Ok(view! { <div class="info">(child)</div> })
+pub async fn info_columns(#[default] class: &str, child: Child<'_>) -> Result<impl View> {
+    Ok(view! { <div class=(format!("info {class}"))>(child)</div> })
 }

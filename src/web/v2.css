@@ -13,6 +13,7 @@
   --r-sm:4px;--r-md:8px;--r-lg:12px;--r-pill:999px;
   --ease-out:cubic-bezier(.22,1,.36,1);--fast:150ms;--med:250ms;--slow:350ms;
   --touch:44px;                 /* the least a finger target is high */
+  --card-w:15rem;               /* a card of the agenda, several to an hour */
   --main-w:1180px;--main-pad-max:72px;--main-pad:clamp(20px,5vw,var(--main-pad-max));  /* main: its width and side padding */
   --measure:68ch                /* a line of prose */
 }

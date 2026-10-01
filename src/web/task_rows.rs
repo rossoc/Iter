@@ -2,11 +2,38 @@
 //! and their tags to chips (`ui::tag_chips`): the one place a task's links,
 //! issue label and chips are built.
 
+use super::task_query::TaskQuery;
+use super::ui::filter_bar::Search;
 use super::ui::tag_chips::Chip;
 use super::ui::task_table::{ProjectLink, TaskRow};
-use super::url::{project_url, task_url};
+use super::url::{project_url, task_url, tasks_list_url};
 use crate::db::Table;
 use crate::models::{Tag, Task};
+
+/// The syntax of the search box, for its fold-out (see `task_query.rs`).
+const SYNTAX: &[(&str, &str)] = &[
+    ("is:open", "queued or in progress (the default)"),
+    ("(empty)", "every task: no filter"),
+    ("is:done", "finished; also is:wip, is:queue, is:all"),
+    ("tag:name", "has the tag; tag:\"two words\" for a long one"),
+    ("project:name", "the project's name contains it"),
+    ("-tag:name", "a minus turns any term around"),
+    ("words, #12", "in the task's name, or the GitHub issue"),
+];
+
+/// The search box of the Tasks tab of the page at `base`, showing `q` (none:
+/// empty, every task). Clear empties it: no filter.
+pub fn search(base: &str, q: Option<&str>) -> Search {
+    let text = TaskQuery::text(q).trim();
+    Search {
+        action: base.to_string(),
+        tab: "tasks",
+        q: text.to_string(),
+        label: "Filter tasks",
+        clear: (!text.is_empty()).then(|| tasks_list_url(base, None)),
+        syntax: SYNTAX,
+    }
+}
 
 /// `#12`, or empty.
 pub fn issue_label(issue: Option<i64>) -> String {
@@ -89,6 +116,15 @@ mod tests {
         let chips = chips(&tags);
         assert_eq!((chips[0].name, chips[0].color), ("Urgent", "#facc15"));
         assert!(super::chips(&[]).is_empty());
+    }
+
+    #[test]
+    fn the_search_clears_to_no_filter() {
+        let all = search("/project/4", None);
+        assert_eq!((all.q.as_str(), all.clear.as_deref()), ("", None));
+        let open = search("/project/4", Some("is:open"));
+        assert_eq!(open.clear.as_deref(), Some("/project/4?tab=tasks"));
+        assert!(search("/project/4", Some(" ")).clear.is_none());
     }
 
     #[test]

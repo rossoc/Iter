@@ -965,6 +965,25 @@ impl Db {
         )
     }
 
+    /// The names of the tags of each of `ids`, in one query (the ids travel
+    /// as one JSON array). A task with no tag is not in the map.
+    #[cfg(feature = "web")]
+    pub fn tag_names_for_tasks(&self, ids: &[i64]) -> Result<HashMap<i64, Vec<String>>> {
+        let rows = self.query_all(
+            "SELECT tt.task_id, g.name FROM task_tags tt
+             JOIN tags g ON g.id = tt.tag_id
+             WHERE tt.task_id IN (SELECT value FROM json_each(?1))
+             ORDER BY g.name",
+            params![json_ids(ids)],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
+        )?;
+        let mut names: HashMap<i64, Vec<String>> = HashMap::new();
+        for (task, name) in rows {
+            names.entry(task).or_default().push(name);
+        }
+        Ok(names)
+    }
+
     pub fn find_session_config_by_task(&self, task_id: i64) -> Result<Option<SessionConfig>> {
         self.find_one("WHERE task_id = ?1", params![task_id])
     }

@@ -9,7 +9,9 @@ use super::open_db;
 use super::sections::section_tabs;
 use super::sections::{Section, TabQuery};
 use super::settings_panel::settings_panel;
-use super::task_rows::project_rows;
+use super::task_new::{TaskCreate, TaskHome, task_modal};
+use super::task_query::TaskQuery;
+use super::task_rows::{project_rows, search};
 use super::ui::breadcrumb::Crumb;
 use super::ui::button::edit_button;
 use super::ui::columns::info_columns;
@@ -19,14 +21,14 @@ use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::tabs::tabs;
 use super::ui::tasks_tab::tasks_tab;
-use super::url::{edit_url, new_task_url, project_url};
+use super::url::{edit_url, project_url};
 use crate::db::{Db, Table};
 use crate::models::{Configured, Organization, Project, Task};
 use topcoat::{
     Result,
     context::Cx,
     router::{RouterBuilder, page, path_param, query_params},
-    view::{View, component, view},
+    view::{Child, View, component, view},
 };
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -53,13 +55,15 @@ pub struct Loaded {
 
 /// Loads project `id` for `section`: the organization only when it has
 /// one, the task rows only for the Tasks tab.
-pub fn load(db: &Db, id: i64, section: Section) -> Result<Loaded> {
+pub fn load(db: &Db, id: i64, section: Section, q: Option<&str>) -> Result<Loaded> {
     let parents = parents_of(db, id)?;
     let (tasks, task_count) = tasks_or_count(
         section == Section::Tasks,
         || db.tasks_for_project(id),
         || db.count_tasks_for_project(id),
     )?;
+    // the badge keeps the total; the rows are the ones the search lets by
+    let tasks = TaskQuery::of(q).filter_tasks(db, tasks, &parents.project.name)?;
     Ok(Loaded {
         parents,
         tasks,
@@ -70,15 +74,20 @@ pub fn load(db: &Db, id: i64, section: Section) -> Result<Loaded> {
 #[page("/project/{id}")]
 async fn show(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let tab = section(query_params::<TabQuery>(cx)?.tab.as_deref());
-    let page = load(&open_db()?, id, tab)?;
+    let query = query_params::<TabQuery>(cx)?;
+    let tab = section(query.tab.as_deref());
+    let page = load(&open_db()?, id, tab, query.q.as_deref())?;
     let Loaded {
         parents: Parents { project, org },
         tasks,
         task_count,
     } = page;
+    let q = query.q.as_deref();
+    // `?new=task` on the Tasks tab: the New task pop-up over the list
+    let create = (tab == Section::Tasks && query.new.as_deref() == Some("task"))
+        .then(|| TaskCreate::in_project(&project, q));
     Ok(view! {
-        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, section: tab)
+        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, section: tab, q: q, task_create: create.as_ref())
     })
 }
 
@@ -97,6 +106,7 @@ async fn project_info(project: &Project) -> Result<impl View> {
 }
 
 /// `tasks` is loaded only for the Tasks tab; `task_count` is the badge.
+/// `task_create` is the New task pop-up, when it is open.
 #[component]
 pub async fn screen(
     project: &Project,
@@ -104,6 +114,8 @@ pub async fn screen(
     tasks: &[Task],
     task_count: usize,
     section: Section,
+    #[default] q: Option<&str>,
+    #[default] task_create: Option<&TaskCreate>,
 ) -> Result<impl View> {
     let base = project_url(project.id());
     let items = section_tabs(&base, section, task_count, None);
@@ -112,13 +124,16 @@ pub async fn screen(
     // is plain text, and with no organization the kicker is just a label.
     let crumbs = trail(org, None, Crumb::label("Project"));
     let rows = project_rows(tasks);
+    let add = TaskHome::Project(project.id()).open_url(q);
+    let dialog = task_create.map(|create| Child::new(view! { task_modal(create: create) }));
     Ok(view! {
         frame(
             title: &parts,
+            dialog: dialog,
             page_header(title: &project.name, kicker: if org.is_some() { Kicker::Crumbs(&crumbs) } else { Kicker::Eyebrow("Project") }, edit_button(href: edit_url(&base)))
             tabs(label: "Sections", items: &items)
             if section == Section::Tasks {
-                tasks_tab(rows: &rows, caption: "Tasks in this project", add: Some(new_task_url(project.id())))
+                tasks_tab(rows: &rows, caption: "Tasks in this project", total: task_count, search: search(&base, q), add: Some(add))
             } else {
                 project_info(project: project)
             }

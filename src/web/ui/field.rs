@@ -84,7 +84,9 @@ async fn labelled(
 /// tasks are such values too: they are what the CLI addresses them by).
 /// `numeric` brings up the number keypad. `required` is announced and
 /// marked, but left to the server to enforce, so its message is the form's
-/// own.
+/// own. `autofocus` is for the first control of a pop-up (`modal.rs`).
+/// `beside` is a control on the input's line, after it (a button that fills
+/// the field in).
 #[component]
 pub async fn field(
     name: &str,
@@ -95,19 +97,30 @@ pub async fn field(
     #[default] required: bool,
     #[default] identifier: bool,
     #[default] numeric: bool,
+    #[default] autofocus: bool,
+    #[default] beside: Option<Child<'_>>,
 ) -> Result<impl View> {
     let id = field_id(name);
     let invalid = is_about(error, name);
     let described = described_by(&id, hint, invalid);
+    let input_id = id.clone();
+    let input = view! {
+        <input type="text" class="control" id=(input_id.as_str()) name=(name) value=(value)
+            if identifier { spellcheck="false" autocapitalize="off" autocorrect="off" }
+            if identifier { autocomplete="off" }
+            if numeric { inputmode="numeric" }
+            if autofocus { autofocus="" }
+            if required { aria-required="true" }
+            if invalid { aria-invalid="true" }
+            if !described.is_empty() { aria-describedby=(described.as_str()) }>
+    };
     Ok(view! {
         labelled(id: &id, label: label, hint: hint, required: required, invalid: invalid,
-            <input type="text" class="control" id=(id.as_str()) name=(name) value=(value)
-                if identifier { spellcheck="false" autocapitalize="off" autocorrect="off" }
-                if identifier { autocomplete="off" }
-                if numeric { inputmode="numeric" }
-                if required { aria-required="true" }
-                if invalid { aria-invalid="true" }
-                if !described.is_empty() { aria-describedby=(described.as_str()) }>
+            if let Some(beside) = beside {
+                <div class="field-row">(input)(beside)</div>
+            } else {
+                (input)
+            }
         )
     })
 }

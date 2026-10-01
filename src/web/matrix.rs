@@ -6,7 +6,7 @@
 //! route are here too.
 
 use super::Id;
-use super::board_cards::{CardCtx, Chips};
+use super::board_cards::CardCtx;
 use super::board_header::{BoardSection, board_header, title_parts};
 use super::board_page::{BoardPage, load_board};
 use super::drop::{Drop, back_or, drop_on};
@@ -23,10 +23,11 @@ use super::ui::pick_bar::pick_bar;
 use super::ui::pick_here::pick_here;
 use super::ui::quadrant::quadrant;
 use super::ui::side_lists::side_lists;
+use super::ui::side_rail::{side_fold, side_rail};
 use super::ui::sticky_head::sticky_head;
 use super::ui::task_card::{Edge, task_card};
 use super::ui::unplaced_list::unplaced_list;
-use super::url::{BOARDS, board_matrix_url};
+use super::url::{BOARDS, board_matrix_url, with_side};
 use crate::db::Table;
 use topcoat::{
     Result,
@@ -39,7 +40,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The id of the aside of the "Not placed" list (the jump link's target).
+/// The id of the aside of the "Backlog" list (the jump link's target).
 const NOT_PLACED: &str = "not-placed";
 
 /// The field a pick form adds to say it is a form post (see [`Drop`]).
@@ -51,6 +52,8 @@ struct MatrixQuery {
     pick: Option<String>,
     /// The task that was just moved (the note says so).
     moved: Option<String>,
+    /// `off`: the Backlog column is folded into its rail.
+    side: Option<String>,
 }
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -83,8 +86,9 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
         .as_ref()
         .map(|p| pick_words(p).title(&p.title))
         .unwrap_or_default();
+    let folded = query.side.as_deref() == Some("off");
     Ok(view! {
-        screen(page: &page, lead: &lead)
+        screen(page: &page, lead: &lead, folded: folded)
     })
 }
 
@@ -95,7 +99,7 @@ fn quadrant_of(task: &Picked) -> Option<usize> {
 
 /// Where a task is, in words: its quadrant, or the list.
 fn place_name(task: &Picked) -> &'static str {
-    quadrant_of(task).map_or("Not placed", |q| QUADRANTS[q].name)
+    quadrant_of(task).map_or("Backlog", |q| QUADRANTS[q].name)
 }
 
 /// The pick mode's words, as on the agenda: a task that is placed is moved,
@@ -111,7 +115,7 @@ fn pick_words(task: &Picked) -> PickWords {
 }
 
 #[component]
-async fn screen(page: &BoardPage<Matrix>, lead: &str) -> Result<impl View> {
+async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<impl View> {
     let BoardPage {
         board,
         colors,
@@ -121,11 +125,18 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str) -> Result<impl View> {
     } = page;
     let id = board.id();
     let ctx = CardCtx {
-        colors,
         picked: picked.as_ref().map(|p| p.id),
     };
     let base = board_matrix_url(id);
-    let links = PickLinks::new(&base);
+    // the links keep the column as it is; the fold and unfold links are the page
+    // itself (and its pick mode) with it folded or not
+    let kept = with_side(base.clone(), folded);
+    let links = PickLinks::new(&kept);
+    let here = match picked {
+        Some(p) => PickLinks::new(&base).pick(p.id),
+        None => base.clone(),
+    };
+    let fold = with_side(here.clone(), true);
     let style = colors.style();
     // where the picked task is now: its quadrant, if it is placed
     let now = picked.as_ref().and_then(quadrant_of);
@@ -146,7 +157,7 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str) -> Result<impl View> {
                 board_empty()
             } else {
                 board_root(post: base.as_str(), style: &style, note: &note,
-                    info_columns(
+                    info_columns(class: if folded { "side-folded" } else { "" },
                         <div>
                             if let Some(p) = picked {
                                 sticky_head(
@@ -157,7 +168,9 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str) -> Result<impl View> {
                                     )
                                 )
                             }
-                            jump_link(target: format!("#{NOT_PLACED}"), "Skip to tasks not placed")
+                            if !folded {
+                                jump_link(target: format!("#{NOT_PLACED}"), "Skip to the backlog")
+                            }
                             matrix_grid(
                                 for (n, (q, cards)) in QUADRANTS.iter().zip(matrix.placed.iter()).enumerate() {
                                     quadrant(id: q.id, target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
@@ -167,19 +180,24 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str) -> Result<impl View> {
                                             }
                                         }
                                         for card in cards.iter() {
-                                            task_card(card: ctx.view_chips(card, "Move", links.pick(card.task.id()), Chips::None), draggable: true)
+                                            task_card(card: ctx.view(card, "Move", links.pick(card.task.id())), draggable: true)
                                         }
                                     )
                                 }
                             )
                         </div>
-                        side_lists(id: NOT_PLACED, label: "Not placed",
-                            unplaced_list(id: "waiting-title", title: "Not placed", empty: "Everything is placed.", count: matrix.waiting.len(), target: "left", alone: true,
+                        if folded {
+                            side_rail(href: here.as_str(), label: "Backlog", total: matrix.waiting.len(), overdue: 0, target: "left")
+                        } else {
+                        side_lists(id: NOT_PLACED, label: "Backlog",
+                            side_fold(href: fold.as_str(), label: "Backlog")
+                            unplaced_list(id: "waiting-title", title: "Backlog", empty: "Everything is placed.", count: matrix.waiting.len(), target: "left", alone: true,
                                 for card in matrix.waiting.iter() {
                                     task_card(card: ctx.view(card, "Place", links.pick(card.task.id())), draggable: true)
                                 }
                             )
                         )
+                        }
                     )
                 )
             }
@@ -209,7 +227,7 @@ mod tests {
             (pick_words(&waiting).verb, pick_words(&waiting).action),
             ("Placing", "Place")
         );
-        assert_eq!(place_name(&waiting), "Not placed");
+        assert_eq!(place_name(&waiting), "Backlog");
         let placed = task(true, true, false);
         assert_eq!(pick_words(&placed), PickWords::MOVING);
         assert_eq!(quadrant_of(&placed), Some(2));
@@ -226,7 +244,7 @@ mod tests {
         let left = task(false, false, true);
         assert_eq!(
             moved_note(&left.title, place_name(&left)),
-            "Moved p/t to Not placed"
+            "Moved p/t to Backlog"
         );
     }
 

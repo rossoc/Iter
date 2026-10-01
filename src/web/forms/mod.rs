@@ -134,7 +134,7 @@ impl SettingsForm {
         }
     }
 
-    fn settings(&self) -> Settings {
+    pub fn settings(&self) -> Settings {
         Settings {
             github: checked(&self.github),
             tmux: checked(&self.tmux),

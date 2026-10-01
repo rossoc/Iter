@@ -20,7 +20,9 @@ pub mod drop_zone;
 pub mod empty_line;
 pub mod empty_state;
 pub mod field;
+pub mod filter_bar;
 pub mod folded_list;
+pub mod folder_list;
 pub mod form;
 pub mod form_actions;
 pub mod form_error;
@@ -33,6 +35,7 @@ mod ink;
 pub mod jump_link;
 pub mod labelled;
 pub mod matrix_grid;
+pub mod modal;
 pub mod notice;
 pub mod page_header;
 pub mod panel;
@@ -43,6 +46,8 @@ pub mod prose;
 pub mod quadrant;
 pub mod sessions_table;
 pub mod side_lists;
+pub mod side_rail;
+pub mod site_footer;
 pub mod status;
 pub mod sticky_head;
 pub mod tabs;
@@ -65,6 +70,7 @@ use topcoat::{
 static CSS: Asset = Asset::css(concat!(
     include_str!("../v2.css"),
     include_str!("frame.css"),
+    include_str!("site_footer.css"),
     include_str!("page_header.css"),
     include_str!("button.css"),
     include_str!("breadcrumb.css"),
@@ -76,16 +82,20 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("task_card.css"),
     include_str!("drop_zone.css"),
     include_str!("folded_list.css"),
+    include_str!("folder_list.css"),
     include_str!("jump_link.css"),
     include_str!("sticky_head.css"),
     include_str!("day_nav.css"),
     include_str!("hour_grid.css"),
     include_str!("side_lists.css"),
+    include_str!("side_rail.css"),
     include_str!("matrix_grid.css"),
     include_str!("quadrant.css"),
     include_str!("pick_bar.css"),
+    include_str!("pick_here.css"),
     include_str!("sessions_table.css"),
     include_str!("task_table.css"),
+    include_str!("filter_bar.css"),
     include_str!("tasks_tab.css"),
     include_str!("panel.css"),
     include_str!("columns.css"),
@@ -101,6 +111,7 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("group.css"),
     include_str!("form.css"),
     include_str!("form_actions.css"),
+    include_str!("modal.css"),
 ));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
