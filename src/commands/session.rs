@@ -39,8 +39,25 @@ fn session_new(
     let (project, mut task) = resolve_task(db, task_ref)?;
     let task_id = task.id();
 
-    if db.find_session_config_by_task(task_id)?.is_some() {
-        return Err(IterError::SessionAlreadyExists(task_ref.to_string()));
+    if let Some(existing) = db.find_session_config_by_task(task_id)? {
+        // A tmux restart or kill leaves the row behind with nothing left to
+        // tear down; only a row whose tmux session and worktree are both gone
+        // is dropped, so a live workspace still blocks a second `session new`.
+        let tmux_gone = existing
+            .tmux_session_name
+            .as_deref()
+            .is_some_and(|name| !tmux::session_exists(name));
+        let worktree_gone = existing
+            .worktree_path
+            .as_deref()
+            .is_none_or(|path| !std::path::Path::new(path).exists());
+        match (tmux_gone, worktree_gone, existing.id) {
+            (true, true, Some(id)) => {
+                db.delete::<SessionConfig>(id)?;
+                eprintln!("note: dropped a stale session for '{task_ref}' (its tmux session and worktree are gone)");
+            }
+            _ => return Err(IterError::SessionAlreadyExists(task_ref.to_string())),
+        }
     }
 
     let tmux_session_name = tmux_session_name(&project, &task);
