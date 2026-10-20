@@ -1,10 +1,11 @@
-//! The v2 design as single-feature components, one file per feature, each
-//! with its rules in a `.css` file next to it (scoped under `.v2`). A page
+//! The shared design as single-feature components, one file per feature, each
+//! with its rules in a `.css` file next to it (the frame wrapper is `.page`). A page
 //! assembles them; see `doc/web_components.md` for the API of each and the
 //! pages that use it.
 //!
-//! `/v2.css` serves `v2.css` (tokens, themes, links, focus) followed by every
-//! component sheet, concatenated at compile time: one cached request.
+//! `/style.css` serves `base.css` (tokens, themes, links, focus) followed by every
+//! component sheet and the report's `org.css`, concatenated at compile time:
+//! one cached request, linked in the document's `<head>` (`web/layout.rs`).
 
 // A component and its module share a name (`frame::frame`), so a component
 // is imported from its module; only the plain types and functions are
@@ -63,7 +64,7 @@ use topcoat::{
 };
 
 static CSS: Asset = Asset::css(concat!(
-    include_str!("../v2.css"),
+    include_str!("../base.css"),
     include_str!("frame.css"),
     include_str!("site_footer.css"),
     include_str!("page_header.css"),
@@ -103,13 +104,15 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("form.css"),
     include_str!("form_actions.css"),
     include_str!("modal.css"),
+    // last, as when it was its own sheet linked after this one
+    include_str!("../org.css"),
 ));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(stylesheet)
 }
 
-#[route(GET "/v2.css")]
+#[route(GET "/style.css")]
 async fn stylesheet(cx: &Cx) -> Result<Response> {
     CSS.respond(cx)
 }

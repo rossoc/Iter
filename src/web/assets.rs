@@ -1,4 +1,4 @@
-//! The static files (`/v2.css`, `/org.css`, `/board.js`, `/org.js`) are
+//! The static files (`/style.css`, `/board.js`, `/org.js`) are
 //! compiled in and only change with the binary. Each is served with an ETag
 //! (a hash of its text, computed once) and `Cache-Control: no-cache`, so the
 //! browser revalidates on every page and gets a 304 with no body instead of

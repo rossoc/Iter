@@ -58,7 +58,7 @@ async fn link_column(id: &str, title: &str, links: &[FooterLink], none: &str) ->
 #[component]
 pub async fn site_footer(data: &FooterData) -> Result<impl View> {
     Ok(view! {
-        <footer class="v2 site-foot">
+        <footer class="site-foot">
             <div class="foot-inner">
                 <div class="foot-brand">
                     <a class="foot-mark" href="/">"iter"</a>

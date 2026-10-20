@@ -1,7 +1,7 @@
 //! The organization page (`/org/{id}`): the route, the loading and the
 //! view of the Info and Tasks tabs. The Report tab is `org_report.rs`. The
-//! page's own rules are in `/org.css` (the report tab only); the shared ones
-//! are the components in `ui/`.
+//! page's own rules are in `org.css` (the report tab only, bundled into
+//! `/style.css`); the shared ones are the components in `ui/`.
 
 use super::Id;
 use super::assets::Asset;
@@ -38,16 +38,10 @@ use topcoat::{
 };
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.route(stylesheet).route(script).page(show)
+    builder.route(script).page(show)
 }
 
-static ORG_CSS: Asset = Asset::css(include_str!("org.css"));
 static ORG_JS: Asset = Asset::js(include_str!("org.js"));
-
-#[route(GET "/org.css")]
-async fn stylesheet(cx: &Cx) -> Result<Response> {
-    ORG_CSS.respond(cx)
-}
 
 #[route(GET "/org.js")]
 async fn script(cx: &Cx) -> Result<Response> {
@@ -186,7 +180,6 @@ pub async fn screen(
     Ok(view! {
         frame(
             title: &parts,
-            styles: &["/org.css"],
             dialog: dialog,
             page_header(title: &org.name, kicker: Kicker::Eyebrow("Organization"), edit_button(href: edit_url(&base)))
             tabs(label: "Sections", items: &items)

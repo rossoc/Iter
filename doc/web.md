@@ -1,7 +1,7 @@
 # iter serve: pages
 
 ## Shared frame (every page)
-- `ui::frame::frame`: skip link, top bar (brand link to Home, Board; the current section has `aria-current`; Home is the brand link), one `main`, the document title "part - part - iter" ("Error: " first on a refused form). One `h1` per page. The stylesheet is `/v2.css` (tokens, themes, every component sheet); a page may add its own (`/org.css`).
+- `ui::frame::frame`: skip link, top bar (brand link to Home, Board; the current section has `aria-current`; Home is the brand link), one `main`, the document title "part - part - iter" ("Error: " first on a refused form). One `h1` per page. The stylesheet is `/style.css` (`base.css` tokens and themes, every component sheet, `org.css`); a page may add its own (`/org.css`).
 - No sidebar and no design switch: the old design, its `?design=old` switch and `/style.css` were removed (`doc/web_cleanup.md`). `?design=` is now just an ignored query parameter.
 
 ## `/` Home
@@ -77,11 +77,11 @@
 GET `/`, `/org/{id}` (`?tab=info|tasks|report&from=&to=`), `/org/{id}/edit`, `/project/{id}` (`?tab=`), `/project/{id}/edit`, `/project/{id}/task/new` (redirects to the pop-up), `/task/{id}`, `/task/{id}/edit`, `/boards`, `/board/{id}` (`?date=&pick=`), `/board/{id}/matrix` (`?pick=`), `/board/{id}/info`, `/board/{id}/edit`, `/settings` (`?saved=1`), `/folders` (folder browser). POST to the four edit pages and `/settings` (save), `/board/{id}/schedule` and `/board/{id}/matrix` (drops), `/task/new`, `/org/{id}/project/quick`, `/board/{id}/project/quick` (the New task / New project pop-ups). A pop-up opens with `?new=task` (Tasks tab) or `?new=project` (Info; with `name` and `base_path` when the folder browser sends them back). A missing id is a 404 and a bad id a 400, both as a page built like the others (GET and HEAD); a URL no route matches keeps topcoat's bare 404.
 
 ## Assets
-- `/v2.css` (tokens plus every component sheet, `ui/*.css`), `/org.css` (the report tab only), `/board.js` (drag and drop on the two board pages), `/org.js` (the report's date auto-apply and copy button). Each is compiled in and served with an ETag (a hash of its text) and `Cache-Control: no-cache`: the browser revalidates and gets a 304 with no body.
+- `/style.css` (`base.css` tokens plus every component sheet, `ui/*.css`, and `org.css`, the report tab's rules), `/board.js` (drag and drop on the two board pages), `/org.js` (the report's date auto-apply and copy button). Each is compiled in and served with an ETag (a hash of its text) and `Cache-Control: no-cache`: the browser revalidates and gets a 304 with no body.
 
 ## Update: the footer
 
-Every page ends with a large footer (`ui/site_footer.rs`, loaded by `web/footer.rs` and rendered by the layout after the page, so it needs no change in `frame`): the wordmark, then columns for the organizations with their projects, the boards, the projects in no organization (only when there are some), a Settings column linking to `/settings` and About (GitHub link, version). Its root is `<footer class="v2 site-foot">` (it sits outside frame's `.v2`), with `min-height:0` and `content-visibility:auto`. It costs three queries (`grouped::<Organization>` and the boards); if they fail the footer is left out. The static 400/404 document (`errors.rs`) has none, and non-page routes (`/v2.css`, `/board.js`) are not wrapped by the layout.
+Every page ends with a large footer (`ui/site_footer.rs`, loaded by `web/footer.rs` and rendered by the layout after the page, so it needs no change in `frame`): the wordmark, then columns for the organizations with their projects, the boards, the projects in no organization (only when there are some), a Settings column linking to `/settings` and About (GitHub link, version). Its root is `<footer class="site-foot">` (it sits outside frame's `.page`), with `content-visibility:auto`. It costs three queries (`grouped::<Organization>` and the boards); if they fail the footer is left out. The static 400/404 document (`errors.rs`) has none, and non-page routes (`/style.css`, `/board.js`) are not wrapped by the layout.
 
 ### Task lists (filter bar and quick add)
 

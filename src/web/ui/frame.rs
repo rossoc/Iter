@@ -35,8 +35,8 @@ pub fn document_title(parts: &[&str], error: bool) -> String {
 /// not in the layout's `<head>`, because the layout renders before the page
 /// knows its own title; browsers take the first `<title>` of the document.
 /// `current` is the `href` of the nav item the page belongs to, if any
-/// (it gets `aria-current`). `styles` are the page's own stylesheets,
-/// loaded after `/v2.css`. `dialog` is a pop-up over the page (`modal.rs`):
+/// (it gets `aria-current`). The stylesheet is not linked here but in the
+/// layout's `<head>`, so the page is styled from its first paint. `dialog` is a pop-up over the page (`modal.rs`):
 /// the bar and the main pane are then `inert`, so only the dialog can be
 /// reached.
 #[component]
@@ -44,18 +44,13 @@ pub async fn frame(
     title: &[&str],
     #[default] error: bool,
     #[default] current: &str,
-    #[default] styles: &[&'static str],
     #[default] dialog: Option<Child<'_>>,
     child: Child<'_>,
 ) -> Result<impl View> {
     let covered = dialog.is_some();
     Ok(view! {
         <title>(document_title(title, error))</title>
-        <link rel="stylesheet" href="/v2.css">
-        for href in styles.iter() {
-            <link rel="stylesheet" href=(*href)>
-        }
-        <div class="v2">
+        <div class="page">
             <a class="skip" href="#main">"Skip to content"</a>
             <header class="bar" if covered { inert="" }>
                 <a class="brand" href="/">(icon(MARK)) "iter"</a>

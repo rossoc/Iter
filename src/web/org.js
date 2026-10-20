@@ -7,7 +7,7 @@
 // ("0002", "0020", ...). Only a four-digit year from 1970 counts as typed.
 // Copy: copies `data-copy` and says so for two seconds.
 (function () {
-  var form = document.querySelector(".v2 .range");
+  var form = document.querySelector(".range");
   if (!form) return;
   var timer, typing = false;
   var ready = function (v) { return v === "" || (/^\d{4}-\d\d-\d\d$/.test(v) && +v.slice(0, 4) >= 1970); };
@@ -18,7 +18,7 @@
     if (!typing && ready(e.target.value)) go();
   });
   // Over the calendar icon a click picks the whole date, so the whole date
-  // lights up (.whole, v2.css). The icon is the last 14px before the right
+  // lights up (.whole, base.css). The icon is the last 14px before the right
   // padding and border; 8px of its left margin count too.
   form.querySelectorAll("input[type=date]").forEach(function (input) {
     input.addEventListener("mousemove", function (e) {
@@ -37,7 +37,7 @@
 })();
 
 (function () {
-  var button = document.querySelector(".v2 .copy");
+  var button = document.querySelector(".copy");
   if (!button || !navigator.clipboard) return;
   var status = document.getElementById("copy-status");
   var timer;

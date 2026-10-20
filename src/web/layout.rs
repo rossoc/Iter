@@ -1,6 +1,7 @@
 //! The document every page shares (`<html>`, the viewport, the language, the
-//! footer after the page) and the script the board pages load. The stylesheet is linked by the page's
-//! `frame` (`ui/frame.rs`), which knows which extra sheets it needs.
+//! one stylesheet, the footer after the page) and the script the board pages
+//! load. The stylesheet is linked in `<head>`, so the browser has it before
+//! it paints the body: the page is never shown unstyled first.
 
 use super::assets::Asset;
 use super::footer::site_footer_for;
@@ -25,6 +26,7 @@ async fn root(slot: Slot<'_>) -> Result<impl View> {
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link rel="stylesheet" href="/style.css">
             </head>
             <body>(slot) site_footer_for()</body>
         </html>

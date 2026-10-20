@@ -1,46 +1,46 @@
 /* jump_link */
-.v2 .jump{display:inline-block;margin:10px 0 0;padding:4px 0;font-size:.8125rem;color:var(--muted);
+.jump{display:inline-block;margin:10px 0 0;padding:4px 0;font-size:.8125rem;color:var(--muted);
   text-decoration:underline;text-underline-offset:.2em}
-.v2 .jump:hover{color:var(--accent)}
+.jump:hover{color:var(--accent)}
 /* wide: the part is beside the day, so the link is only for the keyboard */
 @media (min-width:901px){
-  .v2 .jump:not(:focus){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .jump:not(:focus){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 }
-.v2 .jump[hidden]{display:none}
+.jump[hidden]{display:none}
 /* sticky_head */
 /* under the top bar (--bar-h); what it holds is the page's own business. The
-   heights the anchors must clear (--sticky-h) are the tokens in v2.css. */
-.v2 .sticky-head{position:sticky;top:var(--bar-h);z-index:5;background:var(--bg)}
-@media (max-width:900px),(max-height:600px){.v2 .sticky-head{position:static}}
+   heights the anchors must clear (--sticky-h) are the tokens in base.css. */
+.sticky-head{position:sticky;top:var(--bar-h);z-index:5;background:var(--bg)}
+@media (max-width:900px),(max-height:600px){.sticky-head{position:static}}
 /* side_lists */
 /* sticky beside the day, in a box of its own; scrolls inside itself when taller
    than the screen, and is plain when the screen is narrow or short (as the
    panel is). The padding leaves room for a card's shadow and lift, which the
    scrolling would clip. */
-.v2 .side{position:sticky;top:var(--stick-top);display:flex;flex-direction:column;gap:20px;
+.side{position:sticky;top:var(--stick-top);display:flex;flex-direction:column;gap:20px;
   max-height:calc(100vh - var(--stick-top) - 24px);overflow-y:auto;padding:12px;
   border:1px solid var(--line);border-radius:var(--r-lg)}
-.v2 .side[hidden]{display:none}
-.v2 .side:focus{outline:none}
-.v2 .side:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.v2 .side .labelled .label{margin-bottom:8px}
-@media (max-width:900px),(max-height:600px){.v2 .side{position:relative;max-height:none;overflow:visible}}
+.side[hidden]{display:none}
+.side:focus{outline:none}
+.side:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.side .labelled .label{margin-bottom:8px}
+@media (max-width:900px),(max-height:600px){.side{position:relative;max-height:none;overflow:visible}}
 /* matrix_grid */
 /* two columns when each gets --quad-min, else one: the basis is half the row
    (less half the gap), at least --quad-min, so three never fit on a row (no
    breakpoint: the matrix sits beside a list at some widths, so the viewport
    is the wrong measure) */
-.v2 .quad-grid{--quad-gap:16px;--quad-min:240px;display:flex;flex-wrap:wrap;gap:var(--quad-gap)}
-.v2 .quad-grid>.quad{flex:1 1 max(var(--quad-min),calc(50% - var(--quad-gap)/2))}
+.quad-grid{--quad-gap:16px;--quad-min:240px;display:flex;flex-wrap:wrap;gap:var(--quad-gap)}
+.quad-grid>.quad{flex:1 1 max(var(--quad-min),calc(50% - var(--quad-gap)/2))}
 /* columns */
 /* info: body on the left, aside on the right. A body alone (`.info-body`)
    keeps the width the body has beside the aside: main's --main-w less its
    padding (--main-pad-max a side at most), the aside and the gap. */
-.v2{--info-aside:320px;--info-gap:48px;--info-body:calc(var(--main-w) - 2*var(--main-pad-max) - var(--info-aside) - var(--info-gap))}
-.v2 .info{display:grid;grid-template-columns:minmax(0,1fr) var(--info-aside);gap:var(--info-gap);align-items:start}
-.v2 .info-body{max-width:var(--info-body)}
+:root{--info-aside:320px;--info-gap:48px;--info-body:calc(var(--main-w) - 2*var(--main-pad-max) - var(--info-aside) - var(--info-gap))}
+.info{display:grid;grid-template-columns:minmax(0,1fr) var(--info-aside);gap:var(--info-gap);align-items:start}
+.info-body{max-width:var(--info-body)}
 /* the aside folded into its rail (the agenda): the body takes the width */
-.v2{--rail-w:44px}
-.v2 .info.side-folded{grid-template-columns:minmax(0,1fr) var(--rail-w);gap:16px}
+:root{--rail-w:44px}
+.info.side-folded{grid-template-columns:minmax(0,1fr) var(--rail-w);gap:16px}
 /* stacked, the two parts sit closer than side by side */
-@media (max-width:900px){.v2 .info,.v2 .info.side-folded{grid-template-columns:minmax(0,1fr);gap:28px}}
+@media (max-width:900px){.info,.info.side-folded{grid-template-columns:minmax(0,1fr);gap:28px}}

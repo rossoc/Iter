@@ -21,5 +21,15 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_yaml = "0.9.34"
 thiserror = "2.0.20"
-topcoat = { version = "0.9", optional = true }
+# Only what the app uses (routes, views, the server). The defaults add
+# compression, cookies, sessions, fonts, assets and route discovery: about 120
+# more crates (brotli, h2's codecs, tungstenite, toml, time, rand), which
+# doubled a clean release build.
+topcoat = { version = "0.9", optional = true, default-features = false, features = ["router", "view", "serve"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net"], optional = true }
+
+# A release rebuild reuses what did not change: most of its time is LLVM
+# optimising the web views' async code, so without this every change costs
+# the whole crate again (75s -> 2-27s). The binary is a little less inlined.
+[profile.release]
+incremental = true

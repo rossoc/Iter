@@ -1,6 +1,6 @@
 /* The design shared by every page: tokens, themes, the links, focus, motion.
-   Rules are scoped under .v2 (the page wrapper `frame` writes). Component rules live next to
-   their component in ui/*.css and are concatenated into /v2.css (ui/mod.rs);
+   The frame wrapper is .page. Component rules live next to
+   their component in ui/*.css and are concatenated into /style.css (ui/mod.rs);
    page-only rules in that page's own file (org.css, ...). */
 
 /* the tokens that carry no color.
@@ -9,7 +9,7 @@
    static; min-width 901px is its other side), max-width 600px (tables turn
    into stacked rows, the hour label narrows), max-height 600px (a landscape
    phone, as the 900px), pointer:coarse (a finger needs --touch). */
-.v2{
+:root{
   --r-sm:4px;--r-md:8px;--r-lg:12px;--r-pill:999px;
   --ease-out:cubic-bezier(.22,1,.36,1);--fast:150ms;--med:250ms;--slow:350ms;
   --touch:44px;                 /* the least a finger target is high */
@@ -17,25 +17,21 @@
   --main-w:1180px;--main-pad-max:72px;--main-pad:clamp(20px,5vw,var(--main-pad-max));  /* main: its width and side padding */
   --measure:68ch                /* a line of prose */
 }
-/* the page color, on the root because the body (outside .v2) paints it too */
-:root{--bg:#fbfaf8}
-.v2{
+/* the page color, on the root because the body paints it too */
+:root{
   color-scheme:light dark;
-  --bg-2:#f4f2ee;--bg-3:#ebe8e2;--line:#e4e0d8;--line-2:#d3cec4;
+  --bg:#fbfaf8;--bg-2:#f4f2ee;--bg-3:#ebe8e2;--line:#e4e0d8;--line-2:#d3cec4;
   --control-line:#857f76;  /* the border of a form control: 3.5:1 on --bg-2 (1.4.11) */
   --fg:#1d1c1a;--muted:#6f6b64;--faint:#76716a;  /* decoration only (separators, icons): text is --muted, 4.7:1 on --bg-2 */
   --accent:#3b5bdb;--ok:#14783a;--danger:#b42318;--accent-tint:color-mix(in oklab,var(--accent) 12%,var(--bg));--on-accent:#fff;
   --font:"Inter","InterVariable",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace;
   --shadow:0 1px 0 rgb(0 0 0/.03),0 1px 3px rgb(0 0 0/.06);
-  --shadow-lift:0 10px 28px -12px rgb(0 0 0/.22);
-  min-height:100vh;background:var(--bg);color:var(--fg);
-  font:15px/1.55 var(--font);font-feature-settings:"cv11","ss01";
-  -webkit-font-smoothing:antialiased
+  --shadow-lift:0 10px 28px -12px rgb(0 0 0/.22)
 }
 /* dark: Tokyo Night, matching the terminal (~/.config/alacritty/alacritty.toml) */
-@media (prefers-color-scheme:dark){:root{--bg:#24283b}  /* primary.background */
-.v2{
+@media (prefers-color-scheme:dark){:root{
+  --bg:#24283b;          /* primary.background */
   --bg-2:#1f2335;--bg-3:#292e42;
   --line:#32344a;        /* normal.black */
   --line-2:#444b6a;      /* bright.black */
@@ -50,20 +46,23 @@
   --shadow:none;--shadow-lift:0 10px 28px -12px rgb(0 0 0/.55)
 }}
 *{box-sizing:border-box}
-/* the page behind .v2 (overscroll, short pages) */
-body{margin:0;background:var(--bg)}
+/* the body paints the page behind .page (overscroll, short pages) */
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:15px/1.55 var(--font);font-feature-settings:"cv11","ss01";
+  -webkit-font-smoothing:antialiased}
+.page{min-height:100vh}
 
-.v2 a{color:inherit;text-decoration:none}
-.v2 ::selection{background:var(--accent-tint)}
-.v2 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
-.v2 .i{width:1em;height:1em;flex:none;vertical-align:-.125em;fill:none;stroke:currentColor;
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accent-tint)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
+.i{width:1em;height:1em;flex:none;vertical-align:-.125em;fill:none;stroke:currentColor;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* the small-caps recipe: eyebrows, breadcrumbs, section labels, table headers */
-.v2 .label,.v2 th{margin:0;font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.v2 th{text-align:left;border-bottom:1px solid var(--line)}
-.v2 .mono{font-family:var(--mono);font-size:.8125rem}
-.v2 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.v2 code{font:.85em var(--mono);background:var(--bg-3);padding:1px 6px;border-radius:var(--r-sm)}
+.label,th{margin:0;font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+th{text-align:left;border-bottom:1px solid var(--line)}
+.mono{font-family:var(--mono);font-size:.8125rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+code{font:.85em var(--mono);background:var(--bg-3);padding:1px 6px;border-radius:var(--r-sm)}
 
 /* layout tokens, on html because scroll-padding-top can only be set there:
    --bar-h the sticky top bar; --sticky-h what a page keeps sticky under it (a
@@ -71,7 +70,7 @@ body{margin:0;background:var(--bg)}
    in it; none when the screen is narrow or short, where it is plain);
    --stick-top where a sticky aside sits. A link to a fragment lands clear of
    all of it. */
-html:has(.v2){--bar-h:52px;--sticky-head-h:76px;--pickbar-h:164px;--sticky-h:0px;--stick-top:calc(var(--bar-h) + 24px);
+html{--bar-h:52px;--sticky-head-h:76px;--pickbar-h:164px;--sticky-h:0px;--stick-top:calc(var(--bar-h) + 24px);
   scroll-padding-top:calc(var(--bar-h) + var(--sticky-h) + 16px)}
 html:has(.sticky-head){--sticky-h:var(--sticky-head-h)}
 html:has(.pickbar){--sticky-h:var(--pickbar-h)}
@@ -81,14 +80,14 @@ html:has(.pickbar){--sticky-h:var(--pickbar-h)}
    read as links without hover. On hover or focus an accent line slides in
    from the left over it, 2px, and on leave out to the right (the size
    animates; the anchor side flips). The nav bar and breadcrumb have no .u. */
-.v2{--line-w:2px}  /* whole pixels: a fractional width rounds differently per link */
-.v2 .u{background:linear-gradient(var(--control-line),var(--control-line)) no-repeat left bottom/100% 1px,
+:root{--line-w:2px}  /* whole pixels: a fractional width rounds differently per link */
+.u{background:linear-gradient(var(--control-line),var(--control-line)) no-repeat left bottom/100% 1px,
     linear-gradient(var(--accent),var(--accent)) no-repeat right bottom/0 var(--line-w);padding-bottom:2px;
   transition:background-size var(--slow) var(--ease-out),color var(--fast) var(--ease-out)}
-.v2 a:hover .u,.v2 a.u:hover,.v2 a:focus-visible .u,.v2 a.u:focus-visible{background-position:left bottom,left bottom;background-size:100% 1px,100% var(--line-w)}
-.v2 a.u:hover,.v2 a:hover>.u{color:var(--accent)}
+a:hover .u,a.u:hover,a:focus-visible .u,a.u:focus-visible{background-position:left bottom,left bottom;background-size:100% 1px,100% var(--line-w)}
+a.u:hover,a:hover>.u{color:var(--accent)}
 /* forced colors drop backgrounds, so the gradient line is gone: underline */
-@media (forced-colors:active){.v2 .u{text-decoration:underline}}
+@media (forced-colors:active){.u{text-decoration:underline}}
 
-@media (prefers-reduced-motion:reduce){.v2 *,.v2 *::before,.v2 *::after{transition-duration:0s!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:0s!important}}
 

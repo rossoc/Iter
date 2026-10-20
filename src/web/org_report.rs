@@ -1,8 +1,8 @@
 //! The organization's Report tab (`/org/{id}?tab=report`): the period asked
 //! for, the report loaded through the same function `iter org info` uses, and
 //! the view (period picker, summary, contents, one section per project). The
-//! page around it is `org.rs`; its rules are in `/org.css` and its script
-//! is `/org.js`.
+//! page around it is `org.rs`; its rules are in `org.css` (bundled into
+//! `/style.css`) and its script is `/org.js`.
 
 use super::session_lines::report_lines;
 use super::ui::empty_line::empty_line;
