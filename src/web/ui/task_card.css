@@ -1,7 +1,7 @@
 /* a task on a board. The left edge is the priority color (the board's
    Urgent and Important tag colors, set on the board root); the flags are
-   also chips with words, so color is never the only cue. The text sits on
-   --bg-2, not on those colors. */
+   also chips with words (.tcard-prio, first in .tcard-meta), so color is never
+   the only cue. The text sits on --bg-2, not on those colors. */
 .tcard{position:relative;display:flex;flex-direction:column;gap:6px;
   padding:10px 12px 10px calc(var(--edge-w) + 14px);background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md);
   box-shadow:var(--shadow)}
@@ -10,6 +10,9 @@
 .tcard-title{font-weight:550;line-height:1.35;overflow-wrap:anywhere}
 .tcard-title:hover{color:var(--accent)}
 .tcard-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:.8125rem;color:var(--muted)}
+/* a priority chip: a neutral outline with the word, not the tag color (the
+   default Urgent yellow is 1.37:1 on the card); the edge is the redundant cue */
+.tcard-prio{padding:0 7px;border:1px solid var(--line-2);border-radius:var(--r-pill);color:var(--fg);font-weight:550;line-height:1.6}
 /* the card's own link: at least 24px tall (28 here, 44 for a finger) */
 .tcard-act{margin-left:auto;padding:4px 8px;border-radius:var(--r-sm);text-decoration:underline;text-decoration-color:var(--control-line);
   text-underline-offset:.2em;transition:color var(--fast) var(--ease-out),text-decoration-color var(--fast) var(--ease-out)}

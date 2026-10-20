@@ -108,11 +108,27 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("../org.css"),
 ));
 
+static MODAL_JS: Asset = Asset::js(include_str!("modal.js"));
+static FILTER_BAR_JS: Asset = Asset::js(include_str!("filter_bar.js"));
+
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.route(stylesheet)
+    builder
+        .route(stylesheet)
+        .route(modal_script)
+        .route(filter_bar_script)
 }
 
 #[route(GET "/style.css")]
 async fn stylesheet(cx: &Cx) -> Result<Response> {
     CSS.respond(cx)
+}
+
+#[route(GET "/modal.js")]
+async fn modal_script(cx: &Cx) -> Result<Response> {
+    MODAL_JS.respond(cx)
+}
+
+#[route(GET "/filter_bar.js")]
+async fn filter_bar_script(cx: &Cx) -> Result<Response> {
+    FILTER_BAR_JS.respond(cx)
 }

@@ -13,7 +13,7 @@ use topcoat::{
 };
 
 /// The colored left edge: what the card's priority looks like at a glance.
-/// Never the only cue (a hidden phrase says the priority too).
+/// Never the only cue (a chip with the word says the priority too).
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Edge {
     None,
@@ -48,14 +48,15 @@ impl Edge {
 }
 
 impl Edge {
-    /// The priority in words, for a screen reader (the edge is a color, never
-    /// the only cue); `None` when there is no flag.
-    pub fn words(self) -> Option<&'static str> {
+    /// The flags in words, one per set flag, Urgent first: a chip each, so the
+    /// priority is read by sighted users too (the edge is a color, never the
+    /// only cue). Empty when there is no flag.
+    pub fn words(self) -> &'static [&'static str] {
         match self {
-            Edge::None => None,
-            Edge::Urgent => Some("Urgent"),
-            Edge::Important => Some("Important"),
-            Edge::Both => Some("Urgent, important"),
+            Edge::None => &[],
+            Edge::Urgent => &["Urgent"],
+            Edge::Important => &["Important"],
+            Edge::Both => &["Urgent", "Important"],
         }
     }
 }
@@ -102,10 +103,10 @@ pub async fn task_card(card: CardView<'_>, #[default] draggable: bool) -> Result
             if draggable { data-task=(card.id.to_string()) }
             if card.picked { aria-current="true" }>
             <a id=(title_id.as_str()) class="tcard-title" href=(card.href.as_str())>(card.title)</a>
-            if let Some(words) = card.edge.words() {
-                <span class="sr">(words)</span>
-            }
             <div class="tcard-meta">
+                for word in card.edge.words().iter() {
+                    <span class="tcard-prio">(*word)</span>
+                }
                 if card.picked {
                     <span class="tcard-moving">"Being moved"</span>
                 }
@@ -139,8 +140,9 @@ mod tests {
         assert_eq!(of(false, false), Edge::None);
         assert_eq!(Edge::Both.modifier(), "edge edge-both");
         assert_eq!(Edge::None.modifier(), "edge");
-        assert_eq!(Edge::Both.words(), Some("Urgent, important"));
-        assert_eq!(Edge::None.words(), None);
+        assert_eq!(Edge::Both.words(), ["Urgent", "Important"]);
+        assert_eq!(Edge::Urgent.words(), ["Urgent"]);
+        assert!(Edge::None.words().is_empty());
     }
 
     #[test]

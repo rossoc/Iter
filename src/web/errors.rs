@@ -5,15 +5,13 @@
 //! the drop script's `fetch` wants the status, not a document.
 
 use topcoat::{
-    Result,
     context::Cx,
     router::{
-        Body, Next, StatusCode,
+        Body, LayerFuture, Next, StatusCode,
         content::Html,
         error::{BadRequestError, NotFoundError},
-        layer,
         request::method,
-        response::{IntoResponse, Response},
+        response::IntoResponse,
     },
 };
 
@@ -24,25 +22,29 @@ fn document(title: &str, message: &str) -> String {
     )
 }
 
-#[layer("/")]
-pub async fn error_pages(cx: &Cx, body: Body, next: Next<'_>) -> Result<Response> {
-    let result = next.run(cx, body).await;
-    let Err(error) = result else { return result };
-    if !matches!(method(cx).as_str(), "GET" | "HEAD") {
-        return Err(error);
-    }
-    let error = match error.downcast_cloned::<NotFoundError>() {
-        Ok(_) => {
-            let page = document("Not found", "Nothing lives at this address.");
-            return (StatusCode::NOT_FOUND, Html(page)).into_response(cx);
+/// Registered as a pathless layer (see `web::router`), not with a path: a
+/// layer with a path never runs for a request that matched no route, and
+/// the unmatched `/nope` is exactly the 404 that needs this page.
+pub fn error_pages<'a>(cx: &'a Cx, body: Body, next: Next<'a>) -> LayerFuture<'a> {
+    Box::pin(async move {
+        let result = next.run(cx, body).await;
+        let Err(error) = result else { return result };
+        if !matches!(method(cx).as_str(), "GET" | "HEAD") {
+            return Err(error);
         }
-        Err(error) => error,
-    };
-    match error.downcast_cloned::<BadRequestError>() {
-        Ok(_) => {
-            let page = document("Bad request", "This address is not valid.");
-            (StatusCode::BAD_REQUEST, Html(page)).into_response(cx)
+        let error = match error.downcast_cloned::<NotFoundError>() {
+            Ok(_) => {
+                let page = document("Not found", "Nothing lives at this address.");
+                return (StatusCode::NOT_FOUND, Html(page)).into_response(cx);
+            }
+            Err(error) => error,
+        };
+        match error.downcast_cloned::<BadRequestError>() {
+            Ok(_) => {
+                let page = document("Bad request", "This address is not valid.");
+                (StatusCode::BAD_REQUEST, Html(page)).into_response(cx)
+            }
+            Err(error) => Err(error),
         }
-        Err(error) => Err(error),
-    }
+    })
 }

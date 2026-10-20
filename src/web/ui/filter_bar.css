@@ -25,8 +25,9 @@
 /* a bridge over the gap, so the pointer can move from the "?" into the tip */
 .filter-tip::before{content:"";position:absolute;left:0;right:0;top:-9px;height:9px}
 .filter-help:hover .filter-tip,.filter-help:focus-within .filter-tip{display:block}
+/* Escape closes the tip (filter_bar.js); it comes after the show rules, so it wins */
+.filter-help.dismissed .filter-tip{display:none}
 .filter-tip dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 16px;margin:0}
-.filter-tip dt code{color:var(--fg)}
 .filter-tip dd{margin:0}
 @media (forced-colors:active){.filter-tip{border:2px solid CanvasText}}
 .filter-count{margin:0 0 12px;font-size:.875rem;color:var(--muted)}

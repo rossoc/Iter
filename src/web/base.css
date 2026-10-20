@@ -23,7 +23,7 @@
   --bg:#fbfaf8;--bg-2:#f4f2ee;--bg-3:#ebe8e2;--line:#e4e0d8;--line-2:#d3cec4;
   --control-line:#857f76;  /* the border of a form control: 3.5:1 on --bg-2 (1.4.11) */
   --fg:#1d1c1a;--muted:#6f6b64;--faint:#76716a;  /* decoration only (separators, icons): text is --muted, 4.7:1 on --bg-2 */
-  --accent:#3b5bdb;--ok:#14783a;--danger:#b42318;--accent-tint:color-mix(in oklab,var(--accent) 12%,var(--bg));--on-accent:#fff;
+  --accent:#3b5bd3;--ok:#14783a;--danger:#b42318;--accent-tint:color-mix(in oklab,var(--accent) 12%,var(--bg));--on-accent:#fff;
   --font:"Inter","InterVariable",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace;
   --shadow:0 1px 0 rgb(0 0 0/.03),0 1px 3px rgb(0 0 0/.06);
@@ -62,7 +62,9 @@ a{color:inherit;text-decoration:none}
 th{text-align:left;border-bottom:1px solid var(--line)}
 .mono{font-family:var(--mono);font-size:.8125rem}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-code{font:.85em var(--mono);background:var(--bg-3);padding:1px 6px;border-radius:var(--r-sm)}
+/* the colour is set here, not left to inherit: a code chip in muted text would
+   be --muted on --bg-3 (4.33:1 in light) */
+code{font:.85em var(--mono);color:var(--fg);background:var(--bg-3);padding:1px 6px;border-radius:var(--r-sm)}
 
 /* layout tokens, on html because scroll-padding-top can only be set there:
    --bar-h the sticky top bar; --sticky-h what a page keeps sticky under it (a

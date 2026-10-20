@@ -18,7 +18,8 @@ pub fn project(name: &str) -> Project {
     p
 }
 
-/// [`project`] inserted into `db`: its id.
+/// [`project`] inserted into `db`: its id. (Only the web's tests use it.)
+#[cfg_attr(not(feature = "web"), allow(dead_code))]
 pub fn add_project(db: &Db, name: &str) -> i64 {
     db.insert(&project(name)).expect("project inserts")
 }

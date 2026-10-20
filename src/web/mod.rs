@@ -64,7 +64,7 @@ mod url;
 use crate::config::config;
 use crate::db::Db;
 use crate::error::Result;
-use topcoat::router::{Router, path_param};
+use topcoat::router::{LayerFn, Router, path_param};
 
 // The `{id}` of every route with one: a number, else a 400.
 path_param!(id: i64, error = bad_request);
@@ -84,7 +84,7 @@ fn router() -> Router {
     let builder = Router::builder()
         .layer(blocking::off_the_workers)
         .layer(guard::local_only)
-        .layer(errors::error_pages);
+        .layer(LayerFn::new(None::<&'static str>, errors::error_pages));
     [
         layout::register,
         home::register,

@@ -60,12 +60,14 @@ pub async fn screen(
 ) -> Result<impl View> {
     let add = Home::Board(board.id()).open_url();
     let dialog = project_create.map(|create| Child::new(view! { project_modal(create: create) }));
+    let refused = project_create.is_some_and(|c| c.error.is_some());
     let search = project_search(board_info_url(board.id()), q);
     let title = [BoardSection::Info.label(), board.name.as_str()];
     Ok(view! {
         frame(
             title: &title,
             current: BOARDS,
+            error: refused,
             dialog: dialog,
             board_header(board: board, section: BoardSection::Info)
             info_body(

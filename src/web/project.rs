@@ -126,9 +126,11 @@ pub async fn screen(
     let rows = project_rows(tasks);
     let add = TaskHome::Project(project.id()).open_url(q);
     let dialog = task_create.map(|create| Child::new(view! { task_modal(create: create) }));
+    let refused = task_create.is_some_and(|c| c.error.is_some());
     Ok(view! {
         frame(
             title: &parts,
+            error: refused,
             dialog: dialog,
             page_header(title: &project.name, kicker: if org.is_some() { Kicker::Crumbs(&crumbs) } else { Kicker::Eyebrow("Project") }, edit_button(href: edit_url(&base)))
             tabs(label: "Sections", items: &items)

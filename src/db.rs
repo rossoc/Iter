@@ -1,11 +1,13 @@
 use crate::config::config;
 use crate::error::{IterError, Result};
+#[cfg(feature = "web")]
+use crate::models::Organization;
 use crate::models::{
     Board, Card, Duration, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Session,
     SessionConfig, Tag, Task, TaskStatus, URGENT_TAG, task_ref,
 };
 use chrono::{NaiveDate, NaiveDateTime};
-use rusqlite::types::{Value, ValueRef};
+use rusqlite::types::{Type, Value, ValueRef};
 use rusqlite::{
     Connection, OptionalExtension, Params, Row, Transaction, TransactionBehavior, params,
     params_from_iter,
@@ -51,9 +53,8 @@ fn dt_to_str(dt: NaiveDateTime) -> String {
     dt.format(DATETIME_FMT).to_string()
 }
 
-fn str_to_dt(s: &str) -> NaiveDateTime {
+fn str_to_dt(s: &str) -> chrono::ParseResult<NaiveDateTime> {
     NaiveDateTime::parse_from_str(s, DATETIME_FMT)
-        .unwrap_or_else(|_| panic!("bad datetime in db: {s}"))
 }
 
 /// `ids` as a JSON array, for a `json_each` subquery: one bound variable
@@ -820,6 +821,90 @@ impl Db {
         )
     }
 
+    /// Every organization in name order, each with its first `limit`
+    /// projects by name and its total project count. An organization with no
+    /// projects comes back too, with none and a total of 0. One query: the
+    /// window functions count over every project, but only `limit` rows per
+    /// organization are read.
+    #[cfg(feature = "web")]
+    pub fn organizations_with_projects(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<(Organization, Vec<Project>, usize)>> {
+        let width = Project::COLUMNS.len();
+        let sql = format!(
+            "SELECT ranked.*, o.id, o.name
+             FROM organizations o
+             LEFT JOIN (
+                 SELECT id, {},
+                        COUNT(*) OVER (PARTITION BY organization_id) AS total,
+                        ROW_NUMBER() OVER (PARTITION BY organization_id ORDER BY name) AS rn
+                 FROM projects
+                 WHERE organization_id IS NOT NULL
+             ) ranked ON ranked.organization_id = o.id AND ranked.rn <= ?1
+             ORDER BY o.name, ranked.name",
+            Project::COLUMNS.join(", ")
+        );
+        // Columns: the project's `id` and columns (0..=width), its total, its
+        // row number, then the organization's id and name.
+        let rows = self.query_all(&sql, params![limit as i64], |row| {
+            let org = Organization {
+                id: Some(row.get(width + 3)?),
+                name: row.get(width + 4)?,
+                ..Organization::default()
+            };
+            // An organization without projects has NULLs where a project is.
+            let project = if row.get::<_, Option<i64>>(0)?.is_some() {
+                Some((
+                    Project::from_row(row)?,
+                    row.get::<_, i64>(width + 1)? as usize,
+                ))
+            } else {
+                None
+            };
+            Ok((org, project))
+        })?;
+        let mut groups: Vec<(Organization, Vec<Project>, usize)> = Vec::new();
+        for (org, project) in rows {
+            if groups.last().map(|g| g.0.id) != Some(org.id) {
+                groups.push((org, Vec::new(), 0));
+            }
+            if let Some((project, total)) = project {
+                let group = groups
+                    .last_mut()
+                    .expect("pushed for this organization above");
+                group.1.push(project);
+                group.2 = total;
+            }
+        }
+        Ok(groups)
+    }
+
+    /// The first `limit` projects in no organization, by name, and how many
+    /// there are in all.
+    #[cfg(feature = "web")]
+    pub fn loose_projects(&self, limit: usize) -> Result<(Vec<Project>, usize)> {
+        self.first_by_name("WHERE organization_id IS NULL", limit)
+    }
+
+    /// The first `limit` rows of `T` matching `filter` (a `WHERE` clause, or
+    /// empty), by name, and how many rows match in all. One query: the count
+    /// is a window over the matches, computed before the `LIMIT` cuts them.
+    #[cfg(feature = "web")]
+    pub fn first_by_name<T: Table>(&self, filter: &str, limit: usize) -> Result<(Vec<T>, usize)> {
+        let sql = format!(
+            "SELECT id, {}, COUNT(*) OVER () FROM {} {filter} ORDER BY name LIMIT ?1",
+            T::COLUMNS.join(", "),
+            T::NAME
+        );
+        let rows = self.query_all(&sql, params![limit as i64], |row| {
+            let total: i64 = row.get(T::COLUMNS.len() + 1)?;
+            Ok((T::from_row(row)?, total as usize))
+        })?;
+        let total = rows.first().map_or(0, |(_, total)| *total);
+        Ok((rows.into_iter().map(|(item, _)| item).collect(), total))
+    }
+
     /// Every project's id, name and the id of the `G` it is in, in name
     /// order: the three columns a checklist of projects needs, not whole rows.
     #[cfg(feature = "web")]
@@ -1228,8 +1313,19 @@ impl Column for bool {
 }
 
 impl Column for NaiveDateTime {
+    /// A malformed value fails the read rather than panicking, so one bad
+    /// row is an error page, not a crashed request. The message names the
+    /// value and its column, since that is all the person has to go on.
     fn from_sql(row: &Row, index: usize) -> rusqlite::Result<Self> {
-        Ok(str_to_dt(&row.get::<_, String>(index)?))
+        let text = row.get::<_, String>(index)?;
+        str_to_dt(&text).map_err(|error| {
+            let column = row.as_ref().column_name(index).unwrap_or("?");
+            rusqlite::Error::FromSqlConversionFailure(
+                index,
+                Type::Text,
+                format!("bad datetime '{text}' in column '{column}': {error}").into(),
+            )
+        })
     }
 
     fn to_sql(&self) -> Value {
@@ -1583,6 +1679,42 @@ mod tests {
                 "2025-03-05 23:59:00".to_string(),
             ]
         );
+    }
+
+    /// A stored timestamp that won't parse fails the read with an error
+    /// naming the value and column, instead of panicking. Reads that don't
+    /// touch the bad row still work.
+    #[test]
+    fn a_malformed_stored_timestamp_is_an_error_not_a_panic() {
+        let db = db();
+        let project = insert_project(&db, "proj");
+        let task = insert_task(&db, project, "t");
+        let session = Session {
+            id: None,
+            task_id: task,
+            start: dt("2025-03-04 12:00"),
+            end: None,
+            message: None,
+        };
+        db.insert(&session).expect("session inserts");
+        db.conn
+            .execute(
+                "UPDATE sessions SET start = 'not a date' WHERE task_id = ?1",
+                params![task],
+            )
+            .expect("corrupts the stored start");
+
+        let error = db
+            .sessions_for_task(task)
+            .expect_err("a malformed start is an error");
+        let message = error.to_string();
+        assert!(
+            message.contains("bad datetime 'not a date' in column 'start'"),
+            "{message}"
+        );
+
+        let projects = db.list::<Project>().expect("other reads still work");
+        assert_eq!(projects.len(), 1);
     }
 
     /// An absent `from` reaches back to the beginning of time rather than

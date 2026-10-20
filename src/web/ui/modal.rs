@@ -3,7 +3,9 @@
 //! on top. The page behind is `inert` (`frame`'s `dialog`), so focus, clicks
 //! and screen readers stay in the modal; closing is a link back to the URL
 //! without the flag -- the ✕, the form's Cancel, and the blurred backdrop
-//! itself. (No script means no Esc.)
+//! itself. Esc and the focus trap come from `/modal.js` (`frame` loads it
+//! with the dialog) when the script runs; without it, Esc does nothing and
+//! Tab can leave the pop-up for the site footer.
 
 use super::{X, icon};
 use topcoat::{

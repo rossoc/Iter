@@ -177,9 +177,12 @@ pub async fn screen(
         (None, Some(create)) => Some(Child::new(view! { project_modal(create: create) })),
         (None, None) => None,
     };
+    let refused = task_create.is_some_and(|c| c.error.is_some())
+        || project_create.is_some_and(|c| c.error.is_some());
     Ok(view! {
         frame(
             title: &parts,
+            error: refused,
             dialog: dialog,
             page_header(title: &org.name, kicker: Kicker::Eyebrow("Organization"), edit_button(href: edit_url(&base)))
             tabs(label: "Sections", items: &items)

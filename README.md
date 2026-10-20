@@ -633,3 +633,14 @@ cargo build --release
 
 The `iter serve` web UI is the default `web` feature and needs Rust 1.98+;
 `cargo build --release --no-default-features` builds the CLI alone.
+
+To have every commit check that both test builds still compile, enable the
+pre-commit hook in `.githooks/` once per clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+It runs `cargo test --no-run` with `--features web` and with
+`--no-default-features`, and blocks the commit if either fails (skip once with
+`git commit --no-verify`).

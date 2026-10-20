@@ -1,2 +1,28 @@
-/* a description: readable measure, line breaks kept, a long word wraps (also at 320px) */
-.desc{max-width:var(--measure);margin:0 0 40px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:1rem;line-height:1.65}
+/* a description: markdown (prose.rs) at a readable measure, a long word
+   wrapping (also at 320px). Blocks are spaced by their bottom margin only;
+   the first and last lose theirs, so the box's own margin is the gap. */
+.desc{max-width:var(--measure);margin:0 0 40px;font-size:1rem;line-height:1.65}
+.prose{overflow-wrap:anywhere}
+.prose>:first-child{margin-top:0}
+.prose>:last-child{margin-bottom:0}
+.prose p,.prose ul,.prose ol,.prose pre,.prose blockquote,.prose table{margin:0 0 .85em}
+.prose h3,.prose h4,.prose h5,.prose h6{margin:1.4em 0 .5em;color:var(--fg);font-weight:600;line-height:1.3}
+.prose h3{font-size:1.125em}
+.prose h4{font-size:1em}
+.prose h5,.prose h6{font-size:.9375em;color:var(--muted)}
+.prose ul,.prose ol{padding-left:1.4em}
+.prose li+li{margin-top:.25em}
+.prose li>ul,.prose li>ol{margin:.25em 0 0}
+/* a task list: the box in place of the bullet, at the line's height */
+.prose li:has(>input[type=checkbox]){list-style:none;margin-left:-1.4em}
+.prose li>input[type=checkbox]{width:1em;height:1em;margin:0 .5em 0 0;vertical-align:-.125em;accent-color:var(--accent)}
+.prose a{text-decoration:underline;text-decoration-color:var(--control-line);text-underline-offset:.2em;
+  transition:color var(--fast) var(--ease-out),text-decoration-color var(--fast) var(--ease-out)}
+.prose a:hover,.prose a:focus-visible{color:var(--accent);text-decoration-color:var(--accent)}
+.prose pre{padding:12px 14px;background:var(--bg-3);border-radius:var(--r-md);overflow-x:auto;line-height:1.5}
+.prose pre code{padding:0;background:none;font-size:.85em}
+.prose blockquote{padding-left:14px;border-left:3px solid var(--line-2);color:var(--muted)}
+.prose hr{margin:1.5em 0;border:0;border-top:1px solid var(--line)}
+.prose img{max-width:100%;height:auto}
+.prose table{border-collapse:collapse;font-size:.9375em}
+.prose th,.prose td{padding:6px 12px 6px 0;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}

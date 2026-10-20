@@ -27,12 +27,14 @@
 .project-list.compact li:hover{background:none}
 .project-list.compact a{font-size:.9375rem}
 /* the row that opens New project: the whole row is the link (the ::after
-   covers it), muted until hovered */
+   covers it). It looks hovered while no other row is (as the New task row) */
 .project-list li.add{position:relative;border-top:0;border-bottom:1px dashed var(--line-2);padding:0}
 .project-list .add-link{display:flex;flex-direction:row;align-items:center;gap:8px;padding:10px 14px 10px 4px;color:var(--muted);font-weight:500;
   transition:color var(--fast) var(--ease-out)}
 .project-list .add-link::after{content:"";position:absolute;inset:0}
 .project-list li.add:hover .add-link{color:var(--accent)}
+.project-list:not(:has(li:not(.add):hover)) li.add{background:var(--bg-2)}
+.project-list:not(:has(li:not(.add):hover)) .add-link{color:var(--accent)}
 .project-list .add-link:focus-visible{outline:none}
 .project-list li.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
 .project-list li.add + li{border-top:0}

@@ -4,7 +4,8 @@
 //!
 //! The "?" needs no script either: hovering it shows the syntax, and
 //! clicking it focuses it, which keeps the syntax shown (`:focus-within`)
-//! until a click anywhere else takes the focus away.
+//! until a click anywhere else takes the focus away. Escape closes the tip
+//! (`filter_bar.js`, which the bar emits after itself).
 
 use topcoat::{
     Result,
@@ -68,5 +69,7 @@ pub async fn filter_bar(search: &Search) -> Result<impl View> {
                 <a class="u filter-clear" href=(href.as_str())>"Clear"</a>
             }
         </form>
+        // Escape closes the tip (filter_bar.js); the bar works without it.
+        <script src="/filter_bar.js" defer=""></script>
     })
 }

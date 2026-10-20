@@ -10,7 +10,7 @@ members = ["macros"]
 [features]
 default = ["web"]
 # `iter serve`: the local browser UI. Off for a CLI-only build.
-web = ["dep:topcoat", "dep:tokio"]
+web = ["dep:topcoat", "dep:tokio", "dep:pulldown-cmark"]
 
 [dependencies]
 iter-macros = { path = "macros" }
@@ -26,6 +26,8 @@ thiserror = "2.0.20"
 # more crates (brotli, h2's codecs, tungstenite, toml, time, rand), which
 # doubled a clean release build.
 topcoat = { version = "0.9", optional = true, default-features = false, features = ["router", "view", "serve"] }
+# Descriptions are markdown (`web/ui/prose.rs`); only its HTML writer.
+pulldown-cmark = { version = "0.13.4", optional = true, default-features = false, features = ["html"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net"], optional = true }
 
 # A release rebuild reuses what did not change: most of its time is LLVM

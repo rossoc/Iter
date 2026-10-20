@@ -18,6 +18,8 @@
 .foot-sub li{margin:0 0 3px;font-size:.875rem}
 .foot-sub a{color:var(--muted);transition:color var(--fast) var(--ease-out)}
 .foot-sub a:hover,.foot-sub a:focus-visible{color:var(--accent)}
+.foot-more{color:var(--muted);transition:color var(--fast) var(--ease-out)}
+.foot-more:hover,.foot-more:focus-visible{color:var(--accent)}
 .foot-none,.foot-note{margin:0;font-size:.875rem;color:var(--muted)}
 .foot-note{margin-top:12px;overflow-wrap:anywhere}
 @media (max-width:900px){

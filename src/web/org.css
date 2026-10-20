@@ -54,7 +54,7 @@
 .proj>header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:6px}
 .proj h2{margin:0;font-size:1.375rem;font-weight:650;letter-spacing:-.02em}
 .proj>header .time{font-size:1rem;color:var(--fg)}
-.pdesc,.tdesc{margin:0 0 14px;max-width:var(--measure);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);font-size:.9375rem}
+.pdesc,.tdesc{margin:0 0 14px;max-width:var(--measure);color:var(--muted);font-size:.9375rem}  /* markdown: ui/prose.css */
 @media (prefers-reduced-motion:no-preference){.proj:target>header h2{animation:flash 1.6s var(--ease-out)}}
 @keyframes flash{0%,30%{color:var(--accent)}}
 

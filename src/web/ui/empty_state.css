@@ -3,4 +3,3 @@
   border:1px dashed var(--line-2);border-radius:var(--r-lg)}
 .empty .i{width:28px;height:28px;color:var(--faint);stroke-width:1.5}
 .empty p{margin:0}
-.empty code{color:var(--fg)}  /* --muted on the code chip's --bg-3 is 4.33:1 in light */

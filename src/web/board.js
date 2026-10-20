@@ -22,14 +22,28 @@
 // status region says "Moved <task> to <place>". One that failed says so and
 // leaves the page as it is.
 // The agenda's convenience, only when the page has the piece: the day's
-// title opens the browser's date picker (a change goes to that day). Without
-// script the date is a plain field with a hidden submit button. (The Not
-// scheduled column folds with a link, ?side=off: the server draws it.)
+// title opens the browser's date picker (a date picked there goes to that
+// day at once). A date typed into the field, or stepped with the arrow keys,
+// goes when the typing ends: on Enter (the form's hidden submit button), or
+// when focus leaves the form, not on each keystroke, since Chrome reports a
+// change after every digit of a year ("0002", "0020", ...). Only a complete
+// date with a four-digit year from 1970 counts. Without script the date is a
+// plain field with a hidden submit button. (The Not scheduled column folds
+// with a link, ?side=off: the server draws it.)
 (function () {
   var input = document.getElementById("day-input");
   var label = document.querySelector(".day-label");
-  if (input && label) {
+  if (input && label && input.form) {
+    var form = input.form;
+    var typing = false;
+    var ready = function (v) { return /^\d{4}-\d\d-\d\d$/.test(v) && +v.slice(0, 4) >= 1970; };
+    var go = function () {
+      typing = false;
+      if (form.requestSubmit) form.requestSubmit();
+      else form.submit();
+    };
     label.addEventListener("click", function (e) {
+      typing = false;
       if (typeof input.showPicker !== "function") return;
       e.preventDefault();
       try {
@@ -38,8 +52,12 @@
         input.focus();
       }
     });
-    input.addEventListener("change", function () {
-      if (input.value && input.form) input.form.submit();
+    input.addEventListener("keydown", function (e) { if (e.key !== "Enter" && e.key !== "Tab") typing = true; });
+    input.addEventListener("change", function () { if (!typing && ready(input.value)) go(); });
+    form.addEventListener("focusout", function (e) {
+      if (!typing || form.contains(e.relatedTarget)) return;
+      if (ready(input.value)) go();
+      else typing = false;
     });
   }
 })();
@@ -73,6 +91,69 @@
     here.searchParams.delete("moved");
     history.replaceState(null, "", here);
   }
+
+  // The scroll position across a board action. Each pick step (Schedule, Move,
+  // Place, Cancel), each form that posts and each drop leaves the page by a
+  // full load whose URL ends in #card-<task>, and the browser scrolls that card
+  // to the top of the window on every one. So before a board action leaves the
+  // page its scroll is kept in sessionStorage, and the next load of the same
+  // board on the same day (the key: path and ?date=) puts it back, once the
+  // browser has done its own fragment scroll. The #card-<task> hash stays, so
+  // the keyboard still lands on the card: it is focused without scrolling. A
+  // different board or day drops the entry; storage can be blocked, and then
+  // the page loads at the card as it did before.
+  var SCROLL = "board-scroll";
+
+  function key(url) {
+    url = new URL(url.href);
+    return url.pathname + "?" + (url.searchParams.get("date") || "");
+  }
+
+  function saveScroll() {
+    try {
+      sessionStorage.setItem(SCROLL, JSON.stringify({ key: key(location), y: window.scrollY }));
+    } catch (_) {
+      // Storage is blocked or full: the page still works without it.
+    }
+  }
+
+  var saved = null;
+  try {
+    saved = JSON.parse(sessionStorage.getItem(SCROLL));
+    sessionStorage.removeItem(SCROLL);
+  } catch (_) {
+    // Nothing saved, or storage is blocked.
+  }
+  if (saved && saved.key === key(location)) {
+    history.scrollRestoration = "manual";
+    var restore = function () {
+      requestAnimationFrame(function () {
+        window.scrollTo(0, saved.y);
+        var id = location.hash.slice(1);
+        var card = id.indexOf("card-") === 0 && document.getElementById(id);
+        if (card) card.focus({ preventScroll: true });
+      });
+    };
+    if (document.readyState === "complete") restore();
+    else window.addEventListener("load", restore);
+  }
+
+  // A link to a pick step (its #card- fragment or its pick= parameter) or a
+  // form that posts (the pick-here, unschedule and unplace forms, in the board
+  // or the pick bar) is a board action.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a) return;
+    var to = new URL(a.href);
+    if (to.pathname !== location.pathname) return;
+    if (to.hash.indexOf("#card-") === 0 || to.searchParams.has("pick")) saveScroll();
+  });
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (form.method !== "post") return;
+    if (board.contains(form) || (form.closest && form.closest(".pickbar"))) saveScroll();
+  });
 
   function fail(what) {
     var notes = board.querySelector(".board-notes");
@@ -132,6 +213,7 @@
         var next = new URL(location.href);
         next.searchParams.set("moved", task);
         next.hash = "card-" + task;
+        saveScroll();
         location.replace(next);
       })
       .catch(function () {

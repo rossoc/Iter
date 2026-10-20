@@ -17,6 +17,10 @@
 - Agenda: "Not scheduled" column toggle (remembered in `localStorage`); "Overdue" list for past open tasks, first in the column; big dashed "Schedule here" slot in pick mode; the day title opens a date picker.
 
 ### Changed
+- The "+ New task…" and "+ New project…" first rows look hovered while no other row of their list is, so the way to add one stands out until the pointer picks another row.
+- Descriptions (organization, project, task, board and the org report) are rendered as markdown, styled like the rest of the site. Raw HTML shows as text, only web, mail and relative links are kept, and headings sit under the page's own.
+- Development: `.githooks/pre-commit` builds the test suite with `--features web` and with `--no-default-features` (`cargo test --no-run`) before each commit; enable it with `git config core.hooksPath .githooks` (documented in README, skip with `--no-verify`).
+- Footer cost is bounded per page: it reads the first 8 projects of each organization, the first 8 loose projects and the first 8 boards (`footer::FOOTER_LIMIT`, three queries with window counts) instead of every project, and a longer list ends with a "N more…" link to its page. Before, every page listed the whole database in the footer.
 - Build: topcoat is built with only `router`, `view` and `serve` (no compression, cookies, sessions, fonts, assets or route discovery), so about 120 fewer crates are compiled and a clean release build takes half as long (412 s to 207 s). `[profile.release] incremental = true`: a release rebuild after one change takes 2-27 s instead of 75 s.
 - The stylesheet is linked once in `<head>` (no unstyled first paint) and `org.css` is bundled into it; `v2.css` is now `base.css`, served at `/style.css`, and the `.v2` scoping class is gone (the frame wrapper is `.page`, tokens sit on `:root`, text styles on `body`).
 - Web: the duplicated page and form scaffolding is shared. `ui::form::form_shell` wraps every form (edit pages, Settings, New task, New project). `board_page::board_screen` wraps the agenda and the matrix. `panel` takes a `Row` list. `button::add_link` is the "+ New…" row. `ui/layout.rs` holds the layout atoms and `ui/table.rs` the table cells. `board_empty`, `form_actions`, `add_button` and five layout files are gone, and `NO_PROJECTS` moved to `web/text.rs`. The rendered HTML is unchanged; `/v2.css` only moves the layout rules together.
@@ -32,6 +36,12 @@
 - Agenda hides tasks scheduled after today.
 
 ### Fixed
+- Form checkboxes sit centred on their label's first line (they sat a few pixels high: the input measured its own, smaller line height).
+- Board (agenda and matrix): Schedule, Move, Place, Cancel and the pick-mode forms no longer jump the page to the card. The scroll position is saved before the action and restored on the same board and day (`board.js`); the card is still focused for the keyboard, and the `#card-<task>` fragment stays.
+- Accessibility (review F1, F4, F12): task priority is a visible "Urgent"/"Important" chip in the card's meta line (`.tcard-prio`, was screen-reader text only; the edge stays as the redundant cue); inline `code` sets `--fg` in the one `code` rule (its per-component patches are gone); light `--accent` is `#3b5bd3` (4.70:1 on the accent tint, was 4.61).
+- Pop-ups and the filter tip: a dialog's skip link is inert too, Esc closes a pop-up (`ui/modal.js`) and Tab stays in it (focus trap, footer inert); Esc closes the filter bar's "?" tip (`ui/filter_bar.js`, WCAG 1.4.13); a refused New task / New project pop-up says "Error:" in the page title.
+- Agenda day field no longer reloads on every keystroke or arrow step: a typed or arrow-stepped date goes on Enter or when focus leaves the field, and only a complete date from 1970 counts (`board.js`, as the Report's range fields do); a picked date still goes at once.
+- A malformed stored timestamp is a read error naming the value and column (`db::str_to_dt`, `Column` for `NaiveDateTime`) instead of a panic, so one bad row no longer turns every page that reads it into a 500. Unmatched URLs (`/nope`) get the styled "Not found" page: `error_pages` is a pathless layer (`LayerFn::new(None, ..)`), since a path layer never runs for a miss.
 - Card border is visible after Cancel in pick mode (`.tcard:focus{outline:none}`).
 
 ### Notes

@@ -7,6 +7,7 @@
 use super::session_lines::report_lines;
 use super::ui::empty_line::empty_line;
 use super::ui::notice::notice;
+use super::ui::prose::description;
 use super::ui::sessions_table::sessions_table;
 use super::ui::status::status;
 use super::ui::{CLIPBOARD_CHECK, COPY, icon};
@@ -187,7 +188,7 @@ async fn task_section(t: &TaskReport) -> Result<impl View> {
                 <span class="time">(t.total.total_hhmm.clone())</span>
             </header>
             if let Some(d) = &t.description {
-                <p class="tdesc">(d.clone())</p>
+                description(text: d, class: "tdesc")
             }
             sessions_table(lines: &lines, caption: &caption)
         </article>
@@ -255,7 +256,7 @@ pub async fn report_view(base: &str, report: &Report, today: NaiveDate) -> Resul
                                 <span class="time">(p.total.total_hhmm.clone())</span>
                             </header>
                             if let Some(d) = &p.description {
-                                <p class="pdesc">(d.clone())</p>
+                                description(text: d, class: "pdesc")
                             }
                             for t in p.tasks.iter() {
                                 task_section(t: t)

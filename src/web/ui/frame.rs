@@ -37,8 +37,8 @@ pub fn document_title(parts: &[&str], error: bool) -> String {
 /// `current` is the `href` of the nav item the page belongs to, if any
 /// (it gets `aria-current`). The stylesheet is not linked here but in the
 /// layout's `<head>`, so the page is styled from its first paint. `dialog` is a pop-up over the page (`modal.rs`):
-/// the bar and the main pane are then `inert`, so only the dialog can be
-/// reached.
+/// the skip link, the bar and the main pane are then `inert`, so only the
+/// dialog can be reached, and `modal.js` is loaded for its Esc and focus trap.
 #[component]
 pub async fn frame(
     title: &[&str],
@@ -51,7 +51,7 @@ pub async fn frame(
     Ok(view! {
         <title>(document_title(title, error))</title>
         <div class="page">
-            <a class="skip" href="#main">"Skip to content"</a>
+            <a class="skip" href="#main" if covered { inert="" }>"Skip to content"</a>
             <header class="bar" if covered { inert="" }>
                 <a class="brand" href="/">(icon(MARK)) "iter"</a>
                 <nav aria-label="Main">
@@ -63,6 +63,9 @@ pub async fn frame(
             <main id="main" tabindex="-1" if covered { inert="" }>(child)</main>
             if let Some(dialog) = dialog {
                 (dialog)
+            }
+            if covered {
+                <script src="/modal.js" defer=""></script>
             }
         </div>
     })
