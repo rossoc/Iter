@@ -483,6 +483,12 @@ pub enum InternalCommand {
     /// Stops the clock of every task with a tmux session, then kills the
     /// tmux server -- tmux has no hook of its own for the server exiting
     KillServer,
+
+    /// Re-links iter's sessions to a freshly started tmux server: recreates
+    /// the tmux sessions it lacks, installs the hooks, closes the clocks the
+    /// previous server left open and starts those of attached sessions.
+    /// Meant for tmux-resurrect's `@resurrect-hook-post-restore-all`
+    Restore,
 }
 
 /// The tmux events `iter` tracks time on, each with exactly the arguments

@@ -431,6 +431,26 @@ off:
 bind D run-shell "~/bin/detach_with_message.sh '#{client_name}'"
 ```
 
+**After a reboot (tmux-resurrect/continuum).** Tasks are tied to tmux
+sessions by name, and resurrect restores the names, so the restored
+sessions are still the task's. What a restart loses is the hooks (they
+live in the tmux server), the clock that was running (nothing closed it,
+so it would count the time the machine was off), and any session newer
+than resurrect's last save. `iter internal restore` puts all three back:
+it recreates the missing tmux sessions in their worktree (or `base_path`),
+installs the hooks, closes a clock the previous server left open at the
+time of resurrect's last save (or deletes it, if there's no save after it
+started), and starts the clock of a session a client is already on. Run it
+after every restore:
+
+```tmux
+# above the `run '~/.tmux/plugins/tpm/tpm'` line
+set -g @resurrect-hook-post-restore-all '~/bin/iter internal restore'
+```
+
+It's safe to run by hand too: a clock the running server opened is left
+alone.
+
 `iter task done` closes any open session, kills the tmux session (if any),
 removes the worktree (if any), deletes its branch (if any), and deletes the
 session-config -- the task's past sessions aren't touched, since they're

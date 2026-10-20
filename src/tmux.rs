@@ -1,5 +1,7 @@
 use crate::error::Result;
 use crate::process::{Tmux, Tool};
+use chrono::{DateTime, Local, NaiveDateTime};
+use std::path::{Path, PathBuf};
 
 /// Creates a new detached tmux session named `name`, starting in `cwd`.
 pub fn create_session(name: &str, cwd: &str) -> Result<()> {
@@ -228,8 +230,56 @@ pub fn take_detach_message(session: &str) -> Option<String> {
 /// unwind path guards exactly this call.
 pub fn start_tracked_session(name: &str, cwd: &str) -> Result<()> {
     create_session(name, cwd)?;
+    install_hooks_for_current_exe()
+}
+
+/// [`ensure_hooks_installed`] pointing at the binary that's running now.
+pub fn install_hooks_for_current_exe() -> Result<()> {
     let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
     ensure_hooks_installed(&iter_bin)
+}
+
+/// When the running tmux server started, in local time; `None` when there
+/// is no server. What tells a clock this server opened from one a previous
+/// server left open -- a reboot takes the server down without
+/// `iter internal kill-server`, so nothing closed it.
+pub fn server_start_time() -> Option<NaiveDateTime> {
+    let epoch: i64 = Tmux
+        .output_trimmed(&["display-message", "-p", "#{start_time}"])?
+        .parse()
+        .ok()?;
+    let utc = DateTime::from_timestamp(epoch, 0)?;
+    Some(utc.with_timezone(&Local).naive_local())
+}
+
+/// When tmux-resurrect last saved, in local time: the modification time of
+/// the save `last` points at. That's the last moment the previous server is
+/// known to have been running, and so the best end there is for a clock it
+/// left open. `None` when resurrect has never saved.
+///
+/// The directory is found the way resurrect finds it: `@resurrect-dir`
+/// (with `~` and `$HOME` expanded), else `~/.tmux/resurrect` if it exists,
+/// else `$XDG_DATA_HOME/tmux/resurrect`.
+pub fn last_resurrect_save() -> Option<NaiveDateTime> {
+    let home = std::env::var("HOME").ok()?;
+    let dir = match Tmux.output_trimmed(&["show-options", "-gqv", "@resurrect-dir"]) {
+        Some(dir) if !dir.is_empty() => {
+            PathBuf::from(dir.replace("$HOME", &home).replace('~', &home))
+        }
+        _ => {
+            let legacy = Path::new(&home).join(".tmux/resurrect");
+            match legacy.is_dir() {
+                true => legacy,
+                false => std::env::var("XDG_DATA_HOME")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|_| Path::new(&home).join(".local/share"))
+                    .join("tmux/resurrect"),
+            }
+        }
+    };
+    // `metadata` follows the symlink, so this is the save itself.
+    let modified = std::fs::metadata(dir.join("last")).ok()?.modified().ok()?;
+    Some(DateTime::<Local>::from(modified).naive_local())
 }
 
 #[cfg(test)]

@@ -1,18 +1,20 @@
 //! The commands that belong to no entity: `iter comment`, `iter t`, and
-//! the hidden `iter internal hook`/`kill-server` that tmux invokes.
+//! the hidden `iter internal hook`/`kill-server`/`restore` that tmux invokes.
 
 use crate::app::App;
 use crate::args::{HookEvent, InternalCommand};
 use crate::commands::Run;
 use crate::error::Result;
 use crate::github;
+use crate::models::{Project, SessionConfig, Task};
 use crate::tmux;
 use crate::utils::clock::{
-    client_left_tmux_session, start_for_tmux_session, stop_for_tmux_session,
+    client_left_tmux_session, close_stale_session, start_for_tmux_session, stop_for_tmux_session,
 };
 use crate::utils::resolve::{
     current_session_task, linked_issue, require_github, resolve_task_or_current, task_display,
 };
+use std::path::Path;
 
 pub(crate) fn comment_cmd(app: &App, task_ref: Option<&str>, message: &str) -> Result<()> {
     let db = &app.db;
@@ -72,11 +74,70 @@ fn kill_server_cmd(app: &App) -> Result<()> {
     tmux::kill_server()
 }
 
+/// Puts iter back on a tmux server that has just come up -- after a reboot,
+/// typically, with tmux-resurrect restoring the sessions by name. The names
+/// are what tie a task to its tmux session, so they reconnect by
+/// themselves; what doesn't survive is everything else, and that's what
+/// this redoes. Safe to run again: each step leaves alone what's already
+/// right.
+fn restore_cmd(app: &App) -> Result<()> {
+    let db = &app.db;
+    let tracked: Vec<(SessionConfig, String)> = db
+        .list::<SessionConfig>()?
+        .into_iter()
+        .filter_map(|config| {
+            let name = config.tmux_session_name.clone()?;
+            Some((config, name))
+        })
+        .collect();
+
+    // A session newer than resurrect's last save isn't in it: start it
+    // again where `session new` did.
+    for (config, name) in &tracked {
+        if tmux::session_exists(name) {
+            continue;
+        }
+        let base_path = match db.get::<Task>(config.task_id)? {
+            Some(task) => db.get::<Project>(task.project_id)?.map(|p| p.base_path),
+            None => None,
+        };
+        let cwd = [config.worktree_path.clone(), base_path]
+            .into_iter()
+            .flatten()
+            .find(|path| Path::new(path).is_dir());
+        match cwd {
+            Some(cwd) => tmux::create_session(name, &cwd)?,
+            None => eprintln!("note: not recreating '{name}': its directory is gone"),
+        }
+    }
+
+    // `set-hook -g` lives in the server, so the old server's hooks went
+    // with it.
+    tmux::install_hooks_for_current_exe()?;
+
+    if let Some(server_start) = tmux::server_start_time() {
+        let last_save = tmux::last_resurrect_save();
+        for (config, _) in &tracked {
+            close_stale_session(db, config.task_id, server_start, last_save)?;
+        }
+    }
+
+    // resurrect puts the client back on its session before the hooks above
+    // existed, so that attach was never seen.
+    for (_, name) in &tracked {
+        if tmux::any_client_attached(name) {
+            start_for_tmux_session(db, name)?;
+        }
+    }
+    Ok(())
+}
+
 impl Run for InternalCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
             Self::Hook { event } => hook_cmd(app, event),
             Self::KillServer => kill_server_cmd(app),
+            Self::Restore => restore_cmd(app),
         }
     }
 }

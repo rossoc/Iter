@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- `iter internal restore` (for tmux-resurrect's `@resurrect-hook-post-restore-all`): after a reboot, recreates the tmux sessions of session-configs missing from the save, installs the hooks, closes clocks the previous tmux server left open at the last resurrect save (deletes them when there's no save after they started), and starts the clock of iter sessions a client is already on. New `tmux::server_start_time`, `tmux::last_resurrect_save`, `tmux::install_hooks_for_current_exe`, `clock::close_stale_session`.
 - Agenda: the side column is now called Unscheduled, and has a fourth list, Backlog, for tasks neither urgent nor important; the list before it ("Urgent, not scheduled") holds the urgent, not important ones. Overdue and all three lists put urgent, then in-progress tasks first. The Matrix's Not placed column is renamed Backlog, folds into a rail too and lists in-progress tasks first.
 - Agenda: the Not scheduled column is now called Backlog; its Important and Not important lists fold to their heading like Overdue.
 - Agenda Backlog: the "Important" and "Not important" lists each collapse to their heading (`<details>`, open by default, no JS; `unplaced_list` `collapsible`).
