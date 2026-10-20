@@ -70,6 +70,37 @@ fn close_open_session_at(
     Ok(Closed::Kept)
 }
 
+/// Closes `task_id`'s open session if a previous tmux server left it open:
+/// one that started before `server_start`, the running server's start. A
+/// reboot takes the server down without anything closing the clock, which
+/// otherwise runs on through the time the machine was off.
+///
+/// It's closed at `last_save` -- tmux-resurrect's last save, the last
+/// moment the old server is known to have been up -- when that falls
+/// between the two; otherwise the end is unknown and the session is
+/// deleted. A session this server opened is left alone (`Closed::Nothing`),
+/// which is what makes running this again harmless.
+pub(crate) fn close_stale_session(
+    db: &Db,
+    task_id: i64,
+    server_start: NaiveDateTime,
+    last_save: Option<NaiveDateTime>,
+) -> Result<Closed> {
+    let Some(open) = db.open_session_for_task(task_id)? else {
+        return Ok(Closed::Nothing);
+    };
+    if open.start >= server_start {
+        return Ok(Closed::Nothing); // this server's own clock
+    }
+    match last_save.filter(|&save| open.start < save && save < server_start) {
+        Some(end) => close_open_session_at(db, task_id, None, end),
+        None => {
+            db.delete::<Session>(open.id())?;
+            Ok(Closed::Discarded)
+        }
+    }
+}
+
 /// Starts the session of whatever task `tmux_session` belongs to. A name
 /// `iter` doesn't know is not an error: these hooks are global, so they
 /// fire for every tmux session on the server, not just ours.
@@ -196,5 +227,45 @@ mod tests {
         let again = close_open_session_at(&db, task_id, None, at(11, 0, 0)).expect("second close");
         assert_eq!(again, Closed::Nothing);
         assert_eq!(db.sessions_for_task(task_id).expect("lookup").len(), 1);
+    }
+
+    #[test]
+    fn a_stale_session_is_closed_at_the_last_save() {
+        let (db, task_id) = open_at_nine();
+        let closed = close_stale_session(&db, task_id, at(18, 0, 0), Some(at(11, 30, 0)))
+            .expect("closing succeeds");
+        assert_eq!(closed, Closed::Kept);
+        let sessions = db.sessions_for_task(task_id).expect("lookup");
+        assert_eq!(sessions[0].end, Some(at(11, 30, 0)));
+    }
+
+    /// No save, or one from before the session started: there's no known
+    /// end, so the session goes rather than running to the restart.
+    #[test]
+    fn a_stale_session_without_a_usable_save_is_deleted() {
+        for save in [None, Some(at(8, 0, 0))] {
+            let (db, task_id) = open_at_nine();
+            let closed =
+                close_stale_session(&db, task_id, at(18, 0, 0), save).expect("closing succeeds");
+            assert_eq!(closed, Closed::Discarded, "save {save:?}");
+            assert!(db.sessions_for_task(task_id).expect("lookup").is_empty());
+        }
+    }
+
+    #[test]
+    fn a_session_the_running_server_opened_is_left_alone() {
+        let (db, task_id) = open_at_nine();
+        let closed = close_stale_session(&db, task_id, at(8, 0, 0), Some(at(8, 30, 0)))
+            .expect("closing succeeds");
+        assert_eq!(closed, Closed::Nothing);
+        assert!(db.sessions_for_task(task_id).expect("lookup")[0].is_ongoing());
+    }
+
+    #[test]
+    fn a_stale_session_saved_within_a_minute_of_starting_is_deleted() {
+        let (db, task_id) = open_at_nine();
+        let closed = close_stale_session(&db, task_id, at(18, 0, 0), Some(at(9, 0, 30)))
+            .expect("closing succeeds");
+        assert_eq!(closed, Closed::Discarded);
     }
 }
