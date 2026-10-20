@@ -9,9 +9,6 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// What a card with no projects says.
-pub const NO_PROJECTS: &str = "No projects yet.";
-
 /// The cards of a page, as a responsive grid.
 #[component]
 pub async fn card_grid(child: Child<'_>) -> Result<impl View> {

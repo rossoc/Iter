@@ -65,32 +65,22 @@ pub async fn site_footer_for() -> Result<impl View> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::Settings;
+    use crate::fixtures;
 
     #[test]
     fn the_footer_lists_organizations_with_projects_boards_and_loose_projects() {
-        let db = Db::open(":memory:").expect("db");
+        let db = fixtures::db();
         let org = db
             .insert(&Organization {
                 name: "acme".into(),
                 ..Organization::default()
             })
             .expect("org");
-        let mut in_org = Project::template(&Settings::default());
-        in_org.name = "web".into();
-        in_org.base_path = "/tmp/web".into();
+        let mut in_org = fixtures::project("web");
         in_org.organization_id = Some(org);
         db.insert(&in_org).expect("project");
-        let mut loose = Project::template(&Settings::default());
-        loose.name = "solo".into();
-        loose.base_path = "/tmp/solo".into();
-        db.insert(&loose).expect("loose");
-        let board = db
-            .insert(&Board {
-                name: "week".into(),
-                ..Board::template()
-            })
-            .expect("board");
+        fixtures::add_project(&db, "solo");
+        let board = db.insert(&fixtures::board("week")).expect("board");
 
         let data = load(&db).expect("footer data");
         assert_eq!(data.orgs.len(), 1);

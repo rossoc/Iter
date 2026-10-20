@@ -1,45 +1,88 @@
-//! A titled aside of label / value rows: `panel` is the shell; `flag_row`,
-//! `text_row`, `chips_row` and `value_row` (any content) are the rows. What
-//! the rows say is the caller's business (see `web/settings_panel.rs`,
-//! `web/task_panel.rs`).
+//! A titled aside of label / value rows: `panel` draws the [`Row`]s it is
+//! given. What the rows say is the caller's business (see
+//! `web/settings_panel.rs`, `web/task_panel.rs`).
 
+use super::status::status;
 use super::tag_chips::{Chip, tag_chips};
 use super::{CHECK, MINUS, icon};
+use crate::models::TaskStatus;
 use topcoat::{
     Result,
-    view::{Child, View, component, view},
+    view::{View, component, view},
 };
 
-/// `id` is the heading's id, unique on the page (`aria-labelledby`). The
-/// child nodes are the rows.
+/// One row: its label, then its value.
+pub enum Row<'a> {
+    /// Text in mono, "Not set" when empty.
+    Text(&'a str, String),
+    /// Yes or no.
+    Flag(&'a str, bool),
+    /// Chips, "Not set" when there are none.
+    Chips(&'a str, Vec<Chip<'a>>),
+    /// A task's status.
+    Status(&'a str, TaskStatus),
+}
+
+impl Row<'_> {
+    fn label(&self) -> &str {
+        match self {
+            Row::Text(label, _)
+            | Row::Flag(label, _)
+            | Row::Chips(label, _)
+            | Row::Status(label, _) => label,
+        }
+    }
+
+    /// A text or chips row with nothing in it.
+    fn is_unset(&self) -> bool {
+        match self {
+            Row::Text(_, value) => value.is_empty(),
+            Row::Chips(_, chips) => chips.is_empty(),
+            Row::Flag(..) | Row::Status(..) => false,
+        }
+    }
+}
+
+/// `id` is the heading's id, unique on the page (`aria-labelledby`).
 #[component]
-pub async fn panel(id: &str, title: &str, child: Child<'_>) -> Result<impl View> {
+pub async fn panel(id: &str, title: &str, rows: &[Row<'_>]) -> Result<impl View> {
     Ok(view! {
         <aside class="panel" aria-labelledby=(id)>
             <h2 id=(id) class="label">(title)</h2>
-            <dl>(child)</dl>
+            <dl>
+                for r in rows.iter() {
+                    row(r: r)
+                }
+            </dl>
         </aside>
     })
 }
 
-/// One yes/no row.
 #[component]
-pub async fn flag_row(label: &str, on: bool) -> Result<impl View> {
+async fn row(r: &Row<'_>) -> Result<impl View> {
     Ok(view! {
-        <dt>(label)</dt>
+        <dt>(r.label())</dt>
+        if r.is_unset() {
+            unset()
+        } else {
+            match r {
+                Row::Text(_, value) => <dd class="mono">(value.as_str())</dd>,
+                Row::Flag(_, on) => flag(on: *on),
+                Row::Chips(_, chips) => <dd>tag_chips(chips: chips)</dd>,
+                Row::Status(_, state) => <dd>status(state: *state)</dd>,
+            }
+        }
+    })
+}
+
+/// The value of a yes/no row.
+#[component]
+async fn flag(on: bool) -> Result<impl View> {
+    Ok(view! {
         <dd class=(if on { "flag on" } else { "flag" })>
             (icon(if on { CHECK } else { MINUS }))
             (if on { "on" } else { "off" })
         </dd>
-    })
-}
-
-/// One row whose value is arbitrary content (the child nodes): a status.
-#[component]
-pub async fn value_row(label: &str, child: Child<'_>) -> Result<impl View> {
-    Ok(view! {
-        <dt>(label)</dt>
-        <dd>(child)</dd>
     })
 }
 
@@ -48,31 +91,5 @@ pub async fn value_row(label: &str, child: Child<'_>) -> Result<impl View> {
 async fn unset() -> Result<impl View> {
     Ok(view! {
         <dd class="unset"><span aria-hidden="true">"—"</span><span class="sr">"Not set"</span></dd>
-    })
-}
-
-/// One text row, "Not set" when `value` is empty.
-#[component]
-pub async fn text_row(label: &str, value: &str) -> Result<impl View> {
-    Ok(view! {
-        <dt>(label)</dt>
-        if value.is_empty() {
-            unset()
-        } else {
-            <dd class="mono">(value)</dd>
-        }
-    })
-}
-
-/// One row of chips, "Not set" when there are none.
-#[component]
-pub async fn chips_row(label: &str, chips: &[Chip<'_>]) -> Result<impl View> {
-    Ok(view! {
-        <dt>(label)</dt>
-        if chips.is_empty() {
-            unset()
-        } else {
-            <dd>tag_chips(chips: chips)</dd>
-        }
     })
 }

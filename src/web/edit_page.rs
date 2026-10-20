@@ -10,11 +10,9 @@
 use super::forms::{DESCRIPTION, NAME};
 use super::ui::breadcrumb::Crumb;
 use super::ui::field::{field, textarea};
-use super::ui::form::{form, required_note};
-use super::ui::form_actions::form_actions;
+use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::frame::frame;
-use super::ui::notice::error_box;
 use super::ui::page_header::{Kicker, page_header};
 use topcoat::{
     Result,
@@ -83,14 +81,10 @@ pub async fn edit_page(
             error: error.is_some(),
             current: current,
             page_header(title: &title, kicker: Kicker::Crumbs(crumbs))
-            form(
-                action: action,
-                error_box(error: error)
-                required_note()
+            form_shell(action: action, error: error, cancel: cancel, submit_label: submit_label,
                 field(name: NAME, label: "Name", value: name, required: true, identifier: true, error: error)
                 textarea(name: DESCRIPTION, label: "Description", value: description)
                 (child)
-                form_actions(cancel: cancel, submit_label: submit_label)
             )
         )
     })

@@ -107,25 +107,20 @@ pub fn parents_of(db: &Db, id: i64) -> topcoat::Result<Parents> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::Settings;
+    use crate::fixtures;
 
     #[test]
     fn parents_are_the_project_and_its_organization_only_when_it_has_one() {
-        let db = Db::open(":memory:").expect("db");
+        let db = fixtures::db();
         let org = Organization {
             name: "acme".into(),
             ..Organization::default()
         };
         let org_id = db.insert(&org).expect("org");
-        let mut p = Project::template(&Settings::default());
-        p.name = "in".into();
-        p.base_path = "/tmp/in".into();
+        let mut p = fixtures::project("in");
         p.organization_id = Some(org_id);
         let inside = db.insert(&p).expect("project");
-        p.name = "out".into();
-        p.base_path = "/tmp/out".into();
-        p.organization_id = None;
-        let outside = db.insert(&p).expect("project");
+        let outside = fixtures::add_project(&db, "out");
         let with = parents_of(&db, inside).expect("found");
         assert_eq!(with.org.map(|o| o.name), Some("acme".to_string()));
         let without = parents_of(&db, outside).expect("found");
@@ -135,24 +130,11 @@ mod tests {
 
     #[test]
     fn projects_are_grouped_under_their_own_group_and_the_rest_are_loose() {
-        let db = Db::open(":memory:").expect("db");
-        let work = db
-            .insert(&Board {
-                id: None,
-                name: "work".into(),
-                description: String::new(),
-            })
-            .expect("board");
-        db.insert(&Board {
-            id: None,
-            name: "home".into(),
-            description: String::new(),
-        })
-        .expect("board");
-        let mut p = Project::template(&Settings::default());
+        let db = fixtures::db();
+        let work = db.insert(&fixtures::board("work")).expect("board");
+        db.insert(&fixtures::board("home")).expect("board");
         for (name, board) in [("a", Some(work)), ("b", None)] {
-            p.name = name.into();
-            p.base_path = format!("/tmp/{name}");
+            let mut p = fixtures::project(name);
             p.board_id = board;
             db.insert(&p).expect("project");
         }
@@ -172,17 +154,9 @@ mod tests {
     #[test]
     fn unfinished_cards_come_urgent_first_then_by_label() {
         use crate::models::{Priority, Task, TaskStatus};
-        let db = Db::open(":memory:").expect("db");
-        let board = db
-            .insert(&Board {
-                id: None,
-                name: "b".into(),
-                description: String::new(),
-            })
-            .expect("board");
-        let mut p = Project::template(&Settings::default());
-        p.name = "p".into();
-        p.base_path = "/tmp/p".into();
+        let db = fixtures::db();
+        let board = db.insert(&fixtures::board("b")).expect("board");
+        let mut p = fixtures::project("p");
         p.board_id = Some(board);
         let project = db.insert(&p).expect("project");
         let mut ids = Vec::new();
@@ -214,7 +188,7 @@ mod tests {
 
     #[test]
     fn a_missing_board_is_an_error() {
-        let db = Db::open(":memory:").expect("db");
+        let db = fixtures::db();
         assert!(board_of(&db, 1).is_err());
     }
 }

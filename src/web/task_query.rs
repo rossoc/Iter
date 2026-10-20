@@ -215,6 +215,7 @@ impl TaskQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures;
 
     fn task(name: &str, status: TaskStatus, issue: Option<i64>) -> Task {
         let mut t = Task::template(1, String::new(), status);
@@ -323,11 +324,8 @@ mod tests {
 
     #[test]
     fn filter_reads_tags_only_when_asked() {
-        let db = Db::open(":memory:").expect("db");
-        let mut p = crate::models::Project::template(&crate::models::Settings::default());
-        p.name = "p".into();
-        p.base_path = "/tmp/p".into();
-        let project = db.insert(&p).expect("project");
+        let db = fixtures::db();
+        let project = fixtures::add_project(&db, "p");
         let mut ids = Vec::new();
         for n in ["one", "two"] {
             let mut t = Task::template(project, String::new(), TaskStatus::Queue);

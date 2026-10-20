@@ -4,7 +4,7 @@
 //! loses its start ("…/src/app"), never its end. The whole path is the
 //! tooltip.
 
-use super::{PLUS, icon};
+use super::button::add_link;
 use topcoat::{
     Result,
     view::{View, component, view},
@@ -39,7 +39,7 @@ pub async fn project_list(
     Ok(view! {
         <ul class=(if compact { "project-list compact" } else { "project-list" })>
             if let Some(href) = &add {
-                <li class="add"><a class="add-link" href=(href.as_str())>(icon(PLUS)) "New project\u{2026}"</a></li>
+                <li class="add">add_link(href: href, label: "New project\u{2026}")</li>
             }
             for p in items.iter() {
                 let (dirs, leaf) = split_leaf(&p.path);

@@ -15,11 +15,9 @@ use super::sections::Section;
 use super::task_fields::task_fields;
 use super::task_query::DEFAULT;
 use super::ui::field::{field, select, textarea};
-use super::ui::form::{form, required_note};
-use super::ui::form_actions::form_actions;
+use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::modal::modal;
-use super::ui::notice::error_box;
 use super::url::{NEW_TASK, org_url, page_url, project_url, tasks_list_url};
 use super::{now, open_db};
 use crate::config::config;
@@ -146,10 +144,7 @@ pub async fn task_modal(create: &TaskCreate) -> Result<impl View> {
     };
     Ok(view! {
         modal(id: "new-task-title", title: "New task", close: create.close(),
-            form(
-                action: NEW_TASK,
-                error_box(error: error)
-                required_note()
+            form_shell(action: NEW_TASK, error: error, cancel: create.close(), submit_label: "Create task",
                 if let Some(org) = &org {
                     <input type="hidden" name="org" value=(org.as_str())>
                 }
@@ -164,7 +159,6 @@ pub async fn task_modal(create: &TaskCreate) -> Result<impl View> {
                 field(name: NAME, label: "Name", value: &values.name, required: true, identifier: true, error: error, autofocus: error.is_none())
                 textarea(name: DESCRIPTION, label: "Description", value: &values.description)
                 task_fields(form: values, error: error)
-                form_actions(cancel: create.close(), submit_label: "Create task")
             )
         )
     })

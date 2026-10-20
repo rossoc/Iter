@@ -50,6 +50,7 @@ impl EditForm for BoardForm {
 mod tests {
     use super::*;
     use crate::error::IterError;
+    use crate::fixtures;
     use crate::web::forms::NAME;
 
     fn pairs(v: &[(&str, &str)]) -> Vec<(String, String)> {
@@ -76,8 +77,7 @@ mod tests {
         assert_eq!(dup.projects, [3, 5]);
         let board = Board {
             id: Some(1),
-            name: String::new(),
-            description: String::new(),
+            ..fixtures::board("")
         };
         let (board, valid) = form.apply(board);
         assert!(valid.is_ok());

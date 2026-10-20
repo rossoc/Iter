@@ -10,6 +10,8 @@ mod completion;
 mod config;
 mod db;
 mod error;
+#[cfg(test)]
+mod fixtures;
 mod git;
 mod github;
 mod md_edit;

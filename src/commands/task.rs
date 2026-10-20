@@ -289,14 +289,13 @@ fn task_weekday(app: &App, task_ref: Option<&str>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::Db;
     use crate::models::{Project, Session, TaskStatus};
     use chrono::NaiveDate;
 
     /// A command driven against an in-memory database -- no config file, no
     /// `$XDG_CONFIG_HOME`, no editor. This is what `App::with_db` is for.
     fn app() -> App {
-        App::with_db(Db::open(":memory:").expect("in-memory database opens"))
+        App::with_db(crate::fixtures::db())
     }
 
     fn seed(app: &App) -> (i64, i64) {

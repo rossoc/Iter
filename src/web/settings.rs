@@ -6,11 +6,10 @@
 use super::forms::SettingsForm;
 use super::settings_fields::settings_fields;
 use super::ui::field::{field, select};
-use super::ui::form::{form, required_note};
-use super::ui::form_actions::form_actions;
+use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::frame::frame;
-use super::ui::notice::{error_box, notice};
+use super::ui::notice::notice;
 use super::ui::page_header::{Kicker, page_header};
 use super::url::{SETTINGS, settings_saved_url};
 use crate::config::{Config, config_file, replace};
@@ -162,17 +161,13 @@ async fn screen(
             if saved {
                 notice(id: "saved", <span>"Saved."</span>)
             }
-            form(
-                action: SETTINGS,
-                error_box(error: error)
-                required_note()
+            form_shell(action: SETTINGS, error: error, cancel: "/",
                 field(name: EDITOR, label: "Editor", value: &values.editor, required: true, identifier: true, error: error,
                     hint: "Opened to fill in a new or edited organization, project or task in the terminal.")
                 field(name: PAUSE_GAP, label: "Pause gap (minutes)", value: &values.pause_gap, required: true, numeric: true, error: error,
                     hint: "A gap between sessions shorter than this counts as a pause within one span, not a break.")
                 select(name: STATUS, label: "Status of a new task", options: &statuses, current: &values.status, error: error)
                 settings_fields(s: &values.settings)
-                form_actions(cancel: "/")
             )
             <p class="foot-note">"Saved to " <code>(path.as_str())</code>": every key is written, and comments in the file are not kept. The database location is not changed here."</p>
         )

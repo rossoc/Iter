@@ -19,11 +19,9 @@ use super::org::{load as load_org, screen as org_screen};
 use super::sections::Section;
 use super::settings_fields::settings_fields;
 use super::ui::field::{field, textarea};
-use super::ui::form::{form, required_note};
-use super::ui::form_actions::form_actions;
+use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::modal::modal;
-use super::ui::notice::error_box;
 use super::ui::{FOLDER, icon};
 use super::url::{
     PICK_FOLDER, board_info_url, folders_url, org_url, page_url, quick_board_project_url,
@@ -172,11 +170,10 @@ pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
     let close = create.home.page_url();
     Ok(view! {
         modal(id: "new-project-title", title: "New project", close: close.as_str(),
-            form(
-                action: create.home.quick_url(),
-                <button class="sr" type="submit" tabindex="-1" aria-hidden="true">"Create project"</button>
-                error_box(error: error)
-                required_note()
+            form_shell(action: create.home.quick_url(), error: error, cancel: close.as_str(), submit_label: "Create project",
+                lead: Some(Child::new(view! {
+                    <button class="sr" type="submit" tabindex="-1" aria-hidden="true">"Create project"</button>
+                })),
                 <input type="hidden" name="home" value=(create.home.token())>
                 field(name: NAME, label: "Name", value: &create.name, required: true, identifier: true, error: error, autofocus: error.is_none())
                 textarea(name: DESCRIPTION, label: "Description", value: &create.description)
@@ -186,7 +183,6 @@ pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
                         <button class="button" type="submit" formaction=(PICK_FOLDER)>(icon(FOLDER)) "Choose\u{2026}"</button>
                     })))
                 settings_fields(s: &create.settings)
-                form_actions(cancel: close.as_str(), submit_label: "Create project")
             )
         )
     })

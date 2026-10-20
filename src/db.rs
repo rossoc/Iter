@@ -1281,6 +1281,7 @@ impl<T: Column> Column for Option<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::{board, db};
     use crate::models::Organization;
     use crate::models::Settings;
 
@@ -1330,11 +1331,6 @@ mod tests {
         for suffix in ["", "-wal", "-shm"] {
             let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
         }
-    }
-
-    /// A fresh, empty, migrated database held entirely in memory.
-    fn db() -> Db {
-        Db::open(":memory:").expect("in-memory database opens")
     }
 
     fn project(name: &str) -> Project {
@@ -2779,14 +2775,6 @@ mod tests {
             db.insert(&same),
             Err(IterError::NameTaken { kind: "task" })
         ));
-    }
-
-    fn board(name: &str) -> crate::models::Board {
-        crate::models::Board {
-            id: None,
-            name: name.to_string(),
-            description: String::new(),
-        }
     }
 
     /// Binding is the whole point of a board: a project put on one shows

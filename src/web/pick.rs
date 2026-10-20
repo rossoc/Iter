@@ -60,6 +60,7 @@ pub fn pick_fields(
 
 /// The links of the pick mode of the page at `base` (a board's agenda of a
 /// day, or its matrix): one place builds them, for both boards.
+#[derive(Clone)]
 pub struct PickLinks(String);
 
 impl PickLinks {

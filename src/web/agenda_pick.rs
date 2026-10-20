@@ -51,6 +51,7 @@ pub fn day_url(id: i64, day: NaiveDate, picked: Option<i64>) -> String {
 mod tests {
     use super::*;
     use crate::models::{Priority, parse_start_time};
+    use crate::web::url::with_side;
 
     fn day() -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 9, 29).unwrap()

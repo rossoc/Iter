@@ -8,6 +8,11 @@ use crate::db::{Db, Table};
 use crate::error::Result;
 use crate::models::{Card, TaskStatus, is_hex_color};
 
+/// The hint of a board with no unfinished task (`ui::empty_state`, with the
+/// board icon), on either page.
+pub const BOARD_EMPTY: &str =
+    "No unfinished tasks yet. Add some to the board's projects, and they show up here.";
+
 /// The colors of the Urgent and Important tags: what the board draws with.
 /// Both tags are seeded and can't be deleted.
 pub struct Colors {
@@ -46,6 +51,7 @@ pub const CLOCK_FMT: &str = "%H:%M";
 
 /// What every card of a board page shares: the task being moved (the pick
 /// mode), which its card marks.
+#[derive(Clone, Copy)]
 pub struct CardCtx {
     pub picked: Option<i64>,
 }

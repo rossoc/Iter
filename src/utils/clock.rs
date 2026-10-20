@@ -112,6 +112,7 @@ pub(crate) fn client_left_tmux_session(db: &Db, tmux_session: &str) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures;
     use crate::models::{Project, Task, TaskStatus};
     use chrono::NaiveDate;
 
@@ -125,7 +126,7 @@ mod tests {
     /// An in-memory database holding one task with a session open since
     /// 09:00:00. Returns the database and the task's id.
     fn open_at_nine() -> (Db, i64) {
-        let db = Db::open(":memory:").expect("in-memory database opens");
+        let db = fixtures::db();
         let project_id = db
             .insert(&Project {
                 id: None,

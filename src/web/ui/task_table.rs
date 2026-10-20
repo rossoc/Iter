@@ -1,7 +1,8 @@
 //! A table of tasks: name, optionally project, status, issue.
 
+use super::button::add_link;
 use super::status::status;
-use super::{PLUS, icon};
+use super::table::{cell, col_head};
 use crate::models::TaskStatus;
 use topcoat::{
     Result,
@@ -33,8 +34,7 @@ pub struct TaskRow<'a> {
 /// New task pop-up (`modal.rs`). The caller shows its own empty state
 /// instead of an empty table (see `tasks_tab`).
 ///
-/// The `role`s repeat the native table semantics: on narrow screens the rows
-/// are laid out as a grid, and browsers then drop a table's semantics.
+/// The `role`s repeat the native table semantics (see `table.rs`).
 #[component]
 pub async fn task_table(
     rows: &[TaskRow<'_>],
@@ -42,48 +42,46 @@ pub async fn task_table(
     #[default] add: Option<String>,
 ) -> Result<impl View> {
     let project_column = rows.iter().any(|r| r.project.is_some());
-    let columns = if project_column { 4 } else { 3 };
+    let columns = if project_column { "4" } else { "3" };
     Ok(view! {
         <table class="tasks" role="table">
             <caption class="sr">(caption)</caption>
             <thead role="rowgroup">
                 <tr role="row">
-                    <th scope="col" role="columnheader">"Task"</th>
+                    col_head("Task")
                     if project_column {
-                        <th scope="col" role="columnheader">"Project"</th>
+                        col_head("Project")
                     }
-                    <th scope="col" role="columnheader">"Status"</th>
-                    <th scope="col" role="columnheader">"Issue"</th>
+                    col_head("Status")
+                    col_head("Issue")
                 </tr>
             </thead>
             <tbody role="rowgroup">
                 if let Some(href) = &add {
                     <tr class="add" role="row">
-                        <td role="cell" colspan=(columns.to_string())>
-                            <a class="add-link" href=(href.as_str())>(icon(PLUS)) "New task\u{2026}"</a>
-                        </td>
+                        cell(colspan: columns, add_link(href: href, label: "New task\u{2026}"))
                     </tr>
                 }
                 for row in rows.iter() {
                     <tr role="row">
-                        <td role="cell"><a class="u" href=(row.href.as_str())>(row.name)</a></td>
+                        cell(<a class="u" href=(row.href.as_str())>(row.name)</a>)
                         if project_column {
-                            <td class="project" role="cell">
+                            cell(class: "project",
                                 if let Some(p) = &row.project {
                                     <a class="u muted" href=(p.href.as_str())>(p.name)</a>
                                 }
-                            </td>
+                            )
                         }
-                        <td role="cell">status(state: row.status)</td>
+                        cell(status(state: row.status))
                         // Empty issue: "No issue" for screen readers; the
                         // cell stays, so the row keeps its columns.
-                        <td class="mono" role="cell">
+                        cell(class: "mono",
                             if row.issue.is_empty() {
                                 <span class="sr">"No issue"</span>
                             } else {
                                 (row.issue.as_str())
                             }
-                        </td>
+                        )
                     </tr>
                 }
             </tbody>

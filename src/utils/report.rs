@@ -156,7 +156,8 @@ pub(crate) fn project_reports(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Settings, TaskStatus};
+    use crate::fixtures;
+    use crate::models::TaskStatus;
 
     fn dt(s: &str) -> NaiveDateTime {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").expect("fixture datetime")
@@ -189,9 +190,7 @@ mod tests {
     }
 
     fn project(db: &Db, name: &str) -> Project {
-        let mut p = Project::template(&Settings::default());
-        p.name = name.into();
-        p.base_path = format!("/tmp/{name}");
+        let mut p = fixtures::project(name);
         p.description = format!("about {name}");
         let id = db.insert(&p).expect("project");
         db.get::<Project>(id).expect("read").expect("row")
@@ -217,7 +216,7 @@ mod tests {
 
     #[test]
     fn the_batched_report_equals_the_per_project_one() {
-        let db = Db::open(":memory:").expect("db");
+        let db = fixtures::db();
         // Three projects (the middle one is idle), tasks created out of
         // alphabetical order, and overlapping sessions across projects.
         let (a, b, c) = (

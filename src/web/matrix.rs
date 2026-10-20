@@ -7,27 +7,20 @@
 
 use super::Id;
 use super::board_cards::CardCtx;
-use super::board_header::{BoardSection, board_header, title_parts};
-use super::board_page::{BoardPage, load_board};
+use super::board_header::{BoardSection, title_parts};
+use super::board_page::{BoardPage, board_screen, load_board};
 use super::drop::{Drop, back_or, drop_on};
 use super::pick::{PickLinks, PickWords, Picked, moved_note, pick_fields};
 use super::quadrants::{Matrix, QUADRANTS, place, quadrant_index, split};
-use super::ui::board_empty::board_empty;
-use super::ui::board_root::board_root;
 use super::ui::button::post_button;
-use super::ui::columns::info_columns;
-use super::ui::frame::frame;
-use super::ui::jump_link::jump_link;
-use super::ui::matrix_grid::matrix_grid;
+use super::ui::layout::{jump_link, matrix_grid, side_lists, sticky_head};
 use super::ui::pick_bar::pick_bar;
 use super::ui::pick_here::pick_here;
 use super::ui::quadrant::quadrant;
-use super::ui::side_lists::side_lists;
 use super::ui::side_rail::{side_fold, side_rail};
-use super::ui::sticky_head::sticky_head;
 use super::ui::task_card::{Edge, task_card};
 use super::ui::unplaced_list::unplaced_list;
-use super::url::{BOARDS, board_matrix_url, with_side};
+use super::url::{board_matrix_url, with_side};
 use crate::db::Table;
 use topcoat::{
     Result,
@@ -37,7 +30,7 @@ use topcoat::{
         content::{Form, Json},
         page, path_param, query_params, route,
     },
-    view::{View, component, view},
+    view::{Child, View, component, view},
 };
 
 /// The id of the aside of the "Backlog" list (the jump link's target).
@@ -148,59 +141,50 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
         .as_ref()
         .map(|m| moved_note(&m.title, place_name(m)))
         .unwrap_or_default();
+    // the side's view owns its own (`ctx` is copied)
+    let side_links = links.clone();
     Ok(view! {
-        frame(
-            title: &title,
-            current: BOARDS,
-            board_header(board: board, section: BoardSection::Matrix)
-            if matrix.is_empty() {
-                board_empty()
-            } else {
-                board_root(post: base.as_str(), style: &style, note: &note,
-                    info_columns(class: if folded { "side-folded" } else { "" },
-                        <div>
-                            if let Some(p) = picked {
-                                sticky_head(
-                                    pick_bar(verb: verb, title: &p.title, state: state, prompt: "Choose a quadrant.", cancel: links.cancel(p.id),
-                                        if now.is_some() {
-                                            post_button(action: base.as_str(), fields: pick_fields(p.id, "left", Some(FORM_POST)), small: true, "Unplace")
-                                        }
-                                    )
-                                )
+        board_screen(board: board, section: BoardSection::Matrix, title: &title, post: &base, style: &style, note: &note, folded: folded, empty: matrix.is_empty(),
+            side: Child::new(view! {
+                if folded {
+                    side_rail(href: here.as_str(), label: "Backlog", total: matrix.waiting.len(), overdue: 0, target: "left")
+                } else {
+                    side_lists(id: NOT_PLACED, label: "Backlog",
+                        side_fold(href: fold.as_str(), label: "Backlog")
+                        unplaced_list(id: "waiting-title", title: "Backlog", empty: "Everything is placed.", count: matrix.waiting.len(), target: "left", alone: true,
+                            for card in matrix.waiting.iter() {
+                                task_card(card: ctx.view(card, "Place", side_links.pick(card.task.id())), draggable: true)
                             }
-                            if !folded {
-                                jump_link(target: format!("#{NOT_PLACED}"), "Skip to the backlog")
-                            }
-                            matrix_grid(
-                                for (n, (q, cards)) in QUADRANTS.iter().zip(matrix.placed.iter()).enumerate() {
-                                    quadrant(id: q.id, target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
-                                        if let Some(p) = picked {
-                                            if now != Some(n) {
-                                                pick_here(action: base.as_str(), fields: pick_fields(p.id, q.target, Some(FORM_POST)), verb: action, at: q.name)
-                                            }
-                                        }
-                                        for card in cards.iter() {
-                                            task_card(card: ctx.view(card, "Move", links.pick(card.task.id())), draggable: true)
-                                        }
-                                    )
-                                }
-                            )
-                        </div>
-                        if folded {
-                            side_rail(href: here.as_str(), label: "Backlog", total: matrix.waiting.len(), overdue: 0, target: "left")
-                        } else {
-                        side_lists(id: NOT_PLACED, label: "Backlog",
-                            side_fold(href: fold.as_str(), label: "Backlog")
-                            unplaced_list(id: "waiting-title", title: "Backlog", empty: "Everything is placed.", count: matrix.waiting.len(), target: "left", alone: true,
-                                for card in matrix.waiting.iter() {
-                                    task_card(card: ctx.view(card, "Place", links.pick(card.task.id())), draggable: true)
-                                }
-                            )
                         )
+                    )
+                }
+            }),
+            if let Some(p) = picked {
+                sticky_head(
+                    pick_bar(verb: verb, title: &p.title, state: state, prompt: "Choose a quadrant.", cancel: links.cancel(p.id),
+                        if now.is_some() {
+                            post_button(action: base.as_str(), fields: pick_fields(p.id, "left", Some(FORM_POST)), small: true, "Unplace")
                         }
                     )
                 )
             }
+            if !folded {
+                jump_link(target: format!("#{NOT_PLACED}"), "Skip to the backlog")
+            }
+            matrix_grid(
+                for (n, (q, cards)) in QUADRANTS.iter().zip(matrix.placed.iter()).enumerate() {
+                    quadrant(id: q.id, target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
+                        if let Some(p) = picked {
+                            if now != Some(n) {
+                                pick_here(action: base.as_str(), fields: pick_fields(p.id, q.target, Some(FORM_POST)), verb: action, at: q.name)
+                            }
+                        }
+                        for card in cards.iter() {
+                            task_card(card: ctx.view(card, "Move", links.pick(card.task.id())), draggable: true)
+                        }
+                    )
+                }
+            )
         )
     })
 }

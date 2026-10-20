@@ -143,8 +143,7 @@ impl EditForm for TaskForm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::Project;
-    use crate::models::Settings;
+    use crate::fixtures;
     use crate::web::forms::NAME;
 
     fn task_form(name: &str, issue: &str, status: &str) -> TaskForm {
@@ -180,7 +179,7 @@ mod tests {
         form = task_form("x", "", "wip");
         form.duration = "1h".into();
         assert_eq!(TaskForm::field(&error(form)), Some(TaskForm::DURATION));
-        let db = crate::db::Db::open(":memory:").expect("db");
+        let db = fixtures::db();
         let unknown = db
             .ids_by_name::<Tag>(&["typo".to_string()])
             .expect_err("unknown tag");
@@ -213,11 +212,8 @@ mod tests {
     /// (bad issue, unknown tag) leaves no task behind.
     #[test]
     fn create_writes_the_task_with_its_tags_or_nothing() {
-        let db = crate::db::Db::open(":memory:").expect("db");
-        let mut p = Project::template(&Settings::default());
-        p.name = "p".into();
-        p.base_path = "/tmp/p".into();
-        let project = db.insert(&p).expect("project");
+        let db = fixtures::db();
+        let project = fixtures::add_project(&db, "p");
         let template = || Task::template(project, String::new(), TaskStatus::Queue);
         let mut form = task_form("x", "", "wip");
         form.tags = "Urgent".into();

@@ -52,6 +52,7 @@ impl EditForm for ProjectForm {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures;
     use crate::models::Settings;
     use crate::web::forms::NAME;
 
@@ -67,10 +68,8 @@ mod tests {
             ProjectForm::field(&IterError::EmptyName("project")),
             Some(NAME)
         );
-        let db = crate::db::Db::open(":memory:").expect("db");
-        let mut p = Project::template(&Settings::default());
-        p.name = "p".into();
-        p.base_path = "/tmp/p".into();
+        let db = fixtures::db();
+        let p = fixtures::project("p");
         db.insert(&p).expect("first");
         let taken = db.insert(&p).expect_err("same name");
         assert_eq!(ProjectForm::field(&taken), Some(NAME));

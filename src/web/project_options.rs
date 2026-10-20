@@ -4,9 +4,9 @@
 //! belongs to another group says so, since ticking it moves it here.
 
 use super::forms::PROJECTS;
+use super::text::NO_PROJECTS;
 use super::ui::field::{CheckOption, checklist};
 use super::ui::form_error::FormError;
-use super::ui::group_card::NO_PROJECTS;
 use crate::db::{Db, Table};
 use crate::models::ProjectGroup;
 use std::collections::{HashMap, HashSet};
@@ -92,13 +92,13 @@ fn build<G: ProjectGroup + Table>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures;
     use crate::models::{Board, Organization};
 
     fn board(id: i64, name: &str) -> Board {
         Board {
             id: Some(id),
-            name: name.into(),
-            description: String::new(),
+            ..fixtures::board(name)
         }
     }
 

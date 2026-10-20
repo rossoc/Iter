@@ -9,11 +9,9 @@
 // A component and its module share a name (`frame::frame`), so a component
 // is imported from its module; only the plain types and functions are
 // re-exported here.
-pub mod board_empty;
 pub mod board_root;
 pub mod breadcrumb;
 pub mod button;
-pub mod columns;
 pub mod count;
 pub mod day_nav;
 pub mod drop_zone;
@@ -24,7 +22,6 @@ pub mod filter_bar;
 pub mod folded_list;
 pub mod folder_list;
 pub mod form;
-pub mod form_actions;
 pub mod form_error;
 pub mod frame;
 pub mod group;
@@ -32,9 +29,8 @@ pub mod group_card;
 pub mod hour_grid;
 mod icons;
 mod ink;
-pub mod jump_link;
 pub mod labelled;
-pub mod matrix_grid;
+pub mod layout;
 pub mod modal;
 pub mod notice;
 pub mod page_header;
@@ -45,11 +41,10 @@ pub mod project_list;
 pub mod prose;
 pub mod quadrant;
 pub mod sessions_table;
-pub mod side_lists;
 pub mod side_rail;
 pub mod site_footer;
 pub mod status;
-pub mod sticky_head;
+pub mod table;
 pub mod tabs;
 pub mod tag_chips;
 pub mod task_card;
@@ -83,13 +78,10 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("drop_zone.css"),
     include_str!("folded_list.css"),
     include_str!("folder_list.css"),
-    include_str!("jump_link.css"),
-    include_str!("sticky_head.css"),
+    include_str!("layout.css"),
     include_str!("day_nav.css"),
     include_str!("hour_grid.css"),
-    include_str!("side_lists.css"),
     include_str!("side_rail.css"),
-    include_str!("matrix_grid.css"),
     include_str!("quadrant.css"),
     include_str!("pick_bar.css"),
     include_str!("pick_here.css"),
@@ -98,7 +90,6 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("filter_bar.css"),
     include_str!("tasks_tab.css"),
     include_str!("panel.css"),
-    include_str!("columns.css"),
     include_str!("prose.css"),
     include_str!("labelled.css"),
     include_str!("project_list.css"),

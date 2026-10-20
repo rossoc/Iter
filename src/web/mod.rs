@@ -57,6 +57,7 @@ mod task_new;
 mod task_panel;
 mod task_query;
 mod task_rows;
+mod text;
 mod ui;
 mod url;
 

@@ -3,10 +3,11 @@
 
 use super::agenda_day::Day;
 use super::agenda_pick::links;
-use super::board_cards::CardCtx;
-use super::ui::board_empty::board_empty;
+use super::board_cards::{BOARD_EMPTY, CardCtx};
+use super::ui::KANBAN;
+use super::ui::empty_state::empty_state;
 use super::ui::folded_list::folded_list;
-use super::ui::side_lists::side_lists;
+use super::ui::layout::side_lists;
 use super::ui::side_rail::{side_fold, side_rail};
 use super::ui::task_card::{CardView, task_card};
 use super::ui::unplaced_list::unplaced_list;
@@ -27,6 +28,7 @@ const LABEL: &str = "Unscheduled";
 
 /// What a card's link depends on: the board and the day (a pick link keeps
 /// the day), besides what every board card shares.
+#[derive(Clone, Copy)]
 pub struct Cards {
     pub board: i64,
     pub day: NaiveDate,
@@ -82,7 +84,7 @@ pub async fn side(split: &Day, ctx: &Cards, to: &Fold) -> Result<impl View> {
             side_lists(id: NOT_SCHEDULED, label: LABEL,
                 side_fold(href: to.fold.as_str(), label: LABEL)
                 if split.is_empty() {
-                    board_empty()
+                    empty_state(svg: KANBAN, (BOARD_EMPTY))
                 } else {
                     if !split.overdue.is_empty() {
                         folded_list(id: "overdue-title", title: "Overdue", count: split.overdue.len(), open: true,

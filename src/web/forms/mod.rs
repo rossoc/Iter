@@ -153,7 +153,8 @@ pub const PROJECTS: &str = "project";
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Organization, Project, Task, TaskStatus};
+    use crate::fixtures;
+    use crate::models::{Organization, Task, TaskStatus};
     use crate::web::edit::EditForm;
 
     /// The errors of the name belong to the Name field on every form, and
@@ -178,7 +179,7 @@ mod tests {
     /// field, in words.
     #[test]
     fn taken_organization_and_task_names_read_as_sentences() {
-        let db = crate::db::Db::open(":memory:").expect("db");
+        let db = fixtures::db();
         let org = Organization {
             name: "acme".into(),
             ..Organization::default()
@@ -190,10 +191,7 @@ mod tests {
             OrgForm::refusal(&taken).message,
             "An organization with this name already exists."
         );
-        let mut p = Project::template(&Settings::default());
-        p.name = "p".into();
-        p.base_path = "/tmp/p".into();
-        let project = db.insert(&p).expect("project");
+        let project = fixtures::add_project(&db, "p");
         let mut task = Task::template(project, String::new(), TaskStatus::Queue);
         task.name = "t".into();
         db.insert(&task).expect("first task");

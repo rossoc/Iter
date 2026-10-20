@@ -2,6 +2,7 @@
 //! Organization report and the task page show the same table, with
 //! different columns.
 
+use super::table::{cell, col_head};
 use std::borrow::Cow;
 use topcoat::{
     Result,
@@ -34,26 +35,26 @@ async fn session_row(l: &SessionLine<'_>, dated: bool, show_end: bool) -> Result
     Ok(view! {
         <tr role="row">
             if dated {
-                <td class="mono" role="cell">(l.date.as_deref().unwrap_or_default())</td>
+                cell(class: "mono", (l.date.as_deref().unwrap_or_default()))
             }
-            <td class="mono" role="cell">moment(m: &l.start)</td>
+            cell(class: "mono", moment(m: &l.start))
             if show_end {
-                <td class="mono end" role="cell">
+                cell(class: "mono end",
                     if let Some(end) = &l.end {
                         moment(m: end)
                     } else {
                         <span class="live" aria-hidden="true"></span><span class="ongoing">"ongoing"</span>
                     }
-                </td>
+                )
             }
-            <td class="mono" role="cell">
+            cell(class: "mono",
                 (l.duration.as_ref())
                 // Still open: its duration counts up to now.
                 if l.end.is_none() && !show_end {
                     <span class="live"><span class="sr">" (still running)"</span></span>
                 }
-            </td>
-            <td class="note" role="cell">(l.note.as_deref().unwrap_or_default())</td>
+            )
+            cell(class: "note", (l.note.as_deref().unwrap_or_default()))
         </tr>
     })
 }
@@ -73,8 +74,7 @@ async fn moment(m: &Moment<'_>) -> Result<impl View> {
 /// `caption` is read by screen readers only. `show_end` adds the End column
 /// (an open session reads "ongoing" there); without it the open session is
 /// marked next to its duration. The `role`s repeat the native table
-/// semantics: on narrow screens the rows are laid out as boxes, and browsers
-/// then drop a table's semantics. The caller shows its own empty state
+/// semantics (see `table.rs`). The caller shows its own empty state
 /// instead of an empty table.
 #[component]
 pub async fn sessions_table(
@@ -89,14 +89,14 @@ pub async fn sessions_table(
             <thead role="rowgroup">
                 <tr role="row">
                     if dated {
-                        <th scope="col" role="columnheader">"Date"</th>
+                        col_head("Date")
                     }
-                    <th scope="col" role="columnheader">"Start"</th>
+                    col_head("Start")
                     if show_end {
-                        <th scope="col" role="columnheader">"End"</th>
+                        col_head("End")
                     }
-                    <th scope="col" role="columnheader">"Duration"</th>
-                    <th scope="col" role="columnheader">"Note"</th>
+                    col_head("Duration")
+                    col_head("Note")
                 </tr>
             </thead>
             <tbody role="rowgroup">

@@ -9,21 +9,17 @@ use super::agenda_cards::{Cards, Fold, NOT_SCHEDULED, side};
 use super::agenda_day::{Day, hour_label, hour_target, neighbours, split};
 use super::agenda_pick::{day_url, links};
 use super::board_cards::{CLOCK_FMT, CardCtx};
-use super::board_header::{BoardSection, board_header, title_parts};
-use super::board_page::{BoardPage, load_board};
+use super::board_header::{BoardSection, title_parts};
+use super::board_page::{BoardPage, board_screen, load_board};
 use super::pick::{Picked, moved_note, pick_fields};
-use super::ui::board_root::board_root;
 use super::ui::button::post_button;
-use super::ui::columns::info_columns;
 use super::ui::day_nav::{DayLink, day_nav};
-use super::ui::frame::frame;
 use super::ui::hour_grid::{Now, hour_grid, hour_slot};
-use super::ui::jump_link::jump_link;
+use super::ui::layout::{jump_link, sticky_head};
 use super::ui::pick_bar::pick_bar;
 use super::ui::pick_here::pick_here;
-use super::ui::sticky_head::sticky_head;
 use super::ui::task_card::task_card;
-use super::url::{BOARDS, board_day_url, board_schedule_url, board_url, with_side};
+use super::url::{board_day_url, board_schedule_url, board_url, with_side};
 use super::{Id, now};
 use crate::db::Table;
 use crate::reporting::fmt_date;
@@ -33,7 +29,7 @@ use topcoat::{
     Result,
     context::Cx,
     router::{RouterBuilder, page, path_param, query_params},
-    view::{View, component, view},
+    view::{Child, View, component, view},
 };
 
 /// The id of the day's heading: the hours are labelled by it.
@@ -228,52 +224,43 @@ async fn screen(
     };
     let title: Vec<&str> = title.iter().map(String::as_str).collect();
     Ok(view! {
-        frame(
-            title: &title,
-            current: BOARDS,
-            board_header(board: board, section: BoardSection::Agenda)
-            board_root(post: schedule.as_str(), style: style, note: note,
-                info_columns(class: if *folded { "side-folded" } else { "" },
-                    <div>
-                        sticky_head(
-                            if let Some(p) = picked {
-                                pick_bar(verb: p.words().verb, title: &p.title, state: state, prompt: "Choose an hour.", cancel: links(id, day).cancel(p.id),
-                                    if p.scheduled() {
-                                        post_button(action: schedule.as_str(), fields: pick_fields(p.id, "", Some(("date", date))), small: true, "Unschedule")
-                                    }
-                                )
-                            }
-                            day_nav(
-                                id: DAY_TITLE,
-                                title: heading,
-                                iso: date,
-                                action: board_url(id),
-                                pick: *pick,
-                                folded: *folded,
-                                prev: previous.clone(),
-                                next: next.clone(),
-                                today: today.clone(),
-                                is_today: *is_today,
-                            )
-                        )
-                        if !split.is_empty() && !*folded {
-                            jump_link(target: format!("#{NOT_SCHEDULED}"), "Skip to unscheduled tasks")
+        board_screen(board: board, section: BoardSection::Agenda, title: &title, post: schedule, style: style, note: note, folded: *folded,
+            side: Child::new(view! { side(split: split, ctx: &ctx, to: fold) }),
+            sticky_head(
+                if let Some(p) = picked {
+                    pick_bar(verb: p.words().verb, title: &p.title, state: state, prompt: "Choose an hour.", cancel: links(id, day).cancel(p.id),
+                        if p.scheduled() {
+                            post_button(action: schedule.as_str(), fields: pick_fields(p.id, "", Some(("date", date))), small: true, "Unschedule")
                         }
-                        hour_grid(label_id: DAY_TITLE,
-                            for (h, cards) in split.hours.iter().enumerate() {
-                                hour_slot(label: &labels[h], target: hour_target(day, h), now: now_line(now, day, h),
-                                    if let Some(p) = picked {
-                                        pick_here(action: schedule.as_str(), fields: pick_fields(p.id, &hour_target(day, h), Some(("date", date))), verb: p.words().action, at: &labels[h], slot: true)
-                                    }
-                                    for card in cards.iter() {
-                                        task_card(card: ctx.view(card), draggable: true)
-                                    }
-                                )
-                            }
-                        )
-                    </div>
-                    side(split: split, ctx: &ctx, to: fold)
+                    )
+                }
+                day_nav(
+                    id: DAY_TITLE,
+                    title: heading,
+                    iso: date,
+                    action: board_url(id),
+                    pick: *pick,
+                    folded: *folded,
+                    prev: previous.clone(),
+                    next: next.clone(),
+                    today: today.clone(),
+                    is_today: *is_today,
                 )
+            )
+            if !split.is_empty() && !*folded {
+                jump_link(target: format!("#{NOT_SCHEDULED}"), "Skip to unscheduled tasks")
+            }
+            hour_grid(label_id: DAY_TITLE,
+                for (h, cards) in split.hours.iter().enumerate() {
+                    hour_slot(label: &labels[h], target: hour_target(day, h), now: now_line(now, day, h),
+                        if let Some(p) = picked {
+                            pick_here(action: schedule.as_str(), fields: pick_fields(p.id, &hour_target(day, h), Some(("date", date))), verb: p.words().action, at: &labels[h], slot: true)
+                        }
+                        for card in cards.iter() {
+                            task_card(card: ctx.view(card), draggable: true)
+                        }
+                    )
+                }
             )
         )
     })
