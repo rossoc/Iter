@@ -24,3 +24,5 @@
   .modal-box{max-width:none;max-height:none;min-height:100dvh;border:0;border-radius:0;padding:16px 16px 32px}
 }
 @media (forced-colors:active){.modal-box{border:2px solid CanvasText}}
+/* the page behind a pop-up does not scroll (the box scrolls on its own) */
+body:has(.modal-box[role=dialog]){overflow:hidden}

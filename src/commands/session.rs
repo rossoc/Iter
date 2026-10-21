@@ -170,9 +170,27 @@ fn session_new(
 fn tmux_session_name(project: &Project, task: &Task) -> String {
     format!(
         "{}/{}",
-        project.name.replace('/', "-"),
-        task.name.replace('/', "-")
+        tmux_name_part(&project.name),
+        tmux_name_part(&task.name)
     )
+}
+
+/// One half of a [`tmux_session_name`]. Besides `/`, it flattens `:` and
+/// `.`: `new-session -s` takes any name, but every `-t` after it is parsed as
+/// `session:window.pane`, so a task called `web: x` makes a session nothing
+/// can attach to, check or kill ("can't find window:  x").
+fn tmux_name_part(name: &str) -> String {
+    name.replace('/', "-").replace([':', '.'], "_")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_name_part_has_no_tmux_target_separators() {
+        assert_eq!(tmux_name_part("web: a.b/c"), "web_ a_b-c");
+    }
 }
 
 fn session_start(app: &App, task_ref: Option<&str>) -> Result<()> {

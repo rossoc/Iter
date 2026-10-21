@@ -9,16 +9,16 @@
 .tasks .muted{color:var(--muted)}
 
 /* the row that opens New task: the whole row is the link (the ::after
-   covers it). It looks hovered while no other row is: the first thing to
+   covers it). Its background looks hovered while no other row is (the text
+   stays --fg until the row is really hovered): the first thing to
    do is add one, until the pointer picks another row */
 .tasks tr.add{position:relative;transition:background var(--fast) var(--ease-out)}
 .tasks tr.add td{padding:0;border-bottom:1px dashed var(--line-2)}
-.tasks .add-link{display:flex;align-items:center;gap:8px;padding:12px 14px 12px 4px;color:var(--muted);font-weight:500;
+.tasks .add-link{display:flex;align-items:center;gap:8px;padding:12px 14px 12px 4px;color:var(--fg);font-weight:500;
   transition:color var(--fast) var(--ease-out)}
 .tasks .add-link::after{content:"";position:absolute;inset:0}
 .tasks tr.add:hover .add-link{color:var(--accent)}
 .tasks:not(:has(tbody tr:not(.add):hover)) tr.add{background:var(--bg-2)}
-.tasks:not(:has(tbody tr:not(.add):hover)) .add-link{color:var(--accent)}
 .tasks .add-link:focus-visible{outline:none}
 .tasks tr.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
 

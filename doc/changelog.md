@@ -36,6 +36,7 @@
 - Agenda hides tasks scheduled after today.
 
 ### Fixed
+- The "+ New…" rows keep their text in the normal colour; only the background marks them while no other row is hovered, and the text turns blue on hover. "No tasks yet." under the tasks table is spaced and indented like a row. The page behind a pop-up no longer scrolls (`body:has(.modal-box[role=dialog])`).
 - Form checkboxes sit centred on their label's first line (they sat a few pixels high: the input measured its own, smaller line height).
 - Board (agenda and matrix): Schedule, Move, Place, Cancel and the pick-mode forms no longer jump the page to the card. The scroll position is saved before the action and restored on the same board and day (`board.js`); the card is still focused for the keyboard, and the `#card-<task>` fragment stays.
 - Accessibility (review F1, F4, F12): task priority is a visible "Urgent"/"Important" chip in the card's meta line (`.tcard-prio`, was screen-reader text only; the edge stays as the redundant cue); inline `code` sets `--fg` in the one `code` rule (its per-component patches are gone); light `--accent` is `#3b5bd3` (4.70:1 on the accent tint, was 4.61).
