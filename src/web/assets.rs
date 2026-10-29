@@ -1,4 +1,4 @@
-//! The static files (`/style.css`, `/board.js`, `/org.js`) are
+//! The static files (`/style.css`, `/board.js`, `/org.js`, `/favicon.ico`) are
 //! compiled in and only change with the binary. Each is served with an ETag
 //! (a hash of its text, computed once) and `Cache-Control: no-cache`, so the
 //! browser revalidates on every page and gets a 304 with no body instead of
@@ -19,23 +19,27 @@ use topcoat::{
 };
 
 pub struct Asset {
-    text: &'static str,
+    bytes: &'static [u8],
     content_type: &'static str,
     tag: OnceLock<String>,
 }
 
 impl Asset {
     pub const fn css(text: &'static str) -> Self {
-        Self::new(text, "text/css; charset=utf-8")
+        Self::new(text.as_bytes(), "text/css; charset=utf-8")
     }
 
     pub const fn js(text: &'static str) -> Self {
-        Self::new(text, "text/javascript; charset=utf-8")
+        Self::new(text.as_bytes(), "text/javascript; charset=utf-8")
     }
 
-    const fn new(text: &'static str, content_type: &'static str) -> Self {
+    pub const fn icon(bytes: &'static [u8]) -> Self {
+        Self::new(bytes, "image/x-icon")
+    }
+
+    const fn new(bytes: &'static [u8], content_type: &'static str) -> Self {
         Self {
-            text,
+            bytes,
             content_type,
             tag: OnceLock::new(),
         }
@@ -44,7 +48,7 @@ impl Asset {
     fn tag(&self) -> &str {
         self.tag.get_or_init(|| {
             let mut hasher = DefaultHasher::new();
-            self.text.hash(&mut hasher);
+            self.bytes.hash(&mut hasher);
             format!("\"{:016x}\"", hasher.finish())
         })
     }
@@ -66,7 +70,7 @@ impl Asset {
         (
             head,
             [(CONTENT_TYPE, HeaderValue::from_static(self.content_type))],
-            self.text,
+            self.bytes,
         )
             .into_response(cx)
     }
