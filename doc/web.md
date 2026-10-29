@@ -73,6 +73,10 @@
 - Empty lists say "No X yet." (projects, tasks, sessions, boards); the matrix zones say "Nothing to do first." / "Nothing to plan." / "Nothing to delegate." / "Nothing to eliminate."; the agenda lists say "No important tasks waiting." / "No other tasks waiting."; the org report says "No sessions in this period." (a real filter).
 - A refused form reads as capitalised sentences with a period ("Start time '2026-9' is not valid. Use 2026-09-29 14:30."). The web layer maps the messages (`FormError::new`, `sentence`); the CLI keeps its own wording. Hints end "Leave empty for none." unless the meaning differs (branch prefix).
 
+## Search palette
+
+`/` or the bar's Search button: see `doc/web_search.md`. `GET /search?q=` returns the ranked pages as JSON.
+
 ## Routes
 GET `/`, `/org/{id}` (`?tab=info|tasks|report&from=&to=`), `/org/{id}/edit`, `/project/{id}` (`?tab=`), `/project/{id}/edit`, `/project/{id}/task/new` (redirects to the pop-up), `/task/{id}`, `/task/{id}/edit`, `/boards`, `/board/{id}` (`?date=&pick=`), `/board/{id}/matrix` (`?pick=`), `/board/{id}/info`, `/board/{id}/edit`, `/settings` (`?saved=1`), `/folders` (folder browser). POST to the four edit pages and `/settings` (save), `/board/{id}/schedule` and `/board/{id}/matrix` (drops), `/task/new`, `/org/{id}/project/quick`, `/board/{id}/project/quick` (the New task / New project pop-ups). A pop-up opens with `?new=task` (Tasks tab) or `?new=project` (Info; with `name` and `base_path` when the folder browser sends them back). A missing id is a 404 and a bad id a 400, both as a page built like the others (GET and HEAD); a URL no route matches keeps topcoat's bare 404.
 

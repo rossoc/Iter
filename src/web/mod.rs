@@ -58,6 +58,8 @@ mod task_new;
 mod task_panel;
 mod task_query;
 mod task_rows;
+mod search;
+mod search_index;
 mod text;
 mod ui;
 mod url;
@@ -107,6 +109,7 @@ fn router() -> Router {
         board_info::register,
         board_edit::register,
         settings::register,
+        search_index::register,
     ]
     .into_iter()
     .fold(builder, |builder, register| register(builder))

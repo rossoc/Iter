@@ -1,5 +1,6 @@
 //! The frame: the top bar and the centered main pane.
 
+use super::search::{palette, search_button};
 use super::{KANBAN, MARK, SLIDERS, icon};
 use topcoat::{
     Result,
@@ -50,6 +51,7 @@ pub async fn frame(
     let covered = dialog.is_some();
     Ok(view! {
         <title>(document_title(title, error))</title>
+        <script src="/search.js"></script>
         <div class="page">
             <a class="skip" href="#main" if covered { inert="" }>"Skip to content"</a>
             <header class="bar" if covered { inert="" }>
@@ -59,8 +61,10 @@ pub async fn frame(
                         <a href=(*href) if *href == current { aria-current="true" }>(icon(svg)) (*label)</a>
                     }
                 </nav>
+                search_button()
             </header>
             <main id="main" tabindex="-1" if covered { inert="" }>(child)</main>
+            palette()
             if let Some(dialog) = dialog {
                 (dialog)
             }

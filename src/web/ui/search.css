@@ -1,0 +1,58 @@
+/* the search palette: fixed over the page, a query on top, results left, the
+   selected page (a frame, so interactive) right. Inside a frame (the preview)
+   the chrome is hidden: only the page's content shows. */
+.search-btn{display:inline-flex;align-items:center;gap:7px;margin-left:auto;padding:5px 10px 5px 12px;border:1px solid var(--line-2);border-radius:var(--r-pill);
+  background:transparent;color:var(--muted);font:inherit;font-size:.875rem;font-weight:500;cursor:pointer;
+  transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
+.search-btn:hover,.search-btn:focus-visible{background:var(--bg-2);color:var(--fg)}
+.search-btn[hidden],.palette[hidden]{display:none}
+kbd{display:inline-block;min-width:1.5em;padding:0 5px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:var(--r-sm);
+  background:var(--bg-2);color:var(--muted);font:inherit;font-family:var(--mono);font-size:.75rem;line-height:1.5;text-align:center}
+
+.palette{position:fixed;inset:0;z-index:40;display:grid;justify-items:center;align-items:start;padding:10dvh 16px 16px}
+.palette-backdrop{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 55%,transparent);
+  backdrop-filter:blur(6px) saturate(1.2);-webkit-backdrop-filter:blur(6px) saturate(1.2)}
+.palette-box{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr) auto;width:min(1100px,100%);height:min(640px,78dvh);overflow:hidden;overflow:clip;
+  background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-lg);box-shadow:var(--shadow-lift)}
+.palette-query{display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--line);color:var(--muted)}
+.palette-input{flex:1;min-width:0;height:54px;border:0;outline:0;background:transparent;color:var(--fg);font:inherit;font-size:1.0625rem}
+.palette-input::placeholder{color:var(--muted)}
+.palette-query:focus-within{box-shadow:inset 0 -2px 0 var(--accent)}
+.palette-body{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);min-height:0}
+.palette-list{margin:0;padding:6px;list-style:none;overflow:auto;border-right:1px solid var(--line)}
+.palette-list li{margin:0}
+.palette-list a{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline;padding:7px 10px;border-radius:var(--r-md);color:var(--fg);text-decoration:none}
+.palette-list li[aria-selected=true] a{background:var(--accent-tint)}
+.palette-kind{grid-row:span 2;align-self:start;display:inline-flex;margin-top:1px;color:var(--muted);font-size:1.125rem}
+.palette-list li[aria-selected=true] .palette-kind{color:var(--accent)}
+.palette-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:550}
+.palette-title mark{background:none;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.palette-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:.8125rem}
+.palette-none{padding:18px 12px;color:var(--muted)}
+.palette-preview{display:grid;grid-template-rows:minmax(0,1fr);min-width:0;min-height:0;background:var(--bg-2)}
+.palette-frame{width:100%;height:100%;border:0;background:var(--bg)}
+.palette-hint{display:flex;flex-wrap:wrap;gap:6px 18px;padding:8px 18px;border-top:1px solid var(--line);color:var(--muted);font-size:.75rem}
+.palette-hint kbd{margin-right:3px}
+html.palette-open{overflow:hidden}
+
+@media (max-width:900px){
+  .palette-body{grid-template-columns:minmax(0,1fr)}
+  .palette-list{border-right:0}
+  .palette-preview{display:none}
+}
+@media (max-width:600px){
+  .palette{padding:0}
+  .palette-box{width:100%;height:100dvh;border:0;border-radius:0}
+  .palette-hint{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .palette-box{animation:modal-in var(--med) var(--ease-out)}
+  .palette-backdrop{animation:modal-fade var(--med) var(--ease-out)}
+}
+@media (forced-colors:active){.palette-list li[aria-selected=true] a{outline:2px solid Highlight;outline-offset:-2px}}
+
+/* the preview: a page framed by the palette keeps its content only */
+.in-preview .bar,.in-preview .skip,.in-preview .site-foot,.in-preview .palette{display:none}
+.in-preview main{padding-top:24px;padding-bottom:48px}
+/* the match the palette selected: drawn even though the frame has no focus */
+.in-preview ::selection{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit}

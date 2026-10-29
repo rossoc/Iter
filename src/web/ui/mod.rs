@@ -42,6 +42,7 @@ pub mod pick_here;
 pub mod project_list;
 pub mod prose;
 pub mod quadrant;
+pub mod search;
 pub mod sessions_table;
 pub mod side_rail;
 pub mod site_footer;
@@ -106,18 +107,21 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("form.css"),
     include_str!("form_actions.css"),
     include_str!("modal.css"),
+    include_str!("search.css"),
     // last, as when it was its own sheet linked after this one
     include_str!("../org.css"),
 ));
 
 static MODAL_JS: Asset = Asset::js(include_str!("modal.js"));
 static FILTER_BAR_JS: Asset = Asset::js(include_str!("filter_bar.js"));
+static SEARCH_JS: Asset = Asset::js(include_str!("search.js"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder
         .route(stylesheet)
         .route(modal_script)
         .route(filter_bar_script)
+        .route(search_script)
 }
 
 #[route(GET "/style.css")]
@@ -133,4 +137,9 @@ async fn modal_script(cx: &Cx) -> Result<Response> {
 #[route(GET "/filter_bar.js")]
 async fn filter_bar_script(cx: &Cx) -> Result<Response> {
     FILTER_BAR_JS.respond(cx)
+}
+
+#[route(GET "/search.js")]
+async fn search_script(cx: &Cx) -> Result<Response> {
+    SEARCH_JS.respond(cx)
 }
