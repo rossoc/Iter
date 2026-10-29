@@ -303,9 +303,11 @@ mod tests {
         let edit = TaskEdit {
             task,
             tags: vec!["Urgent".to_string()],
+            project: "alpha".to_string(),
         };
         let rendered = render_template(&edit).unwrap();
         assert!(rendered.contains("tags:\n- Urgent\n"), "{rendered}");
+        assert!(rendered.contains("project: alpha\n"), "{rendered}");
         let mut back = resolve_edit::<TaskEdit>("", &rendered).unwrap().unwrap();
         back.carry_over(&edit);
         assert_eq!(
@@ -347,6 +349,7 @@ mod tests {
         let original = render_template(&TaskEdit {
             task: Task::template(1, String::new(), TaskStatus::Queue),
             tags: Vec::new(),
+            project: String::new(),
         })
         .unwrap();
         let edited = original.replacen("name: ''", "name: 2024", 1);

@@ -220,6 +220,11 @@ pub struct TaskEdit {
     /// Tag names; each must already exist (`iter tag new`).
     #[serde(default)]
     pub tags: Vec<String>,
+
+    /// Name of the project the task belongs to. Change it to move the task;
+    /// left empty it means "stay where it is".
+    #[serde(default)]
+    pub project: String,
 }
 
 impl crate::models::MarkdownBody for TaskEdit {
@@ -237,7 +242,19 @@ impl crate::models::MarkdownBody for TaskEdit {
 
     fn from_front_matter(front: &str) -> serde_yaml::Result<Self> {
         let (task, tags) = crate::models::read_wrapped(front, "tags")?;
-        Ok(TaskEdit { task, tags })
+        // Read off the mapping rather than through the row, so a bare
+        // `project: 2025` still arrives as the text it was typed as.
+        let mapping: serde_yaml::Mapping = serde_yaml::from_str(front)?;
+        let project = match mapping.get("project") {
+            Some(serde_yaml::Value::String(name)) => name.clone(),
+            Some(serde_yaml::Value::Number(n)) => n.to_string(),
+            _ => String::new(),
+        };
+        Ok(TaskEdit {
+            task,
+            tags,
+            project,
+        })
     }
 }
 

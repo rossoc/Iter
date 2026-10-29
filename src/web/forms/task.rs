@@ -3,7 +3,8 @@
 use super::{names, optional, text};
 use crate::db::Db;
 use crate::error::{IterError, Result};
-use crate::models::{Duration, Tag, Task, TaskStatus, parse_start_time, require_name};
+use crate::db::Table;
+use crate::models::{Duration, Project, Tag, Task, TaskStatus, parse_start_time, require_name};
 use crate::web::edit::{EditForm, name_field};
 use crate::web::url::task_url;
 use serde::Deserialize;
@@ -22,6 +23,10 @@ pub struct TaskForm {
     pub duration: String,
     /// Tag names, comma-separated.
     pub tags: String,
+    /// Id of the project to move the task to; empty or absent leaves it
+    /// where it is. Only the edit form shows it.
+    #[serde(default)]
+    pub move_to: String,
 }
 
 impl TaskForm {
@@ -33,6 +38,7 @@ impl TaskForm {
     pub const START_TIME: &'static str = "start_time";
     pub const DURATION: &'static str = "duration";
     pub const TAGS: &'static str = "tags";
+    pub const MOVE_TO: &'static str = "move_to";
 
     /// The form as it starts out for `task` with the tags named `tags`: each
     /// input as the text it shows. A refused submission is shown again as
@@ -48,6 +54,7 @@ impl TaskForm {
             start_time: task.start_text(),
             duration: task.duration_text(),
             tags: tags.to_string(),
+            move_to: task.project_id.to_string(),
         }
     }
 
@@ -71,6 +78,9 @@ impl EditForm for TaskForm {
         match error {
             IterError::InvalidStatus(_) => Some(Self::STATUS),
             IterError::NotFound { kind: "tag", .. } => Some(Self::TAGS),
+            IterError::NotFound { kind: "project", .. } | IterError::TaskHasSession(_) => {
+                Some(Self::MOVE_TO)
+            }
             IterError::CommandFailed(m) if m.starts_with(BAD_ISSUE) => Some(Self::GITHUB_ISSUE),
             IterError::CommandFailed(m) if m.starts_with(BAD_START) => Some(Self::START_TIME),
             IterError::CommandFailed(m) if m.starts_with(BAD_DURATION) => Some(Self::DURATION),
@@ -130,7 +140,23 @@ impl EditForm for TaskForm {
     /// unknown tag is reported before a taken name: the name is only checked
     /// by the write).
     fn save(&self, db: &Db, id: i64, task: &Task) -> Result<()> {
-        db.save_task(Some(id), task, &self.tag_ids(db)?)?;
+        let tag_ids = self.tag_ids(db)?;
+        let mut task = task.clone();
+        if let Ok(target) = self.move_to.trim().parse::<i64>()
+            && target != task.project_id
+        {
+            let project = db
+                .get::<Project>(target)?
+                .ok_or(IterError::NotFound {
+                    kind: "project",
+                    name: self.move_to.clone(),
+                })?;
+            if db.find_session_config_by_task(id)?.is_some() {
+                return Err(IterError::TaskHasSession(task.name.clone()));
+            }
+            task.project_id = project.id();
+        }
+        db.save_task(Some(id), &task, &tag_ids)?;
         Ok(())
     }
 
@@ -156,6 +182,7 @@ mod tests {
             start_time: String::new(),
             duration: String::new(),
             tags: String::new(),
+            move_to: String::new(),
         }
     }
 

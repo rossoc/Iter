@@ -323,7 +323,7 @@ pub enum TaskCommand {
     New {
         /// Project the task belongs to (default: the project of the tmux
         /// session you're in)
-        #[clap(long, add = ArgValueCompleter::new(project_completer))]
+        #[arg(add = ArgValueCompleter::new(project_completer))]
         project: Option<String>,
 
         /// Pre-fill name/description/github_issue from this issue number

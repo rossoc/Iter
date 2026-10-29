@@ -86,9 +86,12 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
     let template = TaskEdit {
         task: template,
         tags: Vec::new(),
+        project: project.name.clone(),
     };
-    edited(&template, "task", "created", |edit| {
+    edited(&template, "task", "created", |mut edit| {
         let tag_ids = checked_tags(db, &edit)?;
+        let project = chosen_project(db, &project, &edit.project)?;
+        edit.task.project_id = project.id();
         let id = db.insert(&edit.task)?;
         db.set_task_tags(id, &tag_ids)?;
         Ok(format!(
@@ -105,6 +108,16 @@ fn checked_tags(db: &Db, edit: &TaskEdit) -> Result<Vec<i64>> {
     db.ids_by_name::<Tag>(&edit.tags)
 }
 
+/// The project named in the edited buffer; empty or unchanged means the
+/// one the task was opened with.
+fn chosen_project(db: &Db, current: &Project, typed: &str) -> Result<Project> {
+    match typed.trim() {
+        "" => Ok(current.clone()),
+        name if name == current.name => Ok(current.clone()),
+        name => db.resolve::<Project>(name),
+    }
+}
+
 fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
     let (project, existing) = resolve_task_or_current(db, task_ref)?;
@@ -113,14 +126,20 @@ fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
     let template = TaskEdit {
         task: existing,
         tags,
+        project: project.name.clone(),
     };
-    edited(&template, "task", "updated", |edit| {
+    edited(&template, "task", "updated", |mut edit| {
         let tag_ids = checked_tags(db, &edit)?;
+        let target = chosen_project(db, &project, &edit.project)?;
+        if target.id() != project.id() && db.find_session_config_by_task(id)?.is_some() {
+            return Err(IterError::TaskHasSession(task_display(&project, &edit.task)));
+        }
+        edit.task.project_id = target.id();
         db.update(id, &edit.task)?;
         db.set_task_tags(id, &tag_ids)?;
         Ok(format!(
             "updated task '{}'",
-            task_display(&project, &edit.task)
+            task_display(&target, &edit.task)
         ))
     })
 }

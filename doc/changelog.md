@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- A task's project can be changed: `project:` in the front matter of `iter task edit` (and in `iter task new`'s template), and a Project select on the task's edit page (`move_to`). Moving is refused while the task has a session (`IterError::TaskHasSession`); a name taken in the target project is refused as usual.
+
+### Changed
+- `iter task new` takes the project positionally: `iter task new [<project>]` replaces `--project`.
+
+### Added (earlier)
 - Search palette: `/` (or the bar's Search button) opens a Telescope-style box over any page: query on top, results on the left, and on the right the selected page in a frame, so it is interactive (inside the frame the bar, footer and palette are hidden). `kind words` restricts to a kind (`proj `, `task fix`, `org acme/proj web`), `is:wip|queue|done` finds tasks, a plain word matches titles first and descriptions second. Keys: arrows/Ctrl-N/P move, Enter opens (Shift/Ctrl/Cmd+Enter new tab), Tab completes a kind word then moves into the preview, Esc closes. The preview selects the first occurrence of the query's word in the page, as a drag of the mouse would. `GET /search?q=` returns the ranked JSON (`web/search.rs` ranks, pure and tested; `web/search_index.rs` reads the pages and notes); `ui/search.{rs,css,js}`. Doc: `doc/web_search.md`.
 - Favicon: the site serves `src/web/favicon.ico` at `/favicon.ico` (`Asset::icon`) and links it from every page, the error pages included.
 - Daily notes: organizations and projects have a Notes tab (`web/daily_notes.rs`, `ui/notes`): the notes by month, the latest day first, a "Today's note" button (`POST /{org,project}/{id}/notes/today`) and a page per day (`/{org,project}/{id}/notes/{yyyy-mm-dd}`) with the way to the previous and next day. A note is a file `YYYY-MM-DD.md` with `layout`, `title` (`dd/mm` by default) and the markdown body; reading is forgiving (`src/notes.rs`). Files are the only store.

@@ -14,7 +14,8 @@ use super::ui::form_error::FormError;
 use super::url::{task_edit_url, task_url};
 use crate::db::{Db, Table};
 use crate::error::Result as IterResult;
-use crate::models::Task;
+use crate::models::{Project, Task};
+use super::ui::field::select;
 use topcoat::{
     Result,
     context::Cx,
@@ -32,15 +33,28 @@ pub fn values(db: &Db, task: &Task) -> IterResult<TaskForm> {
     Ok(TaskForm::of(task, &joined(&db.tags_for_task(task.id())?)))
 }
 
+/// Every project as `(id, name)`, for the Project select.
+fn project_options(db: &Db) -> IterResult<Vec<(String, String)>> {
+    Ok(db
+        .list::<Project>()?
+        .into_iter()
+        .map(|p| (p.id().to_string(), p.name))
+        .collect())
+}
+
 #[page("/task/{id}/edit")]
 async fn show(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let page: Loaded<Task, _> = load(id, |db, task: &Task| {
-        Ok((parents_of(db, task.project_id)?, values(db, task)?))
+        Ok((
+            parents_of(db, task.project_id)?,
+            values(db, task)?,
+            project_options(db)?,
+        ))
     })?;
-    let (task, (parents, values)) = (page.row, page.extra);
+    let (task, (parents, values, projects)) = (page.row, page.extra);
     Ok(view! {
-        screen(stored: &task, parents: &parents, values: &values)
+        screen(stored: &task, parents: &parents, projects: &projects, values: &values)
     })
 }
 
@@ -48,9 +62,12 @@ async fn show(cx: &Cx) -> Result<impl View> {
 async fn save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     // `form` is what was typed; `refused.stored` the stored task.
-    let refused = submit(id, &form, |db, task| parents_of(db, task.project_id))?;
+    let refused = submit(id, &form, |db, task| {
+        Ok((parents_of(db, task.project_id)?, project_options(db)?))
+    })?;
+    let (parents, projects) = refused.extra;
     Ok(view! {
-        screen(stored: &refused.stored, parents: &refused.extra, values: &form, error: Some(&refused.error))
+        screen(stored: &refused.stored, parents: &parents, projects: &projects, values: &form, error: Some(&refused.error))
     })
 }
 
@@ -62,6 +79,7 @@ async fn save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
 pub async fn screen(
     stored: &Task,
     parents: &Parents,
+    projects: &[(String, String)],
     values: &TaskForm,
     #[default] error: Option<&FormError>,
 ) -> Result<impl View> {
@@ -77,6 +95,8 @@ pub async fn screen(
             action: task_edit_url(stored.id()),
             cancel: base,
             error: error,
+            select(name: TaskForm::MOVE_TO, label: "Project", options: projects, current: &values.move_to, required: true, error: error,
+                hint: "Moving a task needs its session torn down first.")
             task_fields(form: values, error: error)
         )
     })

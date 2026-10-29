@@ -63,7 +63,7 @@ iter task info myproj/mytask -f yaml    # YAML instead of the default markdown r
 iter org info acme --from 2026-09-01    # an interval (up to today) instead of a single day
 
 # tasks
-iter task new --project myproj [--issue 42]   # opens a blank (or issue-prefilled) task in nvim
+iter task new [myproj] [--issue 42]   # opens a blank (or issue-prefilled) task in nvim
                                     # front matter also takes urgency/importance (true|false),
                                     # start_time (yyyy-mm-dd hh:mm) and duration (hh:mm)
 iter task edit myproj/mytask
@@ -622,7 +622,7 @@ source <(COMPLETE=zsh iter)
 ```
 
 gets you tab-completion on project names (`project edit/delete/info`,
-`task new --project`, `task pull`/`task push`) and `<project>/<task>` pairs
+`task new`, `task pull`/`task push`) and `<project>/<task>` pairs
 (everywhere a task is expected).
 
 ## Building

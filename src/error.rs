@@ -96,6 +96,10 @@ pub enum IterError {
     #[error("{} {kind} with this name already exists{}", article(.kind), name_scope(.kind))]
     NameTaken { kind: &'static str },
 
+    /// Its worktree and branch live in the old project's repo.
+    #[error("'{0}' has a session; tear it down before moving the task to another project")]
+    TaskHasSession(String),
+
     #[error("'{0}' already has a session")]
     SessionAlreadyExists(String),
 
