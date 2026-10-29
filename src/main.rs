@@ -16,6 +16,8 @@ mod git;
 mod github;
 mod md_edit;
 mod models;
+#[cfg(feature = "web")]
+mod notes;
 mod process;
 mod reporting;
 mod scaffold;

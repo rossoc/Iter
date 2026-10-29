@@ -312,6 +312,7 @@ mod tests {
             branch_template: "feat/{task}".to_string(),
             default_branch: "main".to_string(),
             github_project: String::new(),
+            notes_path: String::new(),
         };
         let project_id = app.db.insert(&project).expect("project inserts");
         let task = Task {

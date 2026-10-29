@@ -205,6 +205,7 @@ pub struct NewProject {
 fn add(home: Home, typed: NewProject) -> Result<ProjectCreate> {
     let template = home.template()?;
     let project = ProjectForm {
+        notes_path: String::new(),
         name: typed.name,
         description: typed.description,
         base_path: typed.base_path,
@@ -371,6 +372,7 @@ mod tests {
             name: "p".into(),
             description: String::new(),
             base_path: "/tmp/p".into(),
+            notes_path: String::new(),
             organization: "3".into(),
             settings: settings_form(&template.settings()),
         };
@@ -397,6 +399,7 @@ mod tests {
             name: "p".into(),
             description: String::new(),
             base_path: "/tmp/p".into(),
+            notes_path: String::new(),
             organization: String::new(),
             settings: settings_form(&template.settings()),
         };

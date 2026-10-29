@@ -20,7 +20,7 @@ fn render_template<T: Serialize + MarkdownBody>(item: &T) -> Result<String> {
 
 /// Splits `content` on the first line that is exactly `---`, or `None` if
 /// there is no such line.
-fn split_at_divider(content: &str) -> Option<(&str, &str)> {
+pub(crate) fn split_at_divider(content: &str) -> Option<(&str, &str)> {
     let mut consumed = 0;
     for line in content.split_inclusive('\n') {
         if line.trim_end_matches('\n') == "---" {

@@ -10,7 +10,7 @@ use super::ui::notice::notice;
 use super::ui::prose::description;
 use super::ui::sessions_table::sessions_table;
 use super::ui::status::status;
-use super::ui::{CLIPBOARD_CHECK, COPY, icon};
+use super::ui::{CHEVRON_LEFT, CHEVRON_RIGHT, CLIPBOARD_CHECK, COPY, icon};
 use super::url::{page_url, project_url, task_url};
 use crate::db::Db;
 use crate::models::Project;
@@ -137,6 +137,30 @@ fn status_list(report: &Report) -> String {
     out.trim_end().to_string()
 }
 
+/// The periods either side of `range`, as long as it is: the one before it
+/// and the one after. "All time" has no neighbours, and nothing comes after
+/// a period that reaches today.
+fn neighbours(range: &DateRange, today: NaiveDate) -> (Option<DateRange>, Option<DateRange>) {
+    let Some(from) = range.from else {
+        return (None, None);
+    };
+    let days = (range.to - from).num_days() as u64 + 1;
+    let prev = from.checked_sub_days(Days::new(1)).and_then(|to| {
+        Some(DateRange {
+            from: to.checked_sub_days(Days::new(days - 1)),
+            to,
+        })
+    });
+    let next = (range.to < today).then(|| {
+        let from = range.to + Days::new(1);
+        DateRange {
+            from: Some(from),
+            to: (from + Days::new(days - 1)).min(today),
+        }
+    });
+    (prev, next)
+}
+
 /// The preset periods and the From/To form.
 #[component]
 async fn period_picker(base: &str, report: &Report, today: NaiveDate) -> Result<impl View> {
@@ -154,8 +178,21 @@ async fn period_picker(base: &str, report: &Report, today: NaiveDate) -> Result<
     ];
     let from = report.range.from.map(fmt_date).unwrap_or_default();
     let to = fmt_date(report.range.to);
+    let (prev, next) = neighbours(&report.range, today);
     Ok(view! {
         <div class="period">
+            <nav class="day-nav" aria-label="Change period">
+                if let Some(range) = &prev {
+                    <a class="button" href=(report_url(base, range)) aria-label="Previous period" rel="prev">(icon(CHEVRON_LEFT))</a>
+                } else {
+                    <span class="button" aria-disabled="true" aria-label="Previous period">(icon(CHEVRON_LEFT))</span>
+                }
+                if let Some(range) = &next {
+                    <a class="button" href=(report_url(base, range)) aria-label="Next period" rel="next">(icon(CHEVRON_RIGHT))</a>
+                } else {
+                    <span class="button" aria-disabled="true" aria-label="Next period">(icon(CHEVRON_RIGHT))</span>
+                }
+            </nav>
             <nav class="presets" aria-label="Period">
                 for (label, range) in presets.iter() {
                     <a href=(report_url(base, range)) if *range == report.range { aria-current="true" }>(label.to_string())</a>
@@ -267,4 +304,41 @@ pub async fn report_view(base: &str, report: &Report, today: NaiveDate) -> Resul
             </div>
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn d(s: &str) -> NaiveDate {
+        parse_day(s).expect("a date")
+    }
+
+    fn range(from: &str, to: &str) -> DateRange {
+        DateRange {
+            from: Some(d(from)),
+            to: d(to),
+        }
+    }
+
+    /// The neighbours are as long as the period; the next one stops at today,
+    /// and "All time" has none.
+    #[test]
+    fn a_period_has_neighbours_of_its_own_length() {
+        let today = d("2026-10-29");
+        let (prev, next) = neighbours(&range("2026-10-10", "2026-10-16"), today);
+        assert_eq!(prev, Some(range("2026-10-03", "2026-10-09")));
+        assert_eq!(next, Some(range("2026-10-17", "2026-10-23")));
+        let (_, next) = neighbours(&range("2026-10-20", "2026-10-26"), today);
+        assert_eq!(next, Some(range("2026-10-27", "2026-10-29")));
+        assert_eq!(
+            neighbours(&range("2026-10-23", "2026-10-29"), today).1,
+            None
+        );
+        let all = DateRange {
+            from: None,
+            to: today,
+        };
+        assert_eq!(neighbours(&all, today), (None, None));
+    }
 }

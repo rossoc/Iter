@@ -12,9 +12,10 @@ pub fn is_git_repo(path: &str) -> bool {
 /// into a single `-`, trimming leading/trailing dashes -- used to turn a
 /// free-text task name into something safe for a branch name / directory.
 ///
-/// Private: [`task_slug`] is the way in, so nothing can end up with the
-/// empty slug that the fallback there exists to rule out.
-fn slugify(name: &str) -> String {
+/// Branch names go through [`task_slug`], so nothing there can end up with
+/// the empty slug that its fallback exists to rule out; other callers
+/// handle the empty slug themselves.
+pub fn slugify(name: &str) -> String {
     let mut out = String::new();
     let mut last_dash = false;
     for c in name.to_lowercase().chars() {

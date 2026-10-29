@@ -4,6 +4,7 @@
 
 use super::Id;
 use super::crumbs::trail;
+use super::daily_notes::{NotesTab, notes_section};
 use super::load::{Parents, parents_of, tasks_or_count};
 use super::open_db;
 use super::sections::section_tabs;
@@ -51,6 +52,8 @@ pub struct Loaded {
     pub tasks: Vec<Task>,
     /// The tab badge: one `COUNT` on Info, the rows counted on Tasks.
     pub task_count: usize,
+    /// The notes' folder; the notes themselves only for the Notes tab.
+    pub notes: NotesTab,
 }
 
 /// Loads project `id` for `section`: the organization only when it has
@@ -64,10 +67,15 @@ pub fn load(db: &Db, id: i64, section: Section, q: Option<&str>) -> Result<Loade
     )?;
     // the badge keeps the total; the rows are the ones the search lets by
     let tasks = TaskQuery::of(q).filter_tasks(db, tasks, &parents.project.name)?;
+    let notes = NotesTab::load(
+        crate::notes::project_dir(&parents.project, &parents.org),
+        section == Section::Notes,
+    );
     Ok(Loaded {
         parents,
         tasks,
         task_count,
+        notes,
     })
 }
 
@@ -81,13 +89,14 @@ async fn show(cx: &Cx) -> Result<impl View> {
         parents: Parents { project, org },
         tasks,
         task_count,
+        notes,
     } = page;
     let q = query.q.as_deref();
     // `?new=task` on the Tasks tab: the New task pop-up over the list
     let create = (tab == Section::Tasks && query.new.as_deref() == Some("task"))
         .then(|| TaskCreate::in_project(&project, q));
     Ok(view! {
-        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, section: tab, q: q, task_create: create.as_ref())
+        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, notes: Some(&notes), section: tab, q: q, task_create: create.as_ref())
     })
 }
 
@@ -99,6 +108,9 @@ async fn project_info(project: &Project) -> Result<impl View> {
             <div>
                 description(text: &project.description)
                 mono_value(id: "path-title", label: "Base path", value: &project.base_path)
+                if !project.notes_path.is_empty() {
+                    mono_value(id: "notes-path-title", label: "Notes path", value: &project.notes_path)
+                }
             </div>
             settings_panel(s: project.settings())
         )
@@ -114,11 +126,12 @@ pub async fn screen(
     tasks: &[Task],
     task_count: usize,
     section: Section,
+    #[default] notes: Option<&NotesTab>,
     #[default] q: Option<&str>,
     #[default] task_create: Option<&TaskCreate>,
 ) -> Result<impl View> {
     let base = project_url(project.id());
-    let items = section_tabs(&base, section, task_count, None);
+    let items = section_tabs(&base, section, task_count, NotesTab::badge(notes), None);
     let parts = [section.title("Project"), project.name.as_str()];
     // The page has tabs, so the current tab is the current item; the crumb
     // is plain text, and with no organization the kicker is just a label.
@@ -136,6 +149,8 @@ pub async fn screen(
             tabs(label: "Sections", items: &items)
             if section == Section::Tasks {
                 tasks_tab(rows: &rows, caption: "Tasks in this project", total: task_count, search: search(&base, q), add: Some(add))
+            } else if let (Section::Notes, Some(notes)) = (section, notes) {
+                notes_section(base: &base, notes: notes)
             } else {
                 project_info(project: project)
             }

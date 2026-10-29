@@ -5,6 +5,7 @@
 
 use super::Id;
 use super::assets::Asset;
+use super::daily_notes::{NotesTab, notes_section};
 use super::load::tasks_or_count;
 use super::org_report::{Report, report_view, tab_url};
 use super::project_new::{Home, ProjectCreate, project_modal};
@@ -17,6 +18,7 @@ use super::task_rows::{group_rows, search};
 use super::text::NO_PROJECTS;
 use super::ui::button::edit_button;
 use super::ui::frame::frame;
+use super::ui::labelled::mono_value;
 use super::ui::layout::info_columns;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
@@ -57,6 +59,8 @@ pub struct Loaded {
     /// The tab badge: one `COUNT` on the other tabs, the rows counted on
     /// Tasks.
     pub task_count: usize,
+    /// The notes' folder; the notes themselves only for the Notes tab.
+    pub notes: NotesTab,
     /// Only for the Report tab.
     pub report: Option<Report>,
 }
@@ -85,11 +89,13 @@ pub fn load(
         Section::Report => Some(super::org_report::load(db, &projects, from, to, now)?),
         _ => None,
     };
+    let notes = NotesTab::load(crate::notes::org_dir(&org), section == Section::Notes);
     Ok(Loaded {
         org,
         projects,
         tasks,
         task_count,
+        notes,
         report,
     })
 }
@@ -138,6 +144,9 @@ async fn info(
         info_columns(
             <div>
                 description(text: &org.description)
+                if !org.notes_path.is_empty() {
+                    mono_value(id: "notes-path-title", label: "Notes path", value: &org.notes_path)
+                }
                 projects_section(projects: projects, empty: NO_PROJECTS, search: Some(search), add: Some(add))
             </div>
             settings_panel(s: org.settings())
@@ -163,10 +172,17 @@ pub async fn screen(
         projects,
         tasks,
         task_count,
+        notes,
         report,
     } = page;
     let base = org_url(org.id());
-    let items = section_tabs(&base, section, *task_count, Some(tab_url(&base, today)));
+    let items = section_tabs(
+        &base,
+        section,
+        *task_count,
+        NotesTab::badge(Some(notes)),
+        Some(tab_url(&base, today)),
+    );
     let parts = [section.title("Organization"), org.name.as_str()];
     let rows = group_rows(tasks);
     // the first row of Tasks opens New task, when there is a project to put it in
@@ -188,6 +204,8 @@ pub async fn screen(
             tabs(label: "Sections", items: &items)
             if section == Section::Tasks {
                 tasks_tab(rows: &rows, caption: "Tasks in this organization", total: *task_count, search: search(&base, q), add: add_task)
+            } else if section == Section::Notes {
+                notes_section(base: &base, notes: notes)
             } else if let Some(r) = report {
                 report_view(base: &base, report: r, today: today)
             } else {

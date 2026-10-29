@@ -2,7 +2,7 @@
 //! rows: the parsing and the URLs live here, `ui/tabs.rs` only draws.
 
 use super::ui::tabs::Tab;
-use super::url::tasks_tab_url;
+use super::url::{notes_tab_url, tasks_tab_url};
 use topcoat::router::query_params;
 
 /// The query of the pages with tabs: `?tab=`, and the organization report's
@@ -38,6 +38,7 @@ pub struct InfoQuery {
 pub enum Section {
     Info,
     Tasks,
+    Notes,
     Report,
 }
 
@@ -46,6 +47,7 @@ impl Section {
     pub fn of(tab: Option<&str>) -> Section {
         match tab {
             Some("tasks") => Section::Tasks,
+            Some("notes") => Section::Notes,
             Some("report") => Section::Report,
             _ => Section::Info,
         }
@@ -57,6 +59,7 @@ impl Section {
         match self {
             Section::Info => page,
             Section::Tasks => "Tasks",
+            Section::Notes => "Notes",
             Section::Report => "Report",
         }
     }
@@ -71,12 +74,15 @@ pub fn tabs_for<S: PartialEq>(current: S, entries: impl IntoIterator<Item = (S, 
         .collect()
 }
 
-/// The Info and Tasks tabs of the page at `base` (the Tasks one with its
-/// count), and the Report tab when the page has one: `report` is its URL.
+/// The Info, Tasks and Notes tabs of the page at `base` (the Tasks one with
+/// its count, the Notes one with `notes`, the number of notes when the page
+/// has a folder for them), and the Report tab when the page has one:
+/// `report` is its URL.
 pub fn section_tabs(
     base: &str,
     current: Section,
     task_count: usize,
+    notes: Option<usize>,
     report: Option<String>,
 ) -> Vec<Tab> {
     let mut entries = vec![
@@ -85,6 +91,13 @@ pub fn section_tabs(
             Section::Tasks,
             Tab::link("Tasks", tasks_tab_url(base)).count(task_count),
         ),
+        (Section::Notes, {
+            let tab = Tab::link("Notes", notes_tab_url(base));
+            match notes {
+                Some(n) => tab.count(n),
+                None => tab,
+            }
+        }),
     ];
     if let Some(href) = report {
         entries.push((Section::Report, Tab::link("Report", href)));
@@ -101,6 +114,7 @@ mod tests {
         assert_eq!(Section::of(None), Section::Info);
         assert_eq!(Section::of(Some("tasks")), Section::Tasks);
         assert_eq!(Section::of(Some("report")), Section::Report);
+        assert_eq!(Section::of(Some("notes")), Section::Notes);
         assert_eq!(Section::of(Some("x")), Section::Info);
         assert_eq!(Section::Info.title("Project"), "Project");
         assert_eq!(Section::Tasks.title("Project"), "Tasks");
@@ -120,16 +134,16 @@ mod tests {
 
     #[test]
     fn section_tabs_mark_the_current_one() {
-        let items = section_tabs("/project/1", Section::Tasks, 4, None);
-        assert_eq!(items.len(), 2);
+        let items = section_tabs("/project/1", Section::Tasks, 4, None, None);
+        assert_eq!(items.len(), 3);
         assert!(!items[0].is_current() && items[1].is_current());
         assert_eq!(
             (items[1].href(), items[1].badge()),
             ("/project/1?tab=tasks&q=is%3Aopen", Some(4))
         );
         assert_eq!(
-            section_tabs("/org/1", Section::Info, 0, Some("/r".into())).len(),
-            3
+            section_tabs("/org/1", Section::Info, 0, Some(2), Some("/r".into())).len(),
+            4
         );
     }
 }

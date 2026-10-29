@@ -12,6 +12,9 @@ pub struct ProjectForm {
     pub name: String,
     pub description: String,
     pub base_path: String,
+    /// The folder of the project's daily notes, or empty.
+    #[serde(default)]
+    pub notes_path: String,
     /// The organization's id, or empty for none.
     pub organization: String,
     #[serde(flatten)]
@@ -23,6 +26,7 @@ impl ProjectForm {
     /// the submitted fields), shared by [`EditForm::field`] and the page.
     pub const BASE_PATH: &'static str = "base_path";
     pub const ORGANIZATION: &'static str = "organization";
+    pub const NOTES_PATH: &'static str = "notes_path";
 }
 
 impl EditForm for ProjectForm {
@@ -42,6 +46,7 @@ impl EditForm for ProjectForm {
         project.name = self.name.trim().to_string();
         project.description = text(&self.description);
         project.base_path = self.base_path.trim().to_string();
+        project.notes_path = self.notes_path.trim().to_string();
         project.organization_id = self.organization.trim().parse().ok();
         project.set_settings(self.settings.settings());
         let valid = project.validate();
@@ -87,6 +92,7 @@ mod tests {
             name: "p".into(),
             description: String::new(),
             base_path: path.into(),
+            notes_path: String::new(),
             organization: org.into(),
             settings: SettingsForm {
                 github: Some("on".into()),

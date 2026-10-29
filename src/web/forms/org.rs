@@ -14,17 +14,23 @@ pub struct OrgForm {
     pub name: String,
     pub description: String,
     pub settings: SettingsForm,
+    /// The folder of the organization's daily notes, or empty.
+    pub notes_path: String,
     /// The ids of the projects ticked.
     pub projects: Vec<i64>,
 }
 
 impl OrgForm {
+    /// The name of the notes folder control (also of the submitted field).
+    pub const NOTES_PATH: &'static str = "notes_path";
+
     pub fn parse(pairs: &[(String, String)]) -> OrgForm {
         let pairs = Pairs(pairs);
         OrgForm {
             name: pairs.first(NAME),
             description: pairs.first(DESCRIPTION),
             settings: SettingsForm::parse(&pairs),
+            notes_path: pairs.first(Self::NOTES_PATH),
             projects: pairs.ids(PROJECTS),
         }
     }
@@ -40,6 +46,7 @@ impl EditForm for OrgForm {
     fn apply(&self, mut org: Organization) -> (Organization, Result<()>) {
         org.name = self.name.trim().to_string();
         org.description = text(&self.description);
+        org.notes_path = self.notes_path.trim().to_string();
         org.set_settings(self.settings.settings());
         let valid = org.validate();
         (org, valid)

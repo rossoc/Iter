@@ -285,7 +285,15 @@ impl Db {
         Self::baseline,
         Self::flags_to_tags,
         Self::drop_short_sessions,
+        Self::add_notes_path,
     ];
+
+    /// `notes_path` on projects and organizations: a database already past
+    /// the baseline never runs [`Self::add_missing_columns`] again, so the
+    /// columns added since need a step of their own.
+    fn add_notes_path(&self) -> Result<()> {
+        self.add_missing_columns()
+    }
 
     /// Everything from before versioning: idempotent, since a database
     /// that predates it could be at any point in that history.
@@ -649,7 +657,7 @@ impl Db {
     /// already allowed to be in. `board_id` follows the same rule: a board
     /// is a container, so deleting one just unbinds its projects.
     fn add_missing_columns(&self) -> Result<()> {
-        const ADDED: [(&str, &str, &str); 10] = [
+        const ADDED: [(&str, &str, &str); 12] = [
             ("tasks", "matrix_placed", "INTEGER NOT NULL DEFAULT 0"),
             ("tasks", "start_time", "TEXT"),
             ("tasks", "duration", "INTEGER"),
@@ -676,6 +684,8 @@ impl Db {
                 "board_id",
                 "INTEGER REFERENCES boards(id) ON DELETE SET NULL",
             ),
+            ("projects", "notes_path", "TEXT NOT NULL DEFAULT ''"),
+            ("organizations", "notes_path", "TEXT NOT NULL DEFAULT ''"),
         ];
         for (table, column, decl) in ADDED {
             if !self.column_exists(table, column)? {
@@ -1443,6 +1453,7 @@ mod tests {
             branch_template: "fix/{task}".to_string(),
             default_branch: "main".to_string(),
             github_project: "Roadmap".to_string(),
+            notes_path: "/tmp/notes".to_string(),
         }
     }
 
@@ -1918,13 +1929,13 @@ mod tests {
         assert_eq!(
             insert_sql::<Organization>(),
             "INSERT INTO organizations (name, description, github, tmux, auto_branch, \
-             branch_template, default_branch, github_project) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
+             branch_template, default_branch, github_project, notes_path) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
         );
         assert_eq!(
             select_sql::<Organization>("WHERE name = ?1"),
             "SELECT id, name, description, github, tmux, auto_branch, branch_template, \
-             default_branch, github_project FROM organizations WHERE name = ?1"
+             default_branch, github_project, notes_path FROM organizations WHERE name = ?1"
         );
     }
 
@@ -2064,6 +2075,7 @@ mod tests {
                     branch_template TEXT NOT NULL DEFAULT 'feat/{task}',
                     default_branch  TEXT NOT NULL DEFAULT 'main',
                     github_project  TEXT NOT NULL DEFAULT '',
+                    notes_path      TEXT NOT NULL DEFAULT '',
                     auto_issue      INTEGER NOT NULL DEFAULT 0
                  );",
             )

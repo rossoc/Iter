@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Daily notes: organizations and projects have a Notes tab (`web/daily_notes.rs`, `ui/notes`): the notes by month, the latest day first, a "Today's note" button (`POST /{org,project}/{id}/notes/today`) and a page per day (`/{org,project}/{id}/notes/{yyyy-mm-dd}`) with the way to the previous and next day. A note is a file `YYYY-MM-DD.md` with `layout`, `title` (`dd/mm` by default) and the markdown body; reading is forgiving (`src/notes.rs`). Files are the only store.
+- New `notes_path` setting on organizations and projects (edit forms, Info tab; `projects.notes_path` and `organizations.notes_path` columns). A project without one keeps its notes in a folder of its name inside its organization's.
 - `iter internal restore` (for tmux-resurrect's `@resurrect-hook-post-restore-all`): after a reboot, recreates the tmux sessions of session-configs missing from the save, installs the hooks, closes clocks the previous tmux server left open at the last resurrect save (deletes them when there's no save after they started), and starts the clock of iter sessions a client is already on. New `tmux::server_start_time`, `tmux::last_resurrect_save`, `tmux::install_hooks_for_current_exe`, `clock::close_stale_session`.
 - Agenda: the side column is now called Unscheduled, and has a fourth list, Backlog, for tasks neither urgent nor important; the list before it ("Urgent, not scheduled") holds the urgent, not important ones. Overdue and all three lists put urgent, then in-progress tasks first. The Matrix's Not placed column is renamed Backlog, folds into a rail too and lists in-progress tasks first.
 - Agenda: the Not scheduled column is now called Backlog; its Important and Not important lists fold to their heading like Overdue.

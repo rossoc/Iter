@@ -49,6 +49,12 @@ pub struct Organization {
     /// Default `github_project` for projects created in this organization.
     #[serde(default)]
     pub github_project: String,
+
+    /// The folder of this organization's daily notes (`~` expanded when
+    /// read), and the folder its projects without one of their own keep
+    /// theirs in. Empty means no notes.
+    #[serde(default)]
+    pub notes_path: String,
 }
 
 impl Organization {

@@ -4,6 +4,8 @@
 
 /* period: preset pills, then a From/To form */
 .period{--control-h:36px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;margin-bottom:28px}
+/* the arrows to the periods either side; one with nowhere to go is dimmed */
+.period .day-nav .button[aria-disabled]{opacity:.4;pointer-events:none}
 /* the presets and the date fields share one height, so the row lines up */
 .presets{box-sizing:border-box;height:var(--control-h);display:flex;align-items:stretch;gap:4px;padding:3px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--bg-2)}
 /* one highlighted pill, like the tabs' one underline: it sits on the

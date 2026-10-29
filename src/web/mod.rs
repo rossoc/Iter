@@ -21,6 +21,7 @@ mod board_info;
 mod board_page;
 mod boards;
 mod crumbs;
+mod daily_notes;
 mod drop;
 mod edit;
 mod edit_page;
@@ -92,6 +93,7 @@ fn router() -> Router {
         org::register,
         project::register,
         task::register,
+        daily_notes::register,
         org_edit::register,
         project_edit::register,
         project_new::register,

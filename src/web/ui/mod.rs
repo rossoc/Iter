@@ -33,6 +33,7 @@ mod ink;
 pub mod labelled;
 pub mod layout;
 pub mod modal;
+pub mod notes;
 pub mod notice;
 pub mod page_header;
 pub mod panel;
@@ -96,6 +97,7 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("project_list.css"),
     include_str!("group_card.css"),
     include_str!("empty_line.css"),
+    include_str!("notes.css"),
     include_str!("empty_state.css"),
     include_str!("notice.css"),
     include_str!("control.css"),

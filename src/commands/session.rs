@@ -54,7 +54,9 @@ fn session_new(
         match (tmux_gone, worktree_gone, existing.id) {
             (true, true, Some(id)) => {
                 db.delete::<SessionConfig>(id)?;
-                eprintln!("note: dropped a stale session for '{task_ref}' (its tmux session and worktree are gone)");
+                eprintln!(
+                    "note: dropped a stale session for '{task_ref}' (its tmux session and worktree are gone)"
+                );
             }
             _ => return Err(IterError::SessionAlreadyExists(task_ref.to_string())),
         }

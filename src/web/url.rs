@@ -132,6 +132,22 @@ pub fn tasks_list_url(base: &str, q: Option<&str>) -> String {
     page_url(base, &[("tab", Some("tasks")), ("q", q)])
 }
 
+/// The Notes tab of the organization or project page at `base`.
+pub fn notes_tab_url(base: &str) -> String {
+    page_url(base, &[("tab", Some("notes"))])
+}
+
+/// The note of `day` on the page at `base`.
+pub fn note_url(base: &str, day: NaiveDate) -> String {
+    format!("{base}/notes/{}", fmt_date(day))
+}
+
+/// Where "today's note" of the page at `base` is posted: it makes the note
+/// and goes to it.
+pub fn notes_today_url(base: &str) -> String {
+    format!("{base}/notes/today")
+}
+
 /// Where the New task pop-up of a task list posts (`task_new.rs`).
 pub const NEW_TASK: &str = "/task/new";
 

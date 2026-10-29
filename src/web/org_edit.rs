@@ -10,7 +10,7 @@ use super::edit_page::edit_page;
 use super::forms::OrgForm;
 use super::project_options::{group_options, project_checklist};
 use super::settings_fields::settings_fields;
-use super::ui::field::CheckOption;
+use super::ui::field::{CheckOption, field};
 use super::ui::form_error::FormError;
 use super::url::{org_edit_url, org_url};
 use crate::db::Table;
@@ -74,6 +74,14 @@ pub async fn screen(
             action: org_edit_url(stored.id()),
             cancel: base,
             error: error,
+            field(
+                name: OrgForm::NOTES_PATH,
+                label: "Notes path",
+                value: &org.notes_path,
+                hint: "Where the organization's daily notes are kept, and the folder its projects without a notes path of their own keep theirs in.",
+                identifier: true,
+                error: error
+            )
             project_checklist(options: projects, noun: "organization", error: error)
             settings_fields(s: &settings)
         )

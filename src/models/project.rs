@@ -91,6 +91,12 @@ pub struct Project {
     /// (`gh auth refresh -s project` on a classic login).
     #[serde(default)]
     pub github_project: String,
+
+    /// The folder of this project's daily notes (`~` expanded when read).
+    /// Empty means a folder of the project's name inside its
+    /// organization's `notes_path`, if that has one.
+    #[serde(default)]
+    pub notes_path: String,
 }
 
 impl Project {

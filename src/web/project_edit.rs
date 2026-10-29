@@ -85,6 +85,14 @@ pub async fn screen(
                 identifier: true,
                 error: error
             )
+            field(
+                name: ProjectForm::NOTES_PATH,
+                label: "Notes path",
+                value: &project.notes_path,
+                hint: "Where the project's daily notes are kept. Left empty, they go in a folder of the project's name inside the organization's notes path.",
+                identifier: true,
+                error: error
+            )
             select(
                 name: ProjectForm::ORGANIZATION,
                 label: "Organization",
