@@ -158,6 +158,10 @@ fn walk(root: &Path, at: &Path, out: &mut Vec<(PathBuf, String)>) {
         if entry.file_name().to_string_lossy().starts_with('.') {
             continue;
         }
+        // a link is not followed: it could lead out of the folder, or round to it
+        if entry.file_type().is_ok_and(|t| t.is_symlink()) {
+            continue;
+        }
         if path.is_dir() {
             walk(root, &path, out);
         } else if path.extension().is_some_and(|e| e == "md")
@@ -373,7 +377,7 @@ impl Wiki {
             );
             if let Some(front) = &node.front {
                 let data = [
-                    ("abstract", front.abstract_.as_deref()),
+                    ("description", front.description.as_deref()),
                     ("confidence", front.confidence.as_deref()),
                     ("updated", front.updated.as_deref()),
                 ];
@@ -662,7 +666,7 @@ mod tests {
         assert!(ask(
             &w,
             &format!(
-                "ASK {{ {idea} iter:abstract \"Retries need a budget\" ; iter:tag \"net\" ; iter:source <urn:iter:acme.app/2026-10-27> }}"
+                "ASK {{ {idea} iter:description \"Retries need a budget\" ; iter:tag \"net\" ; iter:source <urn:iter:acme.app/2026-10-27> }}"
             )
         ));
         assert!(ask(
@@ -745,7 +749,7 @@ mod tests {
     fn select_returns_a_table_and_a_bad_query_is_an_error() {
         let w = build(&fixture("select"));
         let Answer::Table(t) = w
-            .query("SELECT ?a WHERE { ?p iter:abstract ?a ; a iter:Concept }")
+            .query("SELECT ?a WHERE { ?p iter:description ?a ; a iter:Concept }")
             .expect("query")
         else {
             panic!("not a table")
@@ -762,7 +766,7 @@ mod tests {
         write(
             &root.join("acme/app"),
             "wiki/ideas/bad.md",
-            "---\nabstract: [a, b]\n---\n",
+            "---\ndescription: [a, b]\n---\n",
         );
         let w = build(&root);
         let bad = w
@@ -788,7 +792,9 @@ mod tests {
     fn the_graph_exports_as_ntriples() {
         let w = build(&fixture("export"));
         let nt = w.ntriples().expect("dump");
-        assert!(nt.contains("<urn:iter:ns:abstract>") && nt.contains("Back off between retries"));
+        assert!(
+            nt.contains("<urn:iter:ns:description>") && nt.contains("Back off between retries")
+        );
     }
 
     #[test]
@@ -798,17 +804,17 @@ mod tests {
         write(
             &root.join("acme/app"),
             "wiki/concepts/same.md",
-            "---\nabstract: p\n---\n",
+            "---\ndescription: p\n---\n",
         );
         write(
             &root.join("acme/app"),
             "tasks/7/sketches/same.md",
-            "---\nabstract: t\n---\n",
+            "---\ndescription: t\n---\n",
         );
         write(
             &root.join("acme/app/tasks/7"),
             "wiki/concepts/same.md",
-            "---\nabstract: t\n---\n",
+            "---\ndescription: t\n---\n",
         );
         let w = build(&root);
         for from in 0..w.levels.len() {

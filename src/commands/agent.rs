@@ -82,27 +82,32 @@ pub fn save_plan(dir: &TaskDir, text: &str) -> Result<Saved> {
     if !text.ends_with('\n') {
         text.push('\n');
     }
-    // one level of undo: a plan replaced by a worse one is not lost
-    if let Some(old) = dir.read_plan()?
-        && old != text
-    {
-        std::fs::write(dir.previous_plan_path(), old)?;
-    }
-    dir.write_plan(&text)?;
-    Ok(Saved {
-        steps: plan::parse(&text).items.len(),
-        problems: plan::problems(&text),
+    dir.update_plan(|old| {
+        // one level of undo: a plan replaced by a worse one is not lost
+        if let Some(old) = old
+            && old != text
+        {
+            crate::agent::taskdir::write_whole(dir.root(), &dir.previous_plan_path(), &old)?;
+        }
+        Ok((
+            Some(text.clone()),
+            Saved {
+                steps: plan::parse(&text).items.len(),
+                problems: plan::problems(&text),
+            },
+        ))
     })
 }
 
 /// Puts step `id` of the plan of `dir` in `state`; the plan's progress after.
 pub fn mark_step(dir: &TaskDir, id: &str, state: State) -> Result<Progress> {
-    let content = dir
-        .read_plan()?
-        .ok_or_else(|| failed("there is no plan yet: write one with `iter task plan`"))?;
-    let marked = plan::mark(&content, id, state).map_err(|e| failed(e.to_string()))?;
-    dir.write_plan(&marked)?;
-    Ok(plan::parse(&marked).progress())
+    dir.update_plan(|content| {
+        let content = content
+            .ok_or_else(|| failed("there is no plan yet: write one with `iter task plan`"))?;
+        let marked = plan::mark(&content, id, state).map_err(|e| failed(e.to_string()))?;
+        let progress = plan::parse(&marked).progress();
+        Ok((Some(marked), progress))
+    })
 }
 
 /// What `iter task plan` was asked: alone it edits, `--show` prints,
@@ -182,7 +187,7 @@ fn onboarding(app: &App, project: &Project, task: &Task) -> String {
         .hits
         .iter()
         .filter(|h| h.class != "Plan")
-        .map(|h| match &h.abstract_ {
+        .map(|h| match &h.description {
             Some(a) => format!("- `{}` [{}]: {a}", h.id, h.class),
             None => format!("- `{}` [{}]: {}", h.id, h.class, h.title),
         })
@@ -434,7 +439,7 @@ mod tests {
         std::fs::create_dir_all(notes.join("wiki/concepts")).unwrap();
         std::fs::write(
             notes.join("wiki/concepts/backoff.md"),
-            "---\nabstract: Retries need exponential backoff\ntags: [net]\n---\n# Backoff\n",
+            "---\ndescription: Retries need exponential backoff\ntags: [net]\n---\n# Backoff\n",
         )
         .unwrap();
         let with = prompt_text(&app, Some("app/Fix it"), Kind::Plan, None, true).unwrap();
@@ -479,7 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn no_notes_folder_is_an_error_that_says_what_to_set() {
+    fn no_notes_folder_means_the_task_is_kept_in_the_config_folder() {
         let db = fixtures::db();
         let project = db.insert(&fixtures::project("bare")).unwrap();
         db.insert(&Task {
@@ -496,8 +501,13 @@ mod tests {
         })
         .unwrap();
         let app = App::with_db(db);
-        let e = prompt_text(&app, Some("bare/x"), Kind::Plan, None, false).unwrap_err();
-        assert!(e.to_string().contains("set `notes_path`"), "{e}");
+        // only looked at: nothing is written to the real config folder here
+        let (_, _, dir) = locate(&app, Some("bare/x")).unwrap();
+        assert!(dir.root().starts_with(crate::config::config_dir().unwrap()));
+        assert!(dir.root().ends_with("tasks/1"));
+        // a task by its number, as an agent says it
+        assert_eq!(locate(&app, Some("1")).unwrap().1.name, "x");
+        assert!(locate(&app, Some("99")).is_err());
         let e = locate(&app, Some("bare/missing")).unwrap_err();
         assert!(e.to_string().contains("missing"), "{e}");
     }

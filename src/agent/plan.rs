@@ -180,11 +180,24 @@ fn step(line: &str) -> Option<Step<'_>> {
         verify = true;
         rest = rest[8..].trim_start();
     }
+    let mut text = rest.trim_end();
+    // an agent often puts the tag last: `text (verify)` or `text (verify: how)`;
+    // only the last parenthesis counts, so `a (verify) then (b)` stays whole
+    if !verify && text.ends_with(')') {
+        let lower = text.to_ascii_lowercase();
+        if let Some(at) = lower.rfind('(')
+            && lower[at..].starts_with("(verify")
+            && lower[at + 7..].starts_with([')', ':'])
+        {
+            verify = true;
+            text = text[..at].trim_end();
+        }
+    }
     Some(Step {
         state,
         id,
         verify,
-        text: rest.trim_end(),
+        text,
     })
 }
 
@@ -390,7 +403,7 @@ pub fn skeleton(description: &str) -> String {
 mod tests {
     use super::*;
 
-    const PLAN: &str = "---\nabstract: Plan\n---\n## Goal\nShip it.\nTwo lines.\n\n## How\nCarefully.\n\n## Checklist\n- [x] {s1} Write the parser\n- [~] {s2} Wire it in\n    detail one\n    detail two\n- [ ] {s3} (verify) `cargo test` passes\n- not a step\n\n## Notes\n- [ ] {n1} not in the checklist\n";
+    const PLAN: &str = "---\ndescription: Plan\n---\n## Goal\nShip it.\nTwo lines.\n\n## How\nCarefully.\n\n## Checklist\n- [x] {s1} Write the parser\n- [~] {s2} Wire it in\n    detail one\n    detail two\n- [ ] {s3} (verify) `cargo test` passes\n- not a step\n\n## Notes\n- [ ] {n1} not in the checklist\n";
 
     #[test]
     fn a_plan_is_read_by_its_sections() {
@@ -525,13 +538,29 @@ mod tests {
         assert_eq!(p.goal, "Make it fast.");
         assert_eq!(p.items.len(), 2);
         assert!(p.items[1].verify);
+        // the tag last, as an agent writes it
+        let late = parse(
+            "## Checklist\n- [ ] run the tests (verify)\n- [ ] look at the diff (Verify: git diff)\n- [ ] verify the thing (not a tag)\n- [ ] run it (verify) then (clean up)\n",
+        );
+        assert_eq!(
+            late.items
+                .iter()
+                .map(|i| (i.text.as_str(), i.verify))
+                .collect::<Vec<_>>(),
+            [
+                ("run the tests", true),
+                ("look at the diff", true),
+                ("verify the thing (not a tag)", false),
+                ("run it (verify) then (clean up)", false)
+            ]
+        );
         assert_eq!(parse(&skeleton("")).goal, "What done looks like.");
     }
 
     #[test]
     fn front_matter_is_not_the_plan() {
         // a `## Goal` inside the front matter's YAML would be a comment, not a heading
-        let p = parse("---\nabstract: x\n---\n## Goal\ng\n");
+        let p = parse("---\ndescription: x\n---\n## Goal\ng\n");
         assert_eq!(p.goal, "g");
         // a front matter that never closes is not one
         assert_eq!(parse("---\nunclosed\n## Goal\ng\n").goal, "g");

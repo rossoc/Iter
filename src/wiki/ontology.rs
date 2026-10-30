@@ -342,7 +342,7 @@ mod tests {
             Some(vec!["high".to_string(), "medium".into(), "low".into()])
         );
         // a plain datatype takes anything, and so does a property with no range
-        assert_eq!(o.allowed_values(&ns("abstract")), None);
+        assert_eq!(o.allowed_values(&ns("description")), None);
         assert_eq!(o.allowed_values(&ns("nothing-like-it")), None);
     }
 

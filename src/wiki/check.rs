@@ -5,7 +5,7 @@
 
 use super::graph::Wiki;
 use super::ontology::{LevelKind, NS, ns};
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Timelike};
 use oxigraph::model::vocab::rdfs;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
@@ -84,7 +84,8 @@ pub fn dirty_notes(wiki: &Wiki) -> Vec<(usize, Dirty)> {
             .max();
         let modified = node
             .modified
-            .map(|m| DateTime::<Local>::from(m).naive_local());
+            // `updated` has whole seconds: so does the note's time
+            .and_then(|m| DateTime::<Local>::from(m).naive_local().with_nanosecond(0));
         match (modified, ingested) {
             (Some(m), Some(u)) if m > u => out.push((i, Dirty::Changed)),
             (_, None) => out.push((i, Dirty::Changed)),
@@ -128,13 +129,18 @@ pub fn check(wiki: &Wiki, from: usize) -> Vec<Issue> {
                 Severity::Warning,
                 "no-front-matter",
                 id.clone(),
-                "no front matter: the page has no abstract and no tags".into(),
+                "no front matter: the page has no description and no tags".into(),
             ),
             Some(front) => {
                 if strict {
-                    if front.abstract_.as_deref().is_none_or(str::is_empty) {
-                        let message = "no abstract: retrieval cannot say what it is".into();
-                        issue(Severity::Warning, "missing-abstract", id.clone(), message);
+                    if front.description.as_deref().is_none_or(str::is_empty) {
+                        let message = "no description: retrieval cannot say what it is".into();
+                        issue(
+                            Severity::Warning,
+                            "missing-description",
+                            id.clone(),
+                            message,
+                        );
                     }
                     if front.tags.is_empty() {
                         issue(
@@ -146,7 +152,7 @@ pub fn check(wiki: &Wiki, from: usize) -> Vec<Issue> {
                     }
                 }
                 let data = [
-                    ("abstract", front.abstract_.as_deref()),
+                    ("description", front.description.as_deref()),
                     ("confidence", front.confidence.as_deref()),
                     ("updated", front.updated.as_deref()),
                 ];
@@ -345,7 +351,7 @@ mod tests {
         write(
             &root.join("acme/app"),
             "wiki/ideas/retry.md",
-            "---\nabstract: a\ntags: [net]\nsource: 2026-10-27\nupdated: 2999-01-01\n---\n",
+            "---\ndescription: a\ntags: [net]\nsource: 2026-10-27\nupdated: 2999-01-01\n---\n",
         );
         assert!(dirty_notes(&build(&root)).is_empty());
 
@@ -382,7 +388,7 @@ mod tests {
         write(
             &root.join("acme/app"),
             "wiki/concepts/bad.md",
-            "---\nabstract: a\ntags: [x]\ninclude: [2026-10-27]\n---\n",
+            "---\ndescription: a\ntags: [x]\ninclude: [2026-10-27]\n---\n",
         );
         let w = build(&root);
         let issues = check(&w, 1);
@@ -405,12 +411,12 @@ mod tests {
         write(
             &app,
             "wiki/ideas/sure.md",
-            "---\nabstract: a\ntags: [x]\nconfidence: certain\n---\n",
+            "---\ndescription: a\ntags: [x]\nconfidence: certain\n---\n",
         );
         write(
             &app,
             "wiki/ideas/fine.md",
-            "---\nabstract: a\ntags: [x]\nconfidence: low\n---\n",
+            "---\ndescription: a\ntags: [x]\nconfidence: low\n---\n",
         );
         let issues = check(&build(&root), 1);
         let bad: Vec<_> = issues.iter().filter(|i| i.code == "bad-value").collect();
@@ -429,9 +435,9 @@ mod tests {
         write(
             &app,
             "wiki/ideas/mood.md",
-            "---\nabstract: a\ntags: [x]\nmood: sad\n---\n",
+            "---\ndescription: a\ntags: [x]\nmood: sad\n---\n",
         );
-        write(&app, "wiki/ideas/bad.md", "---\nabstract: [a]\n---\n");
+        write(&app, "wiki/ideas/bad.md", "---\ndescription: [a]\n---\n");
         write(&app, "wiki/misc/x.md", "stray");
         write(&app, "wiki/ideas/none.md", "no front matter");
         let got_issues = check(&build(&root), 1);
@@ -454,7 +460,7 @@ mod tests {
             write(
                 &app,
                 &format!("wiki/ideas/i{n}.md"),
-                "---\nabstract: a\ntags: [cache]\nsource: 2026-10-27\n---\n",
+                "---\ndescription: a\ntags: [cache]\nsource: 2026-10-27\n---\n",
             );
         }
         let issues = check(&build(&root), 1);
@@ -465,7 +471,7 @@ mod tests {
         write(
             &app,
             "wiki/concepts/cache.md",
-            "---\nabstract: a\ntags: [cache]\nsource: [ideas/i1]\n---\n",
+            "---\ndescription: a\ntags: [cache]\nsource: [ideas/i1]\n---\n",
         );
         let issues = check(&build(&root), 1);
         assert!(!issues.iter().any(|i| i.code == "promote"));

@@ -4,7 +4,7 @@
 
 use crate::app::App;
 use crate::args::{WikiCommand, WikiScope};
-use crate::commands::Run;
+use crate::commands::{Run, ingest};
 use crate::error::{IterError, Result};
 use crate::utils::output::emit;
 use crate::wiki::check::{self, Severity};
@@ -86,7 +86,7 @@ impl Run for WikiCommand {
                 emit(scope.format, &near, || {
                     let mut out = String::new();
                     for n in &near {
-                        let said = n.abstract_.as_deref().unwrap_or("");
+                        let said = n.description.as_deref().unwrap_or("");
                         out.push_str(&format!(
                             "{} {:<13} {}  [{}]  {said}\n",
                             n.hop,
@@ -171,6 +171,31 @@ impl Run for WikiCommand {
                 print!("{}", load(app, scope)?.ntriples()?);
                 Ok(())
             }
+            Self::Ingest {
+                project,
+                task,
+                dry_run,
+                detach,
+                harness,
+            } => ingest::ingest(
+                app,
+                project.as_deref(),
+                task.as_deref(),
+                *dry_run,
+                *detach,
+                harness,
+            ),
+            Self::BuildConcept {
+                ideas,
+                name,
+                project,
+                harness,
+            } => ingest::build_concept(app, project.as_deref(), name, ideas, harness),
+            Self::Pending {
+                project,
+                accept,
+                revert,
+            } => ingest::pending(app, project.as_deref(), *accept, *revert),
             Self::Schema { scope } => {
                 let levels = scope::levels(&app.db, &spec(scope))?;
                 println!("{}", schema::render(&scope::ontology(&levels)?).trim_end());
@@ -184,7 +209,7 @@ fn find_text(found: &retrieve::Found) -> String {
     let mut out = String::new();
     for h in &found.hits {
         out.push_str(&format!("{}  [{}]", h.id, h.class));
-        if let Some(a) = &h.abstract_ {
+        if let Some(a) = &h.description {
             out.push_str(&format!("  {a}"));
         }
         if !h.tags.is_empty() {
@@ -208,7 +233,7 @@ fn show_text(s: &Shown) -> String {
             out.push_str(&format!("{key}: {v}\n"));
         }
     };
-    line("abstract", s.abstract_.as_deref());
+    line("description", s.description.as_deref());
     line(
         "tags",
         Some(s.tags.join(", ").as_str()).filter(|t| !t.is_empty()),

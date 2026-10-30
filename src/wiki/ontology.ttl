@@ -115,7 +115,7 @@ iter:contains a owl:ObjectProperty .
 # --- Data ------------------------------------------------------------------
 iter:ConfidenceLevel a rdfs:Datatype ;
     owl:oneOf ( "high"^^xsd:string "medium"^^xsd:string "low"^^xsd:string ) .
-iter:abstract   a owl:DatatypeProperty ; rdfs:range xsd:string ;
+iter:description   a owl:DatatypeProperty ; rdfs:range xsd:string ;
     rdfs:comment "One line: what the page says. Retrieval reads this before the page." .
 iter:tag        a owl:DatatypeProperty ; rdfs:range xsd:string .
 iter:confidence a owl:DatatypeProperty ;

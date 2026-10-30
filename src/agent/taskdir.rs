@@ -71,11 +71,30 @@ impl TaskDir {
     /// of it.
     pub fn write_plan(&self, text: &str) -> std::io::Result<()> {
         self.ensure()?;
-        let tmp = self
-            .root
-            .join(format!(".plan.md.{}.tmp", std::process::id()));
-        std::fs::write(&tmp, text)?;
-        std::fs::rename(&tmp, self.plan_path())
+        write_whole(&self.root, &self.plan_path(), text)
+    }
+
+    /// Reads the plan, lets `change` make the new one from it, and writes
+    /// that, all while holding the plan's lock: two writers (an agent ticking
+    /// a step, a click on the page) take turns instead of one losing its
+    /// change. `change` returns `None` to leave the plan as it is.
+    pub fn update_plan<T>(
+        &self,
+        change: impl FnOnce(Option<String>) -> std::result::Result<(Option<String>, T), IterError>,
+    ) -> Result<T> {
+        self.ensure()?;
+        let lock = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(self.root.join(".plan.lock"))?;
+        lock.lock()?;
+        let (new, out) = change(self.read_plan()?)?;
+        if let Some(text) = new {
+            self.write_plan(&text)?;
+        }
+        Ok(out)
+        // the lock is released when `lock` is dropped
     }
 
     /// The markdown files directly in `dir`, by name.
@@ -102,20 +121,41 @@ impl TaskDir {
     }
 }
 
-/// The folder of `task`, which is in `project`. An error when neither the
-/// project nor its organization says where notes are kept.
+/// Writes `text` to `target` through a file of its own beside it, then renames
+/// it over: the name is unique to this write, so writers in one process do not
+/// share it either.
+pub(crate) fn write_whole(dir: &Path, target: &Path, text: &str) -> std::io::Result<()> {
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = dir.join(format!(".write.{}.{n}.tmp", std::process::id()));
+    std::fs::write(&tmp, text)?;
+    std::fs::rename(&tmp, target).inspect_err(|_| {
+        let _ = std::fs::remove_file(&tmp);
+    })
+}
+
+/// The folder of `task`, which is in `project`: inside the project's notes
+/// folder, or -- when neither the project nor its organization has one -- in
+/// iter's own config directory (`tasks/<id>/`), so an agent can still work on
+/// the task. Moving to a notes folder later leaves that one behind.
 pub fn of(db: &Db, project: &Project, task: &Task) -> Result<TaskDir> {
     let org = match project.organization_id {
         Some(id) => db.get::<Organization>(id)?,
         None => None,
     };
-    let dir = notes::project_dir(project, &org).ok_or_else(|| {
-        IterError::CommandFailed(
-            "no notes folder to keep the task in: set `notes_path` on the project or its organization"
-                .into(),
-        )
-    })?;
-    Ok(TaskDir::new(notes::task_dir(&dir, task.id())))
+    Ok(TaskDir::new(match notes::project_dir(project, &org) {
+        Some(dir) => notes::task_dir(&dir, task.id()),
+        None => notes::task_dir(&crate::config::config_dir()?, task.id()),
+    }))
+}
+
+/// Whether the folder of `task` is among the project's notes (and so part of
+/// its wiki) rather than the fallback in the config directory.
+pub fn in_notes(db: &Db, project: &Project) -> bool {
+    let org = project
+        .organization_id
+        .and_then(|id| db.get::<Organization>(id).ok().flatten());
+    notes::project_dir(project, &org).is_some()
 }
 
 #[cfg(test)]

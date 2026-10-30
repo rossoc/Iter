@@ -23,7 +23,7 @@ task, load those, and start.
 
 ```markdown
 ---
-abstract: One line saying what the page says. Retrieval reads this first.
+description: One line saying what the page says. Retrieval reads this first.
 tags: [net, retry]
 confidence: medium
 updated: 2026-10-27T14:03:00
@@ -36,7 +36,7 @@ Body, with [[links]] to other pages. Every link is a `ref`.
 ```
 
 - `confidence` is {{confidence}}.
-- `abstract` and `tags` are required on every page outside `sketches/`. Reuse
+- `description` and `tags` are required on every page outside `sketches/`. Reuse
   tags that exist: `iter wiki sparql 'SELECT DISTINCT ?t WHERE { ?s iter:tag ?t }'`.
 - `updated` is when you last wrote the page, as ISO 8601. A note that changed
   after the `updated` of the pages made from it has not been ingested yet.
@@ -50,8 +50,8 @@ Relations you may write in the front matter (a value or a list):
 ## Reading
 
 1. `iter wiki find <words> --budget 800` ranks pages by path, title, tags and
-   abstract. Start here.
-2. `iter wiki show <id>` gives one page at a depth: `--depth abstract`,
+   description. Start here.
+2. `iter wiki show <id>` gives one page at a depth: `--depth description`,
    `summary` (default: relations and headings) or `full`.
 3. `iter wiki neighbors <id> --hops 1` follows relations. `nb` links are the
    ones that matter: read them before you work on the topic. Backlinks are
@@ -68,7 +68,7 @@ tmux session you are in), and `--format text|yaml|json`.
 
 - **Ingest.** For each note that changed, make or update Ideas in
   `wiki/ideas/`: one thought each, in the user's words, `source` pointing at the
-  note, an abstract and tags. Do not summarize a note as a whole.
+  note, a description and tags. Do not summarize a note as a whole.
 - **Build.** When several Ideas say one thing, write a Concept in
   `wiki/concepts/` with `source` pointing at the Ideas (and `include` if it is
   made of them). People, tools and services go in `wiki/entities/`; a

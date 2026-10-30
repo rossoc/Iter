@@ -2,7 +2,7 @@
 //! few pages worth loading before it works on a task.
 //!
 //! Four steps, each costing more than the last: [`find`] ranks pages by their
-//! path, title, tags and abstract, [`grep`] searches their text, [`neighbors`]
+//! path, title, tags and description, [`grep`] searches their text, [`neighbors`]
 //! follows the graph from a page, and [`show`] loads one page at the depth
 //! asked for. `find` and `grep` take a token budget and stop at it.
 
@@ -27,8 +27,8 @@ fn class_name(node: &Node) -> String {
         .to_string()
 }
 
-fn abstract_of(node: &Node) -> Option<String> {
-    node.front.as_ref().and_then(|f| f.abstract_.clone())
+fn description_of(node: &Node) -> Option<String> {
+    node.front.as_ref().and_then(|f| f.description.clone())
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -36,8 +36,8 @@ pub struct Hit {
     pub id: String,
     pub class: String,
     pub title: String,
-    #[serde(rename = "abstract", skip_serializing_if = "Option::is_none")]
-    pub abstract_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     pub tags: Vec<String>,
     pub score: u32,
     /// What matched.
@@ -48,7 +48,7 @@ impl Hit {
     fn cost(&self) -> usize {
         tokens(&self.id)
             + tokens(&self.title)
-            + self.abstract_.as_deref().map_or(0, tokens)
+            + self.description.as_deref().map_or(0, tokens)
             + self.tags.iter().map(|t| tokens(t)).sum::<usize>()
             + 4
     }
@@ -70,8 +70,8 @@ fn words(text: &str) -> Vec<String> {
 }
 
 /// Ranks the files by how well `query`'s words match their path, title, tags
-/// and abstract, best first, until `budget` tokens are spent (the best hit is
-/// always returned). A note has no abstract or tags: only its name matches.
+/// and description, best first, until `budget` tokens are spent (the best hit is
+/// always returned). A note has no description or tags: only its name matches.
 pub fn find(wiki: &Wiki, from: usize, query: &str, budget: usize) -> Found {
     let words = words(query);
     let mut scored: Vec<(u32, usize, Vec<String>)> = Vec::new();
@@ -79,8 +79,8 @@ pub fn find(wiki: &Wiki, from: usize, query: &str, budget: usize) -> Found {
         let path = node.rel.to_lowercase();
         let title = node.title.to_lowercase();
         let front = node.front.as_ref();
-        let abstract_ = front
-            .and_then(|f| f.abstract_.as_deref())
+        let description = front
+            .and_then(|f| f.description.as_deref())
             .unwrap_or("")
             .to_lowercase();
         let tags: Vec<String> = front
@@ -107,8 +107,8 @@ pub fn find(wiki: &Wiki, from: usize, query: &str, budget: usize) -> Found {
             if title.contains(word.as_str()) {
                 add(3, "title");
             }
-            if abstract_.contains(word.as_str()) {
-                add(2, "abstract");
+            if description.contains(word.as_str()) {
+                add(2, "description");
             }
             matched += hit as usize;
         }
@@ -133,7 +133,7 @@ pub fn find(wiki: &Wiki, from: usize, query: &str, budget: usize) -> Found {
             id: wiki.id(i, from),
             class: class_name(node),
             title: node.title.clone(),
-            abstract_: abstract_of(node),
+            description: description_of(node),
             tags: node
                 .front
                 .as_ref()
@@ -215,7 +215,7 @@ pub fn grep(
 #[derive(Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum)]
 pub enum Depth {
     /// What the page says in a line, its tags and where it stands
-    Abstract,
+    Description,
     /// And what it relates to, and its headings
     Summary,
     /// And the whole text
@@ -234,8 +234,8 @@ pub struct Shown {
     pub class: String,
     pub path: String,
     pub title: String,
-    #[serde(rename = "abstract", skip_serializing_if = "Option::is_none")]
-    pub abstract_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<String>,
@@ -259,7 +259,7 @@ pub fn show(wiki: &Wiki, from: usize, node: usize, depth: Depth) -> Result<Shown
         class: class_name(n),
         path: n.path.display().to_string(),
         title: n.title.clone(),
-        abstract_: front.abstract_,
+        description: front.description,
         tags: front.tags,
         confidence: front.confidence,
         updated: front.updated,
@@ -267,7 +267,7 @@ pub fn show(wiki: &Wiki, from: usize, node: usize, depth: Depth) -> Result<Shown
         outline: None,
         content: None,
     };
-    if depth == Depth::Abstract {
+    if depth == Depth::Description {
         return Ok(shown);
     }
     let content = std::fs::read_to_string(&n.path)?;
@@ -297,8 +297,8 @@ pub fn show(wiki: &Wiki, from: usize, node: usize, depth: Depth) -> Result<Shown
 pub struct Neighbor {
     pub id: String,
     pub class: String,
-    #[serde(rename = "abstract", skip_serializing_if = "Option::is_none")]
-    pub abstract_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     pub hop: usize,
     /// The relations it was reached by (a page can be related in several
     /// ways: it includes it and marks it `nb`)...
@@ -342,7 +342,7 @@ pub fn neighbors(
                 Neighbor {
                     id: wiki.id(other, from),
                     class: class_name(node),
-                    abstract_: abstract_of(node),
+                    description: description_of(node),
                     hop,
                     via: via.clone(),
                     from: wiki.id(*at, from),
@@ -366,15 +366,15 @@ mod tests {
     use crate::wiki::testutil::*;
 
     #[test]
-    fn find_ranks_by_tag_path_and_abstract() {
+    fn find_ranks_by_tag_path_and_description() {
         let w = build(&fixture("find"));
         let found = find(&w, 1, "retr", 10_000);
         let ids: Vec<_> = found.hits.iter().map(|h| h.id.as_str()).collect();
-        // the idea matches by path, title and abstract; the concept by path
-        // and abstract; the other levels' pages are named with their level
+        // the idea matches by path, title and description; the concept by path
+        // and description; the other levels' pages are named with their level
         assert_eq!(ids[0], "wiki/ideas/retry");
         assert!(ids.contains(&"wiki/concepts/backoff"));
-        assert_eq!(found.hits[0].why, ["path", "title", "abstract"]);
+        assert_eq!(found.hits[0].why, ["path", "title", "description"]);
         let by_tag = find(&w, 1, "net", 10_000);
         assert_eq!(by_tag.hits[0].id, "wiki/ideas/retry");
         assert_eq!(by_tag.hits[0].why, ["tag"]);
@@ -434,8 +434,8 @@ mod tests {
     fn show_goes_deeper_with_the_depth() {
         let w = build(&fixture("show"));
         let idea = w.node(1, "ideas/retry").expect("idea");
-        let a = show(&w, 1, idea, Depth::Abstract).expect("show");
-        assert_eq!(a.abstract_.as_deref(), Some("Retries need a budget"));
+        let a = show(&w, 1, idea, Depth::Description).expect("show");
+        assert_eq!(a.description.as_deref(), Some("Retries need a budget"));
         assert_eq!(a.class, "Idea");
         assert!(a.relations.is_none() && a.content.is_none());
         let s = show(&w, 1, idea, Depth::Summary).expect("show");

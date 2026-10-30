@@ -61,6 +61,7 @@ mod task_new;
 mod task_panel;
 mod task_query;
 mod task_rows;
+mod task_wiki;
 mod text;
 mod ui;
 mod url;
@@ -97,6 +98,7 @@ fn router() -> Router {
         project::register,
         task::register,
         task_agent::register,
+        task_wiki::register,
         daily_notes::register,
         org_edit::register,
         project_edit::register,

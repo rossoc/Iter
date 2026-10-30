@@ -30,7 +30,20 @@ pub(crate) fn parse_task_ref(reference: &str) -> Result<(&str, &str)> {
     split_task_ref(reference).ok_or_else(|| IterError::InvalidTaskRef(reference.to_string()))
 }
 
+/// A task by `<project>/<task>`, or by its number (`12`: what a command run
+/// by an agent says, with no space to quote).
 pub(crate) fn resolve_task(db: &Db, task_ref: &str) -> Result<(Project, Task)> {
+    if !task_ref.is_empty()
+        && task_ref.bytes().all(|b| b.is_ascii_digit())
+        && let Ok(id) = task_ref.parse::<i64>()
+    {
+        let task: Task = db.get(id)?.ok_or_else(|| IterError::NotFound {
+            kind: "task",
+            name: task_ref.to_string(),
+        })?;
+        let project = follow(db, task.project_id, "project", "task")?;
+        return Ok((project, task));
+    }
     let (project_name, task_name) = parse_task_ref(task_ref)?;
     let project = db.resolve::<Project>(project_name)?;
     let task = find_task_or_err(db, &project, task_name)?;

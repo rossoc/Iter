@@ -6,6 +6,7 @@
 
 pub mod agent;
 pub mod board;
+pub mod ingest;
 pub mod misc;
 pub mod notes;
 pub mod organization;

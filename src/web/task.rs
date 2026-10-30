@@ -9,6 +9,7 @@ use super::sections::{TabQuery, TaskSection, task_tabs};
 use super::session_lines::task_lines;
 use super::task_agent::{self, AgentTab, agent_tab};
 use super::task_panel::task_panel;
+use super::task_wiki::{self, WikiTab, wiki_tab};
 use super::ui::breadcrumb::Crumb;
 use super::ui::button::edit_button;
 use super::ui::empty_line::empty_line;
@@ -78,9 +79,13 @@ async fn show(cx: &Cx) -> Result<impl View> {
         )?),
         _ => None,
     };
+    let wiki = match section {
+        TaskSection::Wiki => Some(task_wiki::load(&db, &page.parents.project, &page.task)),
+        _ => None,
+    };
     let now = now();
     Ok(view! {
-        screen(page: &page, section: section, now: now, agent: agent.as_ref())
+        screen(page: &page, section: section, now: now, agent: agent.as_ref(), wiki: wiki.as_ref())
     })
 }
 
@@ -125,6 +130,7 @@ pub async fn screen(
     section: TaskSection,
     now: NaiveDateTime,
     #[default] agent: Option<&AgentTab>,
+    #[default] wiki: Option<&WikiTab>,
 ) -> Result<impl View> {
     let Loaded {
         task,
@@ -146,6 +152,8 @@ pub async fn screen(
                 sessions_block(task: task, sessions: rows, now: now)
             } else if let (TaskSection::Agent, Some(agent)) = (section, agent) {
                 agent_tab(task_id: task.id(), agent: agent)
+            } else if let (TaskSection::Wiki, Some(wiki)) = (section, wiki) {
+                wiki_tab(tab: wiki)
             } else {
                 task_info(task: task, tags: tags)
             }

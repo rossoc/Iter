@@ -4,6 +4,7 @@
 use crate::app::App;
 use crate::args::SessionCommand;
 use crate::commands::Run;
+use crate::commands::ingest::{self, Trigger};
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
@@ -40,6 +41,17 @@ fn session_new(
     let task_id = task.id();
 
     if let Some(existing) = db.find_session_config_by_task(task_id)? {
+        // The workspace an agent was handed (`iter task solve`) has a
+        // worktree and no tmux session: give it one rather than refuse.
+        if project.tmux
+            && existing.tmux_session_name.is_none()
+            && existing
+                .worktree_path
+                .as_deref()
+                .is_some_and(|path| std::path::Path::new(path).exists())
+        {
+            return adopt_workspace(app, &project, &mut task, existing);
+        }
         // A tmux restart or kill leaves the row behind with nothing left to
         // tear down; only a row whose tmux session and worktree are both gone
         // is dropped, so a live workspace still blocks a second `session new`.
@@ -126,6 +138,7 @@ fn session_new(
 
     task.status = TaskStatus::Wip;
     db.update(task_id, &task)?;
+    ingest::auto(app, &project, &task, Trigger::TaskStart);
 
     // Attaching last, and only once every row is written: it hands the
     // terminal over to tmux until the user detaches, and the
@@ -138,6 +151,38 @@ fn session_new(
         eprintln!("the session is set up -- attach with: tmux attach -t '{name}'");
     }
 
+    Ok(())
+}
+
+/// A tmux session for a workspace that has a worktree and none yet.
+fn adopt_workspace(
+    app: &App,
+    project: &Project,
+    task: &mut Task,
+    mut config: SessionConfig,
+) -> Result<()> {
+    let name = tmux_session_name(project, task);
+    if tmux::session_exists(&name) {
+        return Err(IterError::TmuxSessionExists(name));
+    }
+    let cwd = config.worktree_path.clone().unwrap_or_default();
+    tmux::start_tracked_session(&name, &cwd)?;
+    println!("session '{name}' started in the workspace made for the agent");
+    config.tmux_session_name = Some(name.clone());
+    if let Some(id) = config.id
+        && let Err(e) = app.db.update(id, &config)
+    {
+        unwind_session_setup(project, None, None, Some(&name));
+        return Err(e);
+    }
+    if task.status == TaskStatus::Queue {
+        task.status = TaskStatus::Wip;
+        app.db.update(task.id(), task)?;
+    }
+    if let Err(e) = tmux::attach_session(&name) {
+        eprintln!("warning: couldn't attach to '{name}': {e}");
+        eprintln!("the session is set up -- attach with: tmux attach -t '{name}'");
+    }
     Ok(())
 }
 

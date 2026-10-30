@@ -8,7 +8,7 @@
 //! * the **class** of a page comes from the folder it is in, as the ontology
 //!   says (`ontology.ttl`); front matter never repeats it;
 //! * the **front matter** of a page (strict, `frontmatter.rs`) gives its
-//!   abstract, tags, confidence, update time and its typed relations;
+//!   description, tags, confidence, update time and its typed relations;
 //! * the **`[[links]]`** in its body are `iter:ref` relations;
 //! * organizations, projects and tasks are nodes too, built from the levels
 //!   the caller passes (the database says which exist), and everything is
@@ -24,6 +24,7 @@
 pub mod check;
 pub mod frontmatter;
 pub mod graph;
+pub mod ingest;
 pub mod mv;
 pub mod ontology;
 pub mod retrieve;

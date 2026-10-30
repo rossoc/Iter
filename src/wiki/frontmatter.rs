@@ -1,7 +1,7 @@
 //! A page's front matter and body links.
 //!
 //! The front matter is strict YAML between a first line `---` and the next
-//! one. A page may have none (then it has no abstract, which `check` reports);
+//! one. A page may have none (then it has no description, which `check` reports);
 //! a note is never parsed at all. Besides the four data keys, any key the
 //! ontology marks `iter:authorable` is a relation, and its value is a target
 //! or a list of them. Any other key is kept in `unknown` so `check` can say so.
@@ -11,7 +11,7 @@ use serde_yaml::Value;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Front {
-    pub abstract_: Option<String>,
+    pub description: Option<String>,
     pub tags: Vec<String>,
     pub confidence: Option<String>,
     pub updated: Option<String>,
@@ -85,8 +85,12 @@ pub fn parse(yaml: &str, relations: &[&str]) -> Result<Front, String> {
             return Err("a front matter key is not text".into());
         };
         let wrong = || format!("`{key}` has the wrong shape");
+        // `description:` with nothing after it is a key left empty, not a mistake
+        if value.is_null() && matches!(key, "description" | "confidence" | "updated") {
+            continue;
+        }
         match key {
-            "abstract" => front.abstract_ = Some(scalar(value).ok_or_else(wrong)?),
+            "description" => front.description = Some(scalar(value).ok_or_else(wrong)?),
             "confidence" => front.confidence = Some(scalar(value).ok_or_else(wrong)?),
             "updated" => front.updated = Some(scalar(value).ok_or_else(wrong)?),
             "tags" => front.tags = strings(value).ok_or_else(wrong)?,
@@ -148,8 +152,8 @@ mod tests {
 
     #[test]
     fn front_matter_opens_on_the_first_line() {
-        let s = split("---\nabstract: x\n---\nbody\n");
-        assert_eq!((s.yaml, s.body), (Some("abstract: x\n"), "body\n"));
+        let s = split("---\ndescription: x\n---\nbody\n");
+        assert_eq!((s.yaml, s.body), (Some("description: x\n"), "body\n"));
         let s = split("intro\n\n---\nnot: front\n---\n");
         assert_eq!(s.yaml, None);
         assert!(s.body.starts_with("intro"));
@@ -159,11 +163,11 @@ mod tests {
     #[test]
     fn data_and_relations_are_read() {
         let f = parse(
-            "abstract: Retries need a budget\ntags: [net, retry]\nconfidence: high\nupdated: 2026-10-27\nsource: [2026-10-27]\nnb: concepts/backoff\n",
+            "description: Retries need a budget\ntags: [net, retry]\nconfidence: high\nupdated: 2026-10-27\nsource: [2026-10-27]\nnb: concepts/backoff\n",
             KEYS,
         )
         .expect("parses");
-        assert_eq!(f.abstract_.as_deref(), Some("Retries need a budget"));
+        assert_eq!(f.description.as_deref(), Some("Retries need a budget"));
         assert_eq!(f.tags, ["net", "retry"]);
         assert_eq!(f.updated.as_deref(), Some("2026-10-27"));
         assert_eq!(
@@ -178,9 +182,9 @@ mod tests {
 
     #[test]
     fn unknown_keys_and_bad_shapes_are_reported() {
-        let f = parse("abstract: a\nmood: happy\n", KEYS).expect("parses");
+        let f = parse("description: a\nmood: happy\n", KEYS).expect("parses");
         assert_eq!(f.unknown, ["mood"]);
-        assert!(parse("abstract: [a, b]\n", KEYS).is_err());
+        assert!(parse("description: [a, b]\n", KEYS).is_err());
         assert!(parse("- just\n- a list\n", KEYS).is_err());
         assert_eq!(parse("", KEYS).expect("empty"), Front::default());
     }
@@ -195,5 +199,19 @@ mod tests {
     fn a_title_is_the_first_heading() {
         assert_eq!(title("x\n# Retries\n# Other").as_deref(), Some("Retries"));
         assert_eq!(title("## sub only"), None);
+    }
+
+    #[test]
+    fn a_key_left_empty_is_absent_not_a_mistake() {
+        let f = parse(
+            "description:\ntags: [a]\nsource: n1\nupdated:\n",
+            &["source"],
+        )
+        .unwrap();
+        assert_eq!((f.description, f.updated), (None, None));
+        assert_eq!(
+            f.relations,
+            [("source".to_string(), vec!["n1".to_string()])]
+        );
     }
 }

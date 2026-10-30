@@ -22,7 +22,7 @@ You are fixing a defect in the project {{project.name}}: "{{task.name}}".
 3. Make the smallest change that removes the cause. Do not clean up around it.
 4. Run the reproduction again, then the rest of the project's checks, and say
    what you ran and what it printed.
-5. If there is a plan, keep it current with `iter task plan {{task}} --mark <id>
+5. If there is a plan, keep it current with `iter task plan {{task.id}} --mark <id>
    doing|done`. Commit with a message that says what was wrong and why.
 
 Never edit the user's notes.

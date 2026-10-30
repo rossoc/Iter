@@ -6,7 +6,7 @@
 
 use crate::agent::taskdir::TaskDir;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// The program that runs the loop. iter starts it; it does not know what it
 /// does.
@@ -25,12 +25,16 @@ impl Harness {
     }
 
     /// The program and the arguments that run `prompt` once, headless, to
-    /// the end. `extra` goes last, for what the harness takes that iter does
-    /// not know about.
+    /// the end. `dirs` are folders besides the working one the agent may
+    /// read and write (the task's folder). `extra` goes last, for what the
+    /// harness takes that iter does not know about.
     pub fn command(
         self,
         model: &str,
+        effort: &str,
         prompt: &str,
+        dirs: &[&Path],
+        allowed: &[String],
         extra: &[String],
     ) -> (&'static str, Vec<String>) {
         match self {
@@ -40,10 +44,23 @@ impl Harness {
                     args.push("--model".into());
                     args.push(model.into());
                 }
-                // headless there is nobody to ask: edits in the worktree are
-                // allowed, the rest is the harness's own settings
+                if !effort.is_empty() {
+                    args.push("--effort".into());
+                    args.push(effort.into());
+                }
+                for dir in dirs {
+                    args.push("--add-dir".into());
+                    args.push(dir.display().to_string());
+                }
+                // headless there is nobody to ask: edits are allowed, and so
+                // are the commands the prompts tell the agent to run; the
+                // rest is the harness's own settings
                 args.push("--permission-mode".into());
                 args.push("acceptEdits".into());
+                if !allowed.is_empty() {
+                    args.push("--allowedTools".into());
+                    args.extend(allowed.iter().cloned());
+                }
                 args.extend(extra.iter().cloned());
                 ("claude", args)
             }
@@ -94,18 +111,38 @@ pub struct Run {
 
 impl Run {
     /// The status to show: a run that says it is running but whose process
-    /// is gone (killed, or the machine restarted) is `lost`.
+    /// is gone (killed, or the machine restarted) is `lost`. One that never
+    /// got a process (the start failed halfway) is `lost` once it is a
+    /// minute old.
     pub fn shown_status(&self) -> &'static str {
         match (self.status, self.pid) {
             (Status::Running, Some(pid)) if !alive(pid) => "lost",
+            (Status::Running, None) if self.age_seconds() > 60 => "lost",
             (status, _) => status.label(),
         }
     }
+
+    /// Whether an agent is working on this run.
+    pub fn is_running(&self) -> bool {
+        self.shown_status() == "running"
+    }
+
+    fn age_seconds(&self) -> i64 {
+        chrono::NaiveDateTime::parse_from_str(&self.started, "%Y-%m-%d %H:%M:%S")
+            .map(|t| (chrono::Local::now().naive_local() - t).num_seconds())
+            .unwrap_or(i64::MAX)
+    }
 }
 
-/// Whether process `pid` exists.
-fn alive(pid: u32) -> bool {
-    crate::process::succeeds("kill", None, &["-0".to_string(), pid.to_string()])
+/// Whether process `pid` exists and is not a zombie (a child nobody has
+/// waited for still answers `kill -0`).
+pub fn alive(pid: u32) -> bool {
+    let pid = pid.to_string();
+    if !crate::process::succeeds("kill", None, &["-0".to_string(), pid.clone()]) {
+        return false;
+    }
+    crate::process::output_trimmed("ps", None, &["-o", "stat=", "-p", &pid])
+        .is_none_or(|stat| !stat.starts_with('Z'))
 }
 
 impl TaskDir {
@@ -125,9 +162,38 @@ impl TaskDir {
         self.runs_dir().join(format!("{n}.prompt.md"))
     }
 
-    /// The number the next run gets: one more than the highest so far.
+    /// The number the next run gets: one more than the highest file in the
+    /// folder, readable or not.
     pub fn next_run(&self) -> u32 {
-        self.runs().iter().map(|r| r.n).max().unwrap_or(0) + 1
+        let highest = std::fs::read_dir(self.runs_dir())
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter_map(|e| {
+                let name = e.file_name();
+                name.to_str()?.split('.').next()?.parse::<u32>().ok()
+            })
+            .max();
+        highest.unwrap_or(0) + 1
+    }
+
+    /// Takes the next number for good: the record file is made, empty, with
+    /// a call that fails if it is there, so two runs started at once get two
+    /// numbers.
+    pub fn claim_run(&self) -> std::io::Result<u32> {
+        std::fs::create_dir_all(self.runs_dir())?;
+        loop {
+            let n = self.next_run();
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(self.run_path(n))
+            {
+                Ok(_) => return Ok(n),
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => return Err(e),
+            }
+        }
     }
 
     pub fn read_run(&self, n: u32) -> std::io::Result<Option<Run>> {
@@ -144,11 +210,7 @@ impl TaskDir {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        let tmp = self
-            .runs_dir()
-            .join(format!(".{}.{}.tmp", run.n, std::process::id()));
-        std::fs::write(&tmp, text)?;
-        std::fs::rename(&tmp, self.run_path(run.n))
+        crate::agent::taskdir::write_whole(&self.runs_dir(), &self.run_path(run.n), &text)
     }
 
     /// Every run, the first one first. A record that cannot be read is left
@@ -216,16 +278,28 @@ mod tests {
 
     #[test]
     fn claude_runs_headless_with_the_prompt_and_the_model() {
-        let (program, args) = Harness::Claude.command("haiku", "do it", &["--verbose".into()]);
-        assert_eq!(program, "claude");
-        assert_eq!(args[..4], ["-p", "do it", "--model", "haiku"]);
-        assert_eq!(args.last().map(String::as_str), Some("--verbose"));
-        // no model: the harness's own default
-        assert!(
-            !Harness::Claude
-                .command("", "x", &[])
-                .1
-                .contains(&"--model".to_string())
+        let dir = Path::new("/n/tasks/1");
+        let (program, args) = Harness::Claude.command(
+            "haiku",
+            "low",
+            "do it",
+            &[dir],
+            &["Bash(git *)".into()],
+            &["--verbose".into()],
         );
+        assert_eq!(program, "claude");
+        assert_eq!(
+            args[..6],
+            ["-p", "do it", "--model", "haiku", "--effort", "low"]
+        );
+        assert!(args.windows(2).any(|w| w == ["--add-dir", "/n/tasks/1"]));
+        assert!(
+            args.windows(2)
+                .any(|w| w == ["--allowedTools", "Bash(git *)"])
+        );
+        assert_eq!(args.last().map(String::as_str), Some("--verbose"));
+        // no model, no effort: the harness's own defaults
+        let (_, bare) = Harness::Claude.command("", "", "x", &[], &[], &[]);
+        assert!(!bare.contains(&"--model".to_string()) && !bare.contains(&"--effort".to_string()));
     }
 }

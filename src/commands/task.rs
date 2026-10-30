@@ -3,6 +3,7 @@
 
 use crate::app::App;
 use crate::args::{ReportOpts, TaskCommand};
+use crate::commands::ingest::{self, Trigger};
 use crate::commands::sync::{task_pull, task_push};
 use crate::commands::{Run, agent, solve};
 use crate::config::config;
@@ -262,6 +263,18 @@ fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
     let display = task_display(&project, &task);
     let session_config = db.find_session_config_by_task(task_id)?;
 
+    // tearing the worktree down under an agent that is working in it would
+    // take its commits with it
+    if let Ok(dir) = crate::agent::taskdir::of(db, &project, &task)
+        && let Some(run) = dir.runs().into_iter().find(|r| r.is_running())
+    {
+        return Err(IterError::CommandFailed(format!(
+            "run {} of '{display}' is still working (pid {}): wait for it to finish, or stop it, and try again",
+            run.n,
+            run.pid.map_or("?".to_string(), |p| p.to_string())
+        )));
+    }
+
     // `--save` goes first, before the clock, the status and the teardown:
     // it is the one step here that can stop halfway, and a merge that
     // stops has to leave the task exactly as it was -- still `wip`, with
@@ -282,6 +295,19 @@ fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
     // that point may never run.
     task.status = TaskStatus::Done;
     db.update(task_id, &task)?;
+
+    // what the task's own notes said goes into today's note of the project,
+    // and the wiki may be asked to learn from it; neither stops the task
+    // from being done
+    match ingest::bridge_task_notes(app, &project, &task) {
+        Ok(0) => {}
+        Ok(n) => println!(
+            "added {n} notes of the task to today's note of '{}'",
+            project.name
+        ),
+        Err(e) => eprintln!("warning: the task's notes were not added to today's note: {e}"),
+    }
+    ingest::auto(app, &project, &task, Trigger::TaskDone);
 
     if let Some(session_config) = session_config {
         teardown_and_kill(db, &project, &session_config);

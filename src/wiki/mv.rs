@@ -54,21 +54,23 @@ fn path_char(c: char) -> bool {
 /// `text` with each whole-word `old` replaced by `new`: not part of a longer
 /// path. How many were replaced.
 fn replace_token(text: &str, old: &str, new: &str) -> (String, usize) {
-    let (mut out, mut rest, mut n) = (String::new(), text, 0);
-    while let Some(at) = rest.find(old) {
-        let before = rest[..at].chars().next_back();
-        let after = rest[at + old.len()..].chars().next();
+    let (mut out, mut from, mut n) = (String::new(), 0, 0);
+    while let Some(found) = text[from..].find(old) {
+        let at = from + found;
+        let end = at + old.len();
+        let before = text[..at].chars().next_back();
+        let after = text[end..].chars().next();
         let whole = !before.is_some_and(path_char) && !after.is_some_and(path_char);
-        out.push_str(&rest[..at]);
+        out.push_str(&text[from..at]);
         if whole {
             out.push_str(new);
             n += 1;
         } else {
             out.push_str(old);
         }
-        rest = &rest[at + old.len()..];
+        from = end;
     }
-    out.push_str(rest);
+    out.push_str(&text[from..]);
     (out, n)
 }
 
@@ -83,7 +85,9 @@ fn replace_links(body: &str, old: &str, new: &str) -> (String, usize) {
         let inner = &rest[start..end];
         let cut = inner.find(['|', '#']).unwrap_or(inner.len());
         out.push_str(&rest[..start]);
-        if inner[..cut].trim() == old {
+        // `[[a/b.md]]` is `[[a/b]]` (the link reader drops the extension too)
+        let target = inner[..cut].trim();
+        if target.strip_suffix(".md").unwrap_or(target) == old {
             out.push_str(new);
             out.push_str(&inner[cut..]);
             n += 1;
@@ -130,6 +134,32 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
         return Err(failed(
             "a file moves inside its level: give a path, not a `level:path`",
         ));
+    }
+    if !to.chars().all(path_char) {
+        return Err(failed(format!(
+            "`{to}` has a character a page's path cannot have: letters, digits and _ . - / only"
+        )));
+    }
+    // a page stays a page: it moves to a folder the wiki gives a class to,
+    // else it would leave the wiki and every reference to it would dangle
+    if wiki.ontology.pages.contains(&n.class) {
+        let folders: Vec<&str> = wiki
+            .ontology
+            .places
+            .iter()
+            .filter(|p| p.kind == level.kind && wiki.ontology.pages.contains(&p.class))
+            .map(|p| p.folder.as_str())
+            .collect();
+        let inside = folders.iter().any(|f| {
+            to.strip_prefix(*f)
+                .is_some_and(|rest| rest.starts_with('/'))
+        });
+        if !inside {
+            return Err(failed(format!(
+                "`{to}` is not in a folder of the wiki: a page goes under {}",
+                folders.join(", ")
+            )));
+        }
     }
     let target = level.dir.join(format!("{to}.md"));
     if target.exists() {
@@ -310,5 +340,26 @@ mod tests {
         for bad in ["", "../x", "a//b", "acme:wiki/x", "wiki/concepts/backoff"] {
             assert!(mv(&w, idea, bad, true).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn a_token_is_replaced_only_when_whole_and_nothing_is_lost_between_matches() {
+        assert_eq!(replace_token("a/b a/ba a/b", "a/b", "x").0, "x a/ba x");
+        assert_eq!(
+            replace_token("a/ba/b", "a/b", "x"),
+            ("a/ba/b".to_string(), 0)
+        );
+        assert_eq!(replace_token("é a/b é", "a/b", "x").0, "é x é");
+    }
+
+    #[test]
+    fn links_written_with_the_extension_are_rewritten_too() {
+        let (out, n) = replace_links(
+            "see [[ideas/a.md]] and [[ideas/a.md|that]] and [[ideas/ab]]",
+            "ideas/a",
+            "ideas/b",
+        );
+        assert_eq!(n, 2);
+        assert_eq!(out, "see [[ideas/b]] and [[ideas/b|that]] and [[ideas/ab]]");
     }
 }

@@ -45,6 +45,46 @@ pub struct TaskDefaults {
     pub status: TaskStatus,
 }
 
+/// What a headless agent (`iter task solve`, `iter wiki ingest`) may do. Nobody
+/// is there to approve a command, so what is not allowed here (or by the
+/// harness's own settings) is refused.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AgentConfig {
+    /// Shell commands the agent may run, in the harness's own syntax
+    /// (`Bash(git *)` for Claude). A command that a hook rewrites (`rtk git
+    /// status`) is matched after the rewrite: add `Bash(rtk *)` then.
+    pub allowed_tools: Vec<String>,
+}
+
+impl Default for AgentConfig {
+    fn default() -> Self {
+        AgentConfig {
+            allowed_tools: [
+                // what the prompts tell an agent to run: its plan, the wiki, the notes
+                "Bash(iter task plan *)",
+                "Bash(iter task prompt *)",
+                "Bash(iter wiki find *)",
+                "Bash(iter wiki grep *)",
+                "Bash(iter wiki show *)",
+                "Bash(iter wiki neighbors *)",
+                "Bash(iter wiki check *)",
+                "Bash(iter wiki schema *)",
+                "Bash(iter notes *)",
+                // and git, to look at its work and commit it (not to push or rewrite)
+                "Bash(git status *)",
+                "Bash(git diff *)",
+                "Bash(git log *)",
+                "Bash(git show *)",
+                "Bash(git add *)",
+                "Bash(git commit *)",
+            ]
+            .map(String::from)
+            .to_vec(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
@@ -65,6 +105,7 @@ pub struct Config {
 
     pub project: Settings,
     pub task: TaskDefaults,
+    pub agent: AgentConfig,
 }
 
 impl Default for Config {
@@ -75,6 +116,7 @@ impl Default for Config {
             editor: default_editor(),
             project: Settings::default(),
             task: TaskDefaults::default(),
+            agent: AgentConfig::default(),
         }
     }
 }

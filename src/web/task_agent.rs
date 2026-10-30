@@ -23,7 +23,7 @@ use crate::agent::run::{Harness, Run};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::commands::solve::{self, Spec};
 use crate::db::{Db, Table};
-use crate::error::Result as Loaded;
+use crate::error::{IterError, Result as Loaded};
 use crate::models::{Project, Task};
 use crate::utils::resolve::task_display;
 use serde::Deserialize;
@@ -75,6 +75,9 @@ pub struct AgentTab {
     /// `None` when neither the project nor its organization has a notes
     /// folder to keep the task in.
     pub dir: Option<TaskDir>,
+    /// The folder is among the project's notes (else it is in iter's config
+    /// directory, because the project has no notes folder).
+    pub in_notes: bool,
     /// The plan's text, when there is a plan.
     pub plan_text: Option<String>,
     pub plan: Plan,
@@ -143,6 +146,7 @@ pub fn load(db: &Db, project: &Project, task: &Task, step: Option<&str>) -> Load
     };
     let runs = dir.as_ref().map(run_views).unwrap_or_default();
     Ok(AgentTab {
+        in_notes: taskdir::in_notes(db, project),
         task_id: task.id(),
         runs,
         task: task_display(project, task),
@@ -415,6 +419,12 @@ async fn agent_panel(agent: &AgentTab, missing: Option<&str>) -> Result<impl Vie
     if let Some(dir) = &agent.dir {
         rows.push(Row::Text("Task folder", dir.root().display().to_string()));
     }
+    if !agent.in_notes {
+        rows.push(Row::Text(
+            "Note",
+            "The project has no notes folder (`notes_path`), so the task is kept in iter's config folder and the wiki does not see it.".to_string(),
+        ));
+    }
     Ok(view! {
         if let Some(step) = missing {
             <p class="empty-line">"There is no step " <code>(step)</code> " in the plan."</p>
@@ -469,12 +479,21 @@ pub fn set_state(dir: &TaskDir, step: &str, state: &str) -> std::result::Result<
         "done" => State::Done,
         other => return Err(Refusal::State(format!("'{other}' is not a state"))),
     };
-    let content = dir
-        .read_plan()
-        .map_err(Refusal::Io)?
-        .ok_or(Refusal::Missing)?;
-    let marked = plan::mark(&content, step, state).map_err(|_| Refusal::Missing)?;
-    dir.write_plan(&marked).map_err(Refusal::Io)
+    // taking turns with whoever else is writing the plan (an agent ticking a step)
+    dir.update_plan(|content| {
+        let missing = || IterError::NotFound {
+            kind: "plan step",
+            name: step.to_string(),
+        };
+        let content = content.ok_or_else(missing)?;
+        let marked = plan::mark(&content, step, state).map_err(|_| missing())?;
+        Ok((Some(marked), ()))
+    })
+    .map_err(|e| match e {
+        IterError::NotFound { .. } => Refusal::Missing,
+        IterError::Io(io) => Refusal::Io(io),
+        other => Refusal::Io(std::io::Error::other(other.to_string())),
+    })
 }
 
 /// `POST /task/{id}/plan/{step}`: moves a step, then shows the plan with that
@@ -541,7 +560,7 @@ async fn start_run(cx: &Cx, Form(form): Form<SolveForm>) -> Result<Response> {
     let db = open_db()?;
     let task = db.get::<Task>(id)?.ok_or_not_found()?;
     let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
-    let dir = taskdir::of(&db, &project, &task).ok().ok_or_not_found()?;
+    let dir = taskdir::of(&db, &project, &task)?;
     if dir.runs().iter().any(|r| r.shown_status() == "running") {
         return Err(bad_request("an agent is already working on this task").into());
     }
@@ -549,15 +568,10 @@ async fn start_run(cx: &Cx, Form(form): Form<SolveForm>) -> Result<Response> {
         db,
         now: chrono::Local::now().naive_local(),
     };
-    solve::start(
-        &app,
-        &task_display(&project, &task),
-        kind,
-        &spec,
-        &task.description,
-        false,
-        &[],
-    )?;
+    let name = task_display(&project, &task);
+    // what went wrong is worth telling: a project that is not a git repository, a harness that is not there
+    solve::start(&app, &name, kind, &spec, &task.description, false, &[])
+        .map_err(|e| bad_request(e.to_string()))?;
     Err(see_other(agent_tab_url(&task_url(id))).into())
 }
 
@@ -623,7 +637,7 @@ mod tests {
     }
 
     #[test]
-    fn a_project_with_nowhere_to_keep_notes_has_an_empty_tab() {
+    fn a_project_with_nowhere_to_keep_notes_keeps_the_task_in_the_config_folder() {
         let db = fixtures::db();
         let project_id = db.insert(&fixtures::project("bare")).unwrap();
         let task_id = db.insert(&task(project_id)).unwrap();
@@ -632,7 +646,7 @@ mod tests {
             db.get::<Task>(task_id).unwrap().unwrap(),
         );
         let tab = load(&db, &project, &task, None).unwrap();
-        assert!(tab.dir.is_none() && tab.plan_text.is_none());
+        assert!(tab.dir.is_some() && !tab.in_notes && tab.plan_text.is_none());
     }
 
     #[test]

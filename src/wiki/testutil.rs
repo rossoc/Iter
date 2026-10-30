@@ -60,33 +60,33 @@ pub fn fixture(name: &str) -> PathBuf {
     write(
         &app,
         "wiki/ideas/retry.md",
-        "---\nabstract: Retries need a budget\ntags: [net]\nsource: 2026-10-27\nupdated: 2026-10-28\n---\n# Retry budget\nsee [[concepts/backoff]]\n",
+        "---\ndescription: Retries need a budget\ntags: [net]\nsource: 2026-10-27\nupdated: 2026-10-28\n---\n# Retry budget\nsee [[concepts/backoff]]\n",
     );
     write(
         &app,
         "wiki/concepts/backoff.md",
-        "---\nabstract: Back off between retries\ninclude: [ideas/retry]\nnb: ideas/retry\n---\nbody\n",
+        "---\ndescription: Back off between retries\ninclude: [ideas/retry]\nnb: ideas/retry\n---\nbody\n",
     );
     write(
         &root.join("acme"),
         "wiki/entities/ci.md",
-        "---\nabstract: The CI\n---\n[[acme.app:concepts/backoff]] [[missing]]\n",
+        "---\ndescription: The CI\n---\n[[acme.app:concepts/backoff]] [[missing]]\n",
     );
     write(
         &app,
         "tasks/7/plan.md",
-        "---\nabstract: Plan\n---\n## Goal\n",
+        "---\ndescription: Plan\n---\n## Goal\n",
     );
     write(
         &app,
         "tasks/7/sketches/s.md",
-        "---\nabstract: Scratch\nref: concepts/backoff\n---\n",
+        "---\ndescription: Scratch\nref: concepts/backoff\n---\n",
     );
     root
 }
 
 /// A wiki of `pages` pages and a tenth as many notes in the project `acme.app`
-/// (every page has an abstract, three tags, a source and two links), for
+/// (every page has a description, three tags, a source and two links), for
 /// timing. Pseudo-random but the same every time.
 pub fn big(name: &str, pages: usize) -> PathBuf {
     let root = scratch(name);
@@ -107,7 +107,7 @@ pub fn big(name: &str, pages: usize) -> PathBuf {
     for i in 0..pages {
         let (a, b, c) = (next(pages), next(pages), next(pages));
         let text = format!(
-            "---\nabstract: Page {i} says something about topic {}\ntags: [t{}, t{}, t{}]\nsource: [n]\nnb: [{}]\nupdated: 2026-10-01\n---\n# Page {i}\nSee [[{}]] and [[{}]].\n{}\n",
+            "---\ndescription: Page {i} says something about topic {}\ntags: [t{}, t{}, t{}]\nsource: [n]\nnb: [{}]\nupdated: 2026-10-01\n---\n# Page {i}\nSee [[{}]] and [[{}]].\n{}\n",
             next(200),
             next(50),
             next(50),

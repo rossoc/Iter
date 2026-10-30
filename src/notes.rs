@@ -188,6 +188,28 @@ pub fn create(dir: &Path, day: NaiveDate) -> Result<()> {
     }
 }
 
+/// Adds `## {heading}` and `body` at the end of the note of `day`, making the
+/// note if need be. A note that already has that heading is left alone: the
+/// answer is whether anything was added.
+pub fn append_section(dir: &Path, day: NaiveDate, heading: &str, body: &str) -> Result<bool> {
+    create(dir, day)?;
+    let path = dir.join(file_name(day));
+    let mut text = std::fs::read_to_string(&path)?;
+    let line = format!("## {heading}");
+    if text.lines().any(|l| l.trim_end() == line) {
+        return Ok(false);
+    }
+    if !text.ends_with('\n') {
+        text.push('\n');
+    }
+    if !text.ends_with("\n\n") {
+        text.push('\n');
+    }
+    text.push_str(&format!("{line}\n\n{}\n", body.trim_end()));
+    std::fs::write(&path, text)?;
+    Ok(true)
+}
+
 /// The days either side of `date` among `notes` (latest first): the
 /// previous (older) and the next (newer) one.
 #[cfg(any(feature = "web", test))]
@@ -232,6 +254,21 @@ pub fn project_dir(project: &Project, org: &Option<Organization>) -> Option<Path
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_section_is_added_once() {
+        let dir = std::env::temp_dir().join(format!("iter-append-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let day = NaiveDate::from_ymd_opt(2026, 10, 30).unwrap();
+        assert!(append_section(&dir, day, "Task: Fix it", "### a\n\nhello\n").unwrap());
+        assert!(!append_section(&dir, day, "Task: Fix it", "other").unwrap());
+        assert!(append_section(&dir, day, "Task: Next", "world").unwrap());
+        let text = std::fs::read_to_string(dir.join("2026-10-30.md")).unwrap();
+        assert!(text.contains("## Task: Fix it\n\n### a\n\nhello\n\n## Task: Next\n\nworld\n"));
+        assert!(!text.contains("other"));
+        // the note still reads as a note
+        assert_eq!(get(&dir, day).unwrap().date, day);
+    }
 
     fn day(d: &str) -> NaiveDate {
         parse_date(d).expect("a date")

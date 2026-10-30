@@ -2,7 +2,7 @@
 //! rows: the parsing and the URLs live here, `ui/tabs.rs` only draws.
 
 use super::ui::tabs::Tab;
-use super::url::{agent_tab_url, notes_tab_url, sessions_tab_url, tasks_tab_url};
+use super::url::{agent_tab_url, notes_tab_url, sessions_tab_url, tasks_tab_url, wiki_tab_url};
 use topcoat::router::query_params;
 
 /// The query of the pages with tabs: `?tab=`, and the organization report's
@@ -113,6 +113,7 @@ pub enum TaskSection {
     Info,
     Sessions,
     Agent,
+    Wiki,
 }
 
 impl TaskSection {
@@ -121,6 +122,7 @@ impl TaskSection {
         match tab {
             Some("sessions") => TaskSection::Sessions,
             Some("agent") => TaskSection::Agent,
+            Some("wiki") => TaskSection::Wiki,
             _ => TaskSection::Info,
         }
     }
@@ -132,11 +134,12 @@ impl TaskSection {
             TaskSection::Info => page,
             TaskSection::Sessions => "Sessions",
             TaskSection::Agent => "Agent",
+            TaskSection::Wiki => "Wiki",
         }
     }
 }
 
-/// The Info, Sessions (with its count) and Agent tabs of the task page at
+/// The Info, Sessions (with its count), Agent and Wiki tabs of the task page at
 /// `base`.
 pub fn task_tabs(base: &str, current: TaskSection, sessions: usize) -> Vec<Tab> {
     tabs_for(
@@ -148,6 +151,7 @@ pub fn task_tabs(base: &str, current: TaskSection, sessions: usize) -> Vec<Tab> 
                 Tab::link("Sessions", sessions_tab_url(base)).count(sessions),
             ),
             (TaskSection::Agent, Tab::link("Agent", agent_tab_url(base))),
+            (TaskSection::Wiki, Tab::link("Wiki", wiki_tab_url(base))),
         ],
     )
 }
@@ -161,6 +165,7 @@ mod tests {
         assert_eq!(TaskSection::of(None), TaskSection::Info);
         assert_eq!(TaskSection::of(Some("sessions")), TaskSection::Sessions);
         assert_eq!(TaskSection::of(Some("agent")), TaskSection::Agent);
+        assert_eq!(TaskSection::of(Some("wiki")), TaskSection::Wiki);
         assert_eq!(TaskSection::of(Some("tasks")), TaskSection::Info);
         assert_eq!(TaskSection::Info.title("Task"), "Task");
         assert_eq!(TaskSection::Agent.title("Task"), "Agent");
@@ -169,7 +174,7 @@ mod tests {
     #[test]
     fn task_tabs_mark_the_current_one() {
         let items = task_tabs("/task/7", TaskSection::Sessions, 3);
-        assert_eq!(items.len(), 3);
+        assert_eq!(items.len(), 4);
         assert!(!items[0].is_current() && items[1].is_current() && !items[2].is_current());
         assert_eq!(
             (items[1].href(), items[1].badge()),

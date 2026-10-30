@@ -155,6 +155,17 @@ pub fn agent_tab_url(base: &str) -> String {
     page_url(base, &[("tab", Some("agent"))])
 }
 
+/// The Wiki tab of the task page at `base`.
+pub fn wiki_tab_url(base: &str) -> String {
+    page_url(base, &[("tab", Some("wiki"))])
+}
+
+/// Where the Wiki tab's buttons post: `action` is `accept`, `revert` or
+/// `ingest`.
+pub fn wiki_action_url(id: i64, action: &str) -> String {
+    format!("{}/wiki/{action}", task_url(id))
+}
+
 /// The Agent tab of task `id` with `step` open beside the plan.
 pub fn task_step_url(id: i64, step: &str) -> String {
     page_url(
@@ -249,6 +260,8 @@ mod tests {
         assert_eq!(task_step_url(5, "s3"), "/task/5?tab=agent&step=s3");
         assert_eq!(plan_step_url(5, "s3"), "/task/5/plan/s3");
         assert_eq!(solve_url(5), "/task/5/solve");
+        assert_eq!(wiki_tab_url("/task/5"), "/task/5?tab=wiki");
+        assert_eq!(wiki_action_url(5, "accept"), "/task/5/wiki/accept");
         // whatever the id, it is one path segment
         assert_eq!(plan_step_url(5, "a/b c"), "/task/5/plan/a%2Fb%20c");
     }

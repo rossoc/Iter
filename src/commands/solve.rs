@@ -7,6 +7,7 @@ use crate::agent::run::{Harness, Run, Status};
 use crate::agent::taskdir::TaskDir;
 use crate::app::App;
 use crate::commands::agent::{locate, prompt_for};
+use crate::commands::ingest::{self, Trigger};
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::git;
@@ -93,8 +94,11 @@ fn workspace(
         crate::utils::workspace::remove_worktree_and_branch(project, Some(&path), Some(&branch));
         return Err(e);
     }
-    task.status = TaskStatus::Wip;
-    db.update(task.id(), task)?;
+    // a task that is done or already going keeps its status
+    if task.status == TaskStatus::Queue {
+        task.status = TaskStatus::Wip;
+        db.update(task.id(), task)?;
+    }
     Ok((Some(branch), Some(path)))
 }
 
@@ -143,9 +147,9 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
 }
 
 /// Starts a run of `kind` on `name` (`<project>/<task>`) with `description`
-/// as the task: makes the workspace if there is none, writes the prompt and
-/// the record, and starts the harness, detached unless `wait`. The number of
-/// the run.
+/// as the task: makes the workspace if the kind changes code and there is
+/// none, writes the prompt and the record, and starts the harness, detached
+/// unless `wait`. The number of the run. One run at a time per task.
 pub fn start(
     app: &App,
     name: &str,
@@ -156,14 +160,29 @@ pub fn start(
     extra: &[String],
 ) -> Result<u32> {
     let (project, mut task, dir) = locate(app, Some(name))?;
-    let prompt = prompt_for(app, Some(name), kind, None, true, Some(description))?;
-    let prompt = format!("{prompt}\n\nWork at {} effort.\n", spec.effort.trim());
-    let (branch, worktree) = workspace(app, &project, &mut task)?;
-
-    let n = dir.next_run();
     dir.ensure()?;
-    std::fs::create_dir_all(dir.runs_dir())?;
-    std::fs::write(dir.run_prompt_path(n), &prompt)?;
+    if let Some(r) = dir.runs().iter().find(|r| r.is_running()) {
+        return Err(failed(format!(
+            "run {} is still working on '{name}': wait for it, or stop it first",
+            r.n
+        )));
+    }
+    // a run that only reads has no use for a branch of its own; one that
+    // changes code works where the task's workspace is, made now if need be.
+    // Before the prompt, so that it names the right directory.
+    let (branch, worktree) = match kind {
+        Kind::Execute | Kind::Fix => workspace(app, &project, &mut task)?,
+        Kind::Plan | Kind::Investigate => app
+            .db
+            .find_session_config_by_task(task.id())?
+            .map_or((None, None), |c| (c.github_branch, c.worktree_path)),
+    };
+    let prompt = prompt_for(app, Some(name), kind, None, true, Some(description))?;
+
+    let n = dir.claim_run()?;
+    if n == 1 {
+        ingest::auto(app, &project, &task, Trigger::TaskStart);
+    }
     let mut run = Run {
         n,
         agent: spec.agent,
@@ -176,62 +195,112 @@ pub fn start(
         exit_code: None,
         branch,
         worktree,
-        pid: None,
+        pid: wait.then(std::process::id),
     };
-    dir.write_run(&run)?;
-
-    if wait {
-        println!("run {n} of {name}: {} working...", run.agent.key());
-        work(&project, &dir, run, extra)?;
-        return Ok(n);
+    // whatever goes wrong from here on, the record says so rather than
+    // staying `running` for good
+    let launched = (|| -> Result<()> {
+        std::fs::write(dir.run_prompt_path(n), &prompt)?;
+        dir.write_run(&run)?;
+        if wait {
+            println!("run {n} of {name}: {} working...", run.agent.key());
+            work(&project, &dir, run.clone(), extra)?;
+            return Ok(());
+        }
+        let mut child = std::process::Command::new(std::env::current_exe()?)
+            .args(["task", "run-worker", &task.id().to_string(), &n.to_string()])
+            .arg("--")
+            .args(extra)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0)
+            .spawn()
+            .map_err(|source| IterError::Spawn {
+                tool: "iter",
+                source,
+            })?;
+        let pid = child.id();
+        // in the web server this process lives on: the worker is waited for,
+        // so that it does not stay a zombie that still looks alive
+        std::thread::spawn(move || {
+            let _ = child.wait();
+        });
+        // the worker writes its own record; only fill in its pid if it has not yet
+        if let Some(mut current) = dir.read_run(n)?
+            && current.status == Status::Running
+            && current.pid.is_none()
+        {
+            current.pid = Some(pid);
+            dir.write_run(&current)?;
+        }
+        Ok(())
+    })();
+    if let Err(e) = launched {
+        run.status = Status::Failed;
+        run.ended = Some(now());
+        let _ = std::fs::write(dir.run_log_path(n), format!("iter: {e}\n"));
+        let _ = dir.write_run(&run);
+        return Err(e);
     }
-    let child = std::process::Command::new(std::env::current_exe()?)
-        .args(["task", "run-worker", &task.id().to_string(), &n.to_string()])
-        .arg("--")
-        .args(extra)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .process_group(0)
-        .spawn()
-        .map_err(|source| IterError::Spawn {
-            tool: "iter",
-            source,
-        })?;
-    run.pid = Some(child.id());
-    dir.write_run(&run)?;
     Ok(n)
 }
 
-/// Runs the harness of `run` in its worktree to the end, its output in the
-/// run's log, and records how it went.
-fn work(project: &Project, dir: &TaskDir, mut run: Run, extra: &[String]) -> Result<Run> {
+/// Starts the harness of `run` and waits for it; its output goes to the
+/// run's log.
+fn launch(project: &Project, dir: &TaskDir, run: &Run, extra: &[String]) -> Result<Option<i32>> {
     let prompt = std::fs::read_to_string(dir.run_prompt_path(run.n))?;
     let log = std::fs::File::create(dir.run_log_path(run.n))?;
-    let (program, args) = run.agent.command(&run.model, &prompt, extra);
+    let (program, args) = run.agent.command(
+        &run.model,
+        &run.effort,
+        &prompt,
+        &[dir.root()],
+        &crate::config::config().agent.allowed_tools,
+        extra,
+    );
     let cwd = run.worktree.as_deref().unwrap_or(&project.base_path);
-    let outcome = std::process::Command::new(program)
+    let status = std::process::Command::new(program)
         .args(&args)
         .current_dir(cwd)
         .stdin(Stdio::null())
         .stdout(log.try_clone()?)
         .stderr(log)
-        .status();
+        .status()
+        .map_err(|source| IterError::Spawn {
+            tool: program,
+            source,
+        })?;
+    Ok(status.success().then_some(0).or(status.code().or(Some(-1))))
+}
+
+/// Runs the harness of `run` in its worktree to the end and records how it
+/// went. A run that cannot start is recorded as failed, with the reason in
+/// its log.
+fn work(project: &Project, dir: &TaskDir, mut run: Run, extra: &[String]) -> Result<Run> {
+    let outcome = launch(project, dir, &run, extra);
+    // an agent that wrote the plan itself leaves the steps without ids: number them now
+    let _ = dir.update_plan(|text| {
+        Ok((
+            text.and_then(|t| {
+                let numbered = crate::agent::plan::normalize(&t);
+                (numbered != t).then_some(numbered)
+            }),
+            (),
+        ))
+    });
     run.ended = Some(now());
     match outcome {
-        Ok(status) => {
-            run.exit_code = status.code();
-            run.status = if status.success() {
+        Ok(code) => {
+            run.exit_code = code;
+            run.status = if code == Some(0) {
                 Status::Done
             } else {
                 Status::Failed
             };
         }
         Err(e) => {
-            let _ = std::fs::write(
-                dir.run_log_path(run.n),
-                format!("cannot start {program}: {e}\n"),
-            );
+            let _ = std::fs::write(dir.run_log_path(run.n), format!("iter: {e}\n"));
             run.status = Status::Failed;
         }
     }

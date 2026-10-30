@@ -659,7 +659,7 @@ pub struct WikiScope {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum WikiCommand {
-    /// Rank pages by how well their path, title, tags and abstract match the
+    /// Rank pages by how well their path, title, tags and description match the
     /// words, best first, until the token budget is spent
     Find {
         /// What to look for
@@ -722,7 +722,7 @@ pub enum WikiCommand {
         scope: WikiScope,
     },
 
-    /// Lint the wiki: dangling links, missing abstracts and tags, broken
+    /// Lint the wiki: dangling links, missing descriptions and tags, broken
     /// front matter, relations the ontology does not allow, and what to do
     /// next. Fails if there are errors
     Check {
@@ -730,7 +730,9 @@ pub enum WikiCommand {
         scope: WikiScope,
     },
 
-    /// Move a page inside its level, rewriting every reference to it
+    /// Move a page inside its level, rewriting every reference to it. Only the
+    /// levels in scope are rewritten: references from other tasks' folders or
+    /// from an organization's projects are not (run `check` there)
     Mv {
         /// The page
         from: String,
@@ -768,6 +770,81 @@ pub enum WikiCommand {
         #[clap(flatten)]
         scope: WikiScope,
     },
+
+    /// Have an agent turn the notes that changed (or were never ingested)
+    /// into pages. Its changes are left uncommitted, to be reviewed with
+    /// `pending`. Needs the notes folder to be in a git repository
+    Ingest {
+        /// A project (default: the one of the tmux session you're in)
+        #[clap(long, short = 'p', add = ArgValueCompleter::new(project_completer),
+               conflicts_with = "task")]
+        project: Option<String>,
+
+        /// A finished task: its sketches are ingested too
+        #[clap(long, short = 't', add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// Only list what is waiting and when it would run on its own
+        #[clap(long)]
+        dry_run: bool,
+
+        /// Leave the agent running and return
+        #[clap(long)]
+        detach: bool,
+
+        #[clap(flatten)]
+        harness: HarnessOpts,
+    },
+
+    /// Have an agent write a concept that includes the given ideas
+    BuildConcept {
+        /// The ideas (`ideas/retry-budget`), at least two
+        #[clap(required = true, num_args = 2..)]
+        ideas: Vec<String>,
+
+        /// The concept's file name, without `.md`
+        #[clap(long)]
+        name: String,
+
+        /// A project (default: the one of the tmux session you're in)
+        #[clap(long, short = 'p', add = ArgValueCompleter::new(project_completer))]
+        project: Option<String>,
+
+        #[clap(flatten)]
+        harness: HarnessOpts,
+    },
+
+    /// What the agents changed in the wiki and nobody has accepted yet
+    Pending {
+        /// A project (default: the one of the tmux session you're in)
+        #[clap(long, short = 'p', add = ArgValueCompleter::new(project_completer))]
+        project: Option<String>,
+
+        /// Commit the changes
+        #[clap(long, conflicts_with = "revert")]
+        accept: bool,
+
+        /// Throw away every uncommitted change under wiki/, yours too
+        #[clap(long)]
+        revert: bool,
+    },
+}
+
+/// How a job that runs an agent is run (the agent of `iter wiki ingest` and
+/// `iter wiki build-concept`).
+#[derive(clap::Args, Debug)]
+pub struct HarnessOpts {
+    /// The harness that runs the agent
+    #[clap(long, value_enum)]
+    pub agent: Option<Harness>,
+
+    /// The model (the harness's own default when left out)
+    #[clap(long)]
+    pub model: Option<String>,
+
+    /// Passed to the harness as they are, after `--`
+    #[clap(last = true)]
+    pub extra: Vec<String>,
 }
 
 /// Which notes: a project's or an organization's (default: the project of the
