@@ -6,14 +6,12 @@ use crate::agent::plan::{self, Plan, Progress, State};
 use crate::agent::prompt::{self, Context, Kind};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
-use crate::args::PlanCommand;
-use crate::commands::Run;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::md_edit::edit_text;
 use crate::models::{Organization, Project, Task};
 use crate::notes;
-use crate::utils::output::emit;
+use crate::utils::output::{Format as DataFormat, emit};
 use crate::utils::resolve::{resolve_task_or_current, task_display};
 use serde::Serialize;
 use std::io::Read;
@@ -67,7 +65,7 @@ fn progress_line(p: &Progress) -> String {
     line
 }
 
-/// What `plan set` did: how many steps the plan has, and what it is missing.
+/// What saving a plan did: how many steps the plan has, and what it is missing.
 pub struct Saved {
     pub steps: usize,
     pub problems: Vec<String>,
@@ -101,69 +99,65 @@ pub fn save_plan(dir: &TaskDir, text: &str) -> Result<Saved> {
 pub fn mark_step(dir: &TaskDir, id: &str, state: State) -> Result<Progress> {
     let content = dir
         .read_plan()?
-        .ok_or_else(|| failed("there is no plan yet: write one with `iter task plan set`"))?;
+        .ok_or_else(|| failed("there is no plan yet: write one with `iter task plan`"))?;
     let marked = plan::mark(&content, id, state).map_err(|e| failed(e.to_string()))?;
     dir.write_plan(&marked)?;
     Ok(plan::parse(&marked).progress())
 }
 
-impl Run for PlanCommand {
-    fn run(&self, app: &App) -> Result<()> {
-        match self {
-            Self::Show { task, format } => {
-                let (project, task, dir) = locate(app, task.as_deref())?;
-                let name = task_display(&project, &task);
-                let word = prompt::shell_word(&name);
-                let content = dir.read_plan()?;
-                let v = view(&name, &dir, content.as_deref());
-                emit(*format, &v, || match &content {
-                    None => format!(
-                        "No plan yet. Write one with `iter task plan set {word}`, or send an agent: `iter task prompt {word} --kind plan`.\n"
-                    ),
-                    Some(text) => {
-                        format!("{}\n\n{}\n", text.trim_end(), progress_line(&v.progress))
-                    }
-                })
-            }
-            Self::Set { task, stdin } => {
-                let (project, task, dir) = locate(app, task.as_deref())?;
-                let text = match stdin {
-                    true => {
-                        let mut buf = String::new();
-                        std::io::stdin().read_to_string(&mut buf)?;
-                        Some(buf)
-                    }
-                    false => {
-                        let start = match dir.read_plan()? {
-                            Some(existing) => existing,
-                            None => plan::skeleton(&task.description),
-                        };
-                        edit_text(&start)?
-                    }
-                };
-                let Some(text) = text else {
-                    println!("no changes -- plan not saved");
-                    return Ok(());
-                };
-                let saved = save_plan(&dir, &text)?;
-                for problem in &saved.problems {
-                    eprintln!("warning: {problem}");
-                }
-                println!(
-                    "saved the plan of {}: {} steps",
-                    task_display(&project, &task),
-                    saved.steps
-                );
-                Ok(())
-            }
-            Self::Mark { step, state, task } => {
-                let (_, _, dir) = locate(app, task.as_deref())?;
-                let p = mark_step(&dir, step, *state)?;
-                println!("{step}: {} -- {}", state.label(), progress_line(&p));
-                Ok(())
-            }
-        }
+/// What `iter task plan` was asked: alone it edits, `--show` prints,
+/// `--stdin` replaces, `--mark` ticks a step.
+pub struct PlanRequest<'a> {
+    pub task: Option<&'a str>,
+    pub show: bool,
+    pub stdin: bool,
+    /// `[step, state]`, or empty.
+    pub mark: &'a [String],
+    pub format: DataFormat,
+}
+
+pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
+    let (project, task, dir) = locate(app, req.task)?;
+    let name = task_display(&project, &task);
+    let word = prompt::shell_word(&name);
+    if let [step, state] = req.mark {
+        let state = <State as clap::ValueEnum>::from_str(state, true)
+            .map_err(|_| failed(format!("`{state}` is not a state: todo, doing or done")))?;
+        let p = mark_step(&dir, step, state)?;
+        println!("{step}: {} -- {}", state.label(), progress_line(&p));
+        return Ok(());
     }
+    if req.show {
+        let content = dir.read_plan()?;
+        let v = view(&name, &dir, content.as_deref());
+        return emit(req.format, &v, || match &content {
+            None => format!(
+                "No plan yet. Write one with `iter task plan {word}`, or send an agent: `iter task prompt {word} --kind plan`.\n"
+            ),
+            Some(text) => format!("{}\n\n{}\n", text.trim_end(), progress_line(&v.progress)),
+        });
+    }
+    let text = if req.stdin {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf)?;
+        Some(buf)
+    } else {
+        let start = match dir.read_plan()? {
+            Some(existing) => existing,
+            None => plan::skeleton(&task.description),
+        };
+        edit_text(&start)?
+    };
+    let Some(text) = text else {
+        println!("no changes -- plan not saved");
+        return Ok(());
+    };
+    let saved = save_plan(&dir, &text)?;
+    for problem in &saved.problems {
+        eprintln!("warning: {problem}");
+    }
+    println!("saved the plan of {name}: {} steps", saved.steps);
+    Ok(())
 }
 
 /// What the project's wiki knows that bears on the task, as a few lines for
@@ -467,7 +461,7 @@ mod tests {
         std::fs::write(&file, "mine: {{task}}").unwrap();
         assert_eq!(
             prompt_text(&app, Some("app/Fix it"), Kind::Plan, Some(&file), false).unwrap(),
-            "mine: 'app/Fix it'"
+            r"mine: app/Fix\ it"
         );
     }
 

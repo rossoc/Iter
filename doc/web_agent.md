@@ -13,7 +13,7 @@ States: no plan ("No plan yet."), no notes folder (the project and its organizat
 
 ## Steps
 
-A step is a link, `?tab=agent&step=s3`, so opening one needs no script; the current one has `aria-current="step"`. A step written by hand and not numbered yet has no id and is not a link (`iter task plan set` numbers it). Each row says its state in text for a screen reader, as well as by its icon (the icons are the task status ones: circle, half, check).
+A step is a link, `?tab=agent&step=s3`, so opening one needs no script; the current one has `aria-current="step"`. A step written by hand and not numbered yet has no id and is not a link (`iter task plan` numbers it). Each row says its state in text for a screen reader, as well as by its icon (the icons are the task status ones: circle, half, check).
 
 `POST /task/{id}/plan/{step}` takes `state=todo|doing|done`, changes that step's checkbox in `plan.md` (nothing else in the file changes) and redirects (303) to the same step. A state that is not one of the three is a 400; no such task, no notes folder, no plan or no such step is a 404, and the file is left as it was.
 

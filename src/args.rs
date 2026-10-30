@@ -1,4 +1,3 @@
-use crate::agent::plan::State as StepState;
 use crate::agent::prompt::Kind as PromptKind;
 use crate::completion::{
     board_completer, organization_completer, project_completer, queued_task_completer,
@@ -384,10 +383,30 @@ pub enum TaskCommand {
     },
 
     /// The plan of a task: its goal, how, and a checklist with the state of
-    /// every step
+    /// every step. Alone it opens the plan in the editor
     Plan {
-        #[clap(subcommand)]
-        action: PlanCommand,
+        /// `<project>/<task>` (default: the task of the tmux session you're in).
+        /// A name with a space needs a backslash: `app/Fix\ it`
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// Print the plan and how far along it is
+        #[clap(long, short = 's', conflicts_with_all = ["stdin", "mark"])]
+        show: bool,
+
+        /// Replace the plan with the one on standard input. Steps get their
+        /// ids; a missing Goal or Checklist is a warning, not a refusal
+        #[clap(long, conflicts_with = "mark")]
+        stdin: bool,
+
+        /// Put one step in a state (todo, doing or done): `--mark s3 done`.
+        /// Only its checkbox changes
+        #[clap(long, num_args = 2, value_names = ["STEP", "STATE"])]
+        mark: Vec<String>,
+
+        /// Output format of --show
+        #[clap(long, short = 'f', value_enum, default_value_t = DataFormat::Text)]
+        format: DataFormat,
     },
 
     /// Print the prompt that tells an agent what to do with a task: plan it,
@@ -727,45 +746,5 @@ pub enum NotesCommand {
 
         #[clap(flatten)]
         scope: NotesScope,
-    },
-}
-
-#[derive(clap::Subcommand, Debug)]
-pub enum PlanCommand {
-    /// The plan and how far along it is
-    Show {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-
-        /// Output format
-        #[clap(long, short = 'f', value_enum, default_value_t = DataFormat::Text)]
-        format: DataFormat,
-    },
-
-    /// Write the plan: in the editor, or the whole plan from standard input.
-    /// Steps get their ids; a missing Goal or Checklist is a warning, not a
-    /// refusal
-    Set {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-
-        /// Read the plan from standard input
-        #[clap(long)]
-        stdin: bool,
-    },
-
-    /// Put one step in a state: todo, doing or done. Only its checkbox changes
-    Mark {
-        /// The step's id (`s3`)
-        step: String,
-
-        #[clap(value_enum)]
-        state: StepState,
-
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
     },
 }

@@ -44,7 +44,22 @@ impl Run for TaskCommand {
                 };
                 task_list(app, project.as_deref(), &statuses)
             }
-            Self::Plan { action } => action.run(app),
+            Self::Plan {
+                task,
+                show,
+                stdin,
+                mark,
+                format,
+            } => agent::plan(
+                app,
+                &agent::PlanRequest {
+                    task: task.as_deref(),
+                    show: *show,
+                    stdin: *stdin,
+                    mark,
+                    format: *format,
+                },
+            ),
             Self::Prompt {
                 task,
                 kind,

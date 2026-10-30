@@ -59,7 +59,7 @@ mod tests {
         let text = render(&Ontology::load(None).expect("loads"));
         assert!(text.contains("| Idea | `wiki/ideas` | organization level."));
         assert!(text.contains("| Plan | `plan.md` | task level."));
-        assert!(text.contains("- `nb`: A reference that matters"));
+        assert!(text.contains("- `nb`: Reference that matters"));
         assert!(text.contains("- `confidence` is one of high, medium, low."));
         assert!(!text.contains("{{"));
     }

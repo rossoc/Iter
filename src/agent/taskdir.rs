@@ -39,7 +39,7 @@ impl TaskDir {
         self.root.join("plan.md")
     }
 
-    /// The plan before the last one `plan set` replaced.
+    /// The plan before the last one `iter task plan` replaced.
     pub fn previous_plan_path(&self) -> PathBuf {
         self.root.join("plan.prev.md")
     }

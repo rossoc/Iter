@@ -16,11 +16,11 @@ You are working on the task "{{task.name}}" of the project {{project.name}}.
 
 - Work in {{worktree}}. Commit in small steps with messages that say why.
 - Follow the checklist in order. Before you start a step, run
-  `iter task plan mark {{task}} <id> doing`; when it is finished and you have
-  looked at the result, `iter task plan mark {{task}} <id> done`.
+  `iter task plan {{task}} --mark <id> doing`; when it is finished and you have
+  looked at the result, `iter task plan {{task}} --mark <id> done`.
 - A `(verify)` step is done when you have run the check and seen it pass, not
   when you believe it would. Say what you ran and what it printed.
-- If the plan is wrong, fix the plan first (`iter task plan set {{task}} --stdin`, the
+- If the plan is wrong, fix the plan first (`iter task plan {{task}} --stdin`, the
   whole plan on standard input) and say why in a sketch. Do not quietly do
   something else.
 - Keep what you learn and decide in {{task.dir}}/sketches/, one markdown file

@@ -45,16 +45,28 @@ impl Kind {
     }
 }
 
-/// `word` as one shell word: as it is when that is safe, else in single
-/// quotes. A task is named `<project>/<task>` and a task name may have spaces,
-/// and `{{task}}` is what goes after `iter task ...` in a command.
+/// `word` as one shell word: a backslash before every character the shell
+/// would read as something else (`app/Fix\ it`). A task is named
+/// `<project>/<task>` and a task name may have spaces, and `{{task}}` is what
+/// goes after `iter task ...` in a command.
 pub fn shell_word(word: &str) -> String {
-    let plain = |b: u8| b.is_ascii_alphanumeric() || b"_./:-@%+=,".contains(&b);
-    if !word.is_empty() && word.bytes().all(plain) {
-        word.to_string()
-    } else {
-        format!("'{}'", word.replace('\'', r"'\''"))
+    if word.is_empty() {
+        return "''".to_string();
     }
+    let plain = |c: char| c.is_ascii_alphanumeric() || "_./:-@%+=,".contains(c);
+    let mut out = String::new();
+    for c in word.chars() {
+        // a newline cannot be escaped: quoted, it is one word again
+        if c == '\n' {
+            out.push_str("'\n'");
+        } else if plain(c) || !c.is_ascii() {
+            out.push(c);
+        } else {
+            out.push('\\');
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// What a template can say about a task.
@@ -196,7 +208,7 @@ mod tests {
         // no worktree yet: the project's own folder
         assert_eq!(
             text,
-            "'app/Fix it'|7|/notes/app/tasks/7|/code/app|## Goal\nx|wiki/a: a thing"
+            "app/Fix\\ it|7|/notes/app/tasks/7|/code/app|## Goal\nx|wiki/a: a thing"
         );
         let mut c = ctx(None, "", dir);
         c.worktree = Some("/wt/fix-it");
@@ -206,9 +218,10 @@ mod tests {
     #[test]
     fn the_task_is_one_shell_word() {
         assert_eq!(shell_word("app/fix-it"), "app/fix-it");
-        assert_eq!(shell_word("app/Fix it"), "'app/Fix it'");
-        assert_eq!(shell_word("app/It's"), r"'app/It'\''s'");
-        assert_eq!(shell_word("a;rm -rf"), "'a;rm -rf'");
+        assert_eq!(shell_word("app/Fix it"), r"app/Fix\ it");
+        assert_eq!(shell_word("app/It's"), r"app/It\'s");
+        assert_eq!(shell_word("a;rm -rf"), r"a\;rm\ -rf");
+        assert_eq!(shell_word("café au"), r"café\ au");
         assert_eq!(shell_word(""), "''");
     }
 
