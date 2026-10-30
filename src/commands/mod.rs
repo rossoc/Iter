@@ -11,6 +11,7 @@ pub mod notes;
 pub mod organization;
 pub mod project;
 pub mod session;
+pub mod solve;
 pub mod sync;
 pub mod tag;
 pub mod task;

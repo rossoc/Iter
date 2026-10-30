@@ -20,9 +20,45 @@
 //!    process halfway through. [`teardown_and_kill`] is the convenience for
 //!    the callers where nothing follows.
 
-use crate::db::Db;
-use crate::models::{Project, SessionConfig};
+use crate::db::{Db, Table};
+use crate::error::Result;
+use crate::models::{Project, SessionConfig, Task};
 use crate::{git, tmux};
+
+/// Makes the git worktree and the branch for `task` under the project's
+/// `.iter-worktrees`: `(branch, worktree path)`. `session new` and
+/// `task solve` both start from here.
+pub(crate) fn create_task_worktree(
+    project: &Project,
+    task: &Task,
+    branch_override: Option<&str>,
+) -> Result<(String, String)> {
+    // The task's own prefix is what it was created (and possibly
+    // edited) with; an empty one -- a task from before the field
+    // existed, or one the user blanked -- falls back to whatever the
+    // project's template says now.
+    let prefix = match task.branch_prefix.trim() {
+        "" => git::branch_prefix(&project.branch_template),
+        prefix => prefix.to_string(),
+    };
+    // One slug for the branch and the directory both. Two tasks whose
+    // names slugify the same ("Fix login" and "fix-login") would
+    // otherwise collide on both at once, and the second `session new`
+    // would fail on a `git worktree add` the user can't work around --
+    // `-b` renames the branch, but nothing renames the directory.
+    let slug = git::task_slug(&task.name, task.id());
+    let worktrees = std::path::Path::new(&project.base_path).join(".iter-worktrees");
+    let slug = match worktrees.join(&slug).exists() {
+        true => format!("{slug}-{}", task.id()),
+        false => slug,
+    };
+    let branch = branch_override
+        .map(|b| b.to_string())
+        .unwrap_or_else(|| format!("{prefix}{slug}"));
+    let path_str = worktrees.join(&slug).to_string_lossy().to_string();
+    git::create_worktree(&project.base_path, &branch, &path_str)?;
+    Ok((branch, path_str))
+}
 
 /// Tears down a task's session-config: removes its worktree (if any),
 /// deletes its branch (if any), deletes the session-config row, and finally

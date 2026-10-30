@@ -7,12 +7,12 @@ use crate::commands::Run;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
+use crate::tmux;
 use crate::utils::clock::{Closed, close_open_session, start_session};
 use crate::utils::resolve::{
     current_session_task, require_git_repo, resolve_task, resolve_task_or_current, task_display,
 };
-use crate::utils::workspace::unwind_session_setup;
-use crate::{git, tmux};
+use crate::utils::workspace::{self, unwind_session_setup};
 
 impl Run for SessionCommand {
     fn run(&self, app: &App) -> Result<()> {
@@ -76,32 +76,9 @@ fn session_new(
     let mut worktree_path = None;
 
     if project.github && project.auto_branch && !no_branch {
-        // The task's own prefix is what it was created (and possibly
-        // edited) with; an empty one -- a task from before the field
-        // existed, or one the user blanked -- falls back to whatever the
-        // project's template says now.
-        let prefix = match task.branch_prefix.trim() {
-            "" => git::branch_prefix(&project.branch_template),
-            prefix => prefix.to_string(),
-        };
-        // One slug for the branch and the directory both. Two tasks whose
-        // names slugify the same ("Fix login" and "fix-login") would
-        // otherwise collide on both at once, and the second `session new`
-        // would fail on a `git worktree add` the user can't work around --
-        // `-b` renames the branch, but nothing renames the directory.
-        let slug = git::task_slug(&task.name, task_id);
-        let worktrees = std::path::Path::new(&project.base_path).join(".iter-worktrees");
-        let slug = match worktrees.join(&slug).exists() {
-            true => format!("{slug}-{task_id}"),
-            false => slug,
-        };
-        let branch = branch_override
-            .map(|b| b.to_string())
-            .unwrap_or_else(|| format!("{prefix}{slug}"));
-        let path_str = worktrees.join(&slug).to_string_lossy().to_string();
-        git::create_worktree(&project.base_path, &branch, &path_str)?;
+        let (branch, path) = workspace::create_task_worktree(&project, &task, branch_override)?;
         github_branch = Some(branch);
-        worktree_path = Some(path_str);
+        worktree_path = Some(path);
     }
 
     // Borrowed, not cloned: `cwd` only needs to outlive this function, and

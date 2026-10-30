@@ -22,7 +22,7 @@ fn failed(message: impl Into<String>) -> IterError {
 }
 
 /// The task a command is about, with its project and its folder.
-fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)> {
+pub(super) fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)> {
     let (project, task) = resolve_task_or_current(&app.db, task)?;
     let dir = taskdir::of(&app.db, &project, &task)?;
     Ok((project, task, dir))
@@ -237,6 +237,19 @@ pub fn prompt_text(
     template: Option<&Path>,
     onboarding_wanted: bool,
 ) -> Result<String> {
+    prompt_for(app, task, kind, template, onboarding_wanted, None)
+}
+
+/// As [`prompt_text`], with `description` told to the agent in place of the
+/// task's own (`solve` lets it be edited for one run).
+pub fn prompt_for(
+    app: &App,
+    task: Option<&str>,
+    kind: Kind,
+    template: Option<&Path>,
+    onboarding_wanted: bool,
+    description: Option<&str>,
+) -> Result<String> {
     let (project, task, dir) = locate(app, task)?;
     // an agent following the prompt writes sketches here: have the folder
     dir.ensure()?;
@@ -259,7 +272,7 @@ pub fn prompt_text(
     let ctx = Context {
         task: &name,
         task_name: &task.name,
-        task_description: &task.description,
+        task_description: description.unwrap_or(&task.description),
         task_id: task.id(),
         task_dir: dir.root(),
         project_name: &project.name,

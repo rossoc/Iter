@@ -7,4 +7,5 @@
 
 pub mod plan;
 pub mod prompt;
+pub mod run;
 pub mod taskdir;

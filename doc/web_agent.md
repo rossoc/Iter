@@ -20,3 +20,9 @@ A step is a link, `?tab=agent&step=s3`, so opening one needs no script; the curr
 ## Not here yet
 
 The harness picker and a button that starts an agent need the runner (`iter task solve`). Until then the panel lists the commands.
+
+## Runs and the launch form
+
+The Runs section lists the latest ten runs of the task (`tasks/<id>/runs/`), newest first. Each is a `<details>`: the summary says the number, the state (as text, `running`, `done`, `failed` or `lost`; colour is not the only cue), what it was asked, the harness, the model and when it started; opened it shows the branch and the end of the log (the last 16 KB, in a focusable `<pre>`).
+
+"Hand to an agent" is a plain form (`POST /task/{id}/solve`, no script): what to do, agent, model, effort. The server checks every value (a model that starts with `-` or has a space is refused, since it becomes an argument of the harness), refuses a second run while one is `running`, starts the run detached and redirects back to the tab. The page does not refresh by itself; reload to follow a run.

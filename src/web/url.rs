@@ -168,6 +168,11 @@ pub fn plan_step_url(id: i64, step: &str) -> String {
     format!("{}/plan/{}", task_url(id), encode(step))
 }
 
+/// Where the form that hands task `id` to an agent is posted.
+pub fn solve_url(id: i64) -> String {
+    format!("{}/solve", task_url(id))
+}
+
 /// The note of `day` on the page at `base`.
 pub fn note_url(base: &str, day: NaiveDate) -> String {
     format!("{base}/notes/{}", fmt_date(day))
@@ -243,6 +248,7 @@ mod tests {
     fn step_urls_open_the_agent_tab_and_post_to_the_step() {
         assert_eq!(task_step_url(5, "s3"), "/task/5?tab=agent&step=s3");
         assert_eq!(plan_step_url(5, "s3"), "/task/5/plan/s3");
+        assert_eq!(solve_url(5), "/task/5/solve");
         // whatever the id, it is one path segment
         assert_eq!(plan_step_url(5, "a/b c"), "/task/5/plan/a%2Fb%20c");
     }

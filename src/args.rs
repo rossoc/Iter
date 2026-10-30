@@ -1,4 +1,5 @@
 use crate::agent::prompt::Kind as PromptKind;
+use crate::agent::run::Harness;
 use crate::completion::{
     board_completer, organization_completer, project_completer, queued_task_completer,
     tag_completer, task_completer, task_name_completer,
@@ -427,6 +428,62 @@ pub enum TaskCommand {
         /// Leave out what the project's wiki knows about the task
         #[clap(long)]
         no_onboarding: bool,
+    },
+
+    /// Hand a task to an agent: it works on its own, headless, in the
+    /// task's worktree, and leaves a log. Opens the editor first (agent,
+    /// model, effort and the description it is given), unless --yes
+    Solve {
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// What the agent is to do
+        #[clap(long, short = 'k', value_enum, default_value_t = PromptKind::Execute)]
+        kind: PromptKind,
+
+        /// The harness that runs the agent
+        #[clap(long, value_enum)]
+        agent: Option<Harness>,
+
+        #[clap(long)]
+        model: Option<String>,
+
+        /// low, medium or high
+        #[clap(long)]
+        effort: Option<String>,
+
+        /// Skip the editor
+        #[clap(long, short = 'y')]
+        yes: bool,
+
+        /// Stay until the agent has finished instead of leaving it running
+        #[clap(long)]
+        wait: bool,
+
+        /// Passed to the harness as they are, after `--`
+        #[clap(last = true)]
+        extra: Vec<String>,
+    },
+
+    /// The runs of a task, or the log of one
+    Runs {
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// Print the log of this run
+        #[clap(long)]
+        log: Option<u32>,
+    },
+
+    /// What a detached `solve` runs: the harness itself, to the end
+    #[clap(hide = true)]
+    RunWorker {
+        task_id: i64,
+        run: u32,
+        #[clap(last = true)]
+        extra: Vec<String>,
     },
 
     /// Mark a task done: closes any open session, tears down its

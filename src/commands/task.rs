@@ -4,7 +4,7 @@
 use crate::app::App;
 use crate::args::{ReportOpts, TaskCommand};
 use crate::commands::sync::{task_pull, task_push};
-use crate::commands::{Run, agent};
+use crate::commands::{Run, agent, solve};
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
@@ -72,6 +72,34 @@ impl Run for TaskCommand {
                 template.as_deref(),
                 !*no_onboarding,
             ),
+            Self::Solve {
+                task,
+                kind,
+                agent,
+                model,
+                effort,
+                yes,
+                wait,
+                extra,
+            } => solve::solve(
+                app,
+                &solve::SolveRequest {
+                    task: task.as_deref(),
+                    kind: *kind,
+                    agent: *agent,
+                    model: model.as_deref(),
+                    effort: effort.as_deref(),
+                    yes: *yes,
+                    wait: *wait,
+                    extra,
+                },
+            ),
+            Self::Runs { task, log } => solve::runs(app, task.as_deref(), *log),
+            Self::RunWorker {
+                task_id,
+                run,
+                extra,
+            } => solve::worker(app, *task_id, *run, extra),
             Self::Done { task, save } => task_done(app, task.as_deref(), *save),
             Self::Pull {
                 project,
