@@ -4,14 +4,17 @@
 //! handles, so the crate root reaches a whole family of commands through
 //! one name and everything else in the file stays private to it.
 
+pub mod agent;
 pub mod board;
 pub mod misc;
+pub mod notes;
 pub mod organization;
 pub mod project;
 pub mod session;
 pub mod sync;
 pub mod tag;
 pub mod task;
+pub mod wiki;
 
 use crate::app::App;
 use crate::error::Result;

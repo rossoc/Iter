@@ -139,6 +139,7 @@ pub fn list(dir: &Path) -> Vec<Note> {
 }
 
 /// How many notes `dir` holds (the files [`list`] would read, unread).
+#[cfg(any(feature = "web", test))]
 pub fn count(dir: &Path) -> usize {
     std::fs::read_dir(dir).map_or(0, |entries| {
         entries
@@ -153,13 +154,13 @@ fn note_day(path: &Path) -> Option<NaiveDate> {
     parse_date(path.file_stem()?.to_str()?).filter(|_| path.extension().is_some_and(|e| e == "md"))
 }
 
+#[cfg(any(feature = "web", test))]
 fn is_note_file(path: &Path) -> bool {
     note_day(path).is_some()
 }
 
 /// The note of `date` in `dir`, if there is one.
-#[cfg(test)]
-fn get(dir: &Path, date: NaiveDate) -> Option<Note> {
+pub fn get(dir: &Path, date: NaiveDate) -> Option<Note> {
     let content = std::fs::read_to_string(dir.join(file_name(date))).ok()?;
     Some(parse(date, &content))
 }
@@ -189,6 +190,7 @@ pub fn create(dir: &Path, day: NaiveDate) -> Result<()> {
 
 /// The days either side of `date` among `notes` (latest first): the
 /// previous (older) and the next (newer) one.
+#[cfg(any(feature = "web", test))]
 pub fn neighbours(notes: &[Note], date: NaiveDate) -> (Option<&Note>, Option<&Note>) {
     let at = notes.iter().position(|n| n.date == date);
     let Some(at) = at else { return (None, None) };
@@ -199,6 +201,12 @@ pub fn neighbours(notes: &[Note], date: NaiveDate) -> (Option<&Note>, Option<&No
 fn resolve(path: &str) -> Option<PathBuf> {
     let path = path.trim();
     (!path.is_empty()).then(|| expand_home(path))
+}
+
+/// The folder of task `id` inside its project's notes folder: its plan, its
+/// own notes and the agent's sketches (`tasks/<id>/`).
+pub fn task_dir(project_dir: &Path, id: i64) -> PathBuf {
+    project_dir.join("tasks").join(id.to_string())
 }
 
 /// Where an organization keeps its notes, if it says.

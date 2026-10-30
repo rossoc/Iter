@@ -1,0 +1,124 @@
+# The wiki's ontology (OWL 2). Loaded into the graph on every build, so it is
+# data: a class that names where it lives (`iter:place`) is found on disk, a
+# property marked `iter:authorable` may be written in a page's front matter.
+#
+# `iter:place` is "<level>:<folder>", the level being organization, project or
+# task, and the folder relative to that level's directory: "." is its root
+# (date-named notes only), a name ending in ".md" is that one file, anything
+# else is a folder searched recursively. A class never says where it lives in
+# the page itself: the folder is the class.
+#
+# The engine reasons over the OWL 2 RL subset this file uses: rdfs:subClassOf,
+# rdfs:subPropertyOf, owl:inverseOf, owl:SymmetricProperty and
+# owl:TransitiveProperty. Domains and ranges are not inferred from; `check`
+# reads them as constraints.
+
+@prefix iter: <urn:iter:ns:> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+<urn:iter:ns:> a owl:Ontology ;
+    rdfs:label "iter wiki ontology" .
+
+# --- Classes ---------------------------------------------------------------
+
+iter:Resource a owl:Class ;
+    rdfs:comment "Anything the graph talks about." .
+
+iter:Structure a owl:Class ; rdfs:subClassOf iter:Resource ;
+    rdfs:comment "What iter itself keeps: organizations, projects and tasks. They come from the database." .
+iter:Organization a owl:Class ; rdfs:subClassOf iter:Structure .
+iter:Project      a owl:Class ; rdfs:subClassOf iter:Structure .
+iter:Task         a owl:Class ; rdfs:subClassOf iter:Structure .
+
+iter:Document a owl:Class ; rdfs:subClassOf iter:Resource ;
+    rdfs:comment "A markdown file." .
+
+iter:Note a owl:Class ; rdfs:subClassOf iter:Document ;
+    rdfs:comment "Raw markdown written by the user: free, no front matter." ;
+    iter:place "organization:.", "project:.", "task:notes" .
+
+iter:Page a owl:Class ; rdfs:subClassOf iter:Document ;
+    rdfs:comment "Markdown the agent writes: strict front matter." .
+
+iter:Idea a owl:Class ; rdfs:subClassOf iter:Page ;
+    rdfs:comment "Provisional, unverified hypothesis to challenge and combine." ;
+    iter:place "organization:wiki/ideas", "project:wiki/ideas" .
+
+    iter:Concept a owl:Class ; rdfs:subClassOf iter:Page ;
+    rdfs:comment "Grounded atomic piece of knowledge sourced from Ideas, Notes, or other Concepts." ;
+    iter:place "organization:wiki/concepts", "project:wiki/concepts" .
+
+iter:Entity a owl:Class ; rdfs:subClassOf iter:Page ;
+    rdfs:comment "Person, tool, service or organization the notes talk about." ;
+    iter:place "organization:wiki/entities", "project:wiki/entities" .
+
+iter:Synthesis a owl:Class ; rdfs:subClassOf iter:Page ;
+    rdfs:comment "Cross-cutting analysis or comparison." ;
+    iter:place "organization:wiki/syntheses", "project:wiki/syntheses" .
+
+iter:Sketch a owl:Class ; rdfs:subClassOf iter:Page ;
+    rdfs:comment "Agent's working memory inside a task; maybe integrated into the wiki at the end." ;
+    iter:place "task:sketches" .
+
+iter:Plan a owl:Class ; rdfs:subClassOf iter:Sketch ;
+    rdfs:comment "Task's plan: Goal, How, Checklist." ;
+    iter:place "task:plan.md" .
+
+# --- Relations -------------------------------------------------------------
+
+iter:ref a owl:ObjectProperty ;
+    rdfs:comment "Mentions another markdown. Every [[wikilink]] in a body is one." ;
+    owl:inverseOf iter:referencedBy ;
+    rdfs:domain iter:Page ; rdfs:range iter:Document ;
+    iter:authorable true .
+iter:referencedBy a owl:ObjectProperty .
+
+iter:nb a owl:ObjectProperty ;
+    rdfs:comment "Reference that matters: read it before working on the topic." ;
+    rdfs:subPropertyOf iter:ref ;
+    rdfs:domain iter:Page ; rdfs:range iter:Document ;
+    iter:authorable true .
+
+iter:include a owl:ObjectProperty ;
+    rdfs:comment "The page is built from the pages it includes: they are its bricks, it is the higher abstraction." ;
+    owl:inverseOf iter:includedIn ;
+    rdfs:domain iter:Page ; rdfs:range iter:Page ;
+    iter:authorable true .
+iter:includedIn a owl:ObjectProperty .
+
+iter:source a owl:ObjectProperty ;
+    rdfs:comment "Where the page was taken from." ;
+    owl:inverseOf iter:sourceOf ;
+    rdfs:domain iter:Page ; rdfs:range iter:Document ;
+    iter:authorable true .
+iter:sourceOf a owl:ObjectProperty .
+
+iter:supersedes a owl:ObjectProperty ;
+    owl:inverseOf iter:supersededBy ;
+    rdfs:domain iter:Page ; rdfs:range iter:Page ;
+    iter:authorable true .
+iter:supersededBy a owl:ObjectProperty .
+
+iter:contradicts a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:domain iter:Page ; rdfs:range iter:Page ;
+    iter:authorable true .
+
+iter:in a owl:ObjectProperty , owl:TransitiveProperty ;
+    rdfs:comment "Where something sits: a task in a project in an organization, a page in the level whose folder holds it." ;
+    owl:inverseOf iter:contains ;
+    rdfs:domain iter:Resource ; rdfs:range iter:Structure .
+iter:contains a owl:ObjectProperty .
+
+# --- Data ------------------------------------------------------------------
+iter:ConfidenceLevel a rdfs:Datatype ;
+    owl:oneOf ( "high"^^xsd:string "medium"^^xsd:string "low"^^xsd:string ) .
+iter:abstract   a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "One line: what the page says. Retrieval reads this before the page." .
+iter:tag        a owl:DatatypeProperty ; rdfs:range xsd:string .
+iter:confidence a owl:DatatypeProperty ;
+    rdfs:range iter:ConfidenceLevel .
+iter:updated    a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "When the page was last (re)written, as ISO 8601. A Note newer than this has not been ingested." .

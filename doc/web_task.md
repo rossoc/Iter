@@ -1,5 +1,7 @@
 # Task page redesign (`/task/{id}`)
 
+> Tabs (agent workflow, M1): the page now has the tab row Info / Sessions / Agent (`?tab=`, `sections::TaskSection`, `sections::task_tabs`), like the Project page. Info keeps the description and the Details panel; Sessions is the sessions table alone (its tab carries the count); Agent is a placeholder for the plan and the agent runs. Because the page has tabs, the last crumb is plain text (`Crumb::label("Task")`) and the document title names the tab ("Sessions - {name} - iter"). Points 1 and 2 below describe the page before the tabs.
+
 > Superseded (final cleanup, `doc/web_cleanup.md`): the compare switch and `?design=old` were removed; the pages render the current design only. References below to the old design, the switch or `proposal` (now `screen`) describe how it was built, not how it is.
 
 

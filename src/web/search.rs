@@ -28,7 +28,13 @@ pub enum Kind {
 }
 
 impl Kind {
-    pub const ALL: [Kind; 5] = [Kind::Board, Kind::Org, Kind::Project, Kind::Task, Kind::Note];
+    pub const ALL: [Kind; 5] = [
+        Kind::Board,
+        Kind::Org,
+        Kind::Project,
+        Kind::Task,
+        Kind::Note,
+    ];
 
     /// The word that completes to this kind, and its label.
     pub fn word(self) -> &'static str {
@@ -242,14 +248,29 @@ mod tests {
     }
 
     fn sample() -> Vec<Entry> {
-        let mut wip = entry(Kind::Task, "fix login", &[(Kind::Org, "acme"), (Kind::Project, "web")], "");
+        let mut wip = entry(
+            Kind::Task,
+            "fix login",
+            &[(Kind::Org, "acme"), (Kind::Project, "web")],
+            "",
+        );
         wip.status = "wip".into();
         vec![
             entry(Kind::Org, "acme", &[], "the customer"),
-            entry(Kind::Project, "web", &[(Kind::Org, "acme")], "login and billing"),
+            entry(
+                Kind::Project,
+                "web",
+                &[(Kind::Org, "acme")],
+                "login and billing",
+            ),
             entry(Kind::Project, "api", &[(Kind::Org, "beta")], ""),
             wip,
-            entry(Kind::Task, "write docs", &[(Kind::Project, "api")], "explain the login flow"),
+            entry(
+                Kind::Task,
+                "write docs",
+                &[(Kind::Project, "api")],
+                "explain the login flow",
+            ),
             entry(Kind::Board, "work", &[], ""),
         ]
     }
@@ -315,7 +336,10 @@ mod tests {
 
     #[test]
     fn the_script_completes_the_same_kinds() {
-        let words: Vec<String> = Kind::ALL.iter().map(|k| format!("\"{}\"", k.word())).collect();
+        let words: Vec<String> = Kind::ALL
+            .iter()
+            .map(|k| format!("\"{}\"", k.word()))
+            .collect();
         let list = format!("var KINDS = [{}];", words.join(","));
         assert!(include_str!("ui/search.js").contains(&list));
     }

@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### Added
+- Task page tabs: Info / Sessions / Agent (`?tab=`, `sections::TaskSection`). Agent shows the task's plan (goal, how, checklist with the state of every step and a progress bar), a step opened beside it (`?tab=agent&step=s3`, buttons `POST /task/{id}/plan/{step}` to move it between todo, doing and done), and the notes and sketches in the task's folder. Doc: `doc/web_agent.md`.
+- The task's folder: `<notes>/tasks/<id>/` with `plan.md`, `notes/` and `sketches/` (`agent::taskdir`, `notes::task_dir`). It lives with the notes, not in the worktree, so discarding a branch keeps the plan.
+- The plan (`agent::plan`): `## Goal`, `## How`, `## Checklist` of `- [ ] {s1} (verify) text`; `[~]` is in progress. Reading is forgiving; ticking a step edits one character. CLI: `iter task plan show|set|mark` (`set --stdin` or the editor; steps get ids; the previous plan is kept as `plan.prev.md`).
+- `iter task prompt [-k plan|execute|fix|investigate] [--template F] [--no-onboarding]`: the prompt for an agent, filled from the task, its plan and what the wiki knows about it. Templates can be overridden per task, project or organization in `prompts/<kind>.md`; an unknown `{{placeholder}}` is an error.
+- The wiki (`src/wiki/`): the notes seen as an RDF graph built in memory on every call (oxigraph, SPARQL), with an OWL ontology (`ontology.ttl`; a project or organization may extend it with `wiki/ontology.ttl`) whose classes say which folder they live in. `iter wiki find|grep|show|neighbors|check|mv|sparql|export|schema`; `--task|--project|--org [--down]` and `--format text|yaml|json` everywhere. `check` enforces the ontology, enumerations included (`confidence`).
+- `iter notes today|list|show`.
+
 - A task's project can be changed: `project:` in the front matter of `iter task edit` (and in `iter task new`'s template), and a Project select on the task's edit page (`move_to`). Moving is refused while the task has a session (`IterError::TaskHasSession`); a name taken in the target project is refused as usual.
 
 ### Changed

@@ -1,8 +1,12 @@
+use crate::agent::plan::State as StepState;
+use crate::agent::prompt::Kind as PromptKind;
 use crate::completion::{
     board_completer, organization_completer, project_completer, queued_task_completer,
     tag_completer, task_completer, task_name_completer,
 };
 use crate::reporting::Format;
+use crate::utils::output::Format as DataFormat;
+use crate::wiki::retrieve::Depth;
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;
 
@@ -120,6 +124,19 @@ pub enum Command {
     Task {
         #[clap(subcommand)]
         action: Option<TaskCommand>,
+    },
+
+    /// Read the wiki built from the notes: find the pages worth loading,
+    /// follow their relations, query the graph, keep it consistent
+    Wiki {
+        #[clap(subcommand)]
+        action: WikiCommand,
+    },
+
+    /// Daily notes of a project or an organization
+    Notes {
+        #[clap(subcommand)]
+        action: NotesCommand,
     },
 
     /// Set up and track a task's session (tmux + git worktree/branch, and
@@ -366,6 +383,33 @@ pub enum TaskCommand {
         status: Option<String>,
     },
 
+    /// The plan of a task: its goal, how, and a checklist with the state of
+    /// every step
+    Plan {
+        #[clap(subcommand)]
+        action: PlanCommand,
+    },
+
+    /// Print the prompt that tells an agent what to do with a task: plan it,
+    /// work through its plan, fix it or investigate it
+    Prompt {
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// What the agent is to do
+        #[clap(long, short = 'k', value_enum, default_value_t = PromptKind::Plan)]
+        kind: PromptKind,
+
+        /// Use this template instead of the task's, project's or built-in one
+        #[clap(long)]
+        template: Option<std::path::PathBuf>,
+
+        /// Leave out what the project's wiki knows about the task
+        #[clap(long)]
+        no_onboarding: bool,
+    },
+
     /// Mark a task done: closes any open session, tears down its
     /// session-config (tmux session + worktree), and deletes that row
     Done {
@@ -507,4 +551,221 @@ pub enum HookEvent {
     ClientDetached { client: String },
     /// `session` no longer exists
     SessionClosed { session: String },
+}
+
+/// Which wiki a `wiki` command sees: a task's (its own folder, its project's
+/// wiki, its organization's), a project's or an organization's. With none of
+/// the three, the task of the tmux session you're in.
+#[derive(clap::Args, Debug)]
+pub struct WikiScope {
+    /// `<project>/<task>`
+    #[clap(long, short = 't', add = ArgValueCompleter::new(task_completer),
+           conflicts_with_all = ["project", "org"])]
+    pub task: Option<String>,
+
+    /// A project: its wiki and its organization's
+    #[clap(long, short = 'p', add = ArgValueCompleter::new(project_completer),
+           conflicts_with = "org")]
+    pub project: Option<String>,
+
+    /// An organization
+    #[clap(long = "org", short = 'o', add = ArgValueCompleter::new(organization_completer))]
+    pub org: Option<String>,
+
+    /// With an organization: also the wikis of its projects
+    #[clap(long, requires = "org")]
+    pub down: bool,
+
+    /// Output format
+    #[clap(long, short = 'f', value_enum, default_value_t = DataFormat::Text)]
+    pub format: DataFormat,
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum WikiCommand {
+    /// Rank pages by how well their path, title, tags and abstract match the
+    /// words, best first, until the token budget is spent
+    Find {
+        /// What to look for
+        #[clap(required = true)]
+        words: Vec<String>,
+
+        /// Stop after about this many tokens
+        #[clap(long, short = 'b', default_value_t = 800)]
+        budget: usize,
+
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// Search the text of the pages for a regular expression
+    Grep {
+        pattern: String,
+
+        /// Search the raw notes too
+        #[clap(long)]
+        notes: bool,
+
+        /// Match case
+        #[clap(long)]
+        case: bool,
+
+        /// Stop after about this many tokens
+        #[clap(long, short = 'b', default_value_t = 800)]
+        budget: usize,
+
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// One page: `<path>` in the level you ask from, `<level>:<path>` in another
+    Show {
+        id: String,
+
+        /// How much of it
+        #[clap(long, short = 'd', value_enum, default_value_t = Depth::Summary)]
+        depth: Depth,
+
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// The pages within a few relations of one, nearest first
+    Neighbors {
+        id: String,
+
+        /// How many relations away
+        #[clap(long, default_value_t = 1)]
+        hops: usize,
+
+        /// Only follow these relations (nb, include, source, referencedBy...)
+        #[clap(long)]
+        prop: Vec<String>,
+
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// Lint the wiki: dangling links, missing abstracts and tags, broken
+    /// front matter, relations the ontology does not allow, and what to do
+    /// next. Fails if there are errors
+    Check {
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// Move a page inside its level, rewriting every reference to it
+    Mv {
+        /// The page
+        from: String,
+
+        /// Its new path in the same level, without `.md`
+        to: String,
+
+        /// Say what would change and change nothing
+        #[clap(long)]
+        dry_run: bool,
+
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// Run a SPARQL query over the graph (`iter:`, `owl:`, `rdf:`, `rdfs:`,
+    /// `xsd:` are declared). Reads only
+    Sparql {
+        /// The query (or `-` for standard input)
+        query: String,
+
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// The whole graph as N-Triples, with what the ontology derives
+    Export {
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+
+    /// The instructions for an agent working with the wiki, filled in from
+    /// the ontology
+    Schema {
+        #[clap(flatten)]
+        scope: WikiScope,
+    },
+}
+
+/// Which notes: a project's or an organization's (default: the project of the
+/// tmux session you're in).
+#[derive(clap::Args, Debug)]
+pub struct NotesScope {
+    #[clap(long, short = 'p', add = ArgValueCompleter::new(project_completer),
+           conflicts_with = "org")]
+    pub project: Option<String>,
+
+    #[clap(long = "org", short = 'o', add = ArgValueCompleter::new(organization_completer))]
+    pub org: Option<String>,
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum NotesCommand {
+    /// Make today's note if it is not there and print its path
+    Today {
+        #[clap(flatten)]
+        scope: NotesScope,
+    },
+
+    /// List the notes, latest first
+    List {
+        #[clap(flatten)]
+        scope: NotesScope,
+    },
+
+    /// Print a note (default: today's)
+    Show {
+        /// YYYY-MM-DD
+        date: Option<String>,
+
+        #[clap(flatten)]
+        scope: NotesScope,
+    },
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum PlanCommand {
+    /// The plan and how far along it is
+    Show {
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// Output format
+        #[clap(long, short = 'f', value_enum, default_value_t = DataFormat::Text)]
+        format: DataFormat,
+    },
+
+    /// Write the plan: in the editor, or the whole plan from standard input.
+    /// Steps get their ids; a missing Goal or Checklist is a warning, not a
+    /// refusal
+    Set {
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+
+        /// Read the plan from standard input
+        #[clap(long)]
+        stdin: bool,
+    },
+
+    /// Put one step in a state: todo, doing or done. Only its checkbox changes
+    Mark {
+        /// The step's id (`s3`)
+        step: String,
+
+        #[clap(value_enum)]
+        state: StepState,
+
+        /// `<project>/<task>` (default: the task of the tmux session you're in)
+        #[arg(add = ArgValueCompleter::new(task_completer))]
+        task: Option<String>,
+    },
 }

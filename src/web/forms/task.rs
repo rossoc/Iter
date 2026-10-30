@@ -2,8 +2,8 @@
 
 use super::{names, optional, text};
 use crate::db::Db;
-use crate::error::{IterError, Result};
 use crate::db::Table;
+use crate::error::{IterError, Result};
 use crate::models::{Duration, Project, Tag, Task, TaskStatus, parse_start_time, require_name};
 use crate::web::edit::{EditForm, name_field};
 use crate::web::url::task_url;
@@ -78,9 +78,10 @@ impl EditForm for TaskForm {
         match error {
             IterError::InvalidStatus(_) => Some(Self::STATUS),
             IterError::NotFound { kind: "tag", .. } => Some(Self::TAGS),
-            IterError::NotFound { kind: "project", .. } | IterError::TaskHasSession(_) => {
-                Some(Self::MOVE_TO)
+            IterError::NotFound {
+                kind: "project", ..
             }
+            | IterError::TaskHasSession(_) => Some(Self::MOVE_TO),
             IterError::CommandFailed(m) if m.starts_with(BAD_ISSUE) => Some(Self::GITHUB_ISSUE),
             IterError::CommandFailed(m) if m.starts_with(BAD_START) => Some(Self::START_TIME),
             IterError::CommandFailed(m) if m.starts_with(BAD_DURATION) => Some(Self::DURATION),
@@ -145,12 +146,10 @@ impl EditForm for TaskForm {
         if let Ok(target) = self.move_to.trim().parse::<i64>()
             && target != task.project_id
         {
-            let project = db
-                .get::<Project>(target)?
-                .ok_or(IterError::NotFound {
-                    kind: "project",
-                    name: self.move_to.clone(),
-                })?;
+            let project = db.get::<Project>(target)?.ok_or(IterError::NotFound {
+                kind: "project",
+                name: self.move_to.clone(),
+            })?;
             if db.find_session_config_by_task(id)?.is_some() {
                 return Err(IterError::TaskHasSession(task.name.clone()));
             }

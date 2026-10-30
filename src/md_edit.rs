@@ -126,6 +126,24 @@ fn read_edited<T: DeserializeOwned + MarkdownBody>(
     })
 }
 
+/// Opens `initial` as plain markdown in the configured editor. `None` if the
+/// editor quit without saving, or saved it unchanged.
+pub fn edit_text(initial: &str) -> Result<Option<String>> {
+    let path = std::env::temp_dir().join(format!(
+        "iter-edit-{}-{}.md",
+        std::process::id(),
+        chrono::Local::now().format("%Y%m%d%H%M%S%f")
+    ));
+    std::fs::write(&path, initial)?;
+    let saved = process::run_status(&config().editor, None, &[&path]);
+    let text = std::fs::read_to_string(&path);
+    let _ = std::fs::remove_file(&path);
+    Ok(match (saved?, text?) {
+        (true, text) if text != initial => Some(text),
+        _ => None,
+    })
+}
+
 /// Opens `template` in the editor and hands what came back to `save`,
 /// which does the writing and returns the line to print.
 ///

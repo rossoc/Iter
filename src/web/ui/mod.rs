@@ -89,6 +89,7 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("pick_bar.css"),
     include_str!("pick_here.css"),
     include_str!("sessions_table.css"),
+    include_str!("steps.css"),
     include_str!("task_table.css"),
     include_str!("filter_bar.css"),
     include_str!("tasks_tab.css"),

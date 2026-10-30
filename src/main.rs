@@ -3,6 +3,7 @@
 // default depth of 128.
 #![recursion_limit = "256"]
 
+mod agent;
 mod app;
 mod args;
 mod commands;
@@ -16,7 +17,6 @@ mod git;
 mod github;
 mod md_edit;
 mod models;
-#[cfg(feature = "web")]
 mod notes;
 mod process;
 mod reporting;
@@ -26,6 +26,7 @@ mod tmux;
 mod utils;
 #[cfg(feature = "web")]
 mod web;
+mod wiki;
 
 use app::App;
 use args::{Args, Command, ProjectCommand};
@@ -77,6 +78,8 @@ fn main() -> ExitCode {
             Some(action) => action.run(app),
             None => task::task_list(app, None, &[TaskStatus::Queue, TaskStatus::Wip]),
         },
+        Command::Wiki { action } => action.run(app),
+        Command::Notes { action } => action.run(app),
         Command::Session { action } => action.run(app),
         Command::Comment { task, message } => misc::comment_cmd(app, task.as_deref(), message),
         Command::T => misc::t_cmd(app),

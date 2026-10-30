@@ -15,17 +15,25 @@ pub fn page_url(base: &str, params: &[(&str, Option<&str>)]) -> String {
             url.push(sep);
             url.push_str(key);
             url.push('=');
-            for b in value.bytes() {
-                if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
-                    url.push(b as char);
-                } else {
-                    url.push_str(&format!("%{b:02X}"));
-                }
-            }
+            url.push_str(&encode(value));
             sep = '&';
         }
     }
     url
+}
+
+/// `value` percent-encoded: letters, digits and `-._~` stay, every other
+/// byte becomes `%XX`. Fit for a query value or a path segment.
+fn encode(value: &str) -> String {
+    let mut out = String::new();
+    for b in value.bytes() {
+        if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
 }
 
 /// The global settings page, and where a save lands.
@@ -137,6 +145,29 @@ pub fn notes_tab_url(base: &str) -> String {
     page_url(base, &[("tab", Some("notes"))])
 }
 
+/// The Sessions tab of the task page at `base`.
+pub fn sessions_tab_url(base: &str) -> String {
+    page_url(base, &[("tab", Some("sessions"))])
+}
+
+/// The Agent tab of the task page at `base`.
+pub fn agent_tab_url(base: &str) -> String {
+    page_url(base, &[("tab", Some("agent"))])
+}
+
+/// The Agent tab of task `id` with `step` open beside the plan.
+pub fn task_step_url(id: i64, step: &str) -> String {
+    page_url(
+        &task_url(id),
+        &[("tab", Some("agent")), ("step", Some(step))],
+    )
+}
+
+/// Where a step's new state is posted.
+pub fn plan_step_url(id: i64, step: &str) -> String {
+    format!("{}/plan/{}", task_url(id), encode(step))
+}
+
 /// The note of `day` on the page at `base`.
 pub fn note_url(base: &str, day: NaiveDate) -> String {
     format!("{base}/notes/{}", fmt_date(day))
@@ -206,6 +237,14 @@ mod tests {
             page_url("/a?x=1", &[("y", Some("a b&c"))]),
             "/a?x=1&y=a%20b%26c"
         );
+    }
+
+    #[test]
+    fn step_urls_open_the_agent_tab_and_post_to_the_step() {
+        assert_eq!(task_step_url(5, "s3"), "/task/5?tab=agent&step=s3");
+        assert_eq!(plan_step_url(5, "s3"), "/task/5/plan/s3");
+        // whatever the id, it is one path segment
+        assert_eq!(plan_step_url(5, "a/b c"), "/task/5/plan/a%2Fb%20c");
     }
 
     #[test]

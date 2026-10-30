@@ -46,20 +46,21 @@ mod project_new;
 mod project_options;
 mod project_rows;
 mod quadrants;
+mod search;
+mod search_index;
 mod sections;
 mod session_lines;
 mod settings;
 mod settings_fields;
 mod settings_panel;
 mod task;
+mod task_agent;
 mod task_edit;
 mod task_fields;
 mod task_new;
 mod task_panel;
 mod task_query;
 mod task_rows;
-mod search;
-mod search_index;
 mod text;
 mod ui;
 mod url;
@@ -95,6 +96,7 @@ fn router() -> Router {
         org::register,
         project::register,
         task::register,
+        task_agent::register,
         daily_notes::register,
         org_edit::register,
         project_edit::register,

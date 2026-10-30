@@ -2,7 +2,7 @@
 //! rows: the parsing and the URLs live here, `ui/tabs.rs` only draws.
 
 use super::ui::tabs::Tab;
-use super::url::{notes_tab_url, tasks_tab_url};
+use super::url::{agent_tab_url, notes_tab_url, sessions_tab_url, tasks_tab_url};
 use topcoat::router::query_params;
 
 /// The query of the pages with tabs: `?tab=`, and the organization report's
@@ -21,6 +21,8 @@ pub struct TabQuery {
     /// What New project starts with, when the folder browser sends it back.
     pub name: Option<String>,
     pub base_path: Option<String>,
+    /// The task page's Agent tab: the step open beside the plan.
+    pub step: Option<String>,
 }
 
 /// The query of a page that is only a search (`?q=`): a board's Info.
@@ -105,9 +107,76 @@ pub fn section_tabs(
     tabs_for(current, entries)
 }
 
+/// The tabs of a task page.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum TaskSection {
+    Info,
+    Sessions,
+    Agent,
+}
+
+impl TaskSection {
+    /// The section a `?tab=` value asks for: anything unknown is Info.
+    pub fn of(tab: Option<&str>) -> TaskSection {
+        match tab {
+            Some("sessions") => TaskSection::Sessions,
+            Some("agent") => TaskSection::Agent,
+            _ => TaskSection::Info,
+        }
+    }
+
+    /// The page title of the section: Info is the page itself (`page`, "Task"),
+    /// the others say which one they are.
+    pub fn title(self, page: &'static str) -> &'static str {
+        match self {
+            TaskSection::Info => page,
+            TaskSection::Sessions => "Sessions",
+            TaskSection::Agent => "Agent",
+        }
+    }
+}
+
+/// The Info, Sessions (with its count) and Agent tabs of the task page at
+/// `base`.
+pub fn task_tabs(base: &str, current: TaskSection, sessions: usize) -> Vec<Tab> {
+    tabs_for(
+        current,
+        [
+            (TaskSection::Info, Tab::link("Info", base.to_string())),
+            (
+                TaskSection::Sessions,
+                Tab::link("Sessions", sessions_tab_url(base)).count(sessions),
+            ),
+            (TaskSection::Agent, Tab::link("Agent", agent_tab_url(base))),
+        ],
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_query_value_picks_a_task_section() {
+        assert_eq!(TaskSection::of(None), TaskSection::Info);
+        assert_eq!(TaskSection::of(Some("sessions")), TaskSection::Sessions);
+        assert_eq!(TaskSection::of(Some("agent")), TaskSection::Agent);
+        assert_eq!(TaskSection::of(Some("tasks")), TaskSection::Info);
+        assert_eq!(TaskSection::Info.title("Task"), "Task");
+        assert_eq!(TaskSection::Agent.title("Task"), "Agent");
+    }
+
+    #[test]
+    fn task_tabs_mark_the_current_one() {
+        let items = task_tabs("/task/7", TaskSection::Sessions, 3);
+        assert_eq!(items.len(), 3);
+        assert!(!items[0].is_current() && items[1].is_current() && !items[2].is_current());
+        assert_eq!(
+            (items[1].href(), items[1].badge()),
+            ("/task/7?tab=sessions", Some(3))
+        );
+        assert_eq!(items[2].href(), "/task/7?tab=agent");
+    }
 
     #[test]
     fn a_query_value_picks_a_section() {

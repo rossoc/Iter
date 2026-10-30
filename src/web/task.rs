@@ -5,7 +5,9 @@
 use super::Id;
 use super::crumbs::trail;
 use super::load::{Parents, parents_of};
+use super::sections::{TabQuery, TaskSection, task_tabs};
 use super::session_lines::task_lines;
+use super::task_agent::{self, AgentTab, agent_tab};
 use super::task_panel::task_panel;
 use super::ui::breadcrumb::Crumb;
 use super::ui::button::edit_button;
@@ -16,7 +18,8 @@ use super::ui::layout::info_columns;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::sessions_table::sessions_table;
-use super::url::task_edit_url;
+use super::ui::tabs::tabs;
+use super::url::{task_edit_url, task_url};
 use super::{now, open_db};
 use crate::db::{Db, Table};
 use crate::models::{Session, Tag, Task};
@@ -24,7 +27,7 @@ use chrono::NaiveDateTime;
 use topcoat::{
     Result,
     context::Cx,
-    router::{RouterBuilder, error::RouterErrorExt, page, path_param},
+    router::{RouterBuilder, error::RouterErrorExt, page, path_param, query_params},
     view::{View, component, view},
 };
 
@@ -61,10 +64,23 @@ pub fn load(db: &Db, id: i64) -> Result<Loaded> {
 #[page("/task/{id}")]
 async fn show(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    let page = load(&open_db()?, id)?;
+    let query = query_params::<TabQuery>(cx)?;
+    let section = TaskSection::of(query.tab.as_deref());
+    let db = open_db()?;
+    let page = load(&db, id)?;
+    // the plan and the folder are read only for the tab that shows them
+    let agent = match section {
+        TaskSection::Agent => Some(task_agent::load(
+            &db,
+            &page.parents.project,
+            &page.task,
+            query.step.as_deref(),
+        )?),
+        _ => None,
+    };
     let now = now();
     Ok(view! {
-        screen(page: &page, now: now)
+        screen(page: &page, section: section, now: now, agent: agent.as_ref())
     })
 }
 
@@ -90,28 +106,49 @@ async fn sessions_block(
     })
 }
 
+/// The Info tab: the description, the Details aside.
 #[component]
-pub async fn screen(page: &Loaded, now: NaiveDateTime) -> Result<impl View> {
+async fn task_info(task: &Task, tags: &[Tag]) -> Result<impl View> {
+    Ok(view! {
+        info_columns(
+            <div>
+                description(text: &task.description)
+            </div>
+            task_panel(task: task, tags: tags)
+        )
+    })
+}
+
+#[component]
+pub async fn screen(
+    page: &Loaded,
+    section: TaskSection,
+    now: NaiveDateTime,
+    #[default] agent: Option<&AgentTab>,
+) -> Result<impl View> {
     let Loaded {
         task,
         parents,
         sessions: rows,
         tags,
     } = page;
-    // No tabs, so the page's own crumb is the current item.
-    let crumbs = trail(&parents.org, Some(&parents.project), Crumb::here("Task"));
-    let parts = ["Task", task.name.as_str()];
+    let items = task_tabs(&task_url(task.id()), section, rows.len());
+    // The page has tabs, so the current tab is the current item and the
+    // page's own crumb is plain text.
+    let crumbs = trail(&parents.org, Some(&parents.project), Crumb::label("Task"));
+    let parts = [section.title("Task"), task.name.as_str()];
     Ok(view! {
         frame(
             title: &parts,
             page_header(title: &task.name, kicker: Kicker::Crumbs(&crumbs), edit_button(href: task_edit_url(task.id())))
-            info_columns(
-                <div>
-                    description(text: &task.description)
-                    sessions_block(task: task, sessions: rows, now: now)
-                </div>
-                task_panel(task: task, tags: tags)
-            )
+            tabs(label: "Sections", items: &items)
+            if section == TaskSection::Sessions {
+                sessions_block(task: task, sessions: rows, now: now)
+            } else if let (TaskSection::Agent, Some(agent)) = (section, agent) {
+                agent_tab(task_id: task.id(), agent: agent)
+            } else {
+                task_info(task: task, tags: tags)
+            }
         )
     })
 }

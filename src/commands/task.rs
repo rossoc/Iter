@@ -3,8 +3,8 @@
 
 use crate::app::App;
 use crate::args::{ReportOpts, TaskCommand};
-use crate::commands::Run;
 use crate::commands::sync::{task_pull, task_push};
+use crate::commands::{Run, agent};
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
@@ -44,6 +44,19 @@ impl Run for TaskCommand {
                 };
                 task_list(app, project.as_deref(), &statuses)
             }
+            Self::Plan { action } => action.run(app),
+            Self::Prompt {
+                task,
+                kind,
+                template,
+                no_onboarding,
+            } => agent::prompt_cmd(
+                app,
+                task.as_deref(),
+                *kind,
+                template.as_deref(),
+                !*no_onboarding,
+            ),
             Self::Done { task, save } => task_done(app, task.as_deref(), *save),
             Self::Pull {
                 project,
@@ -132,7 +145,9 @@ fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
         let tag_ids = checked_tags(db, &edit)?;
         let target = chosen_project(db, &project, &edit.project)?;
         if target.id() != project.id() && db.find_session_config_by_task(id)?.is_some() {
-            return Err(IterError::TaskHasSession(task_display(&project, &edit.task)));
+            return Err(IterError::TaskHasSession(task_display(
+                &project, &edit.task,
+            )));
         }
         edit.task.project_id = target.id();
         db.update(id, &edit.task)?;

@@ -10,12 +10,12 @@ use super::edit_page::edit_page;
 use super::forms::{TaskForm, joined};
 use super::load::{Parents, parents_of};
 use super::task_fields::task_fields;
+use super::ui::field::select;
 use super::ui::form_error::FormError;
 use super::url::{task_edit_url, task_url};
 use crate::db::{Db, Table};
 use crate::error::Result as IterResult;
 use crate::models::{Project, Task};
-use super::ui::field::select;
 use topcoat::{
     Result,
     context::Cx,

@@ -69,7 +69,13 @@ fn entries(db: &Db) -> crate::error::Result<Vec<Entry>> {
         });
         let base = org_url(org.id());
         let dir = notes::org_dir(org);
-        push_notes(&mut out, dir.as_deref(), &base, (Kind::Org, &org.name), Vec::new());
+        push_notes(
+            &mut out,
+            dir.as_deref(),
+            &base,
+            (Kind::Org, &org.name),
+            Vec::new(),
+        );
     }
     let mut by_id: HashMap<i64, Vec<(Kind, String)>> = HashMap::new();
     for project in &projects {
@@ -85,7 +91,13 @@ fn entries(db: &Db) -> crate::error::Result<Vec<Entry>> {
         let org = project_org(project).cloned();
         let dir = notes::project_dir(project, &org);
         let base = project_url(project.id());
-        push_notes(&mut out, dir.as_deref(), &base, (Kind::Project, &project.name), above.clone());
+        push_notes(
+            &mut out,
+            dir.as_deref(),
+            &base,
+            (Kind::Project, &project.name),
+            above.clone(),
+        );
         above.push((Kind::Project, project.name.clone()));
         by_id.insert(project.id(), above);
     }

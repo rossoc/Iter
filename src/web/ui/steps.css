@@ -1,0 +1,24 @@
+/* the plan of a task: progress, the checklist, a step's panel, the files under it */
+.plan-progress{display:flex;align-items:center;gap:12px;margin:0 0 16px;color:var(--muted);font-size:.875rem}
+.plan-progress progress{flex:0 1 16rem;height:8px;accent-color:var(--accent)}
+.plan-part{margin:0 0 18px}
+.plan-part .label{margin-bottom:6px}
+.steps{list-style:none;margin:0;padding:0;border-top:1px dashed var(--line)}
+.steps li{border-bottom:1px dashed var(--line)}
+.steps a,.steps .loose{display:flex;gap:10px;align-items:flex-start;padding:9px 8px;border-radius:var(--r-sm)}
+.steps a:hover{background:var(--bg-2)}
+.steps li.current a{background:var(--accent-tint)}
+.steps .i{margin-top:.25em;color:var(--faint)}
+.steps .doing .i{color:var(--accent)}
+.steps .done .i{color:var(--ok)}
+.steps .step-text{flex:1;min-width:0;overflow-wrap:anywhere}
+.steps .done .step-text{color:var(--muted)}
+.step-tag{flex:none;margin-top:.15em;padding:0 8px;border:1px solid var(--line-2);border-radius:var(--r-pill);font-size:.75rem;color:var(--muted)}
+.step-panel .status{margin-bottom:10px}
+.step-panel .step-tag{margin-left:8px}
+.step-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.step-close{display:inline-block;margin-top:14px;color:var(--muted);font-size:.875rem;text-decoration:underline}
+.files details{border-bottom:1px dashed var(--line);padding:8px 0}
+.files summary{cursor:pointer;color:var(--fg)}
+.files details[open] summary{margin-bottom:8px}
+@media (forced-colors:active){.steps li.current a{outline:2px solid Highlight}}
