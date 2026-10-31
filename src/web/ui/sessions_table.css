@@ -1,10 +1,6 @@
-/* sessions table: the report and the task page */
+/* sessions table (on table.css): the report and the task page */
 .sessions{width:100%;border-collapse:collapse;font-size:.875rem}
-.sessions th{padding:0 14px 10px}  /* look: the shared th rule (base.css) */
-.sessions td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
-.sessions tbody tr{transition:background var(--fast) var(--ease-out)}
-.sessions tbody tr:hover{background:var(--bg-2)}
-.sessions th:first-child,.sessions td:first-child{padding-left:4px}
+.sessions td{vertical-align:top}
 .sessions td.mono{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
 .sessions .note{width:100%;color:var(--fg);overflow-wrap:anywhere;white-space:pre-line}  /* a note keeps its line breaks */
 /* an open session: a dot that breathes three times, next to its duration or the word "ongoing" */
@@ -16,15 +12,10 @@
 @keyframes breathe{50%{opacity:.6}}  /* never dimmer than 3:1 */
 @media (forced-colors:active){.live{background:CanvasText}}
 
-/* narrow screens: session rows stack -- times on one line, the note below;
-   the header row is hidden, so the end says "to" with an arrow */
+/* narrow screens: the times on one line, the note below (the header row is
+   hidden by the table, so the end says "to" with an arrow) */
 @media (max-width:600px){
-  .sessions thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-  .sessions tr{display:flex;flex-wrap:wrap;gap:2px 12px;padding:10px 4px;border-bottom:1px solid var(--line)}
-  .sessions td{display:block;padding:0;border:0}
   .sessions td.end::before{content:"\2192" / "";margin-right:8px;color:var(--muted)}
   .sessions .note{flex-basis:100%}
   .sessions .note:empty{display:none}
 }
-/* the line under the table when there are no sessions: clear of the New session row */
-.sessions + .empty-line{margin-top:16px}

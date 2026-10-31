@@ -13,7 +13,7 @@ use super::ui::frame::frame;
 use super::ui::layout::info_columns;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
-use super::ui::table::{cell, col_head};
+use super::ui::table::{cell, data_table, row};
 use super::ui::tabs::{Tab, tabs};
 use super::ui::{PLAY, STOP, X, icon};
 use super::url::{
@@ -59,7 +59,7 @@ fn heading(run: &RunRecord) -> String {
 async fn use_row(u: &Use) -> Result<impl View> {
     let run = &u.run;
     Ok(view! {
-        <tr role="row">
+        row(
             cell(
                 <a class="u" href=(agent_url(u.task_id, run.n))>(heading(run))</a>
                 // what it was told to use: only on the row under the pointer
@@ -67,7 +67,7 @@ async fn use_row(u: &Use) -> Result<impl View> {
             )
             cell(<a class="u muted" href=(task_url(u.task_id))>(u.task.as_str())</a>)
             cell(state_pill(run: run))
-        </tr>
+        )
     })
 }
 
@@ -86,25 +86,12 @@ async fn list_screen(uses: &[Use]) -> Result<impl View> {
     Ok(view! {
         frame(title: &["Agents"], current: "/agents",
             page_header(title: "Agents", kicker: Kicker::Eyebrow("Global"))
-            if uses.is_empty() {
-                empty_line("No agent has worked on any task yet.")
-            } else {
-                <table class="tasks agents" role="table">
-                    <caption class="sr">"Agents of every task, the latest first"</caption>
-                    <thead role="rowgroup">
-                        <tr role="row">
-                            col_head("Agent")
-                            col_head("Task")
-                            col_head("Status")
-                        </tr>
-                    </thead>
-                    <tbody role="rowgroup">
-                        for u in uses.iter() {
-                            use_row(u: u)
-                        }
-                    </tbody>
-                </table>
-            }
+            data_table(caption: "Agents of every task, the latest first", columns: &["Agent", "Task", "Status"],
+                class: "tasks agents", empty: uses.is_empty().then_some("No agent has worked on any task yet."),
+                for u in uses.iter() {
+                    use_row(u: u)
+                }
+            )
         )
     })
 }

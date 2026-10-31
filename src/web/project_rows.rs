@@ -1,7 +1,6 @@
 //! The mapping from projects to what a project list shows
 //! (`ui::project_list`): the one place a project's link is built.
 
-use super::ui::empty_line::empty_line;
 use super::ui::filter_bar::{Search, filter_bar};
 use super::ui::labelled::labelled_section;
 use super::ui::project_list::{ProjectItem, project_list};
@@ -97,6 +96,13 @@ pub async fn projects_section(
         None => projects.iter().collect(),
     };
     let items = items_of(shown.iter().copied());
+    let none = if projects.is_empty() {
+        Some(empty)
+    } else if items.is_empty() {
+        Some("No projects match.")
+    } else {
+        None
+    };
     let body = view! {
         if let Some(search) = &search {
             if !projects.is_empty() {
@@ -106,14 +112,7 @@ pub async fn projects_section(
                 }
             }
         }
-        if add.is_some() || !items.is_empty() {
-            project_list(items: &items, add: add)
-        }
-        if projects.is_empty() {
-            empty_line((empty))
-        } else if items.is_empty() {
-            empty_line("No projects match.")
-        }
+        project_list(items: &items, add: add, empty: none)
     };
     Ok(view! {
         if titled {

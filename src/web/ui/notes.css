@@ -1,27 +1,16 @@
-/* the Notes tab: the button that opens today's note, then months of rows
-   that highlight like the project list's, the day in mono, the note's own
-   title if it has one, and the start of its text, muted and cut to one line */
-.notes.new{margin:0 0 20px}
-/* the first row, which adds today's note: like the New project row, but its
-   link is a button in a form (it posts), so the button is reset first */
-.notes li.add{position:relative;border-top:0;border-bottom:1px dashed var(--line-2);padding:0}
-.notes li.add form{margin:0}
-.notes .add-link{display:flex;width:100%;align-items:center;gap:8px;padding:10px 14px 10px 4px;border:0;background:none;
-  font:inherit;font-weight:500;color:var(--fg);text-align:left;cursor:pointer;transition:color var(--fast) var(--ease-out)}
-.notes .add-link::after{content:"";position:absolute;inset:0}
-.notes li.add:hover .add-link{color:var(--accent)}
-.notes li.add{background:var(--bg-2)}
-.notes .add-link:focus-visible{outline:none}
-.notes li.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
-.notes-month{margin:0 0 20px}
-.notes{list-style:none;margin:0;padding:0;border-bottom:1px solid var(--line)}
-.notes li{border-top:1px solid var(--line);transition:background var(--fast) var(--ease-out)}
-.notes li:hover{background:var(--bg-2)}
-.notes a{display:flex;align-items:baseline;gap:12px;padding:10px 14px 10px 4px;color:var(--fg);min-width:0}
-.notes .note-day{flex:none;font:.8125rem var(--mono);font-variant-numeric:tabular-nums;color:var(--muted)}
-.notes .note-title{flex:none;max-width:40%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
-.notes .note-preview{flex:1 1 0;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:.875rem;color:var(--muted)}
-.notes a:hover .note-day{color:var(--accent)}
+/* the Notes tab: rows of the table (table.css) under their month, the day in
+   mono, the note's own title if it has one, and the start of its text,
+   muted and cut to one line */
+.notes td.note-day{width:1%;white-space:nowrap}
+.notes .note-day a{color:var(--muted);font:.8125rem var(--mono);font-variant-numeric:tabular-nums}
+.notes tr:hover .note-day a{color:var(--accent)}
+.notes td.note-text{width:100%;max-width:0;padding-left:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}  /* one line, cut */
+.notes .note-title{font-weight:600;margin-right:12px}
+.notes .note-preview{font-size:.875rem;color:var(--muted)}
+@media (max-width:600px){
+  .notes td.note-day{width:auto}
+  .notes td.note-text{flex:1 1 0;width:auto;max-width:none;min-width:0}
+}
 /* a note's page: the way to the days either side of it */
 .note-date{margin:0 0 16px;color:var(--muted);font-size:.875rem}
 .note-nav{display:flex;justify-content:space-between;gap:16px;margin-top:32px;padding-top:14px;border-top:1px solid var(--line)}

@@ -14,8 +14,6 @@ use super::open_db;
 use super::sections::TabQuery;
 use super::task_runs::{label_of, state_pill};
 use super::ui::breadcrumb::Crumb;
-use super::ui::button::add_link;
-use super::ui::empty_line::empty_line;
 use super::ui::field::{field, select, textarea};
 use super::ui::form::form_shell;
 use super::ui::frame::frame;
@@ -24,7 +22,7 @@ use super::ui::modal::modal;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::panel::{Row, panel};
 use super::ui::prose::description;
-use super::ui::table::{cell, col_head};
+use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::tabs::{Tab, tabs};
 use super::url::{instruction_url, instructions_url, page_url, project_url, run_url, task_url};
 use crate::agent::instruction::{self, Instruction, Layers, Source};
@@ -199,32 +197,19 @@ pub async fn instruction_table(
     #[default] add: Option<String>,
 ) -> Result<impl View> {
     Ok(view! {
-        <table class="tasks instructions" role="table">
-            <caption class="sr">"Instructions"</caption>
-            <thead role="rowgroup">
-                <tr role="row">
-                    col_head("Instruction")
-                    col_head("Used")
-                </tr>
-            </thead>
-            <tbody role="rowgroup">
-                if let Some(href) = &add {
-                    <tr class="add" role="row">
-                        cell(colspan: "2", add_link(href: href, label: "New instruction\u{2026}"))
-                    </tr>
-                }
-                for r in rows.iter() {
-                    <tr role="row">
-                        cell(
-                            <a class="u" href=(r.href.as_str())>(label_of(&r.name))</a>
-                            // its space is kept when there is nothing to say, so rows do not jump
-                            <span class="sub">(if r.description.is_empty() { "\u{a0}" } else { r.description.as_str() })</span>
-                        )
-                        cell(class: "mono", (r.used.to_string()))
-                    </tr>
-                }
-            </tbody>
-        </table>
+        data_table(caption: "Instructions", columns: &["Instruction", "Used"], class: "tasks instructions",
+            add: add.map(|href| AddRow::link(href, "New instruction\u{2026}")),
+            for r in rows.iter() {
+                row(
+                    cell(
+                        <a class="u" href=(r.href.as_str())>(label_of(&r.name))</a>
+                        // its space is kept when there is nothing to say, so rows do not jump
+                        <span class="sub">(if r.description.is_empty() { "\u{a0}" } else { r.description.as_str() })</span>
+                    )
+                    cell(class: "mono", (r.used.to_string()))
+                )
+            }
+        )
     })
 }
 
@@ -480,32 +465,19 @@ async fn info_part(i: &Instruction) -> Result<impl View> {
 #[component]
 async fn agents_part(uses: &[Use]) -> Result<impl View> {
     Ok(view! {
-        if uses.is_empty() {
-            empty_line("No agent has been given this instruction yet.")
-        } else {
-            <table class="tasks agents" role="table">
-                <caption class="sr">"Agents given this instruction, the latest first"</caption>
-                <thead role="rowgroup">
-                    <tr role="row">
-                        col_head("Agent")
-                        col_head("Task")
-                        col_head("Status")
-                    </tr>
-                </thead>
-                <tbody role="rowgroup">
-                    for u in uses.iter() {
-                        <tr role="row">
-                            cell(
-                                <a class="u" href=(run_url(u.task_id, u.run.n))>"#" (u.run.n.to_string())</a>
-                                <span class="hint">(u.run.model.as_str()) ", " (u.run.effort.as_str())</span>
-                            )
-                            cell(<a class="u muted" href=(task_url(u.task_id))>(u.task.as_str())</a>)
-                            cell(state_pill(run: &u.run))
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
+        data_table(caption: "Agents given this instruction, the latest first", columns: &["Agent", "Task", "Status"],
+            class: "tasks agents", empty: uses.is_empty().then_some("No agent has been given this instruction yet."),
+            for u in uses.iter() {
+                row(
+                    cell(
+                        <a class="u" href=(run_url(u.task_id, u.run.n))>"#" (u.run.n.to_string())</a>
+                        <span class="hint">(u.run.model.as_str()) ", " (u.run.effort.as_str())</span>
+                    )
+                    cell(<a class="u muted" href=(task_url(u.task_id))>(u.task.as_str())</a>)
+                    cell(state_pill(run: &u.run))
+                )
+            }
+        )
     })
 }
 

@@ -1,8 +1,7 @@
 //! A table of tasks: name, optionally project, status, issue.
 
-use super::button::add_link;
 use super::status::status;
-use super::table::{cell, col_head};
+use super::table::{AddRow, cell, data_table, row};
 use crate::models::TaskStatus;
 use topcoat::{
     Result,
@@ -31,60 +30,46 @@ pub struct TaskRow<'a> {
 /// `caption` is read by screen readers only. The Project column appears
 /// when the rows carry a project. `add` is where the first row leads, when
 /// the table has one: the whole row is a link ("New task…") that opens the
-/// New task pop-up (`modal.rs`). The caller shows its own empty state
-/// instead of an empty table (see `tasks_tab`).
-///
-/// The `role`s repeat the native table semantics (see `table.rs`).
+/// New task pop-up (`modal.rs`). `empty` is the line shown when there are
+/// no rows. It is a `data_table` (see `table.rs`).
 #[component]
 pub async fn task_table(
     rows: &[TaskRow<'_>],
     caption: &str,
     #[default] add: Option<String>,
+    #[default] empty: Option<&str>,
 ) -> Result<impl View> {
     let project_column = rows.iter().any(|r| r.project.is_some());
-    let columns = if project_column { "4" } else { "3" };
+    let mut columns = vec!["Task"];
+    if project_column {
+        columns.push("Project");
+    }
+    columns.extend(["Status", "Issue"]);
+    let add = add.map(|href| AddRow::link(href, "New task\u{2026}"));
     Ok(view! {
-        <table class="tasks" role="table">
-            <caption class="sr">(caption)</caption>
-            <thead role="rowgroup">
-                <tr role="row">
-                    col_head("Task")
+        data_table(caption: caption, columns: &columns, class: "tasks", add: add, empty: empty,
+            for r in rows.iter() {
+                row(
+                    cell(<a class="u" href=(r.href.as_str())>(r.name)</a>)
                     if project_column {
-                        col_head("Project")
-                    }
-                    col_head("Status")
-                    col_head("Issue")
-                </tr>
-            </thead>
-            <tbody role="rowgroup">
-                if let Some(href) = &add {
-                    <tr class="add" role="row">
-                        cell(colspan: columns, add_link(href: href, label: "New task\u{2026}"))
-                    </tr>
-                }
-                for row in rows.iter() {
-                    <tr role="row">
-                        cell(<a class="u" href=(row.href.as_str())>(row.name)</a>)
-                        if project_column {
-                            cell(class: "project",
-                                if let Some(p) = &row.project {
-                                    <a class="u muted" href=(p.href.as_str())>(p.name)</a>
-                                }
-                            )
-                        }
-                        cell(status(state: row.status))
-                        // Empty issue: "No issue" for screen readers; the
-                        // cell stays, so the row keeps its columns.
-                        cell(class: "mono",
-                            if row.issue.is_empty() {
-                                <span class="sr">"No issue"</span>
-                            } else {
-                                (row.issue.as_str())
+                        cell(class: "project",
+                            if let Some(p) = &r.project {
+                                <a class="u muted" href=(p.href.as_str())>(p.name)</a>
                             }
                         )
-                    </tr>
-                }
-            </tbody>
-        </table>
+                    }
+                    cell(status(state: r.status))
+                    // Empty issue: "No issue" for screen readers; the
+                    // cell stays, so the row keeps its columns.
+                    cell(class: "mono",
+                        if r.issue.is_empty() {
+                            <span class="sr">"No issue"</span>
+                        } else {
+                            (r.issue.as_str())
+                        }
+                    )
+                )
+            }
+        )
     })
 }

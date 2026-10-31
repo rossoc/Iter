@@ -2,8 +2,7 @@
 //! Organization report and the task page show the same table, with
 //! different columns.
 
-use super::button::add_link;
-use super::table::{cell, col_head};
+use super::table::{AddRow, cell, data_table, row};
 use std::borrow::Cow;
 use topcoat::{
     Result,
@@ -34,7 +33,7 @@ pub struct SessionLine<'a> {
 #[component]
 async fn session_row(l: &SessionLine<'_>, dated: bool, show_end: bool) -> Result<impl View> {
     Ok(view! {
-        <tr role="row">
+        row(
             if dated {
                 cell(class: "mono", (l.date.as_deref().unwrap_or_default()))
             }
@@ -56,7 +55,7 @@ async fn session_row(l: &SessionLine<'_>, dated: bool, show_end: bool) -> Result
                 }
             )
             cell(class: "note", (l.note.as_deref().unwrap_or_default()))
-        </tr>
+        )
     })
 }
 
@@ -74,45 +73,33 @@ async fn moment(m: &Moment<'_>) -> Result<impl View> {
 
 /// `caption` is read by screen readers only. `show_end` adds the End column
 /// (an open session reads "ongoing" there); without it the open session is
-/// marked next to its duration. The `role`s repeat the native table
-/// semantics (see `table.rs`). `add` is where the first row leads, when the
-/// table has one ("New session…"). The caller shows its own empty state
-/// instead of an empty table, unless the table has that row.
+/// marked next to its duration. `add` is where the first row leads, when the
+/// table has one ("New session…": the pop-up). `empty` is the line shown
+/// when there are no sessions. It is a `data_table` (see `table.rs`).
 #[component]
 pub async fn sessions_table(
     lines: &[SessionLine<'_>],
     caption: &str,
     #[default] show_end: bool,
     #[default] add: Option<String>,
+    #[default] empty: Option<&str>,
 ) -> Result<impl View> {
     let dated = lines.iter().any(|l| l.date.is_some());
-    let columns = (3 + usize::from(dated) + usize::from(show_end)).to_string();
+    let mut columns = Vec::new();
+    if dated {
+        columns.push("Date");
+    }
+    columns.push("Start");
+    if show_end {
+        columns.push("End");
+    }
+    columns.extend(["Duration", "Note"]);
+    let add = add.map(|href| AddRow::link(href, "New session\u{2026}"));
     Ok(view! {
-        <table class="sessions" role="table">
-            <caption class="sr">(caption)</caption>
-            <thead role="rowgroup">
-                <tr role="row">
-                    if dated {
-                        col_head("Date")
-                    }
-                    col_head("Start")
-                    if show_end {
-                        col_head("End")
-                    }
-                    col_head("Duration")
-                    col_head("Note")
-                </tr>
-            </thead>
-            <tbody role="rowgroup">
-                if let Some(href) = &add {
-                    <tr class="add" role="row">
-                        cell(colspan: columns.as_str(), add_link(href: href, label: "New session\u{2026}"))
-                    </tr>
-                }
-                for l in lines.iter() {
-                    session_row(l: l, dated: dated, show_end: show_end)
-                }
-            </tbody>
-        </table>
+        data_table(caption: caption, columns: &columns, class: "sessions inline", add: add, empty: empty,
+            for l in lines.iter() {
+                session_row(l: l, dated: dated, show_end: show_end)
+            }
+        )
     })
 }

@@ -1,8 +1,7 @@
 //! The Tasks tab of an organization or project page: the search box, the task
 //! table (its first row opens the New task pop-up, when the page can add a
-//! task), or "No tasks yet." / "No tasks match." when there are none to show.
+//! task); with no rows the table says "No tasks yet." / "No tasks match.".
 
-use super::empty_line::empty_line;
 use super::filter_bar::{Search, filter_bar};
 use super::task_table::{TaskRow, task_table};
 use topcoat::{
@@ -33,11 +32,6 @@ pub async fn tasks_tab(
                 <p class="filter-count" role="status">(rows.len()) " of " (total) " tasks match"</p>
             }
         }
-        if add.is_some() || !rows.is_empty() {
-            task_table(rows: rows, caption: caption, add: add)
-        }
-        if rows.is_empty() {
-            empty_line((none))
-        }
+        task_table(rows: rows, caption: caption, add: add, empty: rows.is_empty().then_some(none))
     })
 }
