@@ -211,7 +211,7 @@ async fn act(cx: &Cx) -> Result<Response> {
         "ingest" => ingest::ingest_in_background(&db, &project, &task),
         other => return Err(bad_request(format!("'{other}' is not an action")).into()),
     };
-    done.map_err(|e| bad_request(e.to_string()))?;
+    done.map_err(super::errors::refused)?;
     Err(see_other(wiki_tab_url(&task_url(id))).into())
 }
 

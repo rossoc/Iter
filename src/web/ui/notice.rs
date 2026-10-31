@@ -31,6 +31,13 @@ pub async fn notice(
         id.bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
     );
+    // The id goes into an inline script unescaped, so only characters that
+    // cannot end the string are let through (all of the callers' ids already
+    // are such): a `debug_assert!` alone would not hold in a release build.
+    let script_id: String = id
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
+        .collect();
     Ok(view! {
         <p class=(if error { "notice error" } else { "notice" })
             if error { role="alert" }
@@ -39,7 +46,7 @@ pub async fn notice(
             (child)
         </p>
         if focus {
-            <script>(Unescaped::new_unchecked(format!("{{const n=document.getElementById('{id}');n.removeAttribute('role');n.focus()}}")))</script>
+            <script>(Unescaped::new_unchecked(format!("{{const n=document.getElementById('{script_id}');n.removeAttribute('role');n.focus()}}")))</script>
         }
     })
 }

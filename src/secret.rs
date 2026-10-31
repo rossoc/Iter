@@ -52,6 +52,20 @@ pub trait KeyStore {
     fn delete(&self, organization: &str) -> Result<()>;
 }
 
+/// Moves the key kept under `old` to `new`, when there is one: keys are
+/// kept by the organization's name, so a rename that left it behind would
+/// lose the key (and leave a secret nothing can reach or clear).
+pub fn rename_key(store: &dyn KeyStore, old: &str, new: &str) -> Result<()> {
+    if old == new {
+        return Ok(());
+    }
+    if let Some(key) = store.get(old)? {
+        store.set(new, &key)?;
+        store.delete(old)?;
+    }
+    Ok(())
+}
+
 /// The key to use for `organization`: `ITER_PLATFORM_KEY` when set, else the
 /// store's. A missing key is an error that says how to set one.
 pub fn resolve(store: &dyn KeyStore, organization: &str, env: Option<&str>) -> Result<Secret> {
@@ -187,6 +201,19 @@ pub mod fake {
 mod tests {
     use super::fake::MemoryKeys;
     use super::*;
+
+    #[test]
+    fn a_renamed_organization_keeps_its_key() {
+        let store = MemoryKeys::default();
+        store.set("acme", &Secret::new("k").unwrap()).unwrap();
+        rename_key(&store, "acme", "acme-corp").unwrap();
+        assert!(store.get("acme").unwrap().is_none());
+        assert_eq!(store.get("acme-corp").unwrap().unwrap().expose(), "k");
+        // nothing to move is fine, and so is the same name
+        rename_key(&store, "none", "other").unwrap();
+        rename_key(&store, "acme-corp", "acme-corp").unwrap();
+        assert!(store.get("acme-corp").unwrap().is_some());
+    }
 
     #[test]
     fn the_environment_overrides_the_store() {

@@ -218,6 +218,16 @@ impl JsonWebhook {
         &self,
         response: std::result::Result<ureq::http::Response<ureq::Body>, ureq::Error>,
     ) -> Result<String> {
+        Ok(self.read(response, false)?.unwrap_or_default())
+    }
+
+    /// The body of a 2xx response, `None` for a platform without the
+    /// endpoint at all (404, 405, 501), or the error a refusal makes.
+    fn read(
+        &self,
+        response: std::result::Result<ureq::http::Response<ureq::Body>, ureq::Error>,
+        missing_ok: bool,
+    ) -> Result<Option<String>> {
         let mut response = response.map_err(|e| self.fail(&e.to_string()))?;
         let status = response.status();
         let body = response
@@ -225,18 +235,30 @@ impl JsonWebhook {
             .read_to_string()
             .map_err(|e| self.fail(&e.to_string()))?;
         if status.is_success() {
-            return Ok(body);
+            return Ok(Some(body));
+        }
+        if missing_ok && matches!(status.as_u16(), 404 | 405 | 501) {
+            return Ok(None);
         }
         let shown: String = body.trim().chars().take(BODY_LIMIT).collect();
         Err(self.fail(&format!("HTTP {}: {shown}", status.as_u16())))
     }
 
     fn get(&self, url: &str, query: &[(&str, String)]) -> Result<String> {
+        Ok(self.get_or_missing(url, query, false)?.unwrap_or_default())
+    }
+
+    fn get_or_missing(
+        &self,
+        url: &str,
+        query: &[(&str, String)],
+        missing_ok: bool,
+    ) -> Result<Option<String>> {
         let mut request = self.agent.get(url).header("Authorization", self.bearer());
         for (k, v) in query {
             request = request.query(k, v);
         }
-        self.finish(request.call())
+        self.read(request.call(), missing_ok)
     }
 
     fn parse<T: serde::de::DeserializeOwned>(&self, body: &str) -> Result<T> {
@@ -267,9 +289,14 @@ impl TimePlatform for JsonWebhook {
             .content_type("application/json")
             .send(body);
         let reply = self.finish(response)?;
-        let mut results = serde_json::from_str::<Results>(&reply)
-            .map(|r| r.results)
-            .unwrap_or_default();
+        // An empty reply says nothing, which is "all accepted" below. A reply
+        // that says something but not this (a proxy's or captive portal's
+        // HTML page, say) is not an acceptance: nothing may be recorded as
+        // pushed on the strength of it.
+        let mut results = match reply.trim() {
+            "" => Vec::new(),
+            text => self.parse::<Results>(text)?.results,
+        };
         // An entry the response does not mention was accepted.
         for entry in &worklog.entries {
             if !results.iter().any(|r| r.day == entry.day) {
@@ -294,15 +321,22 @@ impl TimePlatform for JsonWebhook {
             let got = self.parse::<Entries>(&body)?;
             out.extend(got.entries.into_iter().map(WorklogEntry::from));
             if !got.has_more {
-                break;
+                return Ok(out);
             }
         }
-        Ok(out)
+        // Stopping here quietly would hide the days beyond it from the
+        // conflict check, and they would be pushed twice.
+        Err(self.fail(&format!(
+            "more than {MAX_PAGES} pages of entries between {from} and {to}: narrow the period"
+        )))
     }
 
     fn projects(&self) -> Result<Vec<Named>> {
-        let body = self.get(&format!("{}/projects", self.url), &[])?;
-        Ok(self.parse::<Projects>(&body)?.projects)
+        // No such endpoint: the platform does not list its projects.
+        match self.get_or_missing(&format!("{}/projects", self.url), &[], true)? {
+            Some(body) => Ok(self.parse::<Projects>(&body)?.projects),
+            None => Ok(Vec::new()),
+        }
     }
 
     fn activities(&self, project_id: &str) -> Result<Vec<Named>> {
@@ -311,7 +345,10 @@ impl TimePlatform for JsonWebhook {
             self.url,
             path_segment(project_id)
         );
-        Ok(self.parse::<Activities>(&self.get(&url, &[])?)?.activities)
+        match self.get_or_missing(&url, &[], true)? {
+            Some(body) => Ok(self.parse::<Activities>(&body)?.activities),
+            None => Ok(Vec::new()),
+        }
     }
 }
 
@@ -445,6 +482,37 @@ mod tests {
 
     fn webhook(url: &str) -> JsonWebhook {
         JsonWebhook::new(url, Secret::new(KEY).unwrap())
+    }
+
+    /// A proxy or captive portal answering 200 with a page is not the
+    /// platform saying "accepted".
+    #[test]
+    fn a_push_answered_with_a_page_is_an_error_not_an_acceptance() {
+        let (url, request) = stub("200 OK", "<html>please log in</html>");
+        let err = webhook(&url).push(&log()).unwrap_err();
+        request.join().unwrap();
+        assert!(err.to_string().contains("unexpected response"), "{err}");
+    }
+
+    #[test]
+    fn a_push_answered_with_nothing_is_an_acceptance() {
+        let (url, request) = stub("200 OK", "");
+        let results = webhook(&url).push(&log()).unwrap();
+        request.join().unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].status, "ok");
+    }
+
+    /// More pages than the cap must not read as "no more entries": the days
+    /// beyond it would escape the conflict check.
+    #[test]
+    fn a_fetch_that_hits_the_page_cap_is_an_error() {
+        let page = r#"{"page":1,"total":9,"entries":[],"has_more":true,"page_size":1}"#;
+        let (url, handle) = stub_all(vec![page.to_string(); MAX_PAGES as usize]);
+        let day = NaiveDate::from_ymd_opt(2026, 9, 4).unwrap();
+        let err = webhook(&url).fetch(day, day).unwrap_err();
+        handle.join().unwrap();
+        assert!(err.to_string().contains("pages"), "{err}");
     }
 
     #[test]

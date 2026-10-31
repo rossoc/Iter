@@ -18,3 +18,17 @@ pub struct Push {
     /// What succeeded and what did not, one line per item.
     pub results: String,
 }
+
+impl Push {
+    /// The items of `results` that succeeded, without their `ok: ` marker.
+    pub fn ok_items(&self) -> impl Iterator<Item = &str> {
+        self.results.lines().filter_map(|l| l.strip_prefix("ok: "))
+    }
+
+    /// Whether every step of this push went through. A push that is not
+    /// complete (a day the platform refused, a GitHub issue that could not
+    /// be closed) is not "already pushed": running it again finishes it.
+    pub fn complete(&self) -> bool {
+        !self.results.lines().any(|l| l.starts_with("FAILED: "))
+    }
+}

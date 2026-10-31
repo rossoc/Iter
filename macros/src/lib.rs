@@ -104,6 +104,8 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 let check = syn::Ident::new(&check.value(), check.span());
                 quote! {
                     fn validate(&mut self) -> crate::error::Result<()> {
+                        // `" work "` would be stored as typed and never found by `work`
+                        self.name = self.name.trim().to_string();
                         crate::models::require_name(#kind, &self.name)?;
                         self.#check()
                     }

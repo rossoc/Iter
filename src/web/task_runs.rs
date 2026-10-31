@@ -10,6 +10,7 @@
 //! (`?new=agent&kind=fix`) that load the prompt of that kind, so no script
 //! is needed to fill the prompt in.
 
+use super::errors::refused;
 use super::sections::TabQuery;
 use super::task_agent::{Open, step_panel};
 use super::ui::button::add_link;
@@ -442,12 +443,6 @@ fn world(id: i64) -> Result<(App, String, Task, Project)> {
         now: chrono::Local::now().naive_local(),
     };
     Ok((app, name, task, project))
-}
-
-/// What went wrong is worth telling the user (a project that is not a git
-/// repository, a harness that is not there): as a 400 with the message.
-fn refused(e: impl std::fmt::Display) -> topcoat::Error {
-    bad_request(e.to_string()).into()
 }
 
 /// `POST /task/{id}/runs`: writes an agent down and, if asked, starts it or

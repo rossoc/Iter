@@ -22,8 +22,24 @@ impl Run for OrganizationCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
             Self::New => create(&app.db, &Organization::template(&config().project)),
-            Self::Edit { name } => update_group(&app.db, organization(app, name)?),
-            Self::Delete { name } => delete_group(&app.db, &organization(app, name)?),
+            Self::Edit { name } => {
+                let existing = organization(app, name)?;
+                let (id, old) = (existing.id(), existing.name.clone());
+                update_group(&app.db, existing)?;
+                // an edit that was cancelled or failed has the same name
+                if let Some(now) = app.db.get::<Organization>(id)? {
+                    secret::rename_key(&Keychain, &old, &now.name)?;
+                }
+                Ok(())
+            }
+            Self::Delete { name } => {
+                let existing = organization(app, name)?;
+                delete_group(&app.db, &existing)?;
+                // the key is kept by name: with the organization gone, nothing
+                // could reach it again (best effort: the row is already gone)
+                let _ = Keychain.delete(&existing.name);
+                Ok(())
+            }
             Self::Info { name, report } => organization_info(app, name.as_deref(), report),
             Self::Key { name, clear } => org_key(app, name.as_deref(), *clear),
             Self::Push {
@@ -176,7 +192,15 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
     let platform = secret::resolve_env(&Keychain, &organization.name)
         .map(|key| JsonWebhook::new(&organization.platform_url, key));
     let check = match (&platform, flags.dry_run) {
-        (Ok(platform), _) => Some(push::check(db, &organization, &plan, platform)?),
+        (Ok(platform), false) => Some(push::check(db, &organization, &plan, platform)?),
+        // A preview is still worth showing when the platform cannot be asked.
+        (Ok(platform), true) => match push::check(db, &organization, &plan, platform) {
+            Ok(check) => Some(check),
+            Err(e) => {
+                eprintln!("warning: {e}");
+                None
+            }
+        },
         (Err(_), true) => None,
         (Err(e), false) => return Err(IterError::Platform(e.to_string())),
     };
@@ -194,14 +218,15 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
     }
     if flags.dry_run {
         if check.is_none() {
-            println!("\nNo API key: the platform was not asked what it already holds.");
+            println!("\nThe platform was not asked what it already holds (no API key, or it did not answer).");
         }
         println!("\nDry run: nothing was sent.");
         return Ok(());
     }
 
+    // Past the dry run, a missing key or a failed check has already returned.
     let (Ok(platform), Some(check)) = (&platform, &check) else {
-        unreachable!("a push without a key returned above")
+        return Err(IterError::Platform("the platform was not asked".into()));
     };
     if let Some(line) = check.already_pushed_line()
         && !flags.force

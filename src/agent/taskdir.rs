@@ -131,6 +131,14 @@ pub(crate) fn write_whole(dir: &Path, target: &Path, text: &str) -> std::io::Res
     })
 }
 
+/// [`write_whole`] for a `target` that is wherever it is: the file is either
+/// the old text or the new one, never a half-written one that a crash, or a
+/// reader at that moment, would see.
+pub(crate) fn write_atomic(target: &Path, text: &str) -> std::io::Result<()> {
+    let dir = target.parent().filter(|d| !d.as_os_str().is_empty());
+    write_whole(dir.unwrap_or(Path::new(".")), target, text)
+}
+
 /// The folder of `task`, which is in `project`: inside the project's notes
 /// folder, or -- when neither the project nor its organization has one -- in
 /// iter's own config directory (`tasks/<id>/`), so an agent can still work on

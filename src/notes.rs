@@ -206,7 +206,7 @@ pub fn append_section(dir: &Path, day: NaiveDate, heading: &str, body: &str) -> 
         text.push('\n');
     }
     text.push_str(&format!("{line}\n\n{}\n", body.trim_end()));
-    std::fs::write(&path, text)?;
+    crate::agent::taskdir::write_atomic(&path, &text)?;
     Ok(true)
 }
 

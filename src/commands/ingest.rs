@@ -185,14 +185,15 @@ fn spawn_ingest(project: &Project, task: Option<&Task>, opts: &HarnessOpts) -> R
     command.args(["wiki", "ingest"]);
     // a task names its project already
     match task {
-        Some(task) => command.args(["--task", &task_display(project, task)]),
-        None => command.args(["--project", &project.name]),
+        // `--flag=value`, so a name starting with `-` is a value, not a flag
+        Some(task) => command.arg(format!("--task={}", task_display(project, task))),
+        None => command.arg(format!("--project={}", project.name)),
     };
     if let Some(agent) = opts.agent {
-        command.args(["--agent", agent.key()]);
+        command.arg(format!("--agent={}", agent.key()));
     }
     if let Some(model) = &opts.model {
-        command.args(["--model", model]);
+        command.arg(format!("--model={model}"));
     }
     if !opts.extra.is_empty() {
         command.arg("--").args(&opts.extra);

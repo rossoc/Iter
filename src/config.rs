@@ -162,7 +162,7 @@ impl Config {
         let text = format!(
             "# iter's config. Saved from the settings page; comments are not kept.\n{body}"
         );
-        std::fs::write(&path, text)?;
+        crate::agent::taskdir::write_atomic(&path, &text)?;
         Ok(())
     }
 

@@ -54,13 +54,16 @@
     var checked = form.querySelector("input[name=mode]:checked");
     return checked ? checked.value : "copy";
   };
-  // a hidden control is disabled too, so only the chosen way is submitted
+  // a hidden control is disabled too, so only the chosen way is submitted --
+  // buttons included: a hidden Copy button that stayed enabled would be the
+  // form's default, and Enter in a push field would copy instead of pushing
   var sync = function () {
     var now = mode();
     form.querySelectorAll("[data-for]").forEach(function (el) {
       var on = el.dataset["for"] === now;
       el.hidden = !on;
-      el.querySelectorAll("input, select").forEach(function (c) { c.disabled = !on; });
+      if (el.matches("button")) el.disabled = !on;
+      el.querySelectorAll("input, select, button").forEach(function (c) { c.disabled = !on; });
     });
   };
   modes.forEach(function (m) { m.addEventListener("change", sync); });

@@ -48,3 +48,20 @@ pub fn error_pages<'a>(cx: &'a Cx, body: Body, next: Next<'a>) -> LayerFuture<'a
         }
     })
 }
+
+/// What a failed action tells the browser. A refusal the user can act on (a
+/// project that is not a git repository, a name already taken, a harness
+/// that is not there) is a 400 carrying the message. A fault of the machine
+/// (the database, the disk, a program that would not start) is the server's:
+/// a 500 with the detail on the terminal, not echoed into a page.
+pub fn refused(error: crate::error::IterError) -> topcoat::Error {
+    use crate::error::IterError::{Db, Io, Spawn};
+    use topcoat::router::error::{bad_request, internal_server_error};
+    match error {
+        Db(_) | Io(_) | Spawn { .. } => {
+            eprintln!("iter: {error}");
+            internal_server_error(error).into()
+        }
+        user => bad_request(user.to_string()).into(),
+    }
+}

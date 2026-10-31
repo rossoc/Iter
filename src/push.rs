@@ -200,23 +200,22 @@ impl Check {
 
     /// One line per conflicting day, for the caller to show in red.
     pub fn conflict_lines(&self) -> Vec<String> {
-        self.conflicts
-            .iter()
-            .map(|e| {
-                format!(
-                    "{}: the platform already has an entry ({:.2} h, {}); not pushed until resolved",
-                    e.day,
-                    e.time,
-                    e.note.replace('\n', " ")
-                )
-            })
-            .collect()
+        self.conflicts.iter().map(conflict_line).collect()
     }
 
     pub fn already_pushed_line(&self) -> Option<&'static str> {
         self.already_pushed
             .then_some("This exact worklog was already pushed.")
     }
+}
+
+fn conflict_line(e: &WorklogEntry) -> String {
+    format!(
+        "{}: the platform already has an entry ({:.2} h, {}); not pushed until resolved",
+        e.day,
+        e.time,
+        e.note.replace('\n', " ")
+    )
 }
 
 /// Reads the ledger and the platform's entries for the days of `plan`.
@@ -226,7 +225,9 @@ pub fn check(
     plan: &Plan,
     platform: &dyn TimePlatform,
 ) -> Result<Check> {
-    let already_pushed = db.find_push(org.id(), &plan.hash)?.is_some();
+    let already_pushed = db
+        .find_push(org.id(), &plan.hash)?
+        .is_some_and(|row| row.complete());
     let (from, to) = plan.days();
     let conflicts = platform
         .fetch(from, to)?
@@ -248,17 +249,17 @@ pub struct Resolved {
 }
 
 /// The platform's project and activity that `target` names, by id or by
-/// name. A list that cannot be read, or is empty, resolves nothing: the text
-/// is then sent as it is. Whatever is named but not listed is an error that
-/// says so.
+/// name. A platform that has no such lists, or an empty one, resolves
+/// nothing: the text is then sent as it is. A list that fails to load is an
+/// error, since sending a name where an id is expected files the hours
+/// under the wrong project or loses them. Whatever is named but not listed
+/// is an error that says so.
 pub fn resolve(platform: &dyn TimePlatform, target: &Target) -> Result<Resolved> {
     let mut out = Resolved {
         project: target.organization.clone(),
         activity: target.activity.clone(),
     };
-    let Ok(projects) = platform.projects() else {
-        return Ok(out);
-    };
+    let projects = platform.projects()?;
     if projects.is_empty() {
         return Ok(out);
     }
@@ -269,9 +270,8 @@ pub fn resolve(platform: &dyn TimePlatform, target: &Target) -> Result<Resolved>
         )));
     };
     out.project = project.id.clone();
-    if let Ok(activities) = platform.activities(&project.id)
-        && !activities.is_empty()
-    {
+    let activities = platform.activities(&project.id)?;
+    if !activities.is_empty() {
         let Some(activity) = activities.iter().find(|a| a.is(&target.activity)) else {
             return Err(IterError::Platform(format!(
                 "'{}' is not an activity of '{}'",
@@ -376,7 +376,31 @@ pub fn execute(
     gh: &dyn Github,
     now: NaiveDateTime,
 ) -> Result<Vec<Item>> {
-    let free = Worklog {
+    // What an earlier, incomplete run of this same worklog already got
+    // through: those days are on the platform because of us (not someone
+    // else's entry), and those GitHub issues need no second comment.
+    let before = db
+        .find_push(org.id(), &plan.hash)?
+        .filter(|row| !row.complete());
+    let earlier: Vec<&str> = before.iter().flat_map(|row| row.ok_items()).collect();
+    let pushed_earlier = |day: &str| {
+        let prefix = format!("platform: {day} ");
+        earlier.iter().any(|what| what.starts_with(&prefix))
+    };
+
+    let mut items = Vec::new();
+    let mut done_days = Vec::new();
+    for entry in &check.conflicts {
+        match pushed_earlier(&entry.day) {
+            true => {
+                items.push(Item::ok(format!("platform: {} (pushed earlier)", entry.day)));
+                done_days.push(entry.day.clone());
+            }
+            false => items.push(Item::failed("platform", conflict_line(entry))),
+        }
+    }
+
+    let mut free = Worklog {
         entries: plan
             .worklog
             .entries
@@ -386,46 +410,42 @@ pub fn execute(
             .collect(),
         open: plan.worklog.open,
     };
-    let mut free = free;
-    let mut items: Vec<Item> = check
-        .conflict_lines()
-        .into_iter()
-        .map(|line| Item::failed("platform", line))
-        .collect();
-    if free.entries.is_empty() {
-        return Ok(items);
-    }
-
-    // the platform takes ids; the plan holds what was chosen (a name or an id)
-    let ids = resolve(platform, &plan.target)?;
-    for entry in &mut free.entries {
-        entry.project = ids.project.clone();
-        entry.activity = ids.activity.clone();
-    }
-    let mut accepted = Vec::new();
-    for result in platform.push(&free)? {
-        match result.accepted() {
-            true => {
-                let hours = free
-                    .entries
-                    .iter()
-                    .find(|e| e.day == result.day)
-                    .map_or(0.0, |e| e.time);
-                items.push(Item::ok(format!("platform: {} {hours:.2} h", result.day)));
-                accepted.push(result.day);
+    if !free.entries.is_empty() {
+        // the platform takes ids; the plan holds what was chosen (a name or an id)
+        let ids = resolve(platform, &plan.target)?;
+        for entry in &mut free.entries {
+            entry.project = ids.project.clone();
+            entry.activity = ids.activity.clone();
+        }
+        for result in platform.push(&free)? {
+            match result.accepted() {
+                true => {
+                    let hours = free
+                        .entries
+                        .iter()
+                        .find(|e| e.day == result.day)
+                        .map_or(0.0, |e| e.time);
+                    items.push(Item::ok(format!("platform: {} {hours:.2} h", result.day)));
+                    done_days.push(result.day);
+                }
+                false => items.push(Item::failed(
+                    format!("platform: {}", result.day),
+                    format!("{}: {}", result.status, result.message),
+                )),
             }
-            false => items.push(Item::failed(
-                format!("platform: {}", result.day),
-                format!("{}: {}", result.status, result.message),
-            )),
         }
     }
-    if accepted.is_empty() {
+    if done_days.is_empty() {
         return Ok(items);
     }
 
-    for job in plan.issues.iter().filter(|j| accepted.contains(&j.day)) {
+    for job in plan.issues.iter().filter(|j| done_days.contains(&j.day)) {
         let what = format!("github #{} ({})", job.issue, job.task);
+        let prefix = format!("{what}: ");
+        if earlier.iter().any(|w| w.starts_with(&prefix)) {
+            items.push(Item::ok(format!("{what}: done earlier")));
+            continue;
+        }
         let step = || -> Result<String> {
             let closed = gh.is_closed(&job.repo_path, job.issue)?;
             if !closed {
@@ -444,7 +464,7 @@ pub fn execute(
     }
 
     let (from, to) = plan.days();
-    db.insert(&Push {
+    let recorded = db.insert(&Push {
         id: None,
         organization_id: org.id(),
         from_day: fmt_date(from),
@@ -452,7 +472,12 @@ pub fn execute(
         hash: plan.hash.clone(),
         at: now,
         results: items.iter().map(Item::line).collect::<Vec<_>>().join("\n"),
-    })?;
+    });
+    // The hours are on the platform by now: failing here would lose what
+    // just happened, so it is reported with the rest.
+    if let Err(e) = recorded {
+        items.push(Item::failed("ledger", e));
+    }
     Ok(items)
 }
 
@@ -763,6 +788,40 @@ mod tests {
         assert!(items[1].error.as_deref().unwrap().contains("gh down"));
         let row = db.find_push(org.id(), &plan.hash).unwrap().unwrap();
         assert!(row.results.contains("FAILED") && row.results.contains("ok: platform"));
+    }
+
+    /// The day is on the platform but its issue was not commented: running
+    /// the same worklog again must finish that, not report a conflict with
+    /// our own entry, and must not push the day a second time.
+    #[test]
+    fn a_partial_push_is_not_already_pushed_and_a_rerun_finishes_the_github_step() {
+        let (db, org) = setup();
+        let plan = the_plan(&db, &org);
+        let first = FakePlatform::default();
+        let down = FakeGh {
+            fail_comment: true,
+            ..Default::default()
+        };
+        run(&db, &org, &plan, &first, &down).unwrap();
+
+        // the platform now holds the pushed day
+        let second = FakePlatform {
+            existing: first.pushed.borrow()[0].entries.clone(),
+            ..Default::default()
+        };
+        assert!(!check(&db, &org, &plan, &second).unwrap().already_pushed);
+        let gh = FakeGh::default();
+        let items = run(&db, &org, &plan, &second, &gh).unwrap();
+
+        assert!(second.pushed.borrow().is_empty(), "the day is not sent twice");
+        assert!(items.iter().all(|i| i.error.is_none()), "{items:?}");
+        assert_eq!(
+            *gh.calls.borrow(),
+            vec!["view #7", "close #7", "comment #7 Completed Ship"]
+        );
+        let row = db.find_push(org.id(), &plan.hash).unwrap().unwrap();
+        assert!(row.complete());
+        assert!(check(&db, &org, &plan, &second).unwrap().already_pushed);
     }
 
     #[test]

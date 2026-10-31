@@ -130,16 +130,20 @@ fn files_of(dir: &Path, folder: &str) -> Vec<(PathBuf, String)> {
                 let path = entry.path();
                 let stem = path.file_stem().and_then(|s| s.to_str());
                 let is_md = path.extension().is_some_and(|e| e == "md");
-                if let (true, true, Some(stem)) = (is_md && path.is_file(), true, stem)
+                let link = entry.file_type().is_ok_and(|t| t.is_symlink());
+                if let (true, Some(stem)) = (is_md && path.is_file() && !link, stem)
                     && parse_date(stem).is_some()
                 {
                     out.push((path.clone(), stem.to_string()));
                 }
             }
         }
+    } else if !stays_inside(folder) {
+        // an ontology can name any folder; one that leaves the level would
+        // read (and, through a move, rewrite) files that are not the wiki's
     } else if let Some(file) = folder.strip_suffix(".md") {
         let path = dir.join(folder);
-        if path.is_file() {
+        if path.is_file() && !path.is_symlink() {
             out.push((path, file.to_string()));
         }
     } else {
@@ -147,6 +151,14 @@ fn files_of(dir: &Path, folder: &str) -> Vec<(PathBuf, String)> {
     }
     out.sort_by(|a, b| a.1.cmp(&b.1));
     out
+}
+
+/// Whether `folder` (from an ontology file) is a relative path that stays
+/// inside the level: no `..`, no root, no drive.
+fn stays_inside(folder: &str) -> bool {
+    Path::new(folder)
+        .components()
+        .all(|c| matches!(c, std::path::Component::Normal(_) | std::path::Component::CurDir))
 }
 
 fn walk(root: &Path, at: &Path, out: &mut Vec<(PathBuf, String)>) {
@@ -875,5 +887,14 @@ mod tests {
             issues.len(),
             rows.rows[0][0]
         );
+    }
+
+    #[test]
+    fn an_ontology_folder_stays_inside_its_level() {
+        assert!(stays_inside("wiki/ideas"));
+        assert!(stays_inside("."));
+        assert!(!stays_inside("../other"));
+        assert!(!stays_inside("wiki/../../x"));
+        assert!(!stays_inside("/etc"));
     }
 }

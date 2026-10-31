@@ -630,7 +630,7 @@ async fn create_instruction(Form(form): Form<NewForm>) -> Result<Response> {
     .map_err(bad_request)?;
     instruction::check(&name, &text).map_err(bad_request)?;
     std::fs::create_dir_all(path.parent().unwrap_or(&home))?;
-    std::fs::write(&path, text)?;
+    crate::agent::taskdir::write_atomic(&path, &text)?;
     let to = page_url(&scope.url(&name), &[("tab", Some("settings"))]);
     Err(see_other(to).into())
 }
@@ -705,7 +705,7 @@ async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Respons
                 return Err(bad_request(format!("'{target}' exists already")).into());
             }
             std::fs::create_dir_all(to.parent().unwrap_or(&home))?;
-            std::fs::write(&to, text)?;
+            crate::agent::taskdir::write_atomic(&to, &text)?;
             if renamed.is_some() {
                 // only the file at this scope moves; an inherited one stays where it is
                 match std::fs::remove_file(&path) {

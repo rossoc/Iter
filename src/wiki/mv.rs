@@ -8,7 +8,9 @@
 
 use super::graph::Wiki;
 use crate::error::{IterError, Result};
+use crate::agent::taskdir::write_atomic;
 use crate::md_edit::split_at_divider;
+use std::path::PathBuf;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -127,7 +129,9 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
     let level = &wiki.levels[n.level];
     let to = to.trim().trim_start_matches('/');
     let to = to.strip_suffix(".md").unwrap_or(to);
-    if to.is_empty() || to.split('/').any(|p| p.is_empty() || p == "." || p == "..") {
+    // no part starts with a dot: not `..`, and not a hidden folder (`.git`,
+    // `.iter`) that the wiki, git and the rest of iter treat as their own
+    if to.is_empty() || to.split('/').any(|p| p.is_empty() || p.starts_with('.')) {
         return Err(failed(format!("`{to}` is not a path inside the level")));
     }
     if to.contains(':') {
@@ -198,7 +202,7 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
                 id: wiki.id(i, n.level),
                 references: count,
             });
-            edits.push((page.path.clone(), new_content));
+            edits.push((page.path.clone(), content, new_content));
         }
     }
 
@@ -207,10 +211,23 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
             std::fs::create_dir_all(dir)?;
         }
         std::fs::rename(&n.path, &target)?;
-        for (path, content) in edits {
+        let mut written: Vec<(PathBuf, String)> = Vec::new();
+        for (path, original, content) in edits {
             // the moved file itself may refer to itself
             let path = if path == n.path { target.clone() } else { path };
-            std::fs::write(path, content)?;
+            match write_atomic(&path, &content) {
+                Ok(()) => written.push((path, original)),
+                Err(e) => {
+                    // Half a move leaves references that dangle: put back
+                    // what was changed, as far as that works, and report the
+                    // original error.
+                    for (done, original) in written {
+                        let _ = write_atomic(&done, &original);
+                    }
+                    let _ = std::fs::rename(&target, &n.path);
+                    return Err(e.into());
+                }
+            }
         }
     }
     Ok(Moved {
@@ -337,7 +354,7 @@ mod tests {
         let root = fixture("refuse");
         let w = build(&root);
         let idea = w.node(1, "ideas/retry").expect("idea");
-        for bad in ["", "../x", "a//b", "acme:wiki/x", "wiki/concepts/backoff"] {
+        for bad in ["", "../x", "a//b", ".git/x", "wiki/.hidden/x", "acme:wiki/x", "wiki/concepts/backoff"] {
             assert!(mv(&w, idea, bad, true).is_err(), "{bad}");
         }
     }

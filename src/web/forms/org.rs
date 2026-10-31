@@ -69,7 +69,13 @@ impl EditForm for OrgForm {
 
     /// The projects in the organization too, in the same transaction.
     fn save(&self, db: &Db, id: i64, org: &Organization) -> Result<()> {
-        db.save_group(id, org, &self.projects)
+        let old = db.get::<Organization>(id)?;
+        db.save_group(id, org, &self.projects)?;
+        // the API key is kept under the name: it moves with a rename
+        if let Some(old) = old {
+            crate::secret::rename_key(&crate::secret::Keychain, &old.name, &org.name)?;
+        }
+        Ok(())
     }
 }
 
