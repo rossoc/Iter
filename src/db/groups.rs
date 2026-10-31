@@ -122,7 +122,11 @@ impl Db {
     /// set-based statements that touch only the rows that change; the ids
     /// travel as one JSON array (`json_each`), so a roster of any length is
     /// one bound variable, and a repeated or unknown id is harmless.
-    pub(super) fn assign_projects<G: ProjectGroup>(&self, id: i64, project_ids: &[i64]) -> Result<()> {
+    pub(super) fn assign_projects<G: ProjectGroup>(
+        &self,
+        id: i64,
+        project_ids: &[i64],
+    ) -> Result<()> {
         let column = G::MEMBER_COLUMN;
         let ids = json_ids(project_ids);
         self.conn
@@ -171,7 +175,11 @@ impl Db {
 
     /// [`Self::tasks_in`] in no order, leaving out finished tasks when
     /// `unfinished` (in the SQL).
-    pub(super) fn tasks_of<G: ProjectGroup>(&self, id: i64, unfinished: bool) -> Result<Vec<(String, Task)>> {
+    pub(super) fn tasks_of<G: ProjectGroup>(
+        &self,
+        id: i64,
+        unfinished: bool,
+    ) -> Result<Vec<(String, Task)>> {
         let names: HashMap<i64, String> = self
             .projects_in::<G>(id)?
             .into_iter()

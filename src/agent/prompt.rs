@@ -14,17 +14,24 @@
 use crate::agent::error::{AgentError, AgentResult};
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum)]
+/// What an agent is asked to do. Saved in a run's record, where the names
+/// older versions wrote (`execute`, `investigate`) still read.
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
 pub enum Kind {
     /// Read the task and write its plan; change no code
     Plan,
     /// Work through the plan's development steps
     #[value(alias = "execute")]
+    #[serde(alias = "execute")]
     Develop,
     /// Write and run the tests for the work
     Test,
     /// Check the work against the plan; change no code
     #[value(alias = "investigate")]
+    #[serde(alias = "investigate")]
     Check,
     /// Reproduce a defect, find its cause and fix it
     Fix,
@@ -222,7 +229,8 @@ mod tests {
     fn every_builtin_renders_and_leaves_no_placeholder() {
         let dir = Path::new("/notes/app/tasks/7");
         for kind in Kind::ALL {
-            let text = render(kind.builtin(), kind, &ctx(None, "", dir)).unwrap_or_else(|e| panic!("{}: {e}", kind.key()));
+            let text = render(kind.builtin(), kind, &ctx(None, "", dir))
+                .unwrap_or_else(|e| panic!("{}: {e}", kind.key()));
             assert!(!text.contains("{{"), "{}: {text}", kind.key());
             assert!(text.contains("Fix it") && text.contains("It is broken."));
             assert!(text.contains("(there is no plan yet)"));
@@ -296,5 +304,19 @@ mod tests {
         assert!(text.starts_with("You are fixing a defect"), "{text}");
         std::fs::remove_file(task.join("instructions/plan.md")).unwrap();
         assert_eq!(template(Kind::Plan, &dirs).1, "from the project");
+    }
+
+    /// A run written by an older version still reads: the kinds were `execute`
+    /// and `investigate` before they were `develop` and `check`.
+    #[test]
+    fn a_kind_reads_the_names_older_runs_were_saved_with() {
+        let read = |word: &str| serde_yaml::from_str::<Kind>(word).unwrap();
+        assert_eq!(read("execute"), Kind::Develop);
+        assert_eq!(read("investigate"), Kind::Check);
+        for kind in Kind::ALL {
+            assert_eq!(read(kind.key()), kind);
+            assert_eq!(serde_yaml::to_string(&kind).unwrap().trim(), kind.key());
+        }
+        assert!(serde_yaml::from_str::<Kind>("nonsense").is_err());
     }
 }

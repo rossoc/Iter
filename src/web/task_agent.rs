@@ -9,8 +9,8 @@
 
 use super::task_runs::{Roster, roster_block};
 use super::ui::button::post_button;
-use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::prose::description;
+use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::{CIRCLE, CIRCLE_CHECK, HALF, icon};
 use super::url::{plan_step_url, task_step_url};
 use super::{Id, open_db};

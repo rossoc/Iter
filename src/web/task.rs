@@ -8,9 +8,9 @@ use super::load::{Parents, parents_of};
 use super::sections::{TabQuery, TaskSection, task_tabs};
 use super::session_lines::task_lines;
 use super::task_agent::{self, AgentTab, agent_tab, files_block, plan_block};
+use super::task_notes::note_modal;
 use super::task_panel::task_panel;
 use super::task_runs::compose_modal;
-use super::task_notes::note_modal;
 use super::task_sessions::session_modal;
 use super::task_wiki::{self, WikiTab, wiki_tab};
 use super::ui::breadcrumb::Crumb;
@@ -19,8 +19,8 @@ use super::ui::layout::info_columns;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::sessions_table::sessions_table;
-use super::ui::tabs::tabs;
 use super::ui::table::AddRow;
+use super::ui::tabs::tabs;
 use super::url::{notes_tab_url, page_url, sessions_tab_url, task_url};
 use super::{now, open_db};
 use crate::agent::taskdir;
@@ -176,7 +176,10 @@ pub async fn screen(
         tags,
     } = page;
     let items = task_tabs(&task_url(task.id()), section, rows.len(), agents);
-    let new_note = page_url(&notes_tab_url(&task_url(task.id())), &[("new", Some("note"))]);
+    let new_note = page_url(
+        &notes_tab_url(&task_url(task.id())),
+        &[("new", Some("note"))],
+    );
     // The page has tabs, so the current tab is the current item and the
     // page's own crumb is plain text.
     let crumbs = trail(&parents.org, Some(&parents.project), Crumb::label("Task"));

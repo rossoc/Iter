@@ -156,8 +156,8 @@ pub(crate) fn project_reports(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixtures::dt;
     use crate::fixtures;
+    use crate::fixtures::dt;
     use crate::models::TaskStatus;
 
     /// The per-project loop the batch replaced, kept as the reference.

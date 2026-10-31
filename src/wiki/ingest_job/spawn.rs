@@ -4,9 +4,9 @@ use super::*;
 
 /// Runs the harness on `prompt` in the notes folder, its output in a log
 /// there (`.iter/`, which git is told to ignore). The log's path.
-pub(super) fn run_agent(
+pub fn run_agent(
     target: &Target,
-    opts: &HarnessOpts,
+    opts: &HarnessChoice,
     prompt: &str,
     what: &str,
 ) -> Result<(PathBuf, bool)> {
@@ -30,7 +30,11 @@ pub(super) fn run_agent(
 
 /// Starts `iter wiki ingest` for `project` (and `task`) as a process of its
 /// own that outlives this one.
-pub(super) fn spawn_ingest(project: &Project, task: Option<&Task>, opts: &HarnessOpts) -> Result<()> {
+pub fn spawn_ingest(
+    project: &Project,
+    task: Option<&Task>,
+    opts: &HarnessChoice,
+) -> Result<()> {
     let mut command = std::process::Command::new(std::env::current_exe()?);
     command.args(["wiki", "ingest"]);
     // a task names its project already
@@ -60,6 +64,6 @@ pub fn ingest_in_background(db: &Db, project: &Project, task: &Task) -> Result<(
     if busy(&target) {
         return Err(AgentError::IngestRunning.into());
     }
-    let none = HarnessOpts::default();
+    let none = HarnessChoice::default();
     spawn_ingest(project, Some(task), &none)
 }

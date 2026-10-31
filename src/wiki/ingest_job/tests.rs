@@ -30,8 +30,8 @@ fn a_finished_tasks_notes_go_into_todays_note_once() {
     std::fs::write(dir.notes_dir().join("empty.md"), "  \n").unwrap();
     assert_eq!(bridge_task_notes(&app, &project, &task).unwrap(), 1);
     let today = chrono::Local::now().date_naive();
-    let text = std::fs::read_to_string(notes.join(format!("{}.md", today.format("%Y-%m-%d"))))
-        .unwrap();
+    let text =
+        std::fs::read_to_string(notes.join(format!("{}.md", today.format("%Y-%m-%d")))).unwrap();
     assert!(text.contains("## Task: Fix it\n\n### thought\n\nMaybe per route."));
     assert!(!text.contains("empty"));
     // done again: the section is there already
@@ -97,9 +97,7 @@ fn pending_pages_are_found_with_their_diffs_in_a_repository_above_the_notes() {
         [("wiki/ideas/a.md", "new"), ("wiki/ideas/b.md", "changed")]
     );
     assert!(review.changes[0].diff.contains("+new"));
-    assert!(
-        review.changes[1].diff.contains("-old") && review.changes[1].diff.contains("+newer")
-    );
+    assert!(review.changes[1].diff.contains("-old") && review.changes[1].diff.contains("+newer"));
 }
 
 #[test]

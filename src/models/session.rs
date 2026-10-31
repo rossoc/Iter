@@ -15,7 +15,9 @@ use iter_macros::Table;
 pub struct Session {
     pub id: Option<i64>,
     pub task_id: i64,
+    #[table(with = "datetime")]
     pub start: NaiveDateTime,
+    #[table(with = "datetime::opt")]
     pub end: Option<NaiveDateTime>,
     pub message: Option<String>,
 }

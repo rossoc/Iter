@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub(super) fn git(target: &Target, args: &[&str]) -> Result<String> {
+pub fn git(target: &Target, args: &[&str]) -> Result<String> {
     process::output("git", Some(&target.notes_dir.display().to_string()), args)
 }
 
@@ -18,7 +18,7 @@ pub struct Change {
 }
 
 /// A path as git's pathspec takes it: that exact file, no globbing.
-pub(super) fn literal(path: &str) -> String {
+pub fn literal(path: &str) -> String {
     format!(":(literal){path}")
 }
 
@@ -26,7 +26,7 @@ pub(super) fn literal(path: &str) -> String {
 /// agent writes is pages; the settings and the ontology extension in the same
 /// folder are the user's own and are not listed. Nothing is written, not even
 /// git's index.
-pub(super) fn changes(target: &Target) -> Result<Vec<Change>> {
+pub fn changes(target: &Target) -> Result<Vec<Change>> {
     // the notes folder may be inside a bigger repository: git reports paths
     // from the repository's root
     let prefix = git(target, &["rev-parse", "--show-prefix"])?

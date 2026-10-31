@@ -1,6 +1,7 @@
 //! The search box above a list: a GET form (works without script) with one
-//! text field named `q`, a Filter button, a "?" that shows the syntax the
-//! field understands, and a Clear link when the list is filtered.
+//! text field named `q` with a "?" inside its right end that shows the syntax
+//! the field understands, a Filter button, and a Clear link when the list is
+//! filtered.
 //!
 //! The "?" needs no script either: hovering it shows the syntax, and
 //! clicking it focuses it, which keeps the syntax shown (`:focus-within`)
@@ -48,23 +49,27 @@ pub async fn filter_bar(search: &Search) -> Result<impl View> {
                 <input type="hidden" name="tab" value=(search.tab)>
             }
             <label class="sr" for=(FILTER_ID)>(search.label)</label>
-            <input class="control" type="search" id=(FILTER_ID) name="q" value=(search.q.as_str()) spellcheck="false" autocomplete="off" autocapitalize="off">
-            <button class="button" type="submit">"Filter"</button>
-            <span class="filter-help">
-                // tabindex: Safari focuses a button on click only with one
-                <button class="filter-help-btn" type="button" tabindex="0" aria-describedby=(SYNTAX_ID)>
-                    <span aria-hidden="true">"?"</span><span class="sr">"Search syntax"</span>
-                </button>
-                // tabindex -1: a click inside keeps the focus here, so it stays open
-                <div class="filter-tip" id=(SYNTAX_ID) role="tooltip" tabindex="-1">
-                    <dl>
-                        for (term, meaning) in search.syntax.iter() {
-                            <dt><code>(*term)</code></dt>
-                            <dd>(*meaning)</dd>
-                        }
-                    </dl>
-                </div>
+            // the "?" sits inside the field, at its right end, like the folder
+            // button of a path field
+            <span class="filter-field">
+                <input class="control" type="search" id=(FILTER_ID) name="q" value=(search.q.as_str()) spellcheck="false" autocomplete="off" autocapitalize="off">
+                <span class="filter-help">
+                    // tabindex: Safari focuses a button on click only with one
+                    <button class="filter-help-btn" type="button" tabindex="0" aria-describedby=(SYNTAX_ID)>
+                        <span aria-hidden="true">"?"</span><span class="sr">"Search syntax"</span>
+                    </button>
+                    // tabindex -1: a click inside keeps the focus here, so it stays open
+                    <div class="filter-tip" id=(SYNTAX_ID) role="tooltip" tabindex="-1">
+                        <dl>
+                            for (term, meaning) in search.syntax.iter() {
+                                <dt><code>(*term)</code></dt>
+                                <dd>(*meaning)</dd>
+                            }
+                        </dl>
+                    </div>
+                </span>
             </span>
+            <button class="button" type="submit">"Filter"</button>
             if let Some(href) = &search.clear {
                 <a class="u filter-clear" href=(href.as_str())>"Clear"</a>
             }

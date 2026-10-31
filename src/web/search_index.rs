@@ -174,7 +174,6 @@ async fn results(cx: &Cx) -> Result<Response> {
         .into_response(cx)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

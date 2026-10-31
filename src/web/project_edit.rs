@@ -12,9 +12,7 @@ use super::settings_fields::settings_fields;
 use super::ui::breadcrumb::Crumb;
 use super::ui::field::{id_text, optional_options, path_field, select};
 use super::ui::form_error::FormError;
-use super::url::{
-    instructions_tab_url, notes_tab_url, project_edit_url, project_url, tasks_tab_url,
-};
+use super::url::{notes_tab_url, project_edit_url, project_url, tasks_tab_url};
 use super::{Id, open_db};
 use crate::db::Table;
 use crate::models::{Configured, Organization, Project};
@@ -79,7 +77,6 @@ pub async fn screen(
             ("Info", base.clone(), None),
             ("Tasks", tasks_tab_url(&base), Some(tasks_n)),
             ("Notes", notes_tab_url(&base), NotesTab::badge(Some(&notes))),
-            ("Instructions", instructions_tab_url(&base), None),
         ],
     );
     Ok(view! {

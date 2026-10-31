@@ -602,7 +602,12 @@ mod tests {
             kind: Some("dance"),
             ..fields("x")
         };
-        assert!(compose(None, &bad_kind).unwrap_err().to_string().contains("dance"));
+        assert!(
+            compose(None, &bad_kind)
+                .unwrap_err()
+                .to_string()
+                .contains("dance")
+        );
         let bad_yaml = Fields {
             permission: "[1, 2",
             ..fields("x")
@@ -642,7 +647,10 @@ mod tests {
     fn a_name_can_change_unless_it_is_built_in_or_would_be() {
         assert_eq!(rename_target("review", "review").unwrap(), None);
         assert_eq!(rename_target("review", "  ").unwrap(), None);
-        assert_eq!(rename_target("review", " audit ").unwrap(), Some("audit".into()));
+        assert_eq!(
+            rename_target("review", " audit ").unwrap(),
+            Some("audit".into())
+        );
         assert!(rename_target("review", "Bad Name").is_err());
         assert!(rename_target("review", "fix").is_err());
         assert!(rename_target("fix", "audit").is_err());

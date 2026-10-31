@@ -5,20 +5,22 @@
 
 use super::Id;
 use super::crumbs::trail;
-use super::load::{Parents, parents_of};
-use super::ui::breadcrumb::Crumb;
 use super::forms;
+use super::load::{Parents, parents_of};
 use super::sections::NoteTab;
+use super::ui::breadcrumb::Crumb;
 use super::ui::empty_line::empty_line;
 use super::ui::field::textarea;
 use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::frame::frame;
-use super::ui::tabs::{Tab, tabs};
 use super::ui::notes::{Month, NoteItem, NoteLink, note_nav, notes_tab};
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
-use super::url::{edit_url, note_tab_url, note_url, notes_tab_url, notes_today_url, org_url, project_url};
+use super::ui::tabs::{Tab, tabs};
+use super::url::{
+    edit_url, note_tab_url, note_url, notes_tab_url, notes_today_url, org_url, project_url,
+};
 use super::{now, open_db};
 use crate::db::Db;
 use crate::models::{Organization, Project};
@@ -342,8 +344,7 @@ async fn org_today(cx: &Cx) -> Result<Response> {
 fn note_tabs(base: &str, day: NaiveDate, current: NoteTab) -> Vec<Tab> {
     super::sections::tabs_for(
         current,
-        NoteTab::ALL
-            .map(|t| (t, Tab::link(t.label(), note_tab_url(base, day, t)))),
+        NoteTab::ALL.map(|t| (t, Tab::link(t.label(), note_tab_url(base, day, t)))),
     )
 }
 

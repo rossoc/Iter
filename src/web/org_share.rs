@@ -19,9 +19,9 @@ use super::ui::{CLIPBOARD_CHECK, COPY, PUSH, icon};
 use super::{Id, now, open_db};
 use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
+use crate::github::{GhCli, IssueTracker};
 use crate::models::Organization;
 use crate::platform::{JsonWebhook, PlatformItem, TimePlatform};
-use crate::github::{GhCli, IssueTracker};
 use crate::push::{self, Item, Target};
 use crate::reporting::{DateRange, fmt_date, worklog_text};
 use crate::secret::{self, Keychain};
@@ -511,7 +511,12 @@ mod tests {
             ..fixtures::task(pid, "Fix")
         };
         let tid = db.insert(&task).unwrap();
-        fixtures::add_session(&db, tid, dt("2026-09-04 09:00"), Some(dt("2026-09-04 10:00")));
+        fixtures::add_session(
+            &db,
+            tid,
+            dt("2026-09-04 09:00"),
+            Some(dt("2026-09-04 10:00")),
+        );
         (db, id)
     }
 

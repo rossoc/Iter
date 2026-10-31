@@ -122,10 +122,20 @@ mod tests {
             text: text.into(),
         };
         write(&dir, &form("Idea", "some\r\ntext")).unwrap();
-        assert_eq!(std::fs::read_to_string(dir.join("idea.md")).unwrap(), "some\ntext");
-        assert!(write(&dir, &form("idea", "again")).unwrap_err().contains("exists already"));
+        assert_eq!(
+            std::fs::read_to_string(dir.join("idea.md")).unwrap(),
+            "some\ntext"
+        );
+        assert!(
+            write(&dir, &form("idea", "again"))
+                .unwrap_err()
+                .contains("exists already")
+        );
         write(&dir, &form("Empty one", "")).unwrap();
-        assert_eq!(std::fs::read_to_string(dir.join("empty-one.md")).unwrap(), "# Empty one\n");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("empty-one.md")).unwrap(),
+            "# Empty one\n"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -367,7 +367,7 @@ mod tests {
             agent: crate::agent::run::Harness::Claude,
             model: "haiku".into(),
             effort: "low".into(),
-            kind: "develop".into(),
+            kind: crate::agent::prompt::Kind::Develop,
             instruction: None,
             status: crate::agent::run::Status::Done,
             started: "2026-10-30 10:00:00".into(),

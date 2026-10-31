@@ -4,7 +4,7 @@
 //!
 //! A run is a queued, running or finished record in the task's folder
 //! (`crate::agent::run`); the routes here write them through
-//! `commands::solve`, the one place that knows how a run begins.
+//! `agent::solve`, the one place that knows how a run begins.
 //!
 //! Everything is a link or a form: the kind of agent is chosen with links
 //! (`?new=agent&kind=fix`) that load the prompt of that kind, so no script
@@ -25,9 +25,9 @@ use crate::agent::instruction::{self, Layers};
 use crate::agent::plan::Item;
 use crate::agent::prompt::Kind;
 use crate::agent::run::{Harness, RunRecord};
+use crate::agent::solve::{self, Launch, Spec};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
-use crate::commands::solve::{self, Spec};
 use crate::config::config;
 use crate::models::{Project, Task};
 use crate::utils::resolve::task_display;
@@ -140,7 +140,7 @@ impl Roster {
                 model = m;
             }
             let kind = inst.kind();
-            let (prompt, error) = match crate::commands::agent::prompt_for(
+            let (prompt, error) = match crate::agent::task_prompt::prompt_for(
                 app,
                 Some(name),
                 kind,
@@ -477,7 +477,7 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
     }
     let chosen = query.instruction.as_deref().unwrap_or_default();
     let inst = instruction::find(chosen, &layers).ok_or_not_found()?;
-    let prompt = crate::commands::agent::prompt_for(
+    let prompt = crate::agent::task_prompt::prompt_for(
         &app,
         Some(&name),
         inst.kind(),
@@ -503,7 +503,7 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
 /// it now; `queue` and `save` leave it waiting (written down, not started).
 fn follow_up(app: &App, name: &str, n: u32, action: RunButton) -> Result<()> {
     if action == RunButton::Run {
-        solve::begin(app, name, n, false, &[]).map_err(refused)?;
+        solve::begin(app, name, n, &Launch::detached()).map_err(refused)?;
     }
     Ok(())
 }
@@ -528,7 +528,7 @@ async fn run_now(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let n = *path_param::<N>(cx)?;
     let (app, name, _, _) = world(id)?;
-    solve::begin(&app, &name, n, false, &[]).map_err(refused)?;
+    solve::begin(&app, &name, n, &Launch::detached()).map_err(refused)?;
     Err(see_other(agent_url(id, n)).into())
 }
 

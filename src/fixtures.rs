@@ -64,12 +64,7 @@ pub fn session(task_id: i64, start: NaiveDateTime, end: Option<NaiveDateTime>) -
 }
 
 /// [`session`] inserted into `db`: its id.
-pub fn add_session(
-    db: &Db,
-    task_id: i64,
-    start: NaiveDateTime,
-    end: Option<NaiveDateTime>,
-) -> i64 {
+pub fn add_session(db: &Db, task_id: i64, start: NaiveDateTime, end: Option<NaiveDateTime>) -> i64 {
     db.insert(&session(task_id, start, end))
         .expect("session inserts")
 }

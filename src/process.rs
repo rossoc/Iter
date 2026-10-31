@@ -234,7 +234,9 @@ pub mod fake {
 
     impl FakeRunner {
         pub fn reply(&self, prefix: &str, stdout: &str) {
-            self.replies.borrow_mut().push((prefix.into(), stdout.into()));
+            self.replies
+                .borrow_mut()
+                .push((prefix.into(), stdout.into()));
         }
         pub fn fail(&self, prefix: &str) {
             self.failing.borrow_mut().push(prefix.into());

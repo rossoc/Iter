@@ -27,7 +27,9 @@ pub const DESCRIPTION: &str = "description";
 
 /// A checkbox is present in the submission (as `on`) only when ticked: for
 /// `#[serde(default, deserialize_with = "ticked")]` on a `bool`.
-fn ticked<'de, D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<bool, D::Error> {
+fn ticked<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<bool, D::Error> {
     Option::<String>::deserialize(deserializer).map(|value| value.is_some())
 }
 

@@ -4,69 +4,27 @@
 //! left uncommitted in the notes' git repository: `pending` shows it, and
 //! accepting is a commit.
 
-use crate::agent::exec;
-use crate::agent::prompt::shell_word;
-use crate::agent::run::{Invocation, alive};
+use crate::agent::error::AgentError;
 use crate::app::App;
 use crate::args::HarnessOpts;
-use crate::db::Db;
-use crate::agent::error::AgentError;
 use crate::error::{IterError, Result};
 use crate::models::{Project, Task};
-use crate::process;
-use crate::utils::resolve::{resolve_project_or_current, resolve_task, task_display};
-use crate::wiki::graph::Wiki;
-use crate::wiki::ingest::{self, Job, Mode};
+use crate::utils::resolve::{resolve_project_or_current, resolve_task};
+use crate::wiki::ingest::{self, Job};
+use crate::wiki::ingest_job::{
+    Auto, HarnessChoice, Target, Trigger, auto as wiki_auto, busy, changes, now, run_agent, settle,
+    spawn_ingest,
+};
 use crate::wiki::schema;
-use crate::wiki::scope::{self, Spec};
-
 use std::path::PathBuf;
 
-
-/// A project's wiki, and where it is kept.
-struct Target {
-    project: Project,
-    wiki: Wiki,
-    notes_dir: PathBuf,
-}
-
-impl Target {
-    fn new(db: &Db, project: Project) -> Result<Target> {
-        let spec = Spec {
-            project: Some(project.name.clone()),
-            ..Spec::default()
-        };
-        let wiki = scope::wiki(db, &spec)?;
-        let notes_dir = wiki.levels[0].dir.clone();
-        Ok(Target {
-            project,
-            wiki,
-            notes_dir,
-        })
+/// The harness the command line chose, as the service takes it.
+fn choice(opts: &HarnessOpts) -> HarnessChoice {
+    HarnessChoice {
+        agent: opts.agent,
+        model: opts.model.clone(),
+        extra: opts.extra.clone(),
     }
-
-    fn scope(&self) -> String {
-        format!("--project {}", shell_word(&self.project.name))
-    }
-
-    fn in_git(&self) -> bool {
-        process::succeeds(
-            "git",
-            Some(&self.notes_dir.display().to_string()),
-            &["rev-parse", "--is-inside-work-tree"],
-        )
-    }
-
-    fn require_git(&self) -> Result<()> {
-        match self.in_git() {
-            true => Ok(()),
-            false => Err(AgentError::NotesNotInGit(self.notes_dir.clone()).into()),
-        }
-    }
-}
-
-fn now() -> String {
-    chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()
 }
 
 fn project_of(
@@ -84,21 +42,6 @@ fn project_of(
     };
     Ok((project, None))
 }
-
-mod bridge;
-mod lock;
-mod review;
-mod spawn;
-#[cfg(test)]
-mod tests;
-
-pub use bridge::bridge_task_notes;
-pub use review::*;
-#[cfg(feature = "web")]
-pub use spawn::ingest_in_background;
-use lock::{busy, lock};
-use spawn::{run_agent, spawn_ingest};
-
 
 pub fn ingest(
     app: &App,
@@ -141,7 +84,7 @@ pub fn ingest(
         return Ok(());
     }
     if detach {
-        spawn_ingest(&target.project, task.as_ref(), opts)?;
+        spawn_ingest(&target.project, task.as_ref(), &choice(opts))?;
         println!(
             "ingesting {} notes of {} in the background; review with `iter wiki pending {}`",
             waiting.len(),
@@ -166,7 +109,10 @@ pub fn ingest(
         waiting.len(),
         target.project.name
     );
-    finish(&target, run_agent(&target, opts, &prompt, "ingest")?)
+    finish(
+        &target,
+        run_agent(&target, &choice(opts), &prompt, "ingest")?,
+    )
 }
 
 fn finish(target: &Target, (log, ok): (PathBuf, bool)) -> Result<()> {
@@ -217,9 +163,11 @@ pub fn build_concept(
     };
     let prompt = ingest::concept_prompt(&job, name, ideas);
     println!("building the concept {name} from {} ideas...", ideas.len());
-    finish(&target, run_agent(&target, opts, &prompt, "concept")?)
+    finish(
+        &target,
+        run_agent(&target, &choice(opts), &prompt, "concept")?,
+    )
 }
-
 
 pub fn pending(app: &App, project: Option<&str>, accept: bool, revert: bool) -> Result<()> {
     let (project, _) = project_of(app, project, None)?;
@@ -251,43 +199,21 @@ pub fn pending(app: &App, project: Option<&str>, accept: bool, revert: bool) -> 
     Ok(())
 }
 
-/// When a task starts or finishes.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Trigger {
-    TaskStart,
-    TaskDone,
+/// Does what the project's `ingest` setting asks for at `trigger` and says
+/// so. It never fails the command it is called from: what goes wrong is a
+/// warning.
+pub fn auto(app: &App, project: &Project, task: &Task, trigger: Trigger) {
+    say_auto(project, &wiki_auto(app, project, task, trigger));
 }
 
-/// Does what the project's `ingest` setting asks for at `trigger`: starts an
-/// ingest in the background. It never fails the command it is called from:
-/// what goes wrong is a warning.
-pub fn auto(app: &App, project: &Project, task: &Task, trigger: Trigger) {
-    let outcome = (|| -> Result<bool> {
-        let Ok(target) = Target::new(&app.db, project.clone()) else {
-            return Ok(false);
-        };
-        let wanted = match ingest::mode(&target.wiki.levels).0 {
-            Mode::OnTaskStart => trigger == Trigger::TaskStart,
-            Mode::OnTaskDone => trigger == Trigger::TaskDone,
-            Mode::Manual => false,
-        };
-        if !wanted || busy(&target) || !target.in_git() {
-            return Ok(false);
-        }
-        let sketches = trigger == Trigger::TaskDone;
-        if ingest::waiting(&target.wiki).is_empty() && !sketches {
-            return Ok(false);
-        }
-        let none = HarnessOpts::default();
-        spawn_ingest(project, sketches.then_some(task), &none)?;
-        Ok(true)
-    })();
+/// What the command line says about what [`auto`] did.
+pub fn say_auto(project: &Project, outcome: &Auto) {
     match outcome {
-        Ok(true) => println!(
+        Auto::Started => println!(
             "ingesting the notes of {} in the background (`iter wiki pending` to review)",
             project.name
         ),
-        Ok(false) => {}
-        Err(e) => eprintln!("warning: could not start the ingest: {e}"),
+        Auto::Idle => {}
+        Auto::Failed(e) => eprintln!("warning: could not start the ingest: {e}"),
     }
 }

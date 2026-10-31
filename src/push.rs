@@ -300,7 +300,10 @@ pub fn unknown_targets(platform: &dyn TimePlatform, target: &Target) -> Vec<Stri
 /// projects, and the activities of the project `project` names (by id or
 /// name). Whatever cannot be fetched is an empty list -- the fields stay
 /// free text.
-pub fn choices(platform: &dyn TimePlatform, project: &str) -> (Vec<PlatformItem>, Vec<PlatformItem>) {
+pub fn choices(
+    platform: &dyn TimePlatform,
+    project: &str,
+) -> (Vec<PlatformItem>, Vec<PlatformItem>) {
     let projects = platform.projects().unwrap_or_default();
     let activities = match projects.iter().find(|p| p.is(project)) {
         Some(found) => platform.activities(&found.id).unwrap_or_default(),
@@ -371,7 +374,10 @@ pub fn execute(
     for entry in &check.conflicts {
         match pushed_earlier(&entry.day) {
             true => {
-                items.push(Item::ok(format!("platform: {} (pushed earlier)", entry.day)));
+                items.push(Item::ok(format!(
+                    "platform: {} (pushed earlier)",
+                    entry.day
+                )));
                 done_days.push(entry.day.clone());
             }
             false => items.push(Item::failed("platform", conflict_line(entry))),
@@ -641,7 +647,12 @@ mod tests {
 
         // another session is worked: the figure differs, so it may be pushed
         let task = a_task(&db, &org);
-        fixtures::add_session(&db, task, dt("2026-09-04 14:00"), Some(dt("2026-09-04 15:00")));
+        fixtures::add_session(
+            &db,
+            task,
+            dt("2026-09-04 14:00"),
+            Some(dt("2026-09-04 15:00")),
+        );
         let changed = the_plan(&db, &org);
         assert!(
             !check(&db, &org, &changed, &platform)
@@ -672,7 +683,12 @@ mod tests {
     fn a_conflict_does_not_stop_the_other_days() {
         let (db, org) = setup();
         let task = a_task(&db, &org);
-        fixtures::add_session(&db, task, dt("2026-09-03 09:00"), Some(dt("2026-09-03 10:00")));
+        fixtures::add_session(
+            &db,
+            task,
+            dt("2026-09-03 09:00"),
+            Some(dt("2026-09-03 10:00")),
+        );
         let both = DateRange {
             from: Some(NaiveDate::from_ymd_opt(2026, 9, 3).unwrap()),
             to: NaiveDate::from_ymd_opt(2026, 9, 4).unwrap(),
@@ -790,7 +806,10 @@ mod tests {
         let gh = FakeGh::default();
         let items = run(&db, &org, &plan, &second, &gh).unwrap();
 
-        assert!(second.pushed.borrow().is_empty(), "the day is not sent twice");
+        assert!(
+            second.pushed.borrow().is_empty(),
+            "the day is not sent twice"
+        );
         assert!(items.iter().all(|i| i.error.is_none()), "{items:?}");
         assert_eq!(
             *gh.calls.borrow(),

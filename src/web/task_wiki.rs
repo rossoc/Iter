@@ -2,7 +2,7 @@
 //! wiki and nobody has accepted (a diff, with Accept and Throw away), and the
 //! notes still waiting to be ingested (with Ingest now).
 //!
-//! The reading and the git work are `commands::ingest`'s; this is the page
+//! The reading and the git work are `wiki::ingest_job`'s; this is the page
 //! and the three routes (`POST /task/{id}/wiki/{accept|revert|ingest}`), each
 //! of which goes back to the tab.
 
@@ -13,20 +13,14 @@ use super::ui::labelled::labelled_section;
 use super::ui::notice::notice;
 use super::url::{WikiAction, task_url, wiki_action_url, wiki_tab_url};
 use super::{Id, open_db};
-use crate::commands::ingest::{self, Review};
 use crate::db::{Db, Table};
 use crate::models::{Project, Task};
 use crate::wiki::ingest::Mode;
+use crate::wiki::ingest_job::{self, Review};
 use topcoat::{
     Result,
     context::Cx,
-    router::{
-        RouterBuilder,
-        error::see_other,
-        path_param,
-        response::Response,
-        route,
-    },
+    router::{RouterBuilder, error::see_other, path_param, response::Response, route},
     view::{View, component, view},
 };
 
@@ -93,7 +87,7 @@ fn diff_lines(diff: &str) -> Vec<DiffLine> {
 }
 
 pub fn load(db: &Db, project: &Project, task: &Task) -> WikiTab {
-    match ingest::review(db, project) {
+    match ingest_job::review(db, project) {
         Ok(review) => {
             let files = review
                 .changes
@@ -205,9 +199,9 @@ async fn act(cx: &Cx) -> Result<Response> {
     let db = open_db()?;
     let (task, project) = super::load::task_with_project(&db, id)?;
     let done = match action {
-        WikiAction::Accept => ingest::settle(&db, &project, true).map(|_| ()),
-        WikiAction::Revert => ingest::settle(&db, &project, false).map(|_| ()),
-        WikiAction::Ingest => ingest::ingest_in_background(&db, &project, &task),
+        WikiAction::Accept => ingest_job::settle(&db, &project, true).map(|_| ()),
+        WikiAction::Revert => ingest_job::settle(&db, &project, false).map(|_| ()),
+        WikiAction::Ingest => ingest_job::ingest_in_background(&db, &project, &task),
     };
     done.map_err(super::errors::refused)?;
     Err(see_other(wiki_tab_url(&task_url(id))).into())

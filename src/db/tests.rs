@@ -373,7 +373,10 @@ fn task_refs_narrows_by_project_and_status_set() {
         (alpha, "queued", TaskStatus::Queue),
         (alpha, "finished", TaskStatus::Done),
     ] {
-        let task = Task { status, ..fixtures::task(project, name) };
+        let task = Task {
+            status,
+            ..fixtures::task(project, name)
+        };
         db.insert(&task).expect("task inserts");
     }
 
@@ -541,7 +544,7 @@ fn every_declared_column_exists_in_the_migrated_schema() {
 fn every_table_binds_one_value_per_column() {
     fn check<T: Table>(item: &T) {
         assert_eq!(
-            item.values().len(),
+            item.values().expect("binds").len(),
             T::COLUMNS.len(),
             "{} binds a different number of values than it declares columns",
             T::NAME
@@ -1340,8 +1343,7 @@ fn tasks_in_a_group_pair_each_task_with_its_project() {
         .into_iter()
         .map(|(project, task)| (project, task.name))
         .collect();
-    let want =
-        [("a", "x"), ("a", "z"), ("b", "y")].map(|(p, t)| (p.to_string(), t.to_string()));
+    let want = [("a", "x"), ("a", "z"), ("b", "y")].map(|(p, t)| (p.to_string(), t.to_string()));
     assert_eq!(got, want);
     assert!(db.tasks_in::<Organization>(1).expect("query").is_empty());
 }
@@ -1591,4 +1593,58 @@ fn task_schedule_round_trips_and_migrates_onto_an_old_tasks_table() {
         );
     }
     std::fs::remove_dir_all(&dir).ok();
+}
+
+/// `Duration` and `TaskStatus` cross SQLite through their own `ToSql` and
+/// `FromSql`: minutes as an integer, the status as its word -- and a status
+/// word this build doesn't know reads back as `Queue` instead of failing.
+#[test]
+fn duration_and_status_round_trip_and_an_unknown_status_is_queue() {
+    let db = db();
+    let project = insert_project(&db, "proj");
+    let task = Task {
+        duration: Some(Duration(90)),
+        status: TaskStatus::Done,
+        ..fixtures::task(project, "t")
+    };
+    let id = db.insert(&task).expect("inserts");
+    let read: Task = db.get(id).expect("reads").expect("exists");
+    assert_eq!(read.duration, Some(Duration(90)));
+    assert_eq!(read.status, TaskStatus::Done);
+    let (minutes, status): (i64, String) = db
+        .conn
+        .query_row(
+            "SELECT duration, status FROM tasks WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("raw row");
+    assert_eq!((minutes, status.as_str()), (90, "done"));
+
+    // The table's CHECK refuses to store one, so read the word directly.
+    let unknown: TaskStatus = db
+        .conn
+        .query_row("SELECT 'from-the-future'", [], |r| r.get(0))
+        .expect("reads an unknown status");
+    assert_eq!(unknown, TaskStatus::Queue);
+}
+
+/// Timestamps are stored as exactly `YYYY-MM-DD HH:MM:SS`, sub-second
+/// precision dropped.
+#[test]
+fn timestamps_are_stored_as_plain_seconds_text() {
+    let db = db();
+    let project = insert_project(&db, "proj");
+    let task = insert_task(&db, project, "t");
+    let start = dt("2025-03-04 12:30") + chrono::Duration::milliseconds(789);
+    db.insert(&fixtures::session(task, start, None))
+        .expect("inserts");
+    let (start, end): (String, Option<String>) = db
+        .conn
+        .query_row("SELECT start, end FROM sessions", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .expect("raw row");
+    assert_eq!(start, "2025-03-04 12:30:00");
+    assert_eq!(end, None);
 }

@@ -7,11 +7,11 @@
 //! are the user's and are never rewritten.
 
 use super::graph::Wiki;
-use crate::error::{Result, failed};
 use crate::agent::taskdir::write_atomic;
+use crate::error::{Result, failed};
 use crate::md_edit::split_at_divider;
-use std::path::PathBuf;
 use serde::Serialize;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, PartialEq)]
 pub struct Rewrite {
@@ -350,7 +350,15 @@ mod tests {
         let root = fixture("refuse");
         let w = build(&root);
         let idea = w.node(1, "ideas/retry").expect("idea");
-        for bad in ["", "../x", "a//b", ".git/x", "wiki/.hidden/x", "acme:wiki/x", "wiki/concepts/backoff"] {
+        for bad in [
+            "",
+            "../x",
+            "a//b",
+            ".git/x",
+            "wiki/.hidden/x",
+            "acme:wiki/x",
+            "wiki/concepts/backoff",
+        ] {
             assert!(mv(&w, idea, bad, true).is_err(), "{bad}");
         }
     }

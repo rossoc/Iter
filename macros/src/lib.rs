@@ -12,7 +12,10 @@ use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input};
 /// the primary key: it's left out of the columns (SQLite assigns it on
 /// insert, and it's the key rather than a payload on update) and read from
 /// column 0 of every row. Every other field's type must implement
-/// `crate::db::Column`, which is where the SQL conversions live.
+/// `rusqlite`'s `FromSql` and `ToSql` (`src/db/sqltypes.rs` has the model
+/// types'), or carry `#[table(with = "path")]`, naming a module under
+/// `crate::db` with `read(row, index)` and `write(&value)` functions, for
+/// a type that can't implement them (`datetime` for a `NaiveDateTime`).
 ///
 /// `order_by` is optional, and supplies the trailing clause for a bare
 /// `Db::list`; without it the listing order is SQLite's.
@@ -80,12 +83,38 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             "`Table` needs named fields: each one maps to a column",
         ));
     };
-    let columns: Vec<_> = fields
+    let mut columns = Vec::new();
+    let (mut reads, mut writes) = (Vec::new(), Vec::new());
+    for field in fields
         .named
         .iter()
-        .filter_map(|field| field.ident.as_ref())
-        .filter(|field| *field != "id")
-        .collect();
+        .filter(|field| field.ident.as_ref().is_some_and(|name| name != "id"))
+    {
+        let name = field.ident.as_ref().expect("named field");
+        let mut with = None;
+        for attr in field.attrs.iter().filter(|a| a.path().is_ident("table")) {
+            attr.parse_nested_meta(|meta| {
+                if !meta.path.is_ident("with") {
+                    return Err(meta.error("expected `with`"));
+                }
+                with = Some(meta.value()?.parse::<LitStr>()?.parse::<syn::Path>()?);
+                Ok(())
+            })?;
+        }
+        let ty = &field.ty;
+        let index = columns.len() + 1;
+        match with {
+            Some(path) => {
+                reads.push(quote! { crate::db::#path::read(row, #index)? });
+                writes.push(quote! { crate::db::#path::write(&self.#name) });
+            }
+            None => {
+                reads.push(quote! { row.get::<_, #ty>(#index)? });
+                writes.push(quote! { ::rusqlite::types::ToSql::to_sql(&self.#name) });
+            }
+        }
+        columns.push(name);
+    }
     if columns.is_empty() {
         return Err(syn::Error::new(
             ty.span(),
@@ -137,15 +166,11 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 // Column 0 is `id`; the struct's other fields follow, in
                 // declaration order -- the same order `COLUMNS` lists and
                 // `values` binds, all three being this one list.
-                let mut index = 0;
-                #(
-                    let #columns = crate::db::Column::from_sql(row, { index += 1; index })?;
-                )*
-                Ok(#ty { id: Some(row.get(0)?), #(#columns,)* })
+                Ok(#ty { id: Some(row.get(0)?), #(#columns: #reads,)* })
             }
 
-            fn values(&self) -> ::std::vec::Vec<::rusqlite::types::Value> {
-                ::std::vec![#(crate::db::Column::to_sql(&self.#columns)),*]
+            fn values(&self) -> ::rusqlite::Result<::std::vec::Vec<::rusqlite::types::ToSqlOutput<'_>>> {
+                ::std::vec![#(#writes),*].into_iter().collect()
             }
 
             fn row_id(&self) -> ::std::option::Option<i64> {

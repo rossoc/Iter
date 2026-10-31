@@ -4,7 +4,8 @@
 use crate::app::App;
 use crate::args::SessionCommand;
 use crate::commands::Run;
-use crate::commands::ingest::{self, Trigger};
+use crate::commands::ingest;
+use crate::wiki::ingest_job::Trigger;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
@@ -22,7 +23,13 @@ impl Run for SessionCommand {
                 task,
                 branch,
                 no_branch,
-            } => session_new(app, &TmuxClient::system(), task, branch.as_deref(), *no_branch),
+            } => session_new(
+                app,
+                &TmuxClient::system(),
+                task,
+                branch.as_deref(),
+                *no_branch,
+            ),
             Self::Start { task } => session_start(app, task.as_deref()),
             Self::Stop { task, message } => session_stop(app, task.as_deref(), message.as_deref()),
             Self::Elapse => session_elapse(app),
@@ -104,14 +111,15 @@ fn session_new(
     // them behind would leave them behind for good, and the retry would hit
     // "branch already exists" on a branch the user has to clean up by hand.
     let final_tmux_name = if project.tmux {
-        tmux.start_tracked_session(&tmux_session_name, cwd).inspect_err(|_| {
-            unwind_session_setup(
-                &project,
-                worktree_path.as_deref(),
-                github_branch.as_deref(),
-                Some(&tmux_session_name),
-            )
-        })?;
+        tmux.start_tracked_session(&tmux_session_name, cwd)
+            .inspect_err(|_| {
+                unwind_session_setup(
+                    &project,
+                    worktree_path.as_deref(),
+                    github_branch.as_deref(),
+                    Some(&tmux_session_name),
+                )
+            })?;
         println!("session '{tmux_session_name}' started");
         Some(tmux_session_name)
     } else {

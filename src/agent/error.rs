@@ -30,8 +30,6 @@ pub enum AgentError {
     RunNotStoppable { run: u32, status: String },
     #[error("run {0} has begun: it cannot be edited")]
     RunBegun(u32),
-    #[error("run {run} has a kind that is not known: {kind}")]
-    RunKindUnknown { run: u32, kind: String },
     #[error("run {0} has no log")]
     RunLogMissing(u32),
     #[error("no such task")]

@@ -60,8 +60,6 @@ pub enum Section {
     Report,
     /// An organization's: its projects.
     Projects,
-    /// A project's: the instructions that apply to it (`instructions.rs`).
-    Instructions,
 }
 
 impl Section {
@@ -85,7 +83,6 @@ impl Section {
             Section::Notes => "Notes",
             Section::Report => "Report",
             Section::Projects => "Projects",
-            Section::Instructions => "Instructions",
         }
     }
 }

@@ -160,11 +160,6 @@ pub fn projects_tab_url(base: &str) -> String {
     tab(base, "projects")
 }
 
-/// The Instructions tab of the project page at `base`.
-pub fn instructions_tab_url(base: &str) -> String {
-    tab(base, "instructions")
-}
-
 /// The list of the global instructions.
 pub fn instructions_url() -> String {
     "/instructions".to_string()
@@ -360,7 +355,10 @@ mod tests {
         assert_eq!(runs_url(5), "/task/5/runs");
         assert_eq!(run_url(5, 2), "/agent/5/2");
         assert_eq!(agents_url(), "/agents");
-        assert_eq!(run_action_url(5, 2, RunAction::Cancel), "/task/5/runs/2/cancel");
+        assert_eq!(
+            run_action_url(5, 2, RunAction::Cancel),
+            "/task/5/runs/2/cancel"
+        );
         assert_eq!(wiki_tab_url("/task/5"), "/task/5?tab=wiki");
         assert_eq!(
             wiki_action_url(5, WikiAction::Accept),

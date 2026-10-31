@@ -7,7 +7,7 @@ use crate::models::{
     SessionConfig, Tag, Task, TaskStatus, URGENT_TAG, task_ref,
 };
 use chrono::{NaiveDate, NaiveDateTime};
-use rusqlite::types::{Type, Value, ValueRef};
+use rusqlite::types::{ToSqlOutput, Type, Value, ValueRef};
 use rusqlite::{
     Connection, OptionalExtension, Params, Row, Transaction, TransactionBehavior, params,
     params_from_iter,
@@ -15,17 +15,17 @@ use rusqlite::{
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-mod column;
 mod groups;
 mod migrate;
 mod pushes;
 mod reporting;
 mod sessions;
+mod sqltypes;
 mod tasks;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use column::Column;
+pub(crate) use sqltypes::datetime;
 
 /// How many names one `ids_by_name` query binds (older SQLite builds allow
 /// 999 bound variables).
@@ -128,7 +128,7 @@ pub(crate) trait Table: Sized {
     fn from_row(row: &Row) -> rusqlite::Result<Self>;
 
     /// This item's column values, in `COLUMNS` order.
-    fn values(&self) -> Vec<Value>;
+    fn values(&self) -> rusqlite::Result<Vec<ToSqlOutput<'_>>>;
 
     /// The primary key as stored on the item: `None` for one that hasn't
     /// been inserted yet (the blank template the editor opens), `Some`
@@ -368,14 +368,14 @@ impl Db {
     pub fn insert<T: Table>(&self, item: &T) -> Result<i64> {
         self.conn
             .prepare_cached(&insert_sql::<T>())?
-            .execute(params_from_iter(item.values()))
+            .execute(params_from_iter(item.values()?))
             .map_err(|e| write_error(e, T::NAME))?;
         Ok(self.conn.last_insert_rowid())
     }
 
     /// Overwrites row `id` with `item`'s columns.
     pub fn update<T: Table>(&self, id: i64, item: &T) -> Result<()> {
-        let mut values = item.values();
+        let mut values = item.values()?;
         values.push(id.into());
         self.conn
             .prepare_cached(&update_sql::<T>())?

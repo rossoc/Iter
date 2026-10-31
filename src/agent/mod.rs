@@ -1,9 +1,10 @@
-//! What an agent works with on a task: its folder, its plan, and the prompts
-//! that tell it what to do.
+//! What an agent works with on a task: its folder, its plan, the prompts
+//! that tell it what to do, and the runs that carry it out.
 //!
-//! Nothing here knows about the wiki. Where a prompt wants the project's
-//! knowledge (the onboarding), the caller passes it in as text, so the wiki can
-//! be replaced without touching this module.
+//! Where the agent side reaches for the wiki it says so: `task_prompt` asks it
+//! for the onboarding, and `solve` starts the ingest the project's setting
+//! asks for when a task's first run begins. Everything else here is
+//! independent of it.
 
 pub mod error;
 pub mod exec;
@@ -11,4 +12,6 @@ pub mod instruction;
 pub mod plan;
 pub mod prompt;
 pub mod run;
+pub mod solve;
+pub mod task_prompt;
 pub mod taskdir;

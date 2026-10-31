@@ -1,10 +1,11 @@
 use super::*;
+use crate::agent::prompt::Kind;
 use crate::fixtures;
 
 #[test]
 fn the_list_counts_the_runs_each_instruction_was_given() {
     let scope = Scope::global();
-    let run = |n: u32, instruction: Option<&str>, kind: &str| Use {
+    let run = |n: u32, instruction: Option<&str>, kind: Kind| Use {
         task_id: 1,
         task: "app/Fix it".into(),
         run: RunRecord {
@@ -12,7 +13,7 @@ fn the_list_counts_the_runs_each_instruction_was_given() {
             agent: crate::agent::run::Harness::Claude,
             model: "haiku".into(),
             effort: "low".into(),
-            kind: kind.into(),
+            kind,
             instruction: instruction.map(String::from),
             status: crate::agent::run::Status::Done,
             started: format!("2026-10-30 10:0{n}:00"),
@@ -25,9 +26,9 @@ fn the_list_counts_the_runs_each_instruction_was_given() {
     };
     // a run from before instructions existed counts for its kind
     let uses = vec![
-        run(3, Some("fix"), "fix"),
-        run(2, None, "fix"),
-        run(1, None, "plan"),
+        run(3, Some("fix"), Kind::Fix),
+        run(2, None, Kind::Fix),
+        run(1, None, Kind::Plan),
     ];
     let rows = rows(&scope, &uses);
     let by = |name: &str| rows.iter().find(|r| r.name == name).unwrap();
@@ -60,7 +61,7 @@ fn usage_is_found_in_the_runs_of_the_tasks() {
         agent: crate::agent::run::Harness::Claude,
         model: "haiku".into(),
         effort: "low".into(),
-        kind: "fix".into(),
+        kind: Kind::Fix,
         instruction: Some("review".into()),
         status: crate::agent::run::Status::Done,
         started: "2026-10-30 10:00:00".into(),

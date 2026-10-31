@@ -3,12 +3,15 @@
 
 use crate::app::App;
 use crate::args::{ReportOpts, TaskCommand};
-use crate::commands::ingest::{self, Trigger};
+use crate::commands::ingest;
+use crate::wiki::ingest_job::{self, Trigger};
 use crate::commands::sync::{task_pull, task_push};
 use crate::commands::{Run, agent, solve};
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
+use crate::git;
+use crate::github::{self, GhCli, IssueTracker};
 use crate::md_edit::edited;
 use crate::models::require_name;
 use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
@@ -23,8 +26,6 @@ use crate::utils::resolve::{
     task_display,
 };
 use crate::utils::workspace::teardown_and_kill;
-use crate::github::{self, GhCli, IssueTracker};
-use crate::git;
 
 /// Note that bare `iter task` is handled in `main` rather than here: it
 /// means the unfinished work across every project, a filter no
@@ -101,18 +102,30 @@ impl Run for TaskCommand {
                 task_id,
                 run,
                 extra,
-            } => solve::worker(app, *task_id, *run, extra),
+            } => crate::agent::solve::worker(app, *task_id, *run, extra),
             Self::Done { task, save } => task_done(app, task.as_deref(), *save),
             Self::Pull {
                 project,
                 task,
                 body,
-            } => task_pull(app, &GhCli::system(), project.as_deref(), task.as_deref(), *body),
+            } => task_pull(
+                app,
+                &GhCli::system(),
+                project.as_deref(),
+                task.as_deref(),
+                *body,
+            ),
             Self::Push {
                 project,
                 task,
                 body,
-            } => task_push(app, &GhCli::system(), project.as_deref(), task.as_deref(), *body),
+            } => task_push(
+                app,
+                &GhCli::system(),
+                project.as_deref(),
+                task.as_deref(),
+                *body,
+            ),
             Self::Weekday { task } => task_weekday(app, task.as_deref()),
         }
     }
@@ -299,7 +312,7 @@ fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
     // what the task's own notes said goes into today's note of the project,
     // and the wiki may be asked to learn from it; neither stops the task
     // from being done
-    match ingest::bridge_task_notes(app, &project, &task) {
+    match ingest_job::bridge_task_notes(app, &project, &task) {
         Ok(0) => {}
         Ok(n) => println!(
             "added {n} notes of the task to today's note of '{}'",

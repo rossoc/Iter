@@ -334,7 +334,10 @@ mod tests {
     fn a_comment_is_posted_with_its_body_as_one_argument() {
         let runner = FakeRunner::default();
         GhCli::new(&runner).comment(REPO, 3, "two words").unwrap();
-        assert_eq!(runner.calls(), ["[/repo] gh issue comment 3 --body two words"]);
+        assert_eq!(
+            runner.calls(),
+            ["[/repo] gh issue comment 3 --body two words"]
+        );
     }
 
     #[test]
@@ -342,7 +345,10 @@ mod tests {
         let runner = FakeRunner::default();
         runner.fail("gh issue close");
         let error = GhCli::new(&runner).close(REPO, 7).unwrap_err();
-        assert!(error.to_string().contains("gh issue close 7 failed"), "{error}");
+        assert!(
+            error.to_string().contains("gh issue close 7 failed"),
+            "{error}"
+        );
     }
 
     #[test]
@@ -375,7 +381,10 @@ mod tests {
     fn signing_adds_me_as_an_assignee() {
         let runner = FakeRunner::default();
         GhCli::new(&runner).assign_self(REPO, 5).unwrap();
-        assert_eq!(runner.calls(), ["[/repo] gh issue edit 5 --add-assignee @me"]);
+        assert_eq!(
+            runner.calls(),
+            ["[/repo] gh issue edit 5 --add-assignee @me"]
+        );
     }
 
     /// Compact JSON, uppercase states, CRLF and escapes in a body -- what

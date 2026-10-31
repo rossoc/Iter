@@ -13,9 +13,9 @@ use crate::app::App;
 use crate::db::Db;
 use crate::db::Table;
 use crate::error::Result;
+use crate::github::{self, IssueTracker};
 use crate::models::{Project, Task, TaskStatus};
 use crate::utils::resolve::{find_task_or_err, github_project, linked_issue, task_display};
-use crate::github::{self, IssueTracker};
 use crate::{git, sync};
 
 /// Sets a task's issue link, status and description -- in the database, and
@@ -325,15 +325,13 @@ fn issues_to_push(
         true => tasks
             .iter()
             .filter_map(|t| t.github_issue)
-            .filter_map(
-                |number| match gh.fetch(&project.base_path, number) {
-                    Ok(issue) => Some(issue),
-                    Err(e) => {
-                        eprintln!("warning: couldn't fetch issue #{number}: {e}");
-                        None
-                    }
-                },
-            )
+            .filter_map(|number| match gh.fetch(&project.base_path, number) {
+                Ok(issue) => Some(issue),
+                Err(e) => {
+                    eprintln!("warning: couldn't fetch issue #{number}: {e}");
+                    None
+                }
+            })
             .collect(),
     };
     Ok(issues.into_iter().map(|i| (i.number, i)).collect())
@@ -347,7 +345,12 @@ fn issues_to_push(
 /// needs write access to the repo, and losing the state sync -- the part
 /// that keeps a task and its issue agreeing -- over a signature would be
 /// the worse trade.
-fn sign_and_close(gh: &dyn IssueTracker, project: &Project, number: i64, display: &str) -> Result<()> {
+fn sign_and_close(
+    gh: &dyn IssueTracker,
+    project: &Project,
+    number: i64,
+    display: &str,
+) -> Result<()> {
     if let Err(e) = gh.assign_self(&project.base_path, number) {
         eprintln!("warning: couldn't assign yourself to issue #{number}: {e}");
     }

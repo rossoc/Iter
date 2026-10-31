@@ -431,7 +431,10 @@ mod tests {
     fn session_closed_is_told_the_session_by_hook_session_name() {
         let action = action_for("session-closed");
         assert!(action.contains("#{q:hook_session_name}"), "{action}");
-        assert!(!action.contains("session_name}") || action.contains("hook_session_name}"), "{action}");
+        assert!(
+            !action.contains("session_name}") || action.contains("hook_session_name}"),
+            "{action}"
+        );
     }
 
     /// `client-session-changed` records the session and closes the one being
@@ -484,7 +487,10 @@ mod tests {
     #[test]
     fn a_binary_path_with_a_space_is_escaped() {
         let action = hook_action("/my dir/iter", "session-closed", "#{q:hook_session_name}");
-        assert!(action.starts_with("run-shell '/my\\ dir/iter internal hook"), "{action}");
+        assert!(
+            action.starts_with("run-shell '/my\\ dir/iter internal hook"),
+            "{action}"
+        );
     }
 
     #[test]
@@ -606,17 +612,27 @@ mod tests {
     #[test]
     fn a_binary_path_with_a_quote_is_refused_before_touching_tmux() {
         let runner = FakeRunner::default();
-        assert!(client(&runner, false).ensure_hooks_installed("/o'brien/iter").is_err());
+        assert!(
+            client(&runner, false)
+                .ensure_hooks_installed("/o'brien/iter")
+                .is_err()
+        );
         assert!(runner.calls().is_empty());
     }
 
     #[test]
     fn a_client_session_is_remembered_and_consumed() {
         let runner = FakeRunner::default();
-        runner.reply("tmux show-options -gv @iter_client_session_/dev/ttys1", "web/a\n");
+        runner.reply(
+            "tmux show-options -gv @iter_client_session_/dev/ttys1",
+            "web/a\n",
+        );
         let tmux = client(&runner, false);
         tmux.remember_client_session("/dev/ttys1", "web/a").unwrap();
-        assert_eq!(tmux.take_client_session("/dev/ttys1").as_deref(), Some("web/a"));
+        assert_eq!(
+            tmux.take_client_session("/dev/ttys1").as_deref(),
+            Some("web/a")
+        );
         assert_eq!(
             runner.calls(),
             [
@@ -640,8 +656,14 @@ mod tests {
     #[ignore = "needs tmux, and TMUX_TMPDIR on a throwaway directory"]
     fn real_tmux_targets_exactly_and_quotes_what_the_hooks_are_told() {
         let tmp = std::env::var("TMUX_TMPDIR").expect("set TMUX_TMPDIR to a throwaway directory");
-        assert!(tmp.starts_with("/tmp/itx"), "not a throwaway directory: {tmp}");
-        assert!(std::env::var("TMUX").is_err(), "run outside tmux (unset TMUX)");
+        assert!(
+            tmp.starts_with("/tmp/itx"),
+            "not a throwaway directory: {tmp}"
+        );
+        assert!(
+            std::env::var("TMUX").is_err(),
+            "run outside tmux (unset TMUX)"
+        );
         let tmux = TmuxClient::system();
         let dir = std::path::PathBuf::from(&tmp);
 
@@ -663,7 +685,8 @@ mod tests {
             format!("#!/bin/sh\nprintf '%s\\n' \"$@\" >> '{}'\n", out.display()),
         )
         .unwrap();
-        std::fs::set_permissions(&stub, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        std::fs::set_permissions(&stub, std::os::unix::fs::PermissionsExt::from_mode(0o755))
+            .unwrap();
         tmux.ensure_hooks_installed(stub.to_str().unwrap()).unwrap();
         // no `.` or `:` in it: those mean pane and window in a tmux target
         let marker = std::path::Path::new("/tmp/itx_PWNED_marker");
@@ -672,7 +695,9 @@ mod tests {
         tmux.create_session(&hostile, "/tmp").unwrap();
         tmux.kill_session(&hostile);
         for _ in 0..40 {
-            if out.exists() && std::fs::read_to_string(&out).is_ok_and(|t| t.contains("session-closed")) {
+            if out.exists()
+                && std::fs::read_to_string(&out).is_ok_and(|t| t.contains("session-closed"))
+            {
                 break;
             }
             std::thread::sleep(std::time::Duration::from_millis(100));

@@ -3,11 +3,11 @@
 use super::*;
 
 /// The lock of a running job: its file, if a process holds it.
-pub(super) fn lock_path(target: &Target) -> PathBuf {
+pub fn lock_path(target: &Target) -> PathBuf {
     target.notes_dir.join(".iter").join("wiki.lock")
 }
 
-pub(super) fn busy(target: &Target) -> bool {
+pub fn busy(target: &Target) -> bool {
     std::fs::read_to_string(lock_path(target))
         .ok()
         .and_then(|t| t.trim().parse::<u32>().ok())
@@ -15,7 +15,7 @@ pub(super) fn busy(target: &Target) -> bool {
 }
 
 /// The lock of a job, held until it is dropped.
-pub(super) struct Lock(PathBuf);
+pub struct Lock(PathBuf);
 
 impl Drop for Lock {
     fn drop(&mut self) {
@@ -25,7 +25,7 @@ impl Drop for Lock {
 
 /// Takes the lock, or says who has it: the file is made with a call that
 /// fails if it exists, and one left by a process that is gone is replaced.
-pub(super) fn lock(target: &Target) -> Result<Lock> {
+pub fn lock(target: &Target) -> Result<Lock> {
     let path = lock_path(target);
     std::fs::create_dir_all(path.parent().unwrap_or(&target.notes_dir))?;
     for _ in 0..2 {

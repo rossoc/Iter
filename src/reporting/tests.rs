@@ -532,9 +532,7 @@ fn settings_of_drops_the_fields_the_report_prints_itself() {
 
 // ---- the worklog ---------------------------------------------------
 
-fn project_of(
-    tasks: Vec<(&str, TaskStatus, Vec<Session>)>,
-) -> (Vec<ProjectReport>, Vec<Session>) {
+fn project_of(tasks: Vec<(&str, TaskStatus, Vec<Session>)>) -> (Vec<ProjectReport>, Vec<Session>) {
     let mut all = Vec::new();
     let mut reports = Vec::new();
     for (i, (name, status, sessions)) in tasks.into_iter().enumerate() {

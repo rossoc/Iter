@@ -45,9 +45,9 @@ fn allowed(
         return false;
     }
     match origin {
-        Some(origin) => origin
-            .split_once("://")
-            .is_some_and(|(_, rest)| is_loopback(rest) && host.is_some_and(|h| h.eq_ignore_ascii_case(rest))),
+        Some(origin) => origin.split_once("://").is_some_and(|(_, rest)| {
+            is_loopback(rest) && host.is_some_and(|h| h.eq_ignore_ascii_case(rest))
+        }),
         None => true,
     }
 }
@@ -78,7 +78,12 @@ mod tests {
     #[test]
     fn posts_must_come_from_this_server() {
         let host = Some("127.0.0.1:3000");
-        assert!(allowed(false, host, Some("http://127.0.0.1:3000"), Some("same-origin")));
+        assert!(allowed(
+            false,
+            host,
+            Some("http://127.0.0.1:3000"),
+            Some("same-origin")
+        ));
         assert!(allowed(false, host, None, None));
         assert!(!allowed(false, host, Some("https://evil.example"), None));
         assert!(!allowed(false, host, Some("http://127.0.0.1:9999"), None));

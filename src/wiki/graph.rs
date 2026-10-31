@@ -165,9 +165,12 @@ fn files_of(dir: &Path, folder: &str) -> Vec<(PathBuf, String)> {
 /// Whether `folder` (from an ontology file) is a relative path that stays
 /// inside the level: no `..`, no root, no drive.
 fn stays_inside(folder: &str) -> bool {
-    Path::new(folder)
-        .components()
-        .all(|c| matches!(c, std::path::Component::Normal(_) | std::path::Component::CurDir))
+    Path::new(folder).components().all(|c| {
+        matches!(
+            c,
+            std::path::Component::Normal(_) | std::path::Component::CurDir
+        )
+    })
 }
 
 /// Every `.md` file under `at`, however deep: dotfiles are skipped, and a

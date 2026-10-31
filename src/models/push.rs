@@ -14,6 +14,7 @@ pub struct Push {
     pub to_day: String,
     /// A fingerprint of what was sent: [`crate::push::fingerprint`].
     pub hash: String,
+    #[table(with = "datetime")]
     pub at: NaiveDateTime,
     /// What succeeded and what did not, one line per item.
     pub results: String,

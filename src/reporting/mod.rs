@@ -29,9 +29,9 @@ mod tests;
 mod worklog;
 
 pub use merge::*;
-pub use render::{Md, non_empty};
 #[cfg(test)]
 use render::message_bullets;
+pub use render::{Md, non_empty};
 use render::{cell, document, summary_line};
 pub use worklog::*;
 
@@ -107,7 +107,13 @@ impl Header {
         period: DateRange,
         total_minutes: i64,
     ) -> Result<Self> {
-        Ok(Self::new(name, description, settings_of(item)?, period, total_minutes))
+        Ok(Self::new(
+            name,
+            description,
+            settings_of(item)?,
+            period,
+            total_minutes,
+        ))
     }
 }
 

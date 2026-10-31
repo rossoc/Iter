@@ -2,22 +2,26 @@
 /* at most 40rem (the field takes what the buttons leave), never wider than
    the row: the "?"'s tip is anchored to its right edge and kept inside it */
 .filter{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;width:min(100%,40rem);margin:0 0 16px}
-.filter .control{flex:1 1 12rem;min-width:0;min-height:38px;padding-block:6px}
+/* the field and the "?" inside it: the field takes what the buttons leave and
+   leaves room at its end for the "?", which is placed over that room */
+.filter-field{position:relative;display:flex;flex:1 1 12rem;min-width:0}
+.filter-field .control{flex:1 1 auto;min-width:0;min-height:38px;padding-block:6px;padding-inline-end:42px}
 .filter .button{min-height:38px}
 .filter-clear{font-size:.875rem;color:var(--muted)}
 @media (pointer:coarse){.filter .control,.filter .button{min-height:var(--touch)}}
-/* the "?" beside Filter: the syntax shows on hover, and stays while the "?"
+/* the "?" inside the field: the syntax shows on hover, and stays while the "?"
    (or the tip itself) has focus -- a click pins it, a click elsewhere drops it.
-   The tip hangs from the search bar's right edge, under the "?", and grows to
-   the left over whatever is there; at most the bar's width, so it never
-   leaves the screen on either side. */
-.filter-help{display:inline-flex}
-.filter-help-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin:0;padding:0;
-  border:1px solid var(--control-line);border-radius:var(--r-pill);background:var(--bg-2);color:var(--muted);
-  font:600 .875rem/1 var(--font);cursor:help;transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out)}
+   The tip hangs from the field's right edge, under the "?", and grows to the
+   left over whatever is there; at most the field's width, so it never leaves
+   the screen on either side. `.filter-help` has no box of its own, so the tip
+   is placed against the field. */
+.filter-help{display:contents}
+.filter-help-btn{position:absolute;inset-block:0;inset-inline-end:7px;margin-block:auto;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;
+  border:1px solid var(--control-line);border-radius:var(--r-pill);background:transparent;color:var(--muted);
+  font:600 .8125rem/1 var(--font);cursor:help;transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out)}
 .filter-help:hover .filter-help-btn,.filter-help:focus-within .filter-help-btn{border-color:var(--accent);color:var(--accent)}
 .filter-help:focus-within .filter-help-btn{background:var(--accent-tint)}
-@media (pointer:coarse){.filter-help-btn{width:var(--touch);height:var(--touch)}}
+@media (pointer:coarse){.filter-field .control{padding-inline-end:48px}.filter-help-btn{width:32px;height:32px}}
 .filter-tip{display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:20;width:max-content;max-width:min(26rem,100%);
   padding:12px 14px;background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-md);box-shadow:var(--shadow-lift);
   font-size:.8125rem;color:var(--muted);cursor:auto}

@@ -53,32 +53,3 @@ async fn list_screen(scope: &Scope, rows: &[ListRow], adding: bool) -> Result<im
         )
     })
 }
-
-/// What the Instructions tab of a project shows.
-pub struct InstructionsTab {
-    pub scope: Scope,
-    pub rows: Vec<ListRow>,
-}
-
-impl InstructionsTab {
-    pub fn load(db: &Db, project_id: i64) -> Result<InstructionsTab> {
-        let scope = Scope::of_project(db, project_id)?;
-        let rows = rows(&scope, &usage(db, Some(project_id)));
-        Ok(InstructionsTab { scope, rows })
-    }
-}
-
-/// The tab's body: the list, its first row writing a new instruction.
-#[component]
-pub async fn instructions_tab(tab: &InstructionsTab) -> Result<impl View> {
-    let add = page_url(
-        &crate::web::url::instructions_tab_url(&project_url(tab.scope.project_id().unwrap_or(0))),
-        &[("new", Some("instruction"))],
-    );
-    Ok(view! {
-        <p class="prompts-intro">
-            "A project's own instruction wins; without one, its organization's, then the one in iter's config folder, then the one built in."
-        </p>
-        instruction_table(rows: &tab.rows, add: Some(add))
-    })
-}

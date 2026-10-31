@@ -6,10 +6,10 @@ use crate::commands::Run;
 use crate::config::config;
 use crate::db::Table;
 use crate::error::{IterError, Result};
+use crate::github::GhCli;
 use crate::models::Organization;
 use crate::platform::JsonWebhook;
 use crate::process::run_status;
-use crate::github::GhCli;
 use crate::push::{self, Target};
 use crate::reporting::{Header, OrganizationInfo, print_report};
 use crate::secret::{self, KeyStore, Keychain, Secret};
@@ -218,7 +218,9 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
     }
     if flags.dry_run {
         if check.is_none() {
-            println!("\nThe platform was not asked what it already holds (no API key, or it did not answer).");
+            println!(
+                "\nThe platform was not asked what it already holds (no API key, or it did not answer)."
+            );
         }
         println!("\nDry run: nothing was sent.");
         return Ok(());
@@ -238,7 +240,15 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
             ));
         }
     }
-    let items = push::execute(db, &organization, &plan, check, platform, &GhCli::system(), app.now)?;
+    let items = push::execute(
+        db,
+        &organization,
+        &plan,
+        check,
+        platform,
+        &GhCli::system(),
+        app.now,
+    )?;
     println!();
     for item in &items {
         match item.error {

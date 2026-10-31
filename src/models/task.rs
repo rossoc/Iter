@@ -101,6 +101,7 @@ pub struct Task {
     /// When the task is scheduled to begin, as `yyyy-mm-dd hh:mm`. Together
     /// with `duration` this places the task on the board's agenda.
     #[serde(default, with = "datetime_opt")]
+    #[table(with = "datetime::opt")]
     pub start_time: Option<NaiveDateTime>,
 
     /// How long the task is expected to take, as `hh:mm`. The end of the

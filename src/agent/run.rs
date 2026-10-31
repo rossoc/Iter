@@ -5,6 +5,7 @@
 //! ones.
 
 use crate::agent::error::AgentResult;
+use crate::agent::prompt::Kind;
 use crate::agent::taskdir::TaskDir;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -162,8 +163,8 @@ pub struct RunRecord {
     pub agent: Harness,
     pub model: String,
     pub effort: String,
-    /// What the agent was asked to do: `plan`, `execute`, `fix` or `investigate`.
-    pub kind: String,
+    /// What the agent was asked to do.
+    pub kind: Kind,
     /// The instruction it was given (`instructions/<name>.md`); a run from
     /// before there were any has none, and its kind is the name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -199,7 +200,7 @@ impl RunRecord {
 
     /// The name of the instruction the run was given.
     pub fn instruction_name(&self) -> &str {
-        self.instruction.as_deref().unwrap_or(&self.kind)
+        self.instruction.as_deref().unwrap_or(self.kind.key())
     }
 
     /// Whether the run waits for its turn.
@@ -304,7 +305,11 @@ impl TaskDir {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(crate::agent::taskdir::write_whole(&self.runs_dir(), &self.run_path(run.n), &text)?)
+        Ok(crate::agent::taskdir::write_whole(
+            &self.runs_dir(),
+            &self.run_path(run.n),
+            &text,
+        )?)
     }
 
     /// Every run, the first one first. A record that cannot be read is left
@@ -350,8 +355,16 @@ mod tests {
         assert_eq!(
             args,
             [
-                "-p", "do it", "--model", "opus", "--add-dir", "/tasks/7",
-                "--permission-mode", "acceptEdits", "--allowedTools", "Bash(git:*)",
+                "-p",
+                "do it",
+                "--model",
+                "opus",
+                "--add-dir",
+                "/tasks/7",
+                "--permission-mode",
+                "acceptEdits",
+                "--allowedTools",
+                "Bash(git:*)",
                 "--verbose",
             ]
         );
@@ -368,7 +381,7 @@ mod tests {
             agent: Harness::Claude,
             model: "haiku".into(),
             effort: "medium".into(),
-            kind: "develop".into(),
+            kind: Kind::Develop,
             instruction: None,
             status: Status::Running,
             started: "2026-10-30 10:00:00".into(),

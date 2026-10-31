@@ -42,10 +42,11 @@ pub async fn new_instruction_modal(scope: &Scope) -> Result<impl View> {
     })
 }
 
-/// The page that lists the instructions of `scope`.
+/// Where a saved instruction leads: the list, or (for a project's own) the
+/// project, which no longer has a tab for them.
 pub(super) fn instructions_target(scope: &Scope) -> String {
     match &scope.project {
-        Some(p) => crate::web::url::instructions_tab_url(&project_url(p.id())),
+        Some(p) => project_url(p.id()),
         None => instructions_url(),
     }
 }
@@ -153,7 +154,8 @@ pub(super) async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Res
     let path = instruction::file(&home, &name);
     match form.action {
         SaveButton::Save => {
-            let renamed = instruction::rename_target(&name, &form.new_name).map_err(|e| bad_request(e.to_string()))?;
+            let renamed = instruction::rename_target(&name, &form.new_name)
+                .map_err(|e| bad_request(e.to_string()))?;
             let target = renamed.as_deref().unwrap_or(&name);
             // the keys the form does not know stay as they are in the file
             let kind = if instruction::is_builtin(&name) {

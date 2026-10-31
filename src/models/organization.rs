@@ -13,7 +13,12 @@ use serde::{Deserialize, Serialize};
 /// `id` is `None` for a not-yet-created organization (the blank template
 /// opened in the YAML editor); it's filled in once inserted.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Table, MarkdownBody)]
-#[table(name = "organizations", order_by = "name", kind = "organization", check = "check")]
+#[table(
+    name = "organizations",
+    order_by = "name",
+    kind = "organization",
+    check = "check"
+)]
 pub struct Organization {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub id: Option<i64>,
