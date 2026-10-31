@@ -206,6 +206,50 @@ pub fn task_tabs(base: &str, current: TaskSection, sessions: usize, agents: usiz
     )
 }
 
+/// The tabs of a daily note's page (`?tab=`): the rendered note, and its
+/// editor. The one place the names are spelled: the URL builder
+/// (`url::note_tab_url`) and the parser both go through here.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum NoteTab {
+    #[default]
+    Info,
+    Edit,
+}
+
+impl NoteTab {
+    pub const ALL: [NoteTab; 2] = [NoteTab::Info, NoteTab::Edit];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            NoteTab::Info => "info",
+            NoteTab::Edit => "edit",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            NoteTab::Info => "Info",
+            NoteTab::Edit => "Edit",
+        }
+    }
+
+    /// The tab a `?tab=` value asks for: anything unknown or missing is Info.
+    pub fn of(tab: Option<&str>) -> NoteTab {
+        tab.and_then(|t| t.parse().ok()).unwrap_or_default()
+    }
+}
+
+impl std::str::FromStr for NoteTab {
+    type Err = ();
+
+    fn from_str(text: &str) -> Result<NoteTab, ()> {
+        NoteTab::ALL
+            .into_iter()
+            .find(|t| t.as_str() == text)
+            .ok_or(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,5 +322,15 @@ mod tests {
             .len(),
             5
         );
+    }
+
+    #[test]
+    fn note_tab_names_round_trip() {
+        for tab in NoteTab::ALL {
+            assert_eq!(tab.as_str().parse(), Ok(tab));
+            assert_eq!(NoteTab::of(Some(tab.as_str())), tab);
+        }
+        assert_eq!(NoteTab::of(None), NoteTab::Info);
+        assert_eq!(NoteTab::of(Some("bogus")), NoteTab::Info);
     }
 }

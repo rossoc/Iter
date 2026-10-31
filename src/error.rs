@@ -43,6 +43,10 @@ pub enum IterError {
         source: serde_yaml::Error,
     },
 
+    #[cfg(any(feature = "web", test))]
+    #[error("the note would not read as a note: {0}")]
+    InvalidNote(String),
+
     #[error("failed to run `{tool}`: {source}")]
     Spawn {
         tool: &'static str,

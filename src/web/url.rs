@@ -271,6 +271,14 @@ pub fn note_url(base: &str, day: NaiveDate) -> String {
     format!("{base}/notes/{}", fmt_date(day))
 }
 
+/// The note of `day` on the page at `base`, with its `tab` open (Info is the
+/// page itself, with no `?tab=`).
+pub fn note_tab_url(base: &str, day: NaiveDate, tab: super::sections::NoteTab) -> String {
+    use super::sections::NoteTab;
+    let name = (tab != NoteTab::Info).then(|| tab.as_str());
+    page_url(&note_url(base, day), &[("tab", name)])
+}
+
 /// Where "today's note" of the page at `base` is posted: it makes the note
 /// and goes to it.
 pub fn notes_today_url(base: &str) -> String {
@@ -402,5 +410,19 @@ mod tests {
         assert_eq!(super::super::ui::frame::NAV[1].1, agents_url());
         assert_eq!(super::super::ui::frame::NAV[3].1, SETTINGS);
         assert_eq!(settings_saved_url(), "/settings?saved=1");
+    }
+
+    #[test]
+    fn note_tab_urls_name_the_tab() {
+        use super::super::sections::NoteTab;
+        let d = NaiveDate::from_ymd_opt(2026, 10, 29).unwrap();
+        assert_eq!(
+            note_tab_url("/org/1", d, NoteTab::Info),
+            "/org/1/notes/2026-10-29"
+        );
+        assert_eq!(
+            note_tab_url("/org/1", d, NoteTab::Edit),
+            "/org/1/notes/2026-10-29?tab=edit"
+        );
     }
 }

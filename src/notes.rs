@@ -165,6 +165,60 @@ pub fn get(dir: &Path, date: NaiveDate) -> Option<Note> {
     Some(parse(date, &content))
 }
 
+/// The text of the note's file, as it is on disk.
+#[cfg(any(feature = "web", test))]
+pub fn raw(dir: &Path, date: NaiveDate) -> Option<String> {
+    std::fs::read_to_string(dir.join(file_name(date))).ok()
+}
+
+/// Whether `content` still reads as a note: no stray NUL, and front matter
+/// that is closed and is YAML. (Reading is forgiving and would otherwise
+/// quietly show a broken header as body text.)
+#[cfg(any(feature = "web", test))]
+pub fn check(content: &str) -> Result<()> {
+    let bad = |why: &str| Err(crate::error::IterError::InvalidNote(why.to_string()));
+    if content.contains('\0') {
+        return bad("it contains a NUL character");
+    }
+    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
+    let (opened, rest) = match content.strip_prefix("---\n") {
+        Some(rest) => (true, rest),
+        None => (false, content),
+    };
+    match crate::md_edit::split_at_divider(rest) {
+        Some((front, _)) => {
+            let keyed = front.lines().any(|l| {
+                ["title:", "layout:", "date:"]
+                    .iter()
+                    .any(|k| l.starts_with(k))
+            });
+            if (opened || keyed)
+                && !front.trim().is_empty()
+                && serde_yaml::from_str::<FrontMatter>(front).is_err()
+            {
+                return bad("its front matter is not valid (expected `title:`, `layout:` lines)");
+            }
+            Ok(())
+        }
+        None if opened => bad("its front matter is not closed by a `---` line"),
+        None => Ok(()),
+    }
+}
+
+/// Writes `content` as the whole file of the existing note of `date`, atomically.
+/// The name (the day) is unchanged; a text that [`check`] refuses, or a note
+/// that is not there, is an error and nothing is written.
+#[cfg(any(feature = "web", test))]
+pub fn save(dir: &Path, date: NaiveDate, content: &str) -> Result<()> {
+    check(content)?;
+    let path = dir.join(file_name(date));
+    if !path.is_file() {
+        return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no such note").into());
+    }
+    crate::agent::taskdir::write_atomic(&path, content)?;
+    Ok(())
+}
+
 /// Makes sure the note of `day` exists, creating the folder and a file with
 /// only its front matter if need be. A note already there is left alone.
 pub fn create(dir: &Path, day: NaiveDate) -> Result<()> {
@@ -268,6 +322,43 @@ mod tests {
         assert!(!text.contains("other"));
         // the note still reads as a note
         assert_eq!(get(&dir, day).unwrap().date, day);
+    }
+
+    #[test]
+    fn a_saved_note_reads_back_and_keeps_its_name() {
+        let dir = scratch("save");
+        let d = day("2026-10-29");
+        create(&dir, d).expect("creates");
+        let text = "layout: page\ntitle: Kickoff\ndate: 2026-10-29\n---\n\nnew body\n";
+        save(&dir, d, text).expect("saves");
+        assert_eq!(raw(&dir, d).as_deref(), Some(text));
+        let n = get(&dir, d).expect("note");
+        assert_eq!((n.title.as_str(), n.body.as_str()), ("Kickoff", "new body"));
+        assert_eq!(list(&dir).len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_unreadable_note_is_refused_and_leaves_the_file() {
+        let dir = scratch("refuse");
+        let d = day("2026-10-29");
+        create(&dir, d).expect("creates");
+        let before = raw(&dir, d);
+        for bad in [
+            "---\ntitle: [oops\n---\nbody",
+            "---\ntitle: x\nno close",
+            "title: [oops\n---\nbody",
+            "a\0b",
+        ] {
+            assert!(save(&dir, d, bad).is_err(), "{bad:?}");
+        }
+        assert_eq!(raw(&dir, d), before);
+        // prose with a rule is fine, and so is no header at all
+        assert!(check("hello\n\n---\n\nworld").is_ok());
+        assert!(check("").is_ok());
+        // a note that is not there is not created by a save
+        assert!(save(&dir, day("2026-10-30"), "x").is_err());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     fn day(d: &str) -> NaiveDate {
