@@ -21,7 +21,8 @@ use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
 use crate::models::Organization;
 use crate::platform::{JsonWebhook, Named, TimePlatform};
-use crate::push::{self, Gh, Github, Item, Target};
+use crate::github::{GhCli, IssueTracker};
+use crate::push::{self, Item, Target};
 use crate::reporting::{DateRange, fmt_date, worklog_text};
 use crate::secret::{self, Keychain};
 use crate::utils::report::parse_day;
@@ -200,7 +201,7 @@ pub fn handle(
     form: &ShareForm,
     now: NaiveDateTime,
     connect: Connect,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
 ) -> Outcome {
     match answer(db, id, form, now, connect, gh) {
         Ok(outcome) => outcome,
@@ -214,7 +215,7 @@ fn answer(
     form: &ShareForm,
     now: NaiveDateTime,
     connect: Connect,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
 ) -> IterResult<Outcome> {
     let org = db
         .get::<Organization>(id)?
@@ -244,7 +245,7 @@ fn push_step(
     form: &ShareForm,
     now: NaiveDateTime,
     connect: Connect,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
 ) -> IterResult<Outcome> {
     if org.platform_url.trim().is_empty() {
         return Err(IterError::CommandFailed(format!(
@@ -290,7 +291,7 @@ async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl
     let form = ShareForm::parse(&pairs);
     let db = open_db()?;
     let now = now();
-    let outcome = handle(&db, id, &form, now, &connect_real, &Gh);
+    let outcome = handle(&db, id, &form, now, &connect_real, &GhCli::system());
     // the Report tab of the period asked for, or the default when it was bad
     let valid = form.range(now).is_ok();
     let (from, to) = match valid {
@@ -431,18 +432,7 @@ mod tests {
     use crate::secret::fake::MemoryKeys;
     use crate::secret::{KeyStore, Secret};
 
-    struct NoGh;
-    impl Github for NoGh {
-        fn is_closed(&self, _: &str, _: i64) -> IterResult<bool> {
-            Ok(false)
-        }
-        fn close(&self, _: &str, _: i64) -> IterResult<()> {
-            Ok(())
-        }
-        fn comment(&self, _: &str, _: i64, _: &str) -> IterResult<()> {
-            Ok(())
-        }
-    }
+    use crate::github::fake::Inert as NoGh;
 
     fn dt(s: &str) -> NaiveDateTime {
         NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").unwrap()

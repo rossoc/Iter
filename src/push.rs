@@ -14,7 +14,7 @@
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::github::{self, IssueState};
+use crate::github::IssueTracker;
 use crate::models::{Organization, Project, Push, Task, TaskStatus};
 use crate::platform::{Named, TimePlatform};
 use crate::reporting::{DateRange, Worklog, WorklogEntry, fmt_date, worklog_line};
@@ -309,28 +309,6 @@ pub fn choices(platform: &dyn TimePlatform, project: &str) -> (Vec<Named>, Vec<N
     (projects, activities)
 }
 
-/// The GitHub side, behind a trait so it can be faked.
-pub trait Github {
-    fn is_closed(&self, repo_path: &str, number: i64) -> Result<bool>;
-    fn close(&self, repo_path: &str, number: i64) -> Result<()>;
-    fn comment(&self, repo_path: &str, number: i64, body: &str) -> Result<()>;
-}
-
-/// `gh`, through `crate::github`.
-pub struct Gh;
-
-impl Github for Gh {
-    fn is_closed(&self, repo_path: &str, number: i64) -> Result<bool> {
-        Ok(github::fetch_issue(repo_path, number)?.state == IssueState::Closed)
-    }
-    fn close(&self, repo_path: &str, number: i64) -> Result<()> {
-        github::set_issue_state(repo_path, number, IssueState::Closed)
-    }
-    fn comment(&self, repo_path: &str, number: i64, body: &str) -> Result<()> {
-        github::post_comment(repo_path, number, body)
-    }
-}
-
 /// What happened to one thing a push does.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Item {
@@ -373,7 +351,7 @@ pub fn execute(
     plan: &Plan,
     check: &Check,
     platform: &dyn TimePlatform,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
     now: NaiveDateTime,
 ) -> Result<Vec<Item>> {
     // What an earlier, incomplete run of this same worklog already got
@@ -485,6 +463,7 @@ pub fn execute(
 mod tests {
     use super::*;
     use crate::fixtures;
+    use crate::github::{Issue, IssueState};
     use crate::platform::fake::FakePlatform;
     use std::cell::RefCell;
 
@@ -499,12 +478,21 @@ mod tests {
         fail_comment: bool,
     }
 
-    impl Github for FakeGh {
-        fn is_closed(&self, _: &str, n: i64) -> Result<bool> {
+    impl IssueTracker for FakeGh {
+        fn fetch(&self, _: &str, n: i64) -> Result<Issue> {
             self.calls.borrow_mut().push(format!("view #{n}"));
-            Ok(self.closed)
+            Ok(Issue {
+                number: n,
+                title: String::new(),
+                body: String::new(),
+                state: match self.closed {
+                    true => IssueState::Closed,
+                    false => IssueState::Open,
+                },
+            })
         }
-        fn close(&self, _: &str, n: i64) -> Result<()> {
+        fn set_state(&self, _: &str, n: i64, state: IssueState) -> Result<()> {
+            assert_eq!(state, IssueState::Closed);
             self.calls.borrow_mut().push(format!("close #{n}"));
             Ok(())
         }
@@ -514,6 +502,18 @@ mod tests {
             }
             self.calls.borrow_mut().push(format!("comment #{n} {body}"));
             Ok(())
+        }
+        fn list(&self, _: &str) -> Result<Vec<Issue>> {
+            unreachable!("a push never lists issues")
+        }
+        fn create(&self, _: &str, _: &str, _: &str, _: &str) -> Result<i64> {
+            unreachable!("a push never opens issues")
+        }
+        fn set_body(&self, _: &str, _: i64, _: &str) -> Result<()> {
+            unreachable!("a push never edits issue bodies")
+        }
+        fn assign_self(&self, _: &str, _: i64) -> Result<()> {
+            unreachable!("a push never assigns")
         }
     }
 

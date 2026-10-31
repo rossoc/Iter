@@ -1,6 +1,6 @@
 use crate::error::{IterError, Result};
 use crate::models::TaskStatus;
-use crate::process::{Gh, Tool};
+use crate::process::{Runner, SYSTEM};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
@@ -62,104 +62,198 @@ const ISSUE_FIELDS: &str = "number,title,body,state";
 /// when it is.
 const ISSUE_LIMIT: usize = 1000;
 
-/// Fetches an issue via the `gh` CLI, run from `repo_path` so `gh` infers
-/// the repo from its git remote -- `iter` never stores or parses an
+/// The GitHub side of the CLI, behind a trait so it can be faked. Every
+/// method runs against the repository at `repo_path`, whose git remote tells
+/// `gh` which GitHub repo is meant -- `iter` never stores or parses an
 /// "owner/repo" string itself.
-pub fn fetch_issue(repo_path: &str, number: i64) -> Result<Issue> {
-    let json =
-        Gh(repo_path).output(&["issue", "view", &number.to_string(), "--json", ISSUE_FIELDS])?;
-    Ok(parse_json::<RawIssue>("issue view", &json)?.into())
-}
+pub trait IssueTracker {
+    /// Fetches one issue.
+    fn fetch(&self, repo_path: &str, number: i64) -> Result<Issue>;
 
-/// Every issue in the repo at `repo_path`, open and closed alike -- pulling
-/// only the open ones would leave a task no way to learn its issue was
-/// closed. `gh issue list` excludes pull requests of its own accord.
-pub fn list_issues(repo_path: &str) -> Result<Vec<Issue>> {
-    let limit = ISSUE_LIMIT.to_string();
-    let json = Gh(repo_path).output(&[
-        "issue",
-        "list",
-        "--state",
-        "all",
-        "--limit",
-        &limit,
-        "--json",
-        ISSUE_FIELDS,
-    ])?;
-    let raw: Vec<RawIssue> = parse_json("issue list", &json)?;
-    // `gh` lists newest first, so a repo past the cap loses its *oldest*
-    // issues -- and a task linked to one of those reads as "issue #N isn't
-    // in this repo", which is what a deleted issue looks like too. Better
-    // to say the list was cut short than to let the two be the same thing.
-    if raw.len() >= ISSUE_LIMIT {
-        eprintln!(
-            "warning: only the {ISSUE_LIMIT} most recent issues were read -- \
-             anything older is invisible to this run"
-        );
+    /// Every issue in the repo, open and closed alike -- pulling only the
+    /// open ones would leave a task no way to learn its issue was closed.
+    fn list(&self, repo_path: &str) -> Result<Vec<Issue>>;
+
+    /// Opens a new issue and returns its number. A new issue is always
+    /// open, whatever the task that asked for it is at -- the caller closes
+    /// it after if it has to.
+    ///
+    /// `project` is the title of a GitHub Project to file the issue under,
+    /// or empty for none. It's handed to `gh` unchecked: `gh` resolves the
+    /// title itself and refuses to create the issue if there's no such
+    /// board, so a name that doesn't resolve costs a failed call rather
+    /// than an issue filed nowhere.
+    fn create(&self, repo_path: &str, title: &str, body: &str, project: &str) -> Result<i64>;
+
+    /// Replaces an issue's body. Only ever called for `--body`, which is
+    /// what makes overwriting what's on GitHub something you asked for
+    /// rather than something a status sync did on its own.
+    fn set_body(&self, repo_path: &str, number: i64, body: &str) -> Result<()>;
+
+    /// Adds the authenticated user to an issue's assignees, leaving whoever
+    /// is already there in place. Signing an issue "done at least by me",
+    /// not claiming it alone.
+    fn assign_self(&self, repo_path: &str, number: i64) -> Result<()>;
+
+    /// Closes or reopens an issue, to match the status of its task.
+    fn set_state(&self, repo_path: &str, number: i64, state: IssueState) -> Result<()>;
+
+    /// Posts `body` as a new comment on an issue.
+    fn comment(&self, repo_path: &str, number: i64, body: &str) -> Result<()>;
+
+    fn is_closed(&self, repo_path: &str, number: i64) -> Result<bool> {
+        Ok(self.fetch(repo_path, number)?.state == IssueState::Closed)
     }
-    Ok(raw.into_iter().map(Issue::from).collect())
-}
 
-/// Opens a new issue and returns its number. A new issue is always open,
-/// whatever the task that asked for it is at -- the caller closes it after
-/// if it has to.
-///
-/// `project` is the title of a GitHub Project to file the issue under, or
-/// empty for none. It's handed to `gh` unchecked: `gh` resolves the title
-/// itself and refuses to create the issue if there's no such board, so a
-/// name that doesn't resolve costs a failed call rather than an issue filed
-/// nowhere. (Resolving one at all needs a token with the Projects
-/// permission -- `gh auth refresh -s project` on a classic login.)
-pub fn create_issue(repo_path: &str, title: &str, body: &str, project: &str) -> Result<i64> {
-    let mut args = vec!["issue", "create", "--title", title, "--body", body];
-    if !project.is_empty() {
-        args.extend(["--project", project]);
+    fn close(&self, repo_path: &str, number: i64) -> Result<()> {
+        self.set_state(repo_path, number, IssueState::Closed)
     }
-    let output = Gh(repo_path).output(&args)?;
-    issue_number_from_url(&output).ok_or_else(|| {
-        IterError::CommandFailed(format!(
-            "gh issue create printed no issue URL: {}",
-            output.trim()
-        ))
-    })
 }
 
-/// Runs `gh issue <verb> <number> [rest]` in `repo_path`. Every write below
-/// is that shape, so the number is stringified and the argument list
-/// assembled in one place rather than at each of them.
-fn gh_issue(repo_path: &str, verb: &str, number: i64, rest: &[&str]) -> Result<()> {
-    let number = number.to_string();
-    let mut args = vec!["issue", verb, &number];
-    args.extend_from_slice(rest);
-    Gh(repo_path).run(&args)
+/// The `gh` CLI, driven through a [`Runner`].
+pub struct GhCli<'a> {
+    runner: &'a dyn Runner,
 }
 
-/// Replaces an issue's body with `body`. Only ever called for `--body`,
-/// which is what makes overwriting what's on GitHub something you asked
-/// for rather than something a status sync did on its own.
-pub fn set_issue_body(repo_path: &str, number: i64, body: &str) -> Result<()> {
-    gh_issue(repo_path, "edit", number, &["--body", body])
+impl GhCli<'static> {
+    /// The real `gh`.
+    pub fn system() -> Self {
+        GhCli { runner: &SYSTEM }
+    }
 }
 
-/// Adds the authenticated user to an issue's assignees, leaving whoever is
-/// already there in place -- `--add-assignee`, not `--assignee`. Signing an
-/// issue "done at least by me", not claiming it alone.
-pub fn assign_self(repo_path: &str, number: i64) -> Result<()> {
-    gh_issue(repo_path, "edit", number, &["--add-assignee", "@me"])
+impl<'a> GhCli<'a> {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn new(runner: &'a dyn Runner) -> Self {
+        GhCli { runner }
+    }
+
+    /// Runs `gh issue <verb> <number> [rest]` in `repo_path`. Every write is
+    /// that shape, so the number is stringified and the argument list
+    /// assembled in one place rather than at each of them.
+    fn issue(&self, repo_path: &str, verb: &str, number: i64, rest: &[&str]) -> Result<()> {
+        let number = number.to_string();
+        let mut args = vec!["issue", verb, &number];
+        args.extend_from_slice(rest);
+        self.runner.run("gh", Some(repo_path), &args)
+    }
 }
 
-/// Closes or reopens an issue, to match the status of the task tracking it.
-pub fn set_issue_state(repo_path: &str, number: i64, state: IssueState) -> Result<()> {
-    let verb = match state {
-        IssueState::Open => "reopen",
-        IssueState::Closed => "close",
-    };
-    gh_issue(repo_path, verb, number, &[])
+impl IssueTracker for GhCli<'_> {
+    fn fetch(&self, repo_path: &str, number: i64) -> Result<Issue> {
+        let json = self.runner.output(
+            "gh",
+            Some(repo_path),
+            &["issue", "view", &number.to_string(), "--json", ISSUE_FIELDS],
+        )?;
+        Ok(parse_json::<RawIssue>("issue view", &json)?.into())
+    }
+
+    /// `gh issue list` excludes pull requests of its own accord.
+    fn list(&self, repo_path: &str) -> Result<Vec<Issue>> {
+        let limit = ISSUE_LIMIT.to_string();
+        let json = self.runner.output(
+            "gh",
+            Some(repo_path),
+            &[
+                "issue",
+                "list",
+                "--state",
+                "all",
+                "--limit",
+                &limit,
+                "--json",
+                ISSUE_FIELDS,
+            ],
+        )?;
+        let raw: Vec<RawIssue> = parse_json("issue list", &json)?;
+        // `gh` lists newest first, so a repo past the cap loses its *oldest*
+        // issues -- and a task linked to one of those reads as "issue #N
+        // isn't in this repo", which is what a deleted issue looks like too.
+        // Better to say the list was cut short than to let the two be the
+        // same thing.
+        if raw.len() >= ISSUE_LIMIT {
+            eprintln!(
+                "warning: only the {ISSUE_LIMIT} most recent issues were read -- \
+                 anything older is invisible to this run"
+            );
+        }
+        Ok(raw.into_iter().map(Issue::from).collect())
+    }
+
+    fn create(&self, repo_path: &str, title: &str, body: &str, project: &str) -> Result<i64> {
+        let mut args = vec!["issue", "create", "--title", title, "--body", body];
+        if !project.is_empty() {
+            args.extend(["--project", project]);
+        }
+        let output = self.runner.output("gh", Some(repo_path), &args)?;
+        issue_number_from_url(&output).ok_or_else(|| {
+            IterError::CommandFailed(format!(
+                "gh issue create printed no issue URL: {}",
+                output.trim()
+            ))
+        })
+    }
+
+    fn set_body(&self, repo_path: &str, number: i64, body: &str) -> Result<()> {
+        self.issue(repo_path, "edit", number, &["--body", body])
+    }
+
+    /// `--add-assignee`, not `--assignee`.
+    fn assign_self(&self, repo_path: &str, number: i64) -> Result<()> {
+        self.issue(repo_path, "edit", number, &["--add-assignee", "@me"])
+    }
+
+    fn set_state(&self, repo_path: &str, number: i64, state: IssueState) -> Result<()> {
+        let verb = match state {
+            IssueState::Open => "reopen",
+            IssueState::Closed => "close",
+        };
+        self.issue(repo_path, verb, number, &[])
+    }
+
+    fn comment(&self, repo_path: &str, number: i64, body: &str) -> Result<()> {
+        self.issue(repo_path, "comment", number, &["--body", body])
+    }
 }
 
-/// Posts `body` as a new comment on an issue, via `gh`, from `repo_path`.
-pub fn post_comment(repo_path: &str, number: i64, body: &str) -> Result<()> {
-    gh_issue(repo_path, "comment", number, &["--body", body])
+/// Tracker fakes for tests elsewhere.
+#[cfg(test)]
+pub mod fake {
+    use super::*;
+
+    /// A tracker with nothing in it: reads find no closed issue, writes
+    /// succeed and are forgotten.
+    pub struct Inert;
+
+    impl IssueTracker for Inert {
+        fn fetch(&self, _: &str, number: i64) -> Result<Issue> {
+            Ok(Issue {
+                number,
+                title: String::new(),
+                body: String::new(),
+                state: IssueState::Open,
+            })
+        }
+        fn list(&self, _: &str) -> Result<Vec<Issue>> {
+            Ok(Vec::new())
+        }
+        fn create(&self, _: &str, _: &str, _: &str, _: &str) -> Result<i64> {
+            Ok(1)
+        }
+        fn set_body(&self, _: &str, _: i64, _: &str) -> Result<()> {
+            Ok(())
+        }
+        fn assign_self(&self, _: &str, _: i64) -> Result<()> {
+            Ok(())
+        }
+        fn set_state(&self, _: &str, _: i64, _: IssueState) -> Result<()> {
+            Ok(())
+        }
+        fn comment(&self, _: &str, _: i64, _: &str) -> Result<()> {
+            Ok(())
+        }
+    }
 }
 
 /// An issue exactly as `gh --json` hands it over, before the tidying
@@ -215,6 +309,74 @@ fn issue_number_from_url(output: &str) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::process::fake::FakeRunner;
+
+    const REPO: &str = "/repo";
+
+    #[test]
+    fn closing_an_issue_runs_gh_issue_close_in_the_repo() {
+        let runner = FakeRunner::default();
+        GhCli::new(&runner).close(REPO, 7).unwrap();
+        assert_eq!(runner.calls(), ["[/repo] gh issue close 7"]);
+    }
+
+    #[test]
+    fn reopening_runs_gh_issue_reopen() {
+        let runner = FakeRunner::default();
+        GhCli::new(&runner)
+            .set_state(REPO, 7, IssueState::Open)
+            .unwrap();
+        assert_eq!(runner.calls(), ["[/repo] gh issue reopen 7"]);
+    }
+
+    #[test]
+    fn a_comment_is_posted_with_its_body_as_one_argument() {
+        let runner = FakeRunner::default();
+        GhCli::new(&runner).comment(REPO, 3, "two words").unwrap();
+        assert_eq!(runner.calls(), ["[/repo] gh issue comment 3 --body two words"]);
+    }
+
+    #[test]
+    fn a_failing_gh_is_an_error() {
+        let runner = FakeRunner::default();
+        runner.fail("gh issue close");
+        let error = GhCli::new(&runner).close(REPO, 7).unwrap_err();
+        assert!(error.to_string().contains("gh issue close 7 failed"), "{error}");
+    }
+
+    #[test]
+    fn is_closed_reads_the_state_from_gh_issue_view() {
+        let runner = FakeRunner::default();
+        runner.reply(
+            "gh issue view 7",
+            r#"{"body":"","number":7,"state":"CLOSED","title":"t"}"#,
+        );
+        assert!(GhCli::new(&runner).is_closed(REPO, 7).unwrap());
+        assert_eq!(
+            runner.calls(),
+            ["[/repo] gh issue view 7 --json number,title,body,state"]
+        );
+    }
+
+    #[test]
+    fn creating_an_issue_files_it_under_the_project_when_given() {
+        let runner = FakeRunner::default();
+        runner.reply("gh issue create", "https://github.com/o/r/issues/12\n");
+        let n = GhCli::new(&runner).create(REPO, "T", "B", "Board").unwrap();
+        assert_eq!(n, 12);
+        assert_eq!(
+            runner.calls(),
+            ["[/repo] gh issue create --title T --body B --project Board"]
+        );
+    }
+
+    #[test]
+    fn signing_adds_me_as_an_assignee() {
+        let runner = FakeRunner::default();
+        GhCli::new(&runner).assign_self(REPO, 5).unwrap();
+        assert_eq!(runner.calls(), ["[/repo] gh issue edit 5 --add-assignee @me"]);
+    }
 
     /// Compact JSON, uppercase states, CRLF and escapes in a body -- what
     /// `gh issue list --json` actually prints.

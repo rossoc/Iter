@@ -23,7 +23,8 @@ use crate::utils::resolve::{
     task_display,
 };
 use crate::utils::workspace::teardown_and_kill;
-use crate::{git, github};
+use crate::github::{self, GhCli, IssueTracker};
+use crate::git;
 
 /// Note that bare `iter task` is handled in `main` rather than here: it
 /// means the unfinished work across every project, a filter no
@@ -106,12 +107,12 @@ impl Run for TaskCommand {
                 project,
                 task,
                 body,
-            } => task_pull(app, project.as_deref(), task.as_deref(), *body),
+            } => task_pull(app, &GhCli::system(), project.as_deref(), task.as_deref(), *body),
             Self::Push {
                 project,
                 task,
                 body,
-            } => task_push(app, project.as_deref(), task.as_deref(), *body),
+            } => task_push(app, &GhCli::system(), project.as_deref(), task.as_deref(), *body),
             Self::Weekday { task } => task_weekday(app, task.as_deref()),
         }
     }
@@ -129,7 +130,7 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
     );
     if let Some(issue_number) = issue {
         require_github(&project)?;
-        let issue = github::fetch_issue(&project.base_path, issue_number)?;
+        let issue = GhCli::system().fetch(&project.base_path, issue_number)?;
         template.name = issue.title;
         template.description = issue.body;
         template.github_issue = Some(issue.number);

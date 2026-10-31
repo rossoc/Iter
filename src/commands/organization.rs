@@ -9,7 +9,8 @@ use crate::error::{IterError, Result};
 use crate::models::Organization;
 use crate::platform::JsonWebhook;
 use crate::process::run_status;
-use crate::push::{self, Gh, Target};
+use crate::github::GhCli;
+use crate::push::{self, Target};
 use crate::reporting::{Header, OrganizationInfo, Report, settings_of};
 use crate::secret::{self, KeyStore, Keychain, Secret};
 use crate::utils::crud::{create, delete_group, update_group};
@@ -238,7 +239,7 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
             ));
         }
     }
-    let items = push::execute(db, &organization, &plan, check, platform, &Gh, app.now)?;
+    let items = push::execute(db, &organization, &plan, check, platform, &GhCli::system(), app.now)?;
     println!();
     for item in &items {
         match item.error {

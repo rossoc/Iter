@@ -141,25 +141,9 @@ pub trait Tool {
         run_status(Self::BIN, self.dir(), args)
     }
 
-    fn output<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<String> {
-        output(Self::BIN, self.dir(), args)
-    }
-
     fn output_trimmed<S: AsRef<OsStr>>(&self, args: &[S]) -> Option<String> {
         output_trimmed(Self::BIN, self.dir(), args)
     }
-
-    fn succeeds<S: AsRef<OsStr>>(&self, args: &[S]) -> bool {
-        succeeds(Self::BIN, self.dir(), args)
-    }
-}
-
-/// `tmux`, which is always addressed by session name rather than by
-/// directory -- hence no `dir`.
-pub struct Tmux;
-
-impl Tool for Tmux {
-    const BIN: &'static str = "tmux";
 }
 
 /// `git`, in the repository at the given path -- or, for `clone`, wherever
@@ -174,15 +158,121 @@ impl Tool for Git<'_> {
     }
 }
 
-/// `gh`, in a repository whose remote tells it which GitHub repo is meant.
-/// `iter` never stores or parses an "owner/repo" string of its own, so the
-/// directory is the whole of the addressing.
-pub struct Gh<'a>(pub &'a str);
+/// The command runner behind the tool clients (`GhCli`, `TmuxClient`), as an
+/// object-safe trait so a fake can record argv instead of spawning anything.
+///
+/// [`Tool`] stays the ergonomic, generic spelling for the callers that run
+/// a real binary directly; this is the seam for the ones that must be
+/// testable. The arguments are `&[&str]` rather than generic for the sake of
+/// object safety.
+pub trait Runner {
+    /// See [`run_status`].
+    fn run_status(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<bool>;
+    /// See [`output`].
+    fn output(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<String>;
+    /// See [`succeeds`].
+    fn succeeds(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> bool;
 
-impl Tool for Gh<'_> {
-    const BIN: &'static str = "gh";
+    /// See [`run`].
+    fn run(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<()> {
+        match self.run_status(tool, dir, args)? {
+            true => Ok(()),
+            false => Err(IterError::CommandFailed(failure_message(tool, args))),
+        }
+    }
 
-    fn dir(&self) -> Option<&str> {
-        Some(self.0)
+    /// See [`output_trimmed`].
+    fn output_trimmed(
+        &self,
+        tool: &'static str,
+        dir: Option<&str>,
+        args: &[&str],
+    ) -> Option<String> {
+        let value = self.output(tool, dir, args).ok()?;
+        let value = value.trim();
+        match value.is_empty() {
+            true => None,
+            false => Some(value.to_string()),
+        }
+    }
+}
+
+/// The [`Runner`] that really spawns processes.
+pub struct SystemRunner;
+
+impl Runner for SystemRunner {
+    fn run_status(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<bool> {
+        run_status(tool, dir, args)
+    }
+    fn output(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<String> {
+        output(tool, dir, args)
+    }
+    fn succeeds(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> bool {
+        succeeds(tool, dir, args)
+    }
+}
+
+/// The one process-wide [`SystemRunner`], for the `system()` constructors.
+pub static SYSTEM: SystemRunner = SystemRunner;
+
+/// A [`Runner`] that records every invocation as `tool arg arg...` and
+/// answers from a script, for tests.
+#[cfg(test)]
+pub mod fake {
+    use super::*;
+    use std::cell::RefCell;
+
+    #[derive(Default)]
+    pub struct FakeRunner {
+        pub calls: RefCell<Vec<String>>,
+        /// `(prefix, stdout)`: the first entry whose prefix starts a call's
+        /// `tool args` line answers it with that stdout.
+        pub replies: RefCell<Vec<(String, String)>>,
+        /// Prefixes of calls that exit nonzero.
+        pub failing: RefCell<Vec<String>>,
+    }
+
+    impl FakeRunner {
+        pub fn reply(&self, prefix: &str, stdout: &str) {
+            self.replies.borrow_mut().push((prefix.into(), stdout.into()));
+        }
+        pub fn fail(&self, prefix: &str) {
+            self.failing.borrow_mut().push(prefix.into());
+        }
+        pub fn calls(&self) -> Vec<String> {
+            self.calls.borrow().clone()
+        }
+        fn record(&self, tool: &str, dir: Option<&str>, args: &[&str]) -> (String, bool) {
+            let line = format!("{tool} {}", args.join(" "));
+            let line = line.trim_end().to_string();
+            let ok = !self.failing.borrow().iter().any(|p| line.starts_with(p));
+            let shown = match dir {
+                Some(dir) => format!("[{dir}] {line}"),
+                None => line.clone(),
+            };
+            self.calls.borrow_mut().push(shown);
+            (line, ok)
+        }
+    }
+
+    impl Runner for FakeRunner {
+        fn run_status(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<bool> {
+            Ok(self.record(tool, dir, args).1)
+        }
+        fn output(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<String> {
+            let (line, ok) = self.record(tool, dir, args);
+            if !ok {
+                return Err(IterError::CommandFailed(failure_message(tool, args)));
+            }
+            let replies = self.replies.borrow();
+            Ok(replies
+                .iter()
+                .find(|(p, _)| line.starts_with(p))
+                .map(|(_, out)| out.clone())
+                .unwrap_or_default())
+        }
+        fn succeeds(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> bool {
+            self.record(tool, dir, args).1
+        }
     }
 }
