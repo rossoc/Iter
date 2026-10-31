@@ -7,25 +7,33 @@ use super::Id;
 use super::crumbs::trail;
 use super::load::{Parents, parents_of};
 use super::ui::breadcrumb::Crumb;
+use super::forms;
+use super::sections::NoteTab;
 use super::ui::empty_line::empty_line;
+use super::ui::field::textarea;
+use super::ui::form::form_shell;
+use super::ui::form_error::FormError;
 use super::ui::frame::frame;
+use super::ui::tabs::{Tab, tabs};
 use super::ui::notes::{Month, NoteItem, NoteLink, note_nav, notes_tab};
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
-use super::url::{edit_url, note_url, notes_tab_url, notes_today_url, org_url, project_url};
+use super::url::{edit_url, note_tab_url, note_url, notes_tab_url, notes_today_url, org_url, project_url};
 use super::{now, open_db};
 use crate::db::Db;
 use crate::models::{Organization, Project};
 use crate::notes::{self as journal, Note};
 use chrono::{Datelike, NaiveDate};
+use serde::Deserialize;
 use std::path::PathBuf;
 use topcoat::{
     Result,
     context::Cx,
     router::{
         RouterBuilder,
+        content::Form,
         error::{RouterErrorExt, see_other},
-        page, path_param,
+        page, path_param, query_params,
         response::Response,
         route,
     },
@@ -34,11 +42,28 @@ use topcoat::{
 
 path_param!(date: String, error = bad_request);
 
+/// The note page's query: which tab is open (`?tab=`, see [`NoteTab`]).
+#[query_params(error = bad_request)]
+pub struct NoteQuery {
+    pub tab: Option<String>,
+}
+
+/// The editor's submission: the note's whole file text.
+#[derive(Deserialize)]
+pub struct NoteForm {
+    text: String,
+}
+
+/// The name of the editor's textarea (and of the submitted field).
+const TEXT: &str = "text";
+
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder
         .page(project_note)
+        .page(project_note_save)
         .route(project_today)
         .page(org_note)
+        .page(org_note_save)
         .route(org_today)
 }
 
@@ -133,6 +158,12 @@ pub struct NotePage {
     note: Note,
     prev: Option<NoteLink>,
     next: Option<NoteLink>,
+    /// The page's own URL base (the owner's), for the tabs and the form.
+    base: String,
+    tab: NoteTab,
+    /// The file's text, as the editor starts out (or as typed, if refused).
+    text: String,
+    error: Option<FormError>,
 }
 
 fn dir_or_404(dir: Option<PathBuf>) -> topcoat::Result<PathBuf> {
@@ -192,7 +223,7 @@ impl Owner {
     }
 
     /// The note of `day`, with its neighbours. No such note is a 404.
-    fn note_page(&self, day: NaiveDate) -> topcoat::Result<NotePage> {
+    fn note_page(&self, day: NaiveDate, tab: NoteTab) -> topcoat::Result<NotePage> {
         let notes = journal::list(&self.dir);
         let (prev, next) = journal::neighbours(&notes, day);
         let (prev, next) = (
@@ -211,7 +242,27 @@ impl Owner {
             note,
             prev,
             next,
+            base: self.base.clone(),
+            tab,
+            text: journal::raw(&self.dir, day).unwrap_or_default(),
+            error: None,
         })
+    }
+
+    /// Saves the editor's `text` as the file of `day`, then goes back to
+    /// the Info tab (an `Err`, as every redirect here is). A text that will
+    /// not do comes back as the editor again, filled in, with the error.
+    fn save(&self, day: NaiveDate, text: &str) -> topcoat::Result<NotePage> {
+        let text = forms::text(text);
+        match journal::save(&self.dir, day, &text) {
+            Ok(()) => Err(see_other(note_tab_url(&self.base, day, NoteTab::Info)).into()),
+            Err(e) => {
+                let mut page = self.note_page(day, NoteTab::Edit)?;
+                page.error = Some(FormError::new(&e, Some(TEXT)));
+                page.text = text;
+                Ok(page)
+            }
+        }
     }
 
     /// Makes sure today's note exists, then redirects to it: always an
@@ -239,7 +290,8 @@ fn link(base: &str, note: &Note) -> NoteLink {
 async fn project_note(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let day = day_of(cx)?;
-    let page = Owner::project(&open_db()?, id)?.note_page(day)?;
+    let tab = NoteTab::of(query_params::<NoteQuery>(cx)?.tab.as_deref());
+    let page = Owner::project(&open_db()?, id)?.note_page(day, tab)?;
     Ok(view! { note_screen(page: &page) })
 }
 
@@ -247,7 +299,26 @@ async fn project_note(cx: &Cx) -> Result<impl View> {
 async fn org_note(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let day = day_of(cx)?;
-    let page = Owner::org(&open_db()?, id)?.note_page(day)?;
+    let tab = NoteTab::of(query_params::<NoteQuery>(cx)?.tab.as_deref());
+    let page = Owner::org(&open_db()?, id)?.note_page(day, tab)?;
+    Ok(view! { note_screen(page: &page) })
+}
+
+/// `POST /project/{id}/notes/{date}`: saves the editor.
+#[page(POST "/project/{id}/notes/{date}")]
+async fn project_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View> {
+    let id = *path_param::<Id>(cx)?;
+    let day = day_of(cx)?;
+    let page = Owner::project(&open_db()?, id)?.save(day, &form.text)?;
+    Ok(view! { note_screen(page: &page) })
+}
+
+/// `POST /org/{id}/notes/{date}`: as the project's.
+#[page(POST "/org/{id}/notes/{date}")]
+async fn org_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View> {
+    let id = *path_param::<Id>(cx)?;
+    let day = day_of(cx)?;
+    let page = Owner::org(&open_db()?, id)?.save(day, &form.text)?;
     Ok(view! { note_screen(page: &page) })
 }
 
@@ -265,6 +336,15 @@ async fn org_today(cx: &Cx) -> Result<Response> {
     Owner::org(&open_db()?, id)?.open_today()
 }
 
+/// The Info and Edit tabs of the note of `day` on the page at `base`.
+fn note_tabs(base: &str, day: NaiveDate, current: NoteTab) -> Vec<Tab> {
+    super::sections::tabs_for(
+        current,
+        NoteTab::ALL
+            .map(|t| (t, Tab::link(t.label(), note_tab_url(base, day, t)))),
+    )
+}
+
 #[component]
 async fn note_screen(page: &NotePage) -> Result<impl View> {
     let NotePage {
@@ -273,21 +353,34 @@ async fn note_screen(page: &NotePage) -> Result<impl View> {
         note,
         prev,
         next,
+        base,
+        tab,
+        text,
+        error,
     } = page;
     let when = note.date.format("%A %-d %B %Y").to_string();
     let iso = crate::reporting::fmt_date(note.date);
     let parts = [note.title.as_str(), "Notes", owner.as_str()];
+    let items = note_tabs(base, note.date, *tab);
+    let here = note_tab_url(base, note.date, NoteTab::Info);
     Ok(view! {
         frame(
             title: &parts,
             page_header(title: note.title.as_str(), kicker: Kicker::Crumbs(crumbs))
+            tabs(label: "Note sections", items: &items)
             <p class="note-date"><time datetime=(iso.as_str())>(when.as_str())</time></p>
-            if note.body.is_empty() {
-                empty_line("Nothing written on this day.")
+            if *tab == NoteTab::Edit {
+                form_shell(action: here.as_str(), error: error.as_ref(), cancel: here.as_str(),
+                    textarea(name: TEXT, label: "Note (markdown, with its front matter)", value: text.as_str())
+                )
             } else {
-                description(text: &note.body)
+                if note.body.is_empty() {
+                    empty_line("Nothing written on this day.")
+                } else {
+                    description(text: &note.body)
+                }
+                note_nav(prev: prev.as_ref(), next: next.as_ref())
             }
-            note_nav(prev: prev.as_ref(), next: next.as_ref())
         )
     })
 }
