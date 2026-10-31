@@ -144,10 +144,13 @@
   function enhanceInput(input) {
     var list = document.getElementById(input.getAttribute("list"));
     if (!list) return;
-    var options = Array.prototype.map.call(list.querySelectorAll("option"), function (o) {
-      var label = o.label && o.label !== o.value ? o.label : o.textContent.trim();
-      return { value: o.value, text: o.value, hint: label && label !== o.value ? label : "" };
-    });
+    // read at each use, so a list a script refreshes (platform.js) is current
+    var choices = function () {
+      return Array.prototype.map.call(list.querySelectorAll("option"), function (o) {
+        var label = o.label && o.label !== o.value ? o.label : o.textContent.trim();
+        return { value: o.value, text: o.value, hint: label && label !== o.value ? label : "" };
+      });
+    };
     input.removeAttribute("list"); // the native suggestions would show twice
     input.setAttribute("role", "combobox");
     input.setAttribute("aria-autocomplete", "list");
@@ -174,7 +177,7 @@
     // `all`: show every choice (a click), else the ones that match the text
     function render(all) {
       var q = input.value.trim().toLowerCase();
-      var shown = options.filter(function (o) {
+      var shown = choices().filter(function (o) {
         return all || !q || (o.value + " " + o.hint).toLowerCase().indexOf(q) >= 0;
       });
       var current = -1;

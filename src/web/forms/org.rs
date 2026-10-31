@@ -16,6 +16,11 @@ pub struct OrgForm {
     pub settings: SettingsForm,
     /// The folder of the organization's daily notes, or empty.
     pub notes_path: String,
+    /// The time platform's endpoint, the organization and the activity
+    /// hours are logged under.
+    pub platform_url: String,
+    pub platform_project: String,
+    pub platform_activity: String,
     /// The ids of the projects ticked.
     pub projects: Vec<i64>,
 }
@@ -24,6 +29,10 @@ impl OrgForm {
     /// The name of the notes folder control (also of the submitted field).
     pub const NOTES_PATH: &'static str = "notes_path";
 
+    pub const PLATFORM_URL: &'static str = "platform_url";
+    pub const PLATFORM_PROJECT: &'static str = "platform_project";
+    pub const PLATFORM_ACTIVITY: &'static str = "platform_activity";
+
     pub fn parse(pairs: &[(String, String)]) -> OrgForm {
         let pairs = Pairs(pairs);
         OrgForm {
@@ -31,6 +40,9 @@ impl OrgForm {
             description: pairs.first(DESCRIPTION),
             settings: SettingsForm::parse(&pairs),
             notes_path: pairs.first(Self::NOTES_PATH),
+            platform_url: pairs.first(Self::PLATFORM_URL),
+            platform_project: pairs.first(Self::PLATFORM_PROJECT),
+            platform_activity: pairs.first(Self::PLATFORM_ACTIVITY),
             projects: pairs.ids(PROJECTS),
         }
     }
@@ -47,6 +59,9 @@ impl EditForm for OrgForm {
         org.name = self.name.trim().to_string();
         org.description = text(&self.description);
         org.notes_path = self.notes_path.trim().to_string();
+        org.platform_url = self.platform_url.trim().to_string();
+        org.platform_project = self.platform_project.trim().to_string();
+        org.platform_activity = self.platform_activity.trim().to_string();
         org.set_settings(self.settings.settings());
         let valid = org.validate();
         (org, valid)

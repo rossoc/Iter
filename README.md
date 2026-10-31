@@ -41,6 +41,8 @@ iter organization edit acme
 iter organization delete acme       # deletes only the grouping; its projects are kept
 iter organization info acme         # what the whole organization spent that day, per project and per task
 iter organization list
+iter organization key acme          # set the time platform's API key (read from stdin; --clear removes it)
+iter organization push acme         # push today's worklog to the time platform (--date, --from/--to, --dry-run, --force)
 
 # boards
 iter board new                      # opens a blank board in nvim; save & quit to create it
@@ -104,7 +106,7 @@ today), or `--from`/`--to` for an interval; one formulation or the other,
 never both. Each end of the interval is optional: `--from` alone runs up to
 today, `--to` alone reaches back over every session there is.
 
-**How it's printed.** `--format`/`-f` is `text` (the default) or `yaml`.
+**How it's printed.** `--format`/`-f` is `text` (the default), `yaml`, or `worklog` (one line per task worked on in the period: `Completed <task>` when it is done, `Worked on <task>` otherwise; for organization and project reports).
 
 `text` is markdown: a YAML front matter block of the settings and totals,
 then the description and the breakdown as the body -- the same shape the
@@ -318,6 +320,27 @@ organizations existed simply have none, and keep working unchanged; `iter
 project edit myproj -o acme` moves one in. Deleting an organization deletes
 only the grouping -- every project, task and session survives, and the
 projects go back to belonging to none.
+
+**Pushing hours to a time platform.** Set `platform_url` (and, optionally,
+`platform_project` and `platform_activity`; the project defaults to the
+organization's name) with `iter org edit`, and the API key with
+`iter org key` (kept in the macOS keychain; `ITER_PLATFORM_KEY` overrides it
+for one run). The platform is a small JSON API behind that URL, every call with
+`Authorization: Bearer <key>`:
+
+- `GET <url>/projects` -> `{"projects": [{"id", "name"}]}`; `GET <url>/projects/<project-id>/activities` -> `{"activities": [{"id", "name"}]}`. They feed the suggestions in the organization's settings and in the Share pop-up, and iter turns the project and activity you give (a name, case ignored, or an id) into ids before sending;
+- `GET <url>/time-entries?from=yyyy-mm-dd&to=yyyy-mm-dd[&page=n]` -> `{"entries": [{"date", "time", "note", "project", "activity"}], "has_more"}`, both days included, `time` in minutes; the pages are followed;
+- `POST <url>/time-entries` with `{"entries": [{"project", "activity", "date", "time", "note"}]}` (ids; `time` in minutes; one entry per day) -> `{"results": [{"day", "status": "ok" | "conflict", "message"}]}`.
+
+`iter org push` sends one entry per day of the period (today unless `--date`
+or `--from`/`--to`). A day the platform already has an entry for is a
+conflict: it is shown in red and not pushed, and the other days still go
+through, so pushing the same day twice does not fail everything. An identical
+second push is refused unless `--force`. Tasks that are done, in a project with
+`github`, get their linked issue closed (if open) and a comment with their
+line, once their day was accepted. `--dry-run` prints what would happen
+(asking the platform what it holds, if there is a key) and sends nothing. The
+web Report tab's *Share* button opens a pop-up (copy or push, with the project and activity suggested by the platform) and does the same for the period it shows.
 
 ## Boards
 

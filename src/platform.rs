@@ -1,0 +1,589 @@
+//! The time-counting platform hours are pushed to.
+//!
+//! One generic JSON interface behind [`TimePlatform`], so a vendor adapter
+//! is a later, additive implementation of the trait. Paths are relative to
+//! the organization's `platform_url`; every call carries
+//! `Authorization: Bearer <key>`:
+//!
+//! * `GET /projects` -- `{"projects": [{"id", "name"}]}`.
+//! * `GET /projects/{project-id}/activities` -- `{"activities": [{"id", "name"}]}`.
+//! * `GET /time-entries?from=yyyy-mm-dd&to=yyyy-mm-dd[&page=n]` --
+//!   `{"entries": [{"date", "time", "note", "project", "activity", ...}],
+//!   "has_more"}`, both days included; `time` is in minutes, `project` and
+//!   `activity` are ids.
+//! * `POST /time-entries` with
+//!   `{"entries": [{"project", "activity", "date", "time", "note"}]}` (ids,
+//!   minutes) -- one entry per day. A day that already has an entry is
+//!   refused, but only that entry: the response is 2xx with
+//!   `{"results": [{"day", "status": "ok" | "conflict", "message"}]}`, so
+//!   pushing the same day twice does not fail everything. A response
+//!   without results means every entry was accepted.
+//!
+//! The key never appears in an error: everything that comes back is
+//! redacted first.
+
+use crate::error::{IterError, Result};
+use crate::reporting::{Worklog, WorklogEntry, fmt_date};
+use crate::secret::Secret;
+use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
+
+/// How many characters of an error response are shown.
+const BODY_LIMIT: usize = 500;
+
+/// What the platform said about one pushed entry.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct EntryResult {
+    pub day: String,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub message: String,
+}
+
+impl EntryResult {
+    pub fn accepted(&self) -> bool {
+        self.status.is_empty() || self.status == "ok"
+    }
+}
+
+/// A project or an activity of the platform: what is sent is its `id`, what
+/// is shown (and typed) its `name`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Named {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+}
+
+impl Named {
+    #[cfg(test)]
+    pub fn new(id: &str, name: &str) -> Self {
+        Named {
+            id: id.into(),
+            name: name.into(),
+        }
+    }
+
+    /// Whether `text` is this one's id, or its name (ignoring case).
+    pub fn is(&self, text: &str) -> bool {
+        let text = text.trim();
+        self.id == text || self.name.eq_ignore_ascii_case(text)
+    }
+}
+
+/// One page of `GET /time-entries`.
+#[derive(Deserialize)]
+struct Entries {
+    #[serde(default)]
+    entries: Vec<WireEntry>,
+    #[serde(default)]
+    has_more: bool,
+}
+
+/// An entry as the platform writes it: a date, minutes, and ids.
+#[derive(Deserialize)]
+struct WireEntry {
+    date: String,
+    #[serde(default)]
+    time: f64,
+    #[serde(default)]
+    note: String,
+    #[serde(default)]
+    project: String,
+    #[serde(default)]
+    activity: String,
+}
+
+impl From<WireEntry> for WorklogEntry {
+    fn from(e: WireEntry) -> Self {
+        WorklogEntry {
+            project: e.project,
+            activity: e.activity,
+            day: e.date,
+            time: e.time / 60.0,
+            note: e.note,
+        }
+    }
+}
+
+/// The body of a `POST /time-entries`.
+#[derive(Serialize)]
+struct Outgoing<'a> {
+    entries: Vec<OutgoingEntry<'a>>,
+}
+
+#[derive(Serialize)]
+struct OutgoingEntry<'a> {
+    project: &'a str,
+    activity: &'a str,
+    date: &'a str,
+    /// Minutes.
+    time: i64,
+    note: &'a str,
+}
+
+/// The most pages of entries read for one period.
+const MAX_PAGES: u32 = 50;
+
+#[derive(Deserialize)]
+struct Results {
+    #[serde(default)]
+    results: Vec<EntryResult>,
+}
+
+#[derive(Deserialize)]
+struct Projects {
+    #[serde(default)]
+    projects: Vec<Named>,
+}
+
+#[derive(Deserialize)]
+struct Activities {
+    #[serde(default)]
+    activities: Vec<Named>,
+}
+
+pub trait TimePlatform {
+    /// Sends `worklog`: the platform's verdict on each entry. An `Err` is
+    /// the request as a whole failing; a refused entry is a result.
+    fn push(&self, worklog: &Worklog) -> Result<Vec<EntryResult>>;
+    /// The entries already logged on the days `from..=to`.
+    fn fetch(&self, from: NaiveDate, to: NaiveDate) -> Result<Vec<WorklogEntry>>;
+    /// The user's projects.
+    fn projects(&self) -> Result<Vec<Named>>;
+    /// The activities of the project with this id.
+    fn activities(&self, project_id: &str) -> Result<Vec<Named>>;
+}
+
+/// `text` as one URL path segment.
+fn path_segment(text: &str) -> String {
+    use std::fmt::Write;
+    text.bytes().fold(String::new(), |mut out, b| {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => {
+                let _ = write!(out, "%{b:02X}");
+            }
+        }
+        out
+    })
+}
+
+/// The generic JSON interface described above.
+pub struct JsonWebhook {
+    url: String,
+    key: Secret,
+    agent: ureq::Agent,
+}
+
+impl JsonWebhook {
+    pub fn new(url: &str, key: Secret) -> Self {
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .http_status_as_error(false)
+            .timeout_global(Some(Duration::from_secs(30)))
+            .build()
+            .into();
+        JsonWebhook {
+            url: url.trim_end_matches('/').to_string(),
+            key,
+            agent,
+        }
+    }
+
+    /// The same platform with a shorter wait, for a page that asks while
+    /// someone is looking at it.
+    pub fn with_timeout(mut self, seconds: u64) -> Self {
+        self.agent = ureq::Agent::config_builder()
+            .http_status_as_error(false)
+            .timeout_global(Some(Duration::from_secs(seconds)))
+            .build()
+            .into();
+        self
+    }
+
+    fn bearer(&self) -> String {
+        format!("Bearer {}", self.key.expose())
+    }
+
+    fn fail(&self, what: &str) -> IterError {
+        IterError::Platform(self.key.redact(what))
+    }
+
+    /// The body of a 2xx response, or the error a refusal makes.
+    fn finish(
+        &self,
+        response: std::result::Result<ureq::http::Response<ureq::Body>, ureq::Error>,
+    ) -> Result<String> {
+        let mut response = response.map_err(|e| self.fail(&e.to_string()))?;
+        let status = response.status();
+        let body = response
+            .body_mut()
+            .read_to_string()
+            .map_err(|e| self.fail(&e.to_string()))?;
+        if status.is_success() {
+            return Ok(body);
+        }
+        let shown: String = body.trim().chars().take(BODY_LIMIT).collect();
+        Err(self.fail(&format!("HTTP {}: {shown}", status.as_u16())))
+    }
+
+    fn get(&self, url: &str, query: &[(&str, String)]) -> Result<String> {
+        let mut request = self.agent.get(url).header("Authorization", self.bearer());
+        for (k, v) in query {
+            request = request.query(k, v);
+        }
+        self.finish(request.call())
+    }
+
+    fn parse<T: serde::de::DeserializeOwned>(&self, body: &str) -> Result<T> {
+        serde_json::from_str(body).map_err(|e| self.fail(&format!("unexpected response: {e}")))
+    }
+}
+
+impl TimePlatform for JsonWebhook {
+    fn push(&self, worklog: &Worklog) -> Result<Vec<EntryResult>> {
+        let body = serde_json::to_string(&Outgoing {
+            entries: worklog
+                .entries
+                .iter()
+                .map(|e| OutgoingEntry {
+                    project: &e.project,
+                    activity: &e.activity,
+                    date: &e.day,
+                    time: (e.time * 60.0).round() as i64,
+                    note: &e.note,
+                })
+                .collect(),
+        })
+        .map_err(|e| self.fail(&format!("could not encode the worklog: {e}")))?;
+        let response = self
+            .agent
+            .post(format!("{}/time-entries", self.url))
+            .header("Authorization", self.bearer())
+            .content_type("application/json")
+            .send(body);
+        let reply = self.finish(response)?;
+        let mut results = serde_json::from_str::<Results>(&reply)
+            .map(|r| r.results)
+            .unwrap_or_default();
+        // An entry the response does not mention was accepted.
+        for entry in &worklog.entries {
+            if !results.iter().any(|r| r.day == entry.day) {
+                results.push(EntryResult {
+                    day: entry.day.clone(),
+                    status: "ok".into(),
+                    message: String::new(),
+                });
+            }
+        }
+        Ok(results)
+    }
+
+    fn fetch(&self, from: NaiveDate, to: NaiveDate) -> Result<Vec<WorklogEntry>> {
+        let mut out = Vec::new();
+        for page in 1..=MAX_PAGES {
+            let mut query = vec![("from", fmt_date(from)), ("to", fmt_date(to))];
+            if page > 1 {
+                query.push(("page", page.to_string()));
+            }
+            let body = self.get(&format!("{}/time-entries", self.url), &query)?;
+            let got = self.parse::<Entries>(&body)?;
+            out.extend(got.entries.into_iter().map(WorklogEntry::from));
+            if !got.has_more {
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+    fn projects(&self) -> Result<Vec<Named>> {
+        let body = self.get(&format!("{}/projects", self.url), &[])?;
+        Ok(self.parse::<Projects>(&body)?.projects)
+    }
+
+    fn activities(&self, project_id: &str) -> Result<Vec<Named>> {
+        let url = format!(
+            "{}/projects/{}/activities",
+            self.url,
+            path_segment(project_id)
+        );
+        Ok(self.parse::<Activities>(&self.get(&url, &[])?)?.activities)
+    }
+}
+
+#[cfg(test)]
+pub mod fake {
+    use super::*;
+    use std::cell::RefCell;
+
+    /// A platform that records what it is sent, and can be made to refuse.
+    #[derive(Default)]
+    pub struct FakePlatform {
+        pub pushed: RefCell<Vec<Worklog>>,
+        pub existing: Vec<WorklogEntry>,
+        pub refuse: Option<String>,
+        /// Days the platform refuses with a conflict.
+        pub conflicts: Vec<String>,
+        pub projects: Vec<Named>,
+        pub activities: Vec<Named>,
+    }
+
+    impl TimePlatform for FakePlatform {
+        fn push(&self, worklog: &Worklog) -> Result<Vec<EntryResult>> {
+            if let Some(why) = &self.refuse {
+                return Err(IterError::Platform(why.clone()));
+            }
+            self.pushed.borrow_mut().push(worklog.clone());
+            Ok(worklog
+                .entries
+                .iter()
+                .map(|e| EntryResult {
+                    day: e.day.clone(),
+                    status: if self.conflicts.contains(&e.day) {
+                        "conflict"
+                    } else {
+                        "ok"
+                    }
+                    .into(),
+                    message: String::new(),
+                })
+                .collect())
+        }
+        fn fetch(&self, _: NaiveDate, _: NaiveDate) -> Result<Vec<WorklogEntry>> {
+            Ok(self.existing.clone())
+        }
+        fn projects(&self) -> Result<Vec<Named>> {
+            Ok(self.projects.clone())
+        }
+        fn activities(&self, _: &str) -> Result<Vec<Named>> {
+            Ok(self.activities.clone())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    const KEY: &str = "s3cr3t-key-123";
+
+    /// Serves one request per body in `bodies` on a local port (status 200),
+    /// handing back the raw requests it received.
+    fn stub_all(bodies: Vec<String>) -> (String, std::thread::JoinHandle<Vec<String>>) {
+        serve("200 OK", bodies)
+    }
+
+    /// Serves one request on a local port with `status` and `body`, handing
+    /// back the raw request it received.
+    fn stub(status: &str, body: &str) -> (String, std::thread::JoinHandle<String>) {
+        let (url, handle) = serve(status, vec![body.to_string()]);
+        let one = std::thread::spawn(move || handle.join().unwrap().remove(0));
+        (url, one)
+    }
+
+    fn serve(status: &str, bodies: Vec<String>) -> (String, std::thread::JoinHandle<Vec<String>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/log", listener.local_addr().unwrap());
+        let status = status.to_string();
+        let handle = std::thread::spawn(move || {
+            let mut seen = Vec::new();
+            for body in bodies {
+                let reply = format!(
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut raw = Vec::new();
+                let mut buf = [0u8; 4096];
+                loop {
+                    let n = stream.read(&mut buf).unwrap();
+                    raw.extend_from_slice(&buf[..n]);
+                    let text = String::from_utf8_lossy(&raw).to_string();
+                    if let Some(split) = text.find("\r\n\r\n") {
+                        let length = text[..split]
+                            .lines()
+                            .find_map(|l| {
+                                l.to_ascii_lowercase()
+                                    .strip_prefix("content-length:")
+                                    .map(|v| v.trim().parse::<usize>().unwrap())
+                            })
+                            .unwrap_or(0);
+                        if raw.len() >= split + 4 + length {
+                            break;
+                        }
+                    }
+                    if n == 0 {
+                        break;
+                    }
+                }
+                stream.write_all(reply.as_bytes()).unwrap();
+                seen.push(String::from_utf8_lossy(&raw).to_string());
+            }
+            seen
+        });
+        (url, handle)
+    }
+
+    fn log() -> Worklog {
+        Worklog {
+            entries: vec![WorklogEntry {
+                project: "acme".into(),
+                activity: "dev".into(),
+                day: "2026-09-04".into(),
+                time: 1.5,
+                note: "- Worked on A".into(),
+            }],
+            open: false,
+        }
+    }
+
+    fn webhook(url: &str) -> JsonWebhook {
+        JsonWebhook::new(url, Secret::new(KEY).unwrap())
+    }
+
+    #[test]
+    fn a_push_posts_json_with_a_bearer_key() {
+        let (url, request) = stub("200 OK", "{}");
+        webhook(&url).push(&log()).unwrap();
+        let raw = request.join().unwrap();
+        assert!(raw.starts_with("POST /log/time-entries "), "{raw}");
+        assert!(
+            raw.contains(&format!("authorization: Bearer {KEY}"))
+                || raw.contains(&format!("Authorization: Bearer {KEY}"))
+        );
+        assert!(
+            raw.to_ascii_lowercase()
+                .contains("content-type: application/json")
+        );
+        // the platform's own shape: `date`, and the time in minutes
+        assert!(raw.contains(r#""date":"2026-09-04""#) && raw.contains(r#""time":90"#));
+    }
+
+    #[test]
+    fn a_refusal_shows_its_body_without_the_key() {
+        let (url, _) = stub("401 Unauthorized", &format!("bad token {KEY}"));
+        let err = webhook(&url).push(&log()).unwrap_err().to_string();
+        assert!(err.contains("HTTP 401"), "{err}");
+        assert!(err.contains("bad token ***"), "{err}");
+        assert!(!err.contains(KEY));
+    }
+
+    #[test]
+    fn a_server_error_is_an_error_too() {
+        let (url, _) = stub("500 Internal Server Error", "boom");
+        let err = webhook(&url).push(&log()).unwrap_err().to_string();
+        assert!(err.contains("HTTP 500") && err.contains("boom"), "{err}");
+    }
+
+    #[test]
+    fn an_unreachable_host_is_an_error_without_the_key() {
+        let port = TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let err = webhook(&format!("http://127.0.0.1:{port}/log"))
+            .push(&log())
+            .unwrap_err()
+            .to_string();
+        assert!(err.starts_with("time platform:"), "{err}");
+        assert!(!err.contains(KEY));
+    }
+
+    #[test]
+    fn fetch_sends_the_period_and_reads_minutes_and_ids() {
+        let body = r#"{"page":1,"total":1,"entries":[{"id":"e1","date":"2026-09-04","note":" x","time":90,"project":"p1","activity":"a1","status":"historical"}],"has_more":false,"page_size":100}"#;
+        let (url, request) = stub("200 OK", body);
+        let day = NaiveDate::from_ymd_opt(2026, 9, 4).unwrap();
+        let got = webhook(&url).fetch(day, day).unwrap();
+        assert_eq!(got.len(), 1);
+        assert_eq!(
+            (got[0].time, got[0].day.as_str(), got[0].project.as_str()),
+            (1.5, "2026-09-04", "p1")
+        );
+        let raw = request.join().unwrap();
+        assert!(
+            raw.starts_with("GET /log/time-entries?from=2026-09-04&to=2026-09-04 "),
+            "{raw}"
+        );
+    }
+
+    #[test]
+    fn fetch_follows_the_pages_while_there_are_more() {
+        let page = |more: bool, date: &str| {
+            format!(
+                r#"{{"entries":[{{"date":"{date}","time":60,"note":"","project":"p","activity":"a"}}],"has_more":{more}}}"#
+            )
+        };
+        let (url, requests) = stub_all(vec![page(true, "2026-09-03"), page(false, "2026-09-04")]);
+        let got = webhook(&url)
+            .fetch(
+                NaiveDate::from_ymd_opt(2026, 9, 3).unwrap(),
+                NaiveDate::from_ymd_opt(2026, 9, 4).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(
+            got.iter().map(|e| e.day.as_str()).collect::<Vec<_>>(),
+            ["2026-09-03", "2026-09-04"]
+        );
+        let raw = requests.join().unwrap();
+        assert!(raw[0].starts_with("GET /log/time-entries?from=2026-09-03&to=2026-09-04 "));
+        assert!(raw[1].contains("&page=2 "), "{}", raw[1]);
+    }
+
+    #[test]
+    fn projects_and_a_projects_activities_are_listed_with_their_ids() {
+        let (url, request) = stub("200 OK", r#"{"projects":[{"id":"p1","name":"Acme"}]}"#);
+        assert_eq!(
+            webhook(&url).projects().unwrap(),
+            vec![Named::new("p1", "Acme")]
+        );
+        assert!(request.join().unwrap().starts_with("GET /log/projects "));
+        let (url, request) = stub("200 OK", r#"{"activities":[{"id":"a1","name":"Dev"}]}"#);
+        assert_eq!(
+            webhook(&url).activities("p 1/x").unwrap(),
+            vec![Named::new("a1", "Dev")]
+        );
+        assert!(
+            request
+                .join()
+                .unwrap()
+                .starts_with("GET /log/projects/p%201%2Fx/activities ")
+        );
+    }
+
+    #[test]
+    fn a_name_matches_without_regard_to_case_and_an_id_exactly() {
+        let n = Named::new("p1", "Next-gen Energy");
+        assert!(n.is("p1") && n.is(" next-GEN energy ") && !n.is("P1x"));
+    }
+
+    #[test]
+    fn a_conflicting_entry_is_a_result_not_a_failure() {
+        let body = r#"{"results":[{"day":"2026-09-04","status":"conflict","message":"already has an entry"}]}"#;
+        let (url, _) = stub("200 OK", body);
+        let results = webhook(&url).push(&log()).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].accepted());
+        assert_eq!(results[0].message, "already has an entry");
+    }
+
+    #[test]
+    fn entries_a_response_does_not_mention_were_accepted() {
+        let (url, _) = stub("200 OK", "{}");
+        let results = webhook(&url).push(&log()).unwrap();
+        assert!(results.len() == 1 && results[0].accepted());
+    }
+
+    #[test]
+    fn the_key_is_not_in_debug_output() {
+        let hook = webhook("http://localhost/log");
+        assert!(!format!("{:?}", hook.key).contains(KEY));
+    }
+}

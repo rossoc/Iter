@@ -29,13 +29,30 @@
 /* summary: the big total, then the counts and the period */
 .summary{display:flex;align-items:center;gap:20px;margin:0 0 36px;color:var(--muted);font-size:.9375rem;line-height:1.5}
 .summary .big{font:600 2.5rem/1 var(--mono);letter-spacing:-.03em;color:var(--fg);font-variant-numeric:tabular-nums}
-/* Copy summary: a .button at the end of the summary row, at the controls' height */
-.copy{margin-left:auto;height:var(--control-h,36px);padding:0 14px;font-size:.8125rem}
-.copy[hidden]{display:none}
-.copy span{display:inline-flex;align-items:center;gap:8px}
-.copy .done,.copy.copied .idle{display:none}
-.copy.copied .done{display:inline-flex;color:var(--ok)}
-.copy.copied{border-color:var(--ok)}
+/* Share: the button on the report, and the pop-up it opens */
+.share-open{margin-left:auto;gap:8px}
+.summary{flex-wrap:wrap}
+.sharing{display:grid;gap:16px}
+.share-modes[hidden]{display:none}
+.share-modes{position:relative;display:flex;gap:8px;margin:0;padding:0;border:0}
+.share-modes .mode{display:inline-flex;align-items:center;gap:8px;min-height:var(--control-h,36px);padding:0 14px;border:1px solid var(--line-2);border-radius:var(--r-md);
+  font-size:.875rem;font-weight:500;cursor:pointer}
+.share-modes .mode:hover{background:var(--bg-2)}
+.share-modes .mode:has(input:checked){border-color:var(--accent);background:var(--accent-tint);color:var(--accent)}
+.share-modes .mode:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.share-modes .mode{position:relative}
+.share-modes input{position:absolute;opacity:0;pointer-events:none}
+.share-set{display:grid;gap:16px}
+.share-set[hidden],.sharing .actions [hidden]{display:none}
+.share-go{gap:8px}
+.share-go span{display:inline-flex;align-items:center;gap:8px}
+.share-go .done,.share-go.copied .idle{display:none}
+.share-go.copied .done{display:inline-flex}
+.share-result{margin:0 0 28px}
+.share-preview,.share-check{max-height:50vh;overflow:auto;margin:12px 0;padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font:.8125rem/1.5 var(--mono);color:var(--fg);border:1px solid var(--line,currentColor);border-radius:var(--r-md)}
+.share-text{width:100%;font:.8125rem/1.5 var(--mono)}
+.share-items .bad{color:var(--danger);font-weight:600}
+.share-items{margin:8px 0 0;padding-left:20px;font:.8125rem/1.6 var(--mono)}
 
 /* contents on the left (sticky), sections on the right */
 .report{display:grid;grid-template-columns:260px minmax(0,1fr);gap:48px;align-items:start}

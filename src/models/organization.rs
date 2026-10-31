@@ -55,6 +55,21 @@ pub struct Organization {
     /// theirs in. Empty means no notes.
     #[serde(default)]
     pub notes_path: String,
+
+    /// The endpoint of the time platform hours are pushed to. Empty means
+    /// none. The API key is not here: see `crate::secret`.
+    #[serde(default)]
+    pub platform_url: String,
+
+    /// The platform's organization that entries are logged under. Falls back
+    /// to this organization's name when empty. Editable on each share.
+    #[serde(default)]
+    pub platform_project: String,
+
+    /// The platform's activity that entries are logged under. Editable on
+    /// each share.
+    #[serde(default)]
+    pub platform_activity: String,
 }
 
 impl Organization {

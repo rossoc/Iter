@@ -4,13 +4,15 @@
 //! page around it is `org.rs`; its rules are in `org.css` (bundled into
 //! `/style.css`) and its script is `/org.js`.
 
+use super::org_share::{Outcome, share_outcome};
 use super::session_lines::report_lines;
 use super::ui::empty_line::empty_line;
 use super::ui::notice::notice;
 use super::ui::prose::description;
 use super::ui::sessions_table::sessions_table;
 use super::ui::status::status;
-use super::ui::{CHEVRON_LEFT, CHEVRON_RIGHT, CLIPBOARD_CHECK, COPY, icon};
+use super::ui::{CHEVRON_LEFT, CHEVRON_RIGHT};
+use super::ui::{SHARE, icon};
 use super::url::{page_url, project_url, task_url};
 use crate::db::Db;
 use crate::models::Project;
@@ -97,13 +99,27 @@ pub fn load(
 /// The report tab of `base` for a period: the one place a report URL is
 /// built. `from` and `to` are given both or neither (an empty `from` is
 /// "all time").
-fn report_link(base: &str, from: Option<&str>, to: Option<&str>) -> String {
+pub(super) fn report_link(base: &str, from: Option<&str>, to: Option<&str>) -> String {
     page_url(base, &[("tab", Some("report")), ("from", from), ("to", to)])
 }
 
 fn report_url(base: &str, range: &DateRange) -> String {
     let from = range.from.map(fmt_date).unwrap_or_default();
     report_link(base, Some(&from), Some(&fmt_date(range.to)))
+}
+
+/// The Report tab of the period with the Share pop-up open over it.
+fn share_url(base: &str, range: &DateRange) -> String {
+    let from = range.from.map(fmt_date).unwrap_or_default();
+    page_url(
+        base,
+        &[
+            ("tab", Some("report")),
+            ("from", Some(&from)),
+            ("to", Some(&fmt_date(range.to))),
+            ("share", Some("1")),
+        ],
+    )
 }
 
 /// The Report tab's own link: the default period (the last 7 days).
@@ -126,7 +142,7 @@ fn plural(n: usize, one: &str) -> String {
 /// proj:
 /// - task: work in progress
 /// ```
-fn status_list(report: &Report) -> String {
+pub fn status_list(report: &Report) -> String {
     let mut out = String::new();
     for p in &report.projects {
         out.push_str(&format!("{}:\n", p.name));
@@ -233,7 +249,13 @@ async fn task_section(t: &TaskReport) -> Result<impl View> {
 }
 
 #[component]
-pub async fn report_view(base: &str, report: &Report, today: NaiveDate) -> Result<impl View> {
+pub async fn report_view(
+    base: &str,
+    report: &Report,
+    today: NaiveDate,
+    #[default] shared: Option<&Outcome>,
+) -> Result<impl View> {
+    let share_link = share_url(base, &report.range);
     let tasks: usize = report.projects.iter().map(|p| p.tasks.len()).sum();
     // Each project's share of the time the projects add up to (which can
     // exceed the merged total when two were worked on at once).
@@ -259,14 +281,12 @@ pub async fn report_view(base: &str, report: &Report, today: NaiveDate) -> Resul
                 " · " (plural(report.sessions, "session"))
             </span>
             if !report.projects.is_empty() {
-                // Hidden until `org.js` finds a clipboard to write to.
-                <button type="button" class="button copy" data-copy=(status_list(report)) hidden="">
-                    <span class="idle">(icon(COPY)) "Copy summary"</span>
-                    <span class="done">(icon(CLIPBOARD_CHECK)) "Copied"</span>
-                </button>
-                <span class="sr" id="copy-status" role="status"></span>
+                <a class="button share-open" href=(share_link.as_str())>(icon(SHARE)) "Share"</a>
             }
         </div>
+        if let Some(outcome) = shared {
+            share_outcome(outcome: outcome)
+        }
         if report.projects.is_empty() {
             empty_line("No sessions in this period.")
         } else {

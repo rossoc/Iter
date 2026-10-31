@@ -8,6 +8,7 @@ use super::edit::{Loaded, load, submit};
 use super::edit_page::{edit_page, settings_row};
 use super::forms::OrgForm;
 use super::org_report::tab_url;
+use super::platform_pick::{self, platform_lists};
 use super::project_options::{group_options, project_checklist};
 use super::settings_fields::settings_fields;
 use super::ui::breadcrumb::Crumb;
@@ -72,6 +73,18 @@ pub async fn screen(
         db.projects_in::<Organization>(stored.id())?.len(),
         db.count_tasks_in::<Organization>(stored.id())?,
     );
+    let key_hint = format!(
+        "Where hours are pushed to. API key: {}. The key is never shown here; set or clear it with `iter org key {}`.",
+        if crate::secret::is_set(&crate::secret::Keychain, &stored.name) {
+            "set"
+        } else {
+            "not set"
+        },
+        stored.name
+    );
+    // what the platform offers, when there is a URL and a key to ask with
+    let (platform_projects, platform_activities) = platform_pick::lists(org, &org.platform_project);
+    let activities_url = format!("{base}/platform-activities");
     let notes = NotesTab::load(crate::notes::org_dir(stored), false);
     let sections = settings_row(
         &base,
@@ -102,6 +115,33 @@ pub async fn screen(
                 identifier: true,
                 error: error
             )
+            field(
+                name: OrgForm::PLATFORM_URL,
+                label: "Time platform URL",
+                value: &org.platform_url,
+                hint: &key_hint,
+                identifier: true,
+                error: error
+            )
+            field(
+                name: OrgForm::PLATFORM_PROJECT,
+                label: "Time platform project",
+                value: &org.platform_project,
+                hint: "The platform project hours are logged under. Defaults to this organization's name; can be changed on each share. Suggestions come from the platform when it answers.",
+                list: platform_pick::LIST_PROJECTS,
+                identifier: true,
+                error: error
+            )
+            field(
+                name: OrgForm::PLATFORM_ACTIVITY,
+                label: "Time platform activity",
+                value: &org.platform_activity,
+                hint: "The activity hours are logged under. Can be changed on each share. Suggestions are the activities of the project above.",
+                list: platform_pick::LIST_ACTIVITIES,
+                identifier: true,
+                error: error
+            )
+            platform_lists(url: &activities_url, projects: &platform_projects, activities: &platform_activities)
             project_checklist(options: projects, noun: "organization", error: error)
             settings_fields(s: &settings)
         )

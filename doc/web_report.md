@@ -44,3 +44,4 @@ Verified on a copy of the database: 27 URLs (every route of `doc/web.md`, tabs, 
 - No type scale (`--t-*`) or spacing scale (`--s*`): sizes and weights are literal.
 - `tasks_of` sorts in Rust; `save_task` rewrites tags on every save; a connection pool and `spawn_blocking` if the server ever serves more than one person.
 - Nothing is committed: the work is uncommitted or untracked in the worktree `html-refactor`.
+- The Report tab's *Copy summary* became *Share* (copy or push to the organization's time platform): see `web_org.md`, "Share replaces Copy summary".

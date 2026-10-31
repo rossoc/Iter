@@ -39,6 +39,7 @@ topcoat = { version = "0.9", optional = true, default-features = false, features
 # Descriptions are markdown (`web/ui/prose.rs`); only its HTML writer.
 pulldown-cmark = { version = "0.13.4", optional = true, default-features = false, features = ["html"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net"], optional = true }
+ureq = "3.5.0"
 
 # A release rebuild reuses what did not change: most of its time is LLVM
 # optimising the web views' async code, so without this every change costs

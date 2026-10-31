@@ -41,7 +41,9 @@ mod notes;
 mod org;
 mod org_edit;
 mod org_report;
+mod org_share;
 mod pick;
+mod platform_pick;
 mod project;
 mod project_edit;
 mod project_new;
@@ -108,6 +110,8 @@ fn router() -> Router {
         task_wiki::register,
         daily_notes::register,
         org_edit::register,
+        org_share::register,
+        platform_pick::register,
         project_edit::register,
         instructions::register,
         project_new::register,

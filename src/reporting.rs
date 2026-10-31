@@ -15,6 +15,10 @@ pub enum Format {
     Text,
     /// The same report as plain YAML, for piping somewhere else
     Yaml,
+    /// One line per task worked on in the period: `Completed <task>` when
+    /// the task is done, `Worked on <task>` otherwise -- what is pushed to
+    /// a time platform
+    Worklog,
 }
 
 /// What a text report says where a session table would otherwise go.
@@ -275,6 +279,10 @@ impl Header {
 /// session is still open, and `duration` is measured against now.
 #[derive(Debug, Serialize)]
 pub struct SessionRow {
+    /// The calendar day the session started on, and its length in minutes:
+    /// what a worklog groups by. Not part of the printed report.
+    #[serde(skip)]
+    pub day: NaiveDate,
     /// Only carried when the report spans more than one day -- on a
     /// single-day report every row would repeat the header's own date.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -293,6 +301,7 @@ pub fn session_rows(sessions: &[Session], now: NaiveDateTime, dated: bool) -> Ve
     sessions
         .iter()
         .map(|s| SessionRow {
+            day: s.start.date(),
             date: dated.then(|| fmt_date(s.start.date())),
             start: s.start.format("%H:%M").to_string(),
             end: s.end.map(|e| e.format("%H:%M").to_string()),
@@ -395,6 +404,114 @@ pub struct WeekdayReport {
     pub weekdays: Vec<WeekdayAverage>,
 }
 
+// ---- the worklog -------------------------------------------------------
+
+/// A task name on one line, as a worklog or a table cell needs it.
+fn one_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// What was done on a task: `Completed <task>` once it is done, `Worked on
+/// <task>` while it is not.
+pub fn worklog_line(name: &str, completed: bool) -> String {
+    let verb = if completed { "Completed" } else { "Worked on" };
+    format!("{verb} {}", one_line(name))
+}
+
+/// One line per task, in report order: the `worklog` format. A task is
+/// listed because it had a session in the period, so `done` here means
+/// finished at some point and worked on in this period -- tasks have no
+/// completion date to be more exact.
+pub fn worklog_text<'a>(tasks: impl Iterator<Item = &'a TaskReport>) -> String {
+    tasks
+        .map(|t| worklog_line(&t.name, t.status == TaskStatus::Done) + "\n")
+        .collect()
+}
+
+/// One day of a [`Worklog`]: the shape the time platform receives.
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
+pub struct WorklogEntry {
+    pub project: String,
+    pub activity: String,
+    /// `yyyy-mm-dd`
+    pub day: String,
+    /// Hours, as a decimal (`1.5` is an hour and a half).
+    pub time: f64,
+    /// What was done, one `- ` line per task.
+    pub note: String,
+}
+
+/// The hours of a period as one entry per day. Entries on one day are never
+/// split: everything done that day is accumulated into a single entry.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Worklog {
+    pub entries: Vec<WorklogEntry>,
+    /// Whether a session is still open, so its figure is measured against
+    /// now and a later push may differ. Not sent.
+    #[serde(skip)]
+    pub open: bool,
+}
+
+impl Worklog {
+    /// Builds the worklog of `projects` (as `project_reports` returned
+    /// them) over `sessions` (the union it returned with them). Each day's
+    /// hours are the merged total of that day's sessions, so tasks worked
+    /// in parallel are not counted twice and the entries add up to what
+    /// `info` reports. A done task reads `Completed` on the last day it was
+    /// worked on in the period and `Worked on` before that.
+    pub fn build(
+        projects: &[ProjectReport],
+        sessions: &[Session],
+        now: NaiveDateTime,
+        gap_minutes: i64,
+        project: &str,
+        activity: &str,
+    ) -> Self {
+        let mut by_day: std::collections::BTreeMap<NaiveDate, Vec<Session>> = Default::default();
+        for s in sessions {
+            by_day.entry(s.start.date()).or_default().push(s.clone());
+        }
+        let tasks: Vec<&TaskReport> = projects.iter().flat_map(|p| &p.tasks).collect();
+        let entries = by_day
+            .into_iter()
+            .map(|(day, of_day)| {
+                let lines: Vec<String> = tasks
+                    .iter()
+                    .filter(|t| t.sessions.iter().any(|r| r.day == day))
+                    .map(|t| {
+                        let last = t.sessions.iter().map(|r| r.day).max() == Some(day);
+                        let done = last && t.status == TaskStatus::Done;
+                        format!("- {}", worklog_line(&t.name, done))
+                    })
+                    .collect();
+                let minutes = merged_total_minutes(&of_day, now, gap_minutes);
+                WorklogEntry {
+                    project: project.to_string(),
+                    activity: activity.to_string(),
+                    day: fmt_date(day),
+                    time: (minutes as f64 / 60.0 * 100.0).round() / 100.0,
+                    note: lines.join("\n"),
+                }
+            })
+            .collect();
+        Worklog {
+            entries,
+            open: sessions.iter().any(Session::is_ongoing),
+        }
+    }
+
+    pub fn total_hours(&self) -> f64 {
+        self.entries.iter().map(|e| e.time).sum()
+    }
+
+    /// The request body: `{"entries": [...]}`.
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string(self).map_err(|e| {
+            crate::error::IterError::CommandFailed(format!("could not encode the worklog: {e}"))
+        })
+    }
+}
+
 // ---- rendering ---------------------------------------------------------
 
 /// A report that can be printed: a header every report shares, and the
@@ -410,9 +527,18 @@ pub trait Report: Serialize {
     /// Everything below the title, summary line and description.
     fn body(&self, md: &mut Md);
 
+    /// The `worklog` rendering, for the report kinds that list tasks.
+    fn worklog(&self) -> Result<String> {
+        Err(crate::error::IterError::CommandFailed(
+            "the worklog format is only available for project and organization reports".into(),
+        ))
+    }
+
     fn render(&self, format: Format) -> Result<String> {
-        if let Format::Yaml = format {
-            return Ok(serde_yaml::to_string(self)?);
+        match format {
+            Format::Yaml => return Ok(serde_yaml::to_string(self)?),
+            Format::Worklog => return self.worklog(),
+            Format::Text => {}
         }
         let header = self.header();
         let mut md = Md::new();
@@ -444,6 +570,10 @@ impl Report for ProjectInfo {
     fn body(&self, md: &mut Md) {
         md.task_breakdown(&self.tasks, 2);
     }
+
+    fn worklog(&self) -> Result<String> {
+        Ok(worklog_text(self.tasks.iter()))
+    }
 }
 
 impl Report for OrganizationInfo {
@@ -466,6 +596,10 @@ impl Report for OrganizationInfo {
         for project in &self.projects {
             md.project_section(project, 2);
         }
+    }
+
+    fn worklog(&self) -> Result<String> {
+        Ok(worklog_text(self.projects.iter().flat_map(|p| &p.tasks)))
     }
 }
 
@@ -1231,5 +1365,127 @@ mod tests {
         .unwrap();
         let keys: Vec<&str> = settings.keys().filter_map(Value::as_str).collect();
         assert_eq!(keys, vec!["github", "branch_template"]);
+    }
+
+    // ---- the worklog ---------------------------------------------------
+
+    fn project_of(
+        tasks: Vec<(&str, TaskStatus, Vec<Session>)>,
+    ) -> (Vec<ProjectReport>, Vec<Session>) {
+        let mut all = Vec::new();
+        let mut reports = Vec::new();
+        for (i, (name, status, sessions)) in tasks.into_iter().enumerate() {
+            let minutes = merged_total_minutes(&sessions, now(), 30);
+            reports.push(TaskReport::new(
+                i as i64,
+                name.to_string(),
+                status,
+                minutes,
+                None,
+                session_rows(&sessions, now(), true),
+            ));
+            all.extend(sessions);
+        }
+        let project = ProjectReport {
+            id: 1,
+            name: "p".into(),
+            total: Total::new(merged_total_minutes(&all, now(), 30)),
+            description: None,
+            tasks: reports,
+        };
+        (vec![project], all)
+    }
+
+    #[test]
+    fn done_tasks_read_completed_and_the_rest_worked_on() {
+        let (projects, _) = project_of(vec![
+            (
+                "Ship it",
+                TaskStatus::Done,
+                vec![sess(1, "2026-09-04 09:00", Some("2026-09-04 10:00"), None)],
+            ),
+            (
+                "Fix bug",
+                TaskStatus::Wip,
+                vec![sess(2, "2026-09-04 11:00", Some("2026-09-04 12:00"), None)],
+            ),
+        ]);
+        let text = worklog_text(projects.iter().flat_map(|p| &p.tasks));
+        assert_eq!(text, "Completed Ship it\nWorked on Fix bug\n");
+    }
+
+    #[test]
+    fn an_empty_period_has_no_lines_and_no_entries() {
+        let (projects, all) = project_of(vec![]);
+        assert_eq!(worklog_text(projects.iter().flat_map(|p| &p.tasks)), "");
+        let log = Worklog::build(&projects, &all, now(), 30, "acme", "dev");
+        assert!(log.entries.is_empty());
+        assert!(!log.open);
+    }
+
+    #[test]
+    fn a_newline_in_a_task_name_stays_on_one_line() {
+        assert_eq!(worklog_line("a\n b | c", false), "Worked on a b | c");
+    }
+
+    #[test]
+    fn entries_are_one_per_day_with_merged_hours() {
+        let (projects, all) = project_of(vec![
+            (
+                "A",
+                TaskStatus::Done,
+                vec![
+                    sess(1, "2026-09-03 09:00", Some("2026-09-03 10:00"), None),
+                    sess(1, "2026-09-04 09:00", Some("2026-09-04 10:30"), None),
+                ],
+            ),
+            // parallel to A on the 4th: must not be double counted
+            (
+                "B",
+                TaskStatus::Wip,
+                vec![sess(2, "2026-09-04 09:30", Some("2026-09-04 10:30"), None)],
+            ),
+        ]);
+        let log = Worklog::build(&projects, &all, now(), 30, "acme", "dev");
+        assert_eq!(log.entries.len(), 2);
+        assert_eq!(log.entries[0].day, "2026-09-03");
+        assert_eq!(log.entries[0].time, 1.0);
+        assert_eq!(log.entries[0].note, "- Worked on A");
+        assert_eq!(log.entries[1].day, "2026-09-04");
+        assert_eq!(log.entries[1].time, 1.5);
+        assert_eq!(log.entries[1].note, "- Completed A\n- Worked on B");
+        assert_eq!(log.total_hours(), 2.5);
+    }
+
+    #[test]
+    fn an_open_session_marks_the_worklog() {
+        let (projects, all) = project_of(vec![(
+            "A",
+            TaskStatus::Wip,
+            vec![sess(1, "2026-09-04 11:00", None, None)],
+        )]);
+        let log = Worklog::build(&projects, &all, now(), 30, "acme", "dev");
+        assert!(log.open);
+        assert_eq!(log.entries[0].time, 1.0);
+    }
+
+    #[test]
+    fn the_json_shape_is_an_entries_list_without_internal_fields() {
+        let (projects, all) = project_of(vec![(
+            "A",
+            TaskStatus::Wip,
+            vec![sess(1, "2026-09-04 11:00", Some("2026-09-04 12:30"), None)],
+        )]);
+        let json = Worklog::build(&projects, &all, now(), 30, "acme", "dev")
+            .to_json()
+            .unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            v,
+            serde_json::json!({"entries": [{
+                "project": "acme", "activity": "dev", "day": "2026-09-04",
+                "time": 1.5, "note": "- Worked on A"
+            }]})
+        );
     }
 }

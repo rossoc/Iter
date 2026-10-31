@@ -1,11 +1,12 @@
 // The report tab's script: applies the From/To dates as they change, and wires
-// the Copy button (shown only where the clipboard is available).
+// the Share form (copying in the page where the clipboard is available).
 //
 // Dates: a date picked from the calendar applies at once. A typed one applies
 // on Enter (the form's Apply button) or when focus leaves both fields, not on
 // each keystroke, since Chrome reports a change after every digit of a year
 // ("0002", "0020", ...). Only a four-digit year from 1970 counts as typed.
-// Copy: copies `data-copy` and says so for two seconds.
+// Share: a copy writes the chosen format (`data-worklog`, `data-status`) and says so
+// for two seconds; a push is posted.
 (function () {
   var form = document.querySelector(".range");
   if (!form) return;
@@ -36,14 +37,41 @@
   });
 })();
 
+// The Share pop-up (org_share.rs `share_modal`): the way to share picks which
+// settings and which button show (without script, both ways show with their
+// own button); a copy is written to the clipboard here and says so for two
+// seconds, a push is posted. Without a clipboard the form posts and the
+// server answers with the text.
 (function () {
-  var button = document.querySelector(".copy");
-  if (!button || !navigator.clipboard) return;
+  var form = document.querySelector("form.sharing");
+  if (!form) return;
+  var modes = form.querySelectorAll("input[name=mode]");
+  var picker = form.querySelector(".share-modes");
+  if (picker) picker.hidden = false; // the way to share is chosen here; without script both show
   var status = document.getElementById("copy-status");
   var timer;
-  button.hidden = false;
-  button.addEventListener("click", function () {
-    navigator.clipboard.writeText(button.dataset.copy).then(function () {
+  var mode = function () {
+    var checked = form.querySelector("input[name=mode]:checked");
+    return checked ? checked.value : "copy";
+  };
+  // a hidden control is disabled too, so only the chosen way is submitted
+  var sync = function () {
+    var now = mode();
+    form.querySelectorAll("[data-for]").forEach(function (el) {
+      var on = el.dataset["for"] === now;
+      el.hidden = !on;
+      el.querySelectorAll("input, select").forEach(function (c) { c.disabled = !on; });
+    });
+  };
+  modes.forEach(function (m) { m.addEventListener("change", sync); });
+  sync();
+  form.addEventListener("submit", function (e) {
+    var copy = e.submitter && e.submitter.value === "copy";
+    if (!copy || !navigator.clipboard) return;
+    e.preventDefault();
+    var button = e.submitter;
+    var format = form.elements.format;
+    navigator.clipboard.writeText(form.dataset[format.value] || "").then(function () {
       button.classList.add("copied");
       status.textContent = "Copied to the clipboard";
       clearTimeout(timer);

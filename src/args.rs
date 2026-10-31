@@ -329,6 +329,47 @@ pub enum OrganizationCommand {
         report: ReportOpts,
     },
 
+    /// Set (read from stdin) or clear the API key of the organization's
+    /// time platform; it is kept in the OS keychain, never in the database
+    Key {
+        /// Default: the organization of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(organization_completer))]
+        name: Option<String>,
+
+        /// Remove the stored key instead of setting one
+        #[clap(long)]
+        clear: bool,
+    },
+
+    /// Push the worklog of a day or an interval (default: today) to the
+    /// organization's time platform, and close and comment on the GitHub
+    /// issues of the tasks completed in it
+    Push {
+        /// Default: the organization of the tmux session's project
+        #[arg(add = ArgValueCompleter::new(organization_completer))]
+        name: Option<String>,
+
+        #[clap(flatten)]
+        report: ReportOpts,
+
+        /// Show what would be sent and done, and send nothing
+        #[clap(long)]
+        dry_run: bool,
+
+        /// Push even if this exact worklog was pushed before, without asking.
+        /// Days the platform already has an entry for are never pushed
+        #[clap(long)]
+        force: bool,
+
+        /// Log under this platform organization instead of the default
+        #[clap(long)]
+        platform_organization: Option<String>,
+
+        /// Log under this activity instead of the default
+        #[clap(long)]
+        activity: Option<String>,
+    },
+
     /// List every organization
     List,
 }

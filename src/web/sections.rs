@@ -20,6 +20,8 @@ pub struct TabQuery {
     /// The pop-up open over the page: `task` (New task, on Tasks) or
     /// `project` (New project, on Info).
     pub new: Option<String>,
+    /// The Report tab's Share pop-up is open (`?share=1`).
+    pub share: Option<String>,
     /// What New project starts with, when the folder browser sends it back.
     pub name: Option<String>,
     pub base_path: Option<String>,

@@ -7,7 +7,8 @@ use super::Id;
 use super::assets::Asset;
 use super::daily_notes::{NotesTab, notes_section};
 use super::load::tasks_or_count;
-use super::org_report::{Report, report_view, tab_url};
+use super::org_report::{Report, report_link, report_view, tab_url};
+use super::org_share::{Outcome, ShareDialog, preview_modal, share_modal};
 use super::project_new::{Home, ProjectCreate, project_modal};
 use super::project_rows::{project_search_in, projects_section};
 use super::sections::{Section, TabQuery, section_tabs, settings_tab};
@@ -27,6 +28,7 @@ use super::url::org_url;
 use super::{now, open_db};
 use crate::db::{Db, Table};
 use crate::models::{Configured, Organization, Project, Task};
+use crate::reporting::fmt_date;
 use chrono::{NaiveDate, NaiveDateTime};
 use topcoat::{
     Result,
@@ -126,8 +128,21 @@ async fn show(cx: &Cx) -> Result<impl View> {
         }
         _ => None,
     };
+    // `?share=1`: the Share pop-up over the Report tab
+    let share_dialog = match (section, query.share.as_deref(), &page.report) {
+        (Section::Report, Some(_), Some(report)) if !report.projects.is_empty() => {
+            let base = org_url(id);
+            let close = report_link(
+                &base,
+                Some(&report.range.from.map(fmt_date).unwrap_or_default()),
+                Some(&fmt_date(report.range.to)),
+            );
+            Some(ShareDialog::new(&page.org, &base, report, close))
+        }
+        _ => None,
+    };
     Ok(view! {
-        screen(page: &page, section: section, today: now.date(), q: q, task_create: task_create.as_ref(), project_create: project_create.as_ref())
+        screen(page: &page, section: section, today: now.date(), q: q, task_create: task_create.as_ref(), project_create: project_create.as_ref(), share_dialog: share_dialog.as_ref())
     })
 }
 
@@ -173,6 +188,8 @@ pub async fn screen(
     #[default] q: Option<&str>,
     #[default] task_create: Option<&TaskCreate>,
     #[default] project_create: Option<&ProjectCreate>,
+    #[default] share: Option<&Outcome>,
+    #[default] share_dialog: Option<&ShareDialog>,
 ) -> Result<impl View> {
     let Loaded {
         org,
@@ -197,10 +214,26 @@ pub async fn screen(
     // the first row of Tasks opens New task, when there is a project to put it in
     let add_task = (!projects.is_empty()).then(|| TaskHome::Org(org.id()).open_url(q));
     let add_project = Home::Org(org.id()).open_url();
-    let dialog = match (task_create, project_create) {
-        (Some(create), _) => Some(Child::new(view! { task_modal(create: create) })),
-        (None, Some(create)) => Some(Child::new(view! { project_modal(create: create) })),
-        (None, None) => None,
+    // a push preview is a pop-up too; closing it goes back to the report
+    let preview = match (share, report) {
+        (Some(Outcome::Preview(p)), Some(r)) => {
+            let close = report_link(
+                &base,
+                Some(&r.range.from.map(fmt_date).unwrap_or_default()),
+                Some(&fmt_date(r.range.to)),
+            );
+            Some((p.as_ref(), base.clone(), close))
+        }
+        _ => None,
+    };
+    let dialog = match (task_create, project_create, share_dialog, preview) {
+        (Some(create), ..) => Some(Child::new(view! { task_modal(create: create) })),
+        (None, Some(create), ..) => Some(Child::new(view! { project_modal(create: create) })),
+        (None, None, Some(dialog), _) => Some(Child::new(view! { share_modal(dialog: dialog) })),
+        (None, None, None, Some((p, base, close))) => Some(Child::new(
+            view! { preview_modal(base: base, p: p, close: close) },
+        )),
+        (None, None, None, None) => None,
     };
     let refused = task_create.is_some_and(|c| c.error.is_some())
         || project_create.is_some_and(|c| c.error.is_some());
@@ -218,7 +251,7 @@ pub async fn screen(
             } else if section == Section::Projects {
                 projects_tab(org: org, projects: projects, q: q, add: add_project)
             } else if let Some(r) = report {
-                report_view(base: &base, report: r, today: today)
+                report_view(base: &base, report: r, today: today, shared: share)
             } else {
                 info(org: org)
             }

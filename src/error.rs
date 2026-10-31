@@ -53,6 +53,16 @@ pub enum IterError {
     #[error("{0}")]
     CommandFailed(String),
 
+    /// No API key for the organization's time platform: set one with
+    /// `iter org key`, or `ITER_PLATFORM_KEY`.
+    #[error("no API key for organization '{0}': run `iter org key {0}` or set ITER_PLATFORM_KEY")]
+    MissingKey(String),
+
+    /// The time platform could not be reached, or refused the request. The
+    /// message has already been scrubbed of the API key.
+    #[error("time platform: {0}")]
+    Platform(String),
+
     /// A board, organization, project or tag looked up by a name nothing has.
     #[error("no such {kind} '{name}'")]
     NotFound { kind: &'static str, name: String },

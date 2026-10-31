@@ -92,3 +92,7 @@ Checked in a browser again (throwaway database via `XDG_CONFIG_HOME`): GET, save
 ## Update: the form is the Settings tab
 
 `/org/{id}/edit` is reached from the Settings tab. The page shows the normal header (`Organization` eyebrow, the name as `h1`) and the tab row with Settings current, then the form; the document title is "Settings - Name - iter". Create pages (New …) are unchanged. `edit_page` takes `sections` (the tab row, built without counts by `edit_page::settings_row`); `crumbs::edit_trail` is gone.
+
+## Update: time platform fields
+
+The Settings tab has three more fields under *Notes path*: *Time platform URL* (where hours are pushed; its hint says whether an API key is set and that `iter org key` sets it), *Time platform organization* (defaults to the organization's name) and *Time platform activity*. The three are `platform_url`, `platform_project`, `platform_activity` on the organization. They are not defaults for projects. The key is not a field. When the URL and a key are available, the page asks the platform (5 s limit) for its projects and for the activities of the stored project and offers them as suggestions (`<datalist>`) on the two fields; any text may still be typed, and if the platform does not answer the fields are plain text.

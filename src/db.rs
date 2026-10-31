@@ -3,7 +3,7 @@ use crate::error::{IterError, Result};
 #[cfg(feature = "web")]
 use crate::models::Organization;
 use crate::models::{
-    Board, Card, Duration, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Session,
+    Board, Card, Duration, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Push, Session,
     SessionConfig, Tag, Task, TaskStatus, URGENT_TAG, task_ref,
 };
 use chrono::{NaiveDate, NaiveDateTime};
@@ -286,6 +286,8 @@ impl Db {
         Self::flags_to_tags,
         Self::drop_short_sessions,
         Self::add_notes_path,
+        Self::add_platform,
+        Self::add_pushes,
     ];
 
     /// `notes_path` on projects and organizations: a database already past
@@ -293,6 +295,28 @@ impl Db {
     /// columns added since need a step of their own.
     fn add_notes_path(&self) -> Result<()> {
         self.add_missing_columns()
+    }
+
+    /// The time platform's connection settings on organizations.
+    fn add_platform(&self) -> Result<()> {
+        self.add_missing_columns()
+    }
+
+    /// The ledger of worklogs pushed to a time platform.
+    fn add_pushes(&self) -> Result<()> {
+        self.conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS pushes (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                from_day        TEXT NOT NULL,
+                to_day          TEXT NOT NULL,
+                hash            TEXT NOT NULL,
+                at              TEXT NOT NULL,
+                results         TEXT NOT NULL DEFAULT ''
+             );
+             CREATE INDEX IF NOT EXISTS idx_pushes_organization ON pushes(organization_id, hash);",
+        )?;
+        Ok(())
     }
 
     /// Everything from before versioning: idempotent, since a database
@@ -657,7 +681,7 @@ impl Db {
     /// already allowed to be in. `board_id` follows the same rule: a board
     /// is a container, so deleting one just unbinds its projects.
     fn add_missing_columns(&self) -> Result<()> {
-        const ADDED: [(&str, &str, &str); 12] = [
+        const ADDED: [(&str, &str, &str); 15] = [
             ("tasks", "matrix_placed", "INTEGER NOT NULL DEFAULT 0"),
             ("tasks", "start_time", "TEXT"),
             ("tasks", "duration", "INTEGER"),
@@ -686,6 +710,17 @@ impl Db {
             ),
             ("projects", "notes_path", "TEXT NOT NULL DEFAULT ''"),
             ("organizations", "notes_path", "TEXT NOT NULL DEFAULT ''"),
+            ("organizations", "platform_url", "TEXT NOT NULL DEFAULT ''"),
+            (
+                "organizations",
+                "platform_project",
+                "TEXT NOT NULL DEFAULT ''",
+            ),
+            (
+                "organizations",
+                "platform_activity",
+                "TEXT NOT NULL DEFAULT ''",
+            ),
         ];
         for (table, column, decl) in ADDED {
             if !self.column_exists(table, column)? {
@@ -1150,6 +1185,14 @@ impl Db {
              ORDER BY s.start, s.id",
             params![json_ids(project_ids), lower, upper],
             Session::from_row,
+        )
+    }
+
+    /// The push already recorded for `organization_id` with this fingerprint.
+    pub fn find_push(&self, organization_id: i64, hash: &str) -> Result<Option<Push>> {
+        self.find_one(
+            "WHERE organization_id = ?1 AND hash = ?2 ORDER BY id DESC",
+            params![organization_id, hash],
         )
     }
 
@@ -1929,13 +1972,15 @@ mod tests {
         assert_eq!(
             insert_sql::<Organization>(),
             "INSERT INTO organizations (name, description, github, tmux, auto_branch, \
-             branch_template, default_branch, github_project, notes_path) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+             branch_template, default_branch, github_project, notes_path, platform_url, \
+             platform_project, platform_activity) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
         );
         assert_eq!(
             select_sql::<Organization>("WHERE name = ?1"),
             "SELECT id, name, description, github, tmux, auto_branch, branch_template, \
-             default_branch, github_project, notes_path FROM organizations WHERE name = ?1"
+             default_branch, github_project, notes_path, platform_url, platform_project, \
+             platform_activity FROM organizations WHERE name = ?1"
         );
     }
 
@@ -1983,6 +2028,7 @@ mod tests {
         check::<Task>(&db);
         check::<SessionConfig>(&db);
         check::<Session>(&db);
+        check::<Push>(&db);
     }
 
     /// Every table binds exactly as many values as it declares columns.
@@ -2174,6 +2220,9 @@ mod tests {
             .expect("the row just inserted exists");
         assert_eq!(loaded.github_project, "Acme Roadmap");
         assert_eq!(loaded.default_branch, "dev");
+        assert_eq!(loaded.platform_url, "");
+        assert_eq!(loaded.platform_project, "");
+        assert_eq!(loaded.platform_activity, "");
     }
 
     #[test]
