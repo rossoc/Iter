@@ -118,6 +118,7 @@ static MODAL_JS: Asset = Asset::js(include_str!("modal.js"));
 static FILTER_BAR_JS: Asset = Asset::js(include_str!("filter_bar.js"));
 static SEARCH_JS: Asset = Asset::js(include_str!("search.js"));
 static COMBOBOX_JS: Asset = Asset::js(include_str!("combobox.js"));
+static PATH_PICK_JS: Asset = Asset::js(include_str!("path_pick.js"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder
@@ -126,6 +127,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .route(filter_bar_script)
         .route(search_script)
         .route(combobox_script)
+        .route(path_pick_script)
 }
 
 #[route(GET "/style.css")]
@@ -146,6 +148,11 @@ async fn filter_bar_script(cx: &Cx) -> Result<Response> {
 #[route(GET "/combobox.js")]
 async fn combobox_script(cx: &Cx) -> Result<Response> {
     COMBOBOX_JS.respond(cx)
+}
+
+#[route(GET "/path_pick.js")]
+async fn path_pick_script(cx: &Cx) -> Result<Response> {
+    PATH_PICK_JS.respond(cx)
 }
 
 #[route(GET "/search.js")]

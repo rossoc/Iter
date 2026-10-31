@@ -12,7 +12,7 @@ use super::platform_pick::{self, platform_lists};
 use super::project_options::{group_options, project_checklist};
 use super::settings_fields::settings_fields;
 use super::ui::breadcrumb::Crumb;
-use super::ui::field::{CheckOption, field};
+use super::ui::field::{CheckOption, field, path_field};
 use super::ui::form_error::FormError;
 use super::url::{notes_tab_url, org_edit_url, org_url, projects_tab_url, tasks_tab_url};
 use super::{Id, open_db};
@@ -107,12 +107,11 @@ pub async fn screen(
             action: org_edit_url(stored.id()),
             cancel: base,
             error: error,
-            field(
+            path_field(
                 name: OrgForm::NOTES_PATH,
                 label: "Notes path",
                 value: &org.notes_path,
                 hint: "Where the organization's daily notes are kept, and the folder its projects without a notes path of their own keep theirs in.",
-                identifier: true,
                 error: error
             )
             field(

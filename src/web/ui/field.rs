@@ -8,6 +8,7 @@
 use super::empty_line::empty_line;
 use super::form_error::{FormError, is_about};
 use super::group::group;
+use super::icons::{FOLDER, icon};
 use super::notice::ERROR_ID;
 use topcoat::{
     Result,
@@ -138,6 +139,36 @@ pub async fn field(
             }
         )
     })
+}
+
+/// A control for a filesystem path, the one place any form asks for one: the
+/// text input of a [`field`] (so a typed path always works) and, on its right,
+/// a folder-icon button that has `path_pick.js` open the system's folder
+/// chooser (`POST /folders/pick`, `folders.rs`) and fill the input. The button
+/// is `hidden` until that script runs, so without script there is no dead
+/// control.
+#[component]
+pub async fn path_field(
+    name: &str,
+    label: &str,
+    value: &str,
+    #[default] hint: &str,
+    #[default] error: Option<&FormError>,
+    #[default] required: bool,
+) -> Result<impl View> {
+    let id = field_id(name);
+    let aria = path_pick_label(label);
+    Ok(view! {
+        field(name: name, label: label, value: value, hint: hint, error: error, required: required, identifier: true,
+            beside: Some(Child::new(view! {
+                <button class="button path-pick" type="button" hidden="" data-path-pick=(id.as_str()) aria-label=(aria.as_str()) title="Choose folder">(icon(FOLDER))</button>
+            })))
+    })
+}
+
+/// The accessible name of the folder button of the path field `label`.
+fn path_pick_label(label: &str) -> String {
+    format!("Choose folder for {label}")
 }
 
 #[component]
@@ -307,6 +338,11 @@ mod tests {
     fn a_checklist_numbers_its_boxes() {
         assert_eq!(choice_id("projects", 0), "f-projects-0");
         assert_eq!(choice_id("projects", 12), "f-projects-12");
+    }
+
+    #[test]
+    fn a_path_field_names_its_folder_button_after_its_label() {
+        assert_eq!(path_pick_label("Base path"), "Choose folder for Base path");
     }
 
     #[test]

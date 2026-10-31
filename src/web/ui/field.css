@@ -7,6 +7,8 @@
 .field-row{display:flex;gap:8px;align-items:stretch}
 .field-row .control{flex:1 1 auto;min-width:0}
 .field-row .button{flex:none}
+.field-row .path-pick[hidden]{display:none}
+.field-row .path-pick{padding-inline:10px}
 .field .hint{margin:0;color:var(--muted);font-size:.8125rem}
 /* a checkbox row: a tap-sized row (padding, not margins), the box on the first
    line, a long unbroken name wrapping inside the row; the note is secondary

@@ -6,45 +6,34 @@
 //! does: no directory is made), from the template `iter init` starts from --
 //! the config's project defaults, the organization's settings over them --
 //! and with the edit form's validation. The base path is typed or chosen
-//! with Choose: the system's folder picker (`folder_picker.rs`), or, where
-//! there is none, the folder browser (`folders.rs`); both come back to the
-//! pop-up.
+//! with the folder icon of `path_field` (the system's folder picker).
 
 use super::board_info::{load as load_board, screen as board_screen};
 use super::edit::create_to;
-use super::folder_picker::{Picked, pick};
-use super::folders::start_folder;
 use super::forms::{DESCRIPTION, NAME, ProjectForm, SettingsForm};
 use super::org::{load as load_org, screen as org_screen};
 use super::sections::Section;
 use super::settings_fields::settings_fields;
-use super::ui::field::{field, textarea};
+use super::ui::field::{field, path_field, textarea};
 use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::modal::modal;
-use super::ui::{FOLDER, icon};
 use super::url::{
-    PICK_FOLDER, board_info_url, folders_url, org_url, page_url, projects_tab_url,
-    quick_board_project_url, quick_project_url,
+    board_info_url, org_url, page_url, projects_tab_url, quick_board_project_url, quick_project_url,
 };
 use super::{Id, now, open_db};
-use crate::config::{config, expand_home};
+use crate::config::config;
 use crate::models::{Board, Configured, Organization, Project, Settings};
 use serde::Deserialize;
 use topcoat::{
     Result,
     context::Cx,
-    router::{
-        RouterBuilder,
-        content::Form,
-        error::{RouterErrorExt, bad_request, see_other},
-        page, path_param,
-    },
-    view::{Child, View, component, view},
+    router::{RouterBuilder, content::Form, error::RouterErrorExt, page, path_param},
+    view::{View, component, view},
 };
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.page(quick_org).page(quick_board).page(pick_folder)
+    builder.page(quick_org).page(quick_board)
 }
 
 /// The list a project is added to.
@@ -158,12 +147,9 @@ pub struct ProjectCreate {
     pub error: Option<FormError>,
 }
 
-/// The pop-up: Name, Description, Base path (typed, or with Choose beside
-/// it), the Settings group, the way out back to the list.
-///
-/// Enter in a field submits with the form's first submit button, so the
-/// first one is a hidden Create project: Choose (which posts the form to the
-/// folder picker, [`pick_folder`]) must not be the default.
+/// The pop-up: Name, Description, Base path (typed, or chosen with the
+/// folder icon of [`path_field`]), the Settings group, the way out back to
+/// the list.
 #[component]
 pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
     let error = create.error.as_ref();
@@ -171,17 +157,11 @@ pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
     Ok(view! {
         modal(id: "new-project-title", title: "New project", close: close.as_str(),
             form_shell(action: create.home.quick_url(), error: error, cancel: close.as_str(), submit_label: "Create project",
-                lead: Some(Child::new(view! {
-                    <button class="sr" type="submit" tabindex="-1" aria-hidden="true">"Create project"</button>
-                })),
                 <input type="hidden" name="home" value=(create.home.token())>
                 field(name: NAME, label: "Name", value: &create.name, required: true, identifier: true, error: error, autofocus: error.is_none())
                 textarea(name: DESCRIPTION, label: "Description", value: &create.description)
-                field(name: ProjectForm::BASE_PATH, label: "Base path", value: &create.base_path, required: true, identifier: true, error: error,
-                    hint: "The project's directory on disk, such as ~/src/app. ~ is expanded and a relative path is made absolute. Choose opens the folder picker there, or in your home folder.",
-                    beside: Some(Child::new(view! {
-                        <button class="button" type="submit" formaction=(PICK_FOLDER)>(icon(FOLDER)) "Choose\u{2026}"</button>
-                    })))
+                path_field(name: ProjectForm::BASE_PATH, label: "Base path", value: &create.base_path, required: true, error: error,
+                    hint: "The project's directory on disk, such as ~/src/app. ~ is expanded and a relative path is made absolute.")
                 settings_fields(s: &create.settings)
             )
         )
@@ -264,57 +244,6 @@ async fn quick_board(cx: &Cx, Form(typed): Form<NewProject>) -> Result<impl View
     let id = *path_param::<Id>(cx)?;
     let create = add(Home::Board(id), typed)?;
     Ok(view! { list_page(home: Home::Board(id), create: &create) })
-}
-
-/// What Choose posts: the whole pop-up, so nothing typed is lost.
-#[derive(Deserialize)]
-struct PickFolder {
-    home: String,
-    #[serde(flatten)]
-    typed: NewProject,
-}
-
-/// `POST /folders/pick`: opens the system's folder picker at the typed base
-/// path (the nearest folder that exists; else the home folder) and shows the
-/// pop-up again with the chosen folder as the base path, and its name as the
-/// project's when none was typed. Cancelled, the pop-up comes back as it
-/// was. With no picker on the system, the folder browser instead.
-#[page(POST "/folders/pick")]
-async fn pick_folder(Form(posted): Form<PickFolder>) -> Result<impl View> {
-    let home = Home::parse(&posted.home).ok_or_else(|| bad_request("Unknown list."))?;
-    home.exists()?;
-    let NewProject {
-        mut name,
-        description,
-        mut base_path,
-        settings,
-    } = posted.typed;
-    let start = start_folder(&base_path, &expand_home("~"));
-    match pick(&start) {
-        Picked::Folder(folder) => {
-            if name.trim().is_empty() {
-                name = folder
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default();
-            }
-            base_path = folder.to_string_lossy().into_owned();
-        }
-        Picked::Cancelled => {}
-        Picked::Unavailable => {
-            let browse = folders_url(&home.token(), &name, &start.to_string_lossy(), false);
-            return Err(see_other(browse).into());
-        }
-    }
-    let create = ProjectCreate {
-        home,
-        name,
-        description,
-        base_path,
-        settings: settings.settings(),
-        error: None,
-    };
-    Ok(view! { list_page(home: home, create: &create) })
 }
 
 #[cfg(test)]

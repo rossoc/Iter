@@ -10,7 +10,7 @@ use super::forms::ProjectForm;
 use super::load::org_in;
 use super::settings_fields::settings_fields;
 use super::ui::breadcrumb::Crumb;
-use super::ui::field::{field, id_text, optional_options, select};
+use super::ui::field::{id_text, optional_options, path_field, select};
 use super::ui::form_error::FormError;
 use super::url::{
     instructions_tab_url, notes_tab_url, project_edit_url, project_url, tasks_tab_url,
@@ -93,21 +93,19 @@ pub async fn screen(
             action: project_edit_url(stored.id()),
             cancel: base,
             error: error,
-            field(
+            path_field(
                 name: ProjectForm::BASE_PATH,
                 label: "Base path",
                 value: &project.base_path,
                 hint: "The project's directory on disk. ~ is expanded and a relative path is made absolute.",
                 required: true,
-                identifier: true,
                 error: error
             )
-            field(
+            path_field(
                 name: ProjectForm::NOTES_PATH,
                 label: "Notes path",
                 value: &project.notes_path,
                 hint: "Where the project's daily notes are kept. Left empty, they go in a folder of the project's name inside the organization's notes path.",
-                identifier: true,
                 error: error
             )
             select(
