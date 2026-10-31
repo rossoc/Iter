@@ -14,9 +14,9 @@
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::github::{self, IssueState};
+use crate::github::IssueTracker;
 use crate::models::{Organization, Project, Push, Task, TaskStatus};
-use crate::platform::{Named, TimePlatform};
+use crate::platform::{PlatformItem, TimePlatform};
 use crate::reporting::{DateRange, Worklog, WorklogEntry, fmt_date, worklog_line};
 use crate::utils::report::project_reports;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -300,35 +300,13 @@ pub fn unknown_targets(platform: &dyn TimePlatform, target: &Target) -> Vec<Stri
 /// projects, and the activities of the project `project` names (by id or
 /// name). Whatever cannot be fetched is an empty list -- the fields stay
 /// free text.
-pub fn choices(platform: &dyn TimePlatform, project: &str) -> (Vec<Named>, Vec<Named>) {
+pub fn choices(platform: &dyn TimePlatform, project: &str) -> (Vec<PlatformItem>, Vec<PlatformItem>) {
     let projects = platform.projects().unwrap_or_default();
     let activities = match projects.iter().find(|p| p.is(project)) {
         Some(found) => platform.activities(&found.id).unwrap_or_default(),
         None => Vec::new(),
     };
     (projects, activities)
-}
-
-/// The GitHub side, behind a trait so it can be faked.
-pub trait Github {
-    fn is_closed(&self, repo_path: &str, number: i64) -> Result<bool>;
-    fn close(&self, repo_path: &str, number: i64) -> Result<()>;
-    fn comment(&self, repo_path: &str, number: i64, body: &str) -> Result<()>;
-}
-
-/// `gh`, through `crate::github`.
-pub struct Gh;
-
-impl Github for Gh {
-    fn is_closed(&self, repo_path: &str, number: i64) -> Result<bool> {
-        Ok(github::fetch_issue(repo_path, number)?.state == IssueState::Closed)
-    }
-    fn close(&self, repo_path: &str, number: i64) -> Result<()> {
-        github::set_issue_state(repo_path, number, IssueState::Closed)
-    }
-    fn comment(&self, repo_path: &str, number: i64, body: &str) -> Result<()> {
-        github::post_comment(repo_path, number, body)
-    }
 }
 
 /// What happened to one thing a push does.
@@ -373,7 +351,7 @@ pub fn execute(
     plan: &Plan,
     check: &Check,
     platform: &dyn TimePlatform,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
     now: NaiveDateTime,
 ) -> Result<Vec<Item>> {
     // What an earlier, incomplete run of this same worklog already got
@@ -484,13 +462,10 @@ pub fn execute(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixtures;
+    use crate::fixtures::{self, dt};
+    use crate::github::{Issue, IssueState};
     use crate::platform::fake::FakePlatform;
     use std::cell::RefCell;
-
-    fn dt(s: &str) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").expect("fixture datetime")
-    }
 
     #[derive(Default)]
     struct FakeGh {
@@ -499,12 +474,21 @@ mod tests {
         fail_comment: bool,
     }
 
-    impl Github for FakeGh {
-        fn is_closed(&self, _: &str, n: i64) -> Result<bool> {
+    impl IssueTracker for FakeGh {
+        fn fetch(&self, _: &str, n: i64) -> Result<Issue> {
             self.calls.borrow_mut().push(format!("view #{n}"));
-            Ok(self.closed)
+            Ok(Issue {
+                number: n,
+                title: String::new(),
+                body: String::new(),
+                state: match self.closed {
+                    true => IssueState::Closed,
+                    false => IssueState::Open,
+                },
+            })
         }
-        fn close(&self, _: &str, n: i64) -> Result<()> {
+        fn set_state(&self, _: &str, n: i64, state: IssueState) -> Result<()> {
+            assert_eq!(state, IssueState::Closed);
             self.calls.borrow_mut().push(format!("close #{n}"));
             Ok(())
         }
@@ -514,6 +498,18 @@ mod tests {
             }
             self.calls.borrow_mut().push(format!("comment #{n} {body}"));
             Ok(())
+        }
+        fn list(&self, _: &str) -> Result<Vec<Issue>> {
+            unreachable!("a push never lists issues")
+        }
+        fn create(&self, _: &str, _: &str, _: &str, _: &str) -> Result<i64> {
+            unreachable!("a push never opens issues")
+        }
+        fn set_body(&self, _: &str, _: i64, _: &str) -> Result<()> {
+            unreachable!("a push never edits issue bodies")
+        }
+        fn assign_self(&self, _: &str, _: i64) -> Result<()> {
+            unreachable!("a push never assigns")
         }
     }
 
@@ -544,14 +540,7 @@ mod tests {
             } else {
                 ("2026-09-04 11:00", "2026-09-04 12:00")
             };
-            db.insert(&crate::models::Session {
-                id: None,
-                task_id: tid,
-                start: dt(start),
-                end: Some(dt(end)),
-                message: None,
-            })
-            .unwrap();
+            fixtures::add_session(&db, tid, dt(start), Some(dt(end)));
         }
         (db, org)
     }
@@ -588,17 +577,19 @@ mod tests {
 
     #[test]
     fn choices_are_the_platforms_lists_and_empty_without_a_project() {
-        let mut platform = FakePlatform::default();
-        platform.projects = vec![Named::new("p1", "Acme")];
-        platform.activities = vec![Named::new("a1", "Dev")];
+        let platform = FakePlatform {
+            projects: vec![PlatformItem::new("p1", "Acme")],
+            activities: vec![PlatformItem::new("a1", "Dev")],
+            ..Default::default()
+        };
         let both = (
-            vec![Named::new("p1", "Acme")],
-            vec![Named::new("a1", "Dev")],
+            vec![PlatformItem::new("p1", "Acme")],
+            vec![PlatformItem::new("a1", "Dev")],
         );
         // by name or by id
         assert_eq!(choices(&platform, "acme"), both);
         assert_eq!(choices(&platform, "p1"), both);
-        assert_eq!(choices(&platform, "").1, Vec::<Named>::new());
+        assert_eq!(choices(&platform, "").1, Vec::<PlatformItem>::new());
     }
 
     #[test]
@@ -650,14 +641,7 @@ mod tests {
 
         // another session is worked: the figure differs, so it may be pushed
         let task = a_task(&db, &org);
-        db.insert(&crate::models::Session {
-            id: None,
-            task_id: task,
-            start: dt("2026-09-04 14:00"),
-            end: Some(dt("2026-09-04 15:00")),
-            message: None,
-        })
-        .unwrap();
+        fixtures::add_session(&db, task, dt("2026-09-04 14:00"), Some(dt("2026-09-04 15:00")));
         let changed = the_plan(&db, &org);
         assert!(
             !check(&db, &org, &changed, &platform)
@@ -688,14 +672,7 @@ mod tests {
     fn a_conflict_does_not_stop_the_other_days() {
         let (db, org) = setup();
         let task = a_task(&db, &org);
-        db.insert(&crate::models::Session {
-            id: None,
-            task_id: task,
-            start: dt("2026-09-03 09:00"),
-            end: Some(dt("2026-09-03 10:00")),
-            message: None,
-        })
-        .unwrap();
+        fixtures::add_session(&db, task, dt("2026-09-03 09:00"), Some(dt("2026-09-03 10:00")));
         let both = DateRange {
             from: Some(NaiveDate::from_ymd_opt(2026, 9, 3).unwrap()),
             to: NaiveDate::from_ymd_opt(2026, 9, 4).unwrap(),
@@ -829,14 +806,7 @@ mod tests {
         let (db, org) = setup();
         let closed = the_plan(&db, &org);
         let task = a_task(&db, &org);
-        db.insert(&crate::models::Session {
-            id: None,
-            task_id: task,
-            start: dt("2026-09-04 17:00"),
-            end: None,
-            message: None,
-        })
-        .unwrap();
+        fixtures::add_session(&db, task, dt("2026-09-04 17:00"), None);
         let open = the_plan(&db, &org);
         assert!(open.preview().contains("still open"));
         assert_ne!(open.hash, closed.hash);
@@ -850,13 +820,13 @@ mod tests {
         };
         assert!(unknown_targets(&FakePlatform::default(), &target).is_empty());
         let wrong_project = FakePlatform {
-            projects: vec![Named::new("p2", "beta")],
+            projects: vec![PlatformItem::new("p2", "beta")],
             ..Default::default()
         };
         assert!(unknown_targets(&wrong_project, &target)[0].contains("not one of your projects"));
         let wrong_activity = FakePlatform {
-            projects: vec![Named::new("p1", "acme")],
-            activities: vec![Named::new("a1", "ops")],
+            projects: vec![PlatformItem::new("p1", "acme")],
+            activities: vec![PlatformItem::new("a1", "ops")],
             ..Default::default()
         };
         assert!(unknown_targets(&wrong_activity, &target)[0].contains("not an activity of 'acme'"));
@@ -867,8 +837,8 @@ mod tests {
         let (db, org) = setup();
         let plan = the_plan(&db, &org);
         let platform = FakePlatform {
-            projects: vec![Named::new("p1", "ACME")],
-            activities: vec![Named::new("a1", "Dev")],
+            projects: vec![PlatformItem::new("p1", "ACME")],
+            activities: vec![PlatformItem::new("a1", "Dev")],
             ..Default::default()
         };
         let check = check(&db, &org, &plan, &platform).unwrap();

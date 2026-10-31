@@ -186,7 +186,7 @@ mod tests {
     }
 
     fn task() -> Task {
-        Task::template(7, String::new(), TaskStatus::Queue)
+        crate::fixtures::task(7, "")
     }
 
     /// Each task error that belongs to a field says which.

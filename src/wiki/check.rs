@@ -3,7 +3,7 @@
 //! what could be done next. Contradictions between what pages say need
 //! judgement and are the agent's lint, not this one.
 
-use super::graph::Wiki;
+use super::graph::{Wiki, md_files};
 use super::ontology::{LevelKind, NS, ns};
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Timelike};
 use oxigraph::model::vocab::rdfs;
@@ -151,12 +151,7 @@ pub fn check(wiki: &Wiki, from: usize) -> Vec<Issue> {
                         );
                     }
                 }
-                let data = [
-                    ("description", front.description.as_deref()),
-                    ("confidence", front.confidence.as_deref()),
-                    ("updated", front.updated.as_deref()),
-                ];
-                for (key, value) in data {
+                for (key, value) in front.scalars() {
                     if let (Some(value), Some(allowed)) = (value, onto.allowed_values(&ns(key)))
                         && !allowed.iter().any(|a| a == value)
                     {
@@ -207,9 +202,8 @@ pub fn check(wiki: &Wiki, from: usize) -> Vec<Issue> {
         if level.kind == LevelKind::Task {
             continue;
         }
-        let mut stray = Vec::new();
-        stray_files(&level.dir.join("wiki"), &claimed, &mut stray);
-        for path in stray {
+        let stray = md_files(&level.dir.join("wiki"));
+        for path in stray.into_iter().filter(|p| !claimed.contains(p.as_path())) {
             let rel = path.strip_prefix(&level.dir).unwrap_or(&path);
             issue(
                 Severity::Warning,
@@ -300,23 +294,6 @@ fn violation(wiki: &Wiki, prop: &oxigraph::model::NamedNode, s: usize, t: usize)
         ));
     }
     None
-}
-
-fn stray_files(dir: &Path, claimed: &HashSet<&Path>, out: &mut Vec<std::path::PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if entry.file_name().to_string_lossy().starts_with('.') {
-            continue;
-        }
-        if path.is_dir() {
-            stray_files(&path, claimed, out);
-        } else if path.extension().is_some_and(|e| e == "md") && !claimed.contains(path.as_path()) {
-            out.push(path);
-        }
-    }
 }
 
 #[cfg(test)]

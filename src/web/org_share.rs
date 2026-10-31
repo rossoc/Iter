@@ -20,8 +20,9 @@ use super::{Id, now, open_db};
 use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
 use crate::models::Organization;
-use crate::platform::{JsonWebhook, Named, TimePlatform};
-use crate::push::{self, Gh, Github, Item, Target};
+use crate::platform::{JsonWebhook, PlatformItem, TimePlatform};
+use crate::github::{GhCli, IssueTracker};
+use crate::push::{self, Item, Target};
 use crate::reporting::{DateRange, fmt_date, worklog_text};
 use crate::secret::{self, Keychain};
 use crate::utils::report::parse_day;
@@ -35,6 +36,73 @@ use topcoat::{
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(share)
+}
+
+/// The two ways to share. The form's buttons, its script (`org.js`) and the
+/// handler read the same words from here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Modality {
+    /// Put the text on the clipboard.
+    Copy,
+    /// Send the worklog to the time platform.
+    Push,
+}
+
+impl Modality {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Modality::Copy => "copy",
+            Modality::Push => "push",
+        }
+    }
+}
+
+impl std::str::FromStr for Modality {
+    type Err = String;
+
+    fn from_str(word: &str) -> Result<Self, String> {
+        [Modality::Copy, Modality::Push]
+            .into_iter()
+            .find(|m| m.as_str() == word)
+            .ok_or_else(|| format!("unknown way to share '{word}'"))
+    }
+}
+
+/// The text a copy puts on the clipboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShareFormat {
+    Worklog,
+    Status,
+}
+
+impl ShareFormat {
+    pub const ALL: [ShareFormat; 2] = [ShareFormat::Worklog, ShareFormat::Status];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ShareFormat::Worklog => "worklog",
+            ShareFormat::Status => "status",
+        }
+    }
+
+    /// What the format's choice reads in the pop-up.
+    pub fn label(self) -> &'static str {
+        match self {
+            ShareFormat::Worklog => "Worklog",
+            ShareFormat::Status => "Status list",
+        }
+    }
+}
+
+impl std::str::FromStr for ShareFormat {
+    type Err = String;
+
+    fn from_str(word: &str) -> Result<Self, String> {
+        Self::ALL
+            .into_iter()
+            .find(|f| f.as_str() == word)
+            .ok_or_else(|| format!("unknown format '{word}'"))
+    }
 }
 
 /// What the Share form submits. `from`/`to` are the period the Report tab
@@ -111,8 +179,8 @@ pub struct ShareDialog {
     pub worklog: String,
     pub status: String,
     pub target: Target,
-    pub projects: Vec<Named>,
-    pub activities: Vec<Named>,
+    pub projects: Vec<PlatformItem>,
+    pub activities: Vec<PlatformItem>,
     /// Why a push is not possible yet, if it is not.
     pub hint: String,
 }
@@ -142,8 +210,8 @@ impl ShareDialog {
             activities_url: format!("{base}/platform-activities"),
             from: report.range.from.map(fmt_date).unwrap_or_default(),
             to: fmt_date(report.range.to),
-            worklog: share_text(report, "worklog").unwrap_or_default(),
-            status: share_text(report, "status").unwrap_or_default(),
+            worklog: share_text(report, ShareFormat::Worklog),
+            status: share_text(report, ShareFormat::Status),
             target,
             projects,
             activities,
@@ -185,11 +253,10 @@ fn connect_real(org: &Organization) -> IterResult<Box<dyn TimePlatform>> {
 }
 
 /// The text a copy puts on the clipboard, for `format`.
-pub fn share_text(report: &super::org_report::Report, format: &str) -> Option<String> {
+pub fn share_text(report: &super::org_report::Report, format: ShareFormat) -> String {
     match format {
-        "worklog" => Some(worklog_text(report.projects.iter().flat_map(|p| &p.tasks))),
-        "status" => Some(super::org_report::status_list(report)),
-        _ => None,
+        ShareFormat::Worklog => worklog_text(report.projects.iter().flat_map(|p| &p.tasks)),
+        ShareFormat::Status => super::org_report::status_list(report),
     }
 }
 
@@ -200,7 +267,7 @@ pub fn handle(
     form: &ShareForm,
     now: NaiveDateTime,
     connect: Connect,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
 ) -> Outcome {
     match answer(db, id, form, now, connect, gh) {
         Ok(outcome) => outcome,
@@ -214,26 +281,22 @@ fn answer(
     form: &ShareForm,
     now: NaiveDateTime,
     connect: Connect,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
 ) -> IterResult<Outcome> {
     let org = db
         .get::<Organization>(id)?
         .ok_or_else(|| IterError::CommandFailed("no such organization".into()))?;
     let range = form.range(now)?;
-    match form.modality.as_str() {
-        "copy" => {
+    let modality: Modality = form.modality.parse().map_err(IterError::CommandFailed)?;
+    match modality {
+        Modality::Copy => {
             let projects = db.projects_in::<Organization>(id)?;
             let report =
                 super::org_report::load(db, &projects, Some(&form.from), Some(&form.to), now)?;
-            let text = share_text(&report, &form.format).ok_or_else(|| {
-                IterError::CommandFailed(format!("unknown format '{}'", form.format))
-            })?;
-            Ok(Outcome::Copied(text))
+            let format: ShareFormat = form.format.parse().map_err(IterError::CommandFailed)?;
+            Ok(Outcome::Copied(share_text(&report, format)))
         }
-        "push" => push_step(db, &org, range, form, now, connect, gh),
-        other => Err(IterError::CommandFailed(format!(
-            "unknown way to share '{other}'"
-        ))),
+        Modality::Push => push_step(db, &org, range, form, now, connect, gh),
     }
 }
 
@@ -244,7 +307,7 @@ fn push_step(
     form: &ShareForm,
     now: NaiveDateTime,
     connect: Connect,
-    gh: &dyn Github,
+    gh: &dyn IssueTracker,
 ) -> IterResult<Outcome> {
     if org.platform_url.trim().is_empty() {
         return Err(IterError::CommandFailed(format!(
@@ -290,7 +353,7 @@ async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl
     let form = ShareForm::parse(&pairs);
     let db = open_db()?;
     let now = now();
-    let outcome = handle(&db, id, &form, now, &connect_real, &Gh);
+    let outcome = handle(&db, id, &form, now, &connect_real, &GhCli::system());
     // the Report tab of the period asked for, or the default when it was bad
     let valid = form.range(now).is_ok();
     let (from, to) = match valid {
@@ -308,10 +371,7 @@ async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl
 /// their button; `org.js` shows the chosen one only and copies in the page.
 #[component]
 pub async fn share_modal(dialog: &ShareDialog) -> Result<impl View> {
-    let formats = [
-        ("worklog".to_string(), "Worklog".to_string()),
-        ("status".to_string(), "Status list".to_string()),
-    ];
+    let formats = ShareFormat::ALL.map(|f| (f.as_str().to_string(), f.label().to_string()));
     Ok(view! {
         modal(id: "share-title", title: "Share this period", close: dialog.close.as_str(),
             <form class="form sharing" method="post" action=(dialog.action.as_str())
@@ -320,13 +380,13 @@ pub async fn share_modal(dialog: &ShareDialog) -> Result<impl View> {
                 <input type="hidden" name="to" value=(dialog.to.as_str())>
                 <fieldset class="share-modes" hidden="">
                     <legend class="sr">"How to share"</legend>
-                    <label class="mode"><input type="radio" name="mode" value="copy" checked="">(icon(COPY)) "Copy"</label>
-                    <label class="mode"><input type="radio" name="mode" value="push">(icon(PUSH)) "Push"</label>
+                    <label class="mode"><input type="radio" name="mode" value=(Modality::Copy.as_str()) checked="">(icon(COPY)) "Copy"</label>
+                    <label class="mode"><input type="radio" name="mode" value=(Modality::Push.as_str())>(icon(PUSH)) "Push"</label>
                 </fieldset>
-                <div class="share-set" data-for="copy">
-                    select(name: "format", label: "Format", options: &formats, current: "worklog")
+                <div class="share-set" data-for=(Modality::Copy.as_str())>
+                    select(name: "format", label: "Format", options: &formats, current: ShareFormat::Worklog.as_str())
                 </div>
-                <div class="share-set" data-for="push">
+                <div class="share-set" data-for=(Modality::Push.as_str())>
                     field(name: "organization", label: "Project", value: &dialog.target.organization, identifier: true, list: platform_pick::LIST_PROJECTS,
                         hint: "The platform's project, by name or id.")
                     field(name: "activity", label: "Activity", value: &dialog.target.activity, identifier: true, list: platform_pick::LIST_ACTIVITIES,
@@ -337,11 +397,11 @@ pub async fn share_modal(dialog: &ShareDialog) -> Result<impl View> {
                     }
                 </div>
                 <div class="actions">
-                    <button type="submit" name="modality" value="copy" class="button primary share-go" data-for="copy">
+                    <button type="submit" name="modality" value=(Modality::Copy.as_str()) class="button primary share-go" data-for=(Modality::Copy.as_str())>
                         <span class="idle">(icon(COPY)) "Copy"</span>
                         <span class="done">(icon(CLIPBOARD_CHECK)) "Copied"</span>
                     </button>
-                    <button type="submit" name="modality" value="push" class="button primary share-go" data-for="push">(icon(PUSH)) "Push"</button>
+                    <button type="submit" name="modality" value=(Modality::Push.as_str()) class="button primary share-go" data-for=(Modality::Push.as_str())>(icon(PUSH)) "Push"</button>
                     <a class="u" href=(dialog.close.as_str())>"Cancel"</a>
                     <span class="sr" id="copy-status" role="status"></span>
                 </div>
@@ -381,7 +441,7 @@ pub async fn preview_modal(
             <form class="form" method="post" action=(format!("{base}/share"))>
                 <input type="hidden" name="from" value=(p.form.from.as_str())>
                 <input type="hidden" name="to" value=(p.form.to.as_str())>
-                <input type="hidden" name="modality" value="push">
+                <input type="hidden" name="modality" value=(Modality::Push.as_str())>
                 <input type="hidden" name="format" value=(p.form.format.as_str())>
                 <input type="hidden" name="organization" value=(p.form.organization.as_str())>
                 <input type="hidden" name="activity" value=(p.form.activity.as_str())>
@@ -425,28 +485,13 @@ pub async fn share_outcome(outcome: &Outcome) -> Result<impl View> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixtures;
-    use crate::models::{Session, Settings, Task, TaskStatus};
+    use crate::fixtures::{self, dt};
+    use crate::models::{Settings, Task, TaskStatus};
     use crate::platform::fake::FakePlatform;
     use crate::secret::fake::MemoryKeys;
     use crate::secret::{KeyStore, Secret};
 
-    struct NoGh;
-    impl Github for NoGh {
-        fn is_closed(&self, _: &str, _: i64) -> IterResult<bool> {
-            Ok(false)
-        }
-        fn close(&self, _: &str, _: i64) -> IterResult<()> {
-            Ok(())
-        }
-        fn comment(&self, _: &str, _: i64, _: &str) -> IterResult<()> {
-            Ok(())
-        }
-    }
-
-    fn dt(s: &str) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").unwrap()
-    }
+    use crate::github::fake::Inert as NoGh;
 
     fn now() -> NaiveDateTime {
         dt("2026-09-04 18:00")
@@ -461,17 +506,12 @@ mod tests {
         let mut p = fixtures::project("web");
         p.organization_id = Some(id);
         let pid = db.insert(&p).unwrap();
-        let mut t = Task::template(pid, String::new(), TaskStatus::Wip);
-        t.name = "Fix".into();
-        let tid = db.insert(&t).unwrap();
-        db.insert(&Session {
-            id: None,
-            task_id: tid,
-            start: dt("2026-09-04 09:00"),
-            end: Some(dt("2026-09-04 10:00")),
-            message: None,
-        })
-        .unwrap();
+        let task = Task {
+            status: TaskStatus::Wip,
+            ..fixtures::task(pid, "Fix")
+        };
+        let tid = db.insert(&task).unwrap();
+        fixtures::add_session(&db, tid, dt("2026-09-04 09:00"), Some(dt("2026-09-04 10:00")));
         (db, id)
     }
 
@@ -637,5 +677,20 @@ mod tests {
             ),
             ("2026-09-01", "push", true, "dev")
         );
+    }
+
+    #[test]
+    fn the_words_of_the_form_round_trip() {
+        for m in [Modality::Copy, Modality::Push] {
+            assert_eq!(m.as_str().parse(), Ok(m));
+        }
+        for f in ShareFormat::ALL {
+            assert_eq!(f.as_str().parse(), Ok(f));
+        }
+        assert_eq!(
+            "mail".parse::<Modality>(),
+            Err("unknown way to share 'mail'".into())
+        );
+        assert_eq!("".parse::<ShareFormat>(), Err("unknown format ''".into()));
     }
 }

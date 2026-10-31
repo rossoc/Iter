@@ -7,8 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("iter-wiki-{}-{name}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
+    let dir = crate::fixtures::scratch(&format!("wiki-{name}"));
     fs::create_dir_all(&dir).expect("dir");
     dir
 }

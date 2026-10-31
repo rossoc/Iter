@@ -599,18 +599,29 @@ async fn create_instruction(Form(form): Form<NewForm>) -> Result<Response> {
             ..Default::default()
         },
     )
-    .map_err(bad_request)?;
-    instruction::check(&name, &text).map_err(bad_request)?;
+    .map_err(|e| bad_request(e.to_string()))?;
+    instruction::check(&name, &text).map_err(|e| bad_request(e.to_string()))?;
     std::fs::create_dir_all(path.parent().unwrap_or(&home))?;
     crate::agent::taskdir::write_atomic(&path, &text)?;
     let to = page_url(&scope.url(&name), &[("tab", Some("settings"))]);
     Err(see_other(to).into())
 }
 
+/// The buttons of the instruction form (`name="do"`).
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum SaveButton {
+    /// Write the file at this scope (and rename it, when asked).
+    Save,
+    /// Delete this scope's file, so the inherited one shows again.
+    Reset,
+}
+
 #[derive(Deserialize)]
 struct SaveForm {
-    #[serde(rename = "do", default)]
-    action: String,
+    /// The button pressed; a submission without one is refused (a 400).
+    #[serde(rename = "do")]
+    action: SaveButton,
     #[serde(default)]
     project: String,
     /// The name to save it under; empty or the same: no change.
@@ -648,9 +659,9 @@ async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Respons
         .clone()
         .ok_or_else(|| bad_request("there is no folder to keep it in"))?;
     let path = instruction::file(&home, &name);
-    match form.action.as_str() {
-        "save" => {
-            let renamed = instruction::rename_target(&name, &form.new_name).map_err(bad_request)?;
+    match form.action {
+        SaveButton::Save => {
+            let renamed = instruction::rename_target(&name, &form.new_name).map_err(|e| bad_request(e.to_string()))?;
             let target = renamed.as_deref().unwrap_or(&name);
             // the keys the form does not know stay as they are in the file
             let kind = if instruction::is_builtin(&name) {
@@ -670,8 +681,8 @@ async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Respons
                     prompt: &form.prompt,
                 },
             )
-            .map_err(bad_request)?;
-            instruction::check(target, &text).map_err(bad_request)?;
+            .map_err(|e| bad_request(e.to_string()))?;
+            instruction::check(target, &text).map_err(|e| bad_request(e.to_string()))?;
             let to = instruction::file(&home, target);
             if renamed.is_some() && to.exists() {
                 return Err(bad_request(format!("'{target}' exists already")).into());
@@ -690,12 +701,11 @@ async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Respons
                 see_other(page_url(&scope.url(target), &[("tab", Some("settings"))])).into(),
             );
         }
-        "reset" => match std::fs::remove_file(&path) {
+        SaveButton::Reset => match std::fs::remove_file(&path) {
             Ok(()) => {}
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => return Err(e.into()),
         },
-        other => return Err(bad_request(format!("'{other}' is not an action")).into()),
     }
     Err(see_other(page_url(&scope.url(&name), &[("tab", Some("settings"))])).into())
 }
@@ -742,8 +752,7 @@ mod tests {
 
     #[test]
     fn usage_is_found_in_the_runs_of_the_tasks() {
-        let notes = std::env::temp_dir().join(format!("iter-usage-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&notes);
+        let notes = fixtures::scratch("usage");
         let db = fixtures::db();
         let mut p = fixtures::project("app");
         p.notes_path = notes.display().to_string();

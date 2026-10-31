@@ -193,7 +193,6 @@ pub fn wiki(db: &Db, spec: &Spec) -> Result<Wiki> {
 mod tests {
     use super::*;
     use crate::fixtures;
-    use crate::models::TaskStatus;
 
     fn world() -> (Db, i64, i64) {
         let db = fixtures::db();
@@ -213,22 +212,6 @@ mod tests {
         (db, org, app)
     }
 
-    fn add_task(db: &Db, project: i64) -> i64 {
-        db.insert(&Task {
-            id: None,
-            project_id: project,
-            name: "Fix it".into(),
-            description: String::new(),
-            github_issue: None,
-            status: TaskStatus::Queue,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
-        })
-        .expect("task")
-    }
-
     fn summary(levels: &[Level]) -> Vec<(String, String, Option<usize>)> {
         levels
             .iter()
@@ -239,7 +222,7 @@ mod tests {
     #[test]
     fn a_task_sees_itself_its_project_and_its_organization() {
         let (db, _, app) = world();
-        let task = add_task(&db, app);
+        let task = fixtures::add_task(&db, app, "Fix it");
         let spec = Spec {
             task: Some("App/Fix it".into()),
             ..Spec::default()

@@ -161,11 +161,9 @@ fn neighbours(range: &DateRange, today: NaiveDate) -> (Option<DateRange>, Option
         return (None, None);
     };
     let days = (range.to - from).num_days() as u64 + 1;
-    let prev = from.checked_sub_days(Days::new(1)).and_then(|to| {
-        Some(DateRange {
-            from: to.checked_sub_days(Days::new(days - 1)),
-            to,
-        })
+    let prev = from.checked_sub_days(Days::new(1)).map(|to| DateRange {
+        from: to.checked_sub_days(Days::new(days - 1)),
+        to,
     });
     let next = (range.to < today).then(|| {
         let from = range.to + Days::new(1);

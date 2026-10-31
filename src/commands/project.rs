@@ -15,7 +15,7 @@ use crate::db::Table;
 use crate::error::Result;
 use crate::md_edit::edited;
 use crate::models::{Board, Named, Organization, Project};
-use crate::reporting::{Header, ProjectInfo, Report, settings_of};
+use crate::reporting::{Header, ProjectInfo, print_report};
 use crate::utils::crud::update;
 use crate::utils::output::list_names;
 use crate::utils::report::{resolve_range, task_reports, total_minutes};
@@ -264,17 +264,16 @@ fn project_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> 
     let total_minutes = total_minutes(&sessions, now);
 
     let info = ProjectInfo {
-        header: Header::new(
+        header: Header::of(
             project.name.clone(),
             &project.description,
-            settings_of(&project)?,
+            &project,
             range,
             total_minutes,
-        ),
+        )?,
         tasks,
     };
-    print!("{}", info.render(opts.format)?);
-    Ok(())
+    print_report(&info, opts.format)
 }
 
 fn project_list(app: &App) -> Result<()> {

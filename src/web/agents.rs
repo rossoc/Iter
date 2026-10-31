@@ -17,7 +17,8 @@ use super::ui::table::{cell, data_table, row};
 use super::ui::tabs::{Tab, tabs};
 use super::ui::{PLAY, STOP, X, icon};
 use super::url::{
-    agent_tab_url, agent_url, agents_url, page_url, run_action_url, run_post_url, task_url,
+    RunAction, agent_tab_url, agent_url, agents_url, page_url, run_action_url, run_post_url,
+    task_url,
 };
 use super::{Id, open_db};
 use crate::agent::run::RunRecord;
@@ -164,10 +165,10 @@ async fn actions(task_id: i64, run: &RunRecord) -> Result<impl View> {
     Ok(view! {
         <div class="compose-actions">
             if shown == "queued" {
-                act(action: run_action_url(task_id, run.n, "run"), label: "Run now", svg: PLAY)
-                act(action: run_action_url(task_id, run.n, "cancel"), label: "Remove from the queue", svg: X)
+                act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
+                act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
             } else if shown == "running" {
-                act(action: run_action_url(task_id, run.n, "cancel"), label: "Stop the agent", svg: STOP)
+                act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop the agent", svg: STOP)
             }
         </div>
     })

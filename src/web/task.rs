@@ -10,6 +10,7 @@ use super::session_lines::task_lines;
 use super::task_agent::{self, AgentTab, agent_tab, files_block, plan_block};
 use super::task_panel::task_panel;
 use super::task_runs::compose_modal;
+use super::task_notes::note_modal;
 use super::task_sessions::session_modal;
 use super::task_wiki::{self, WikiTab, wiki_tab};
 use super::ui::breadcrumb::Crumb;
@@ -19,7 +20,8 @@ use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::sessions_table::sessions_table;
 use super::ui::tabs::tabs;
-use super::url::{page_url, sessions_tab_url, task_url};
+use super::ui::table::AddRow;
+use super::url::{notes_tab_url, page_url, sessions_tab_url, task_url};
 use super::{now, open_db};
 use crate::agent::taskdir;
 use crate::db::{Db, Table};
@@ -109,9 +111,10 @@ async fn show(cx: &Cx) -> Result<impl View> {
         .map(|d| d.runs().len())
         .unwrap_or(0);
     let add_session = section == TaskSection::Sessions && query.new.as_deref() == Some("session");
+    let add_note = section == TaskSection::Notes && query.new.as_deref() == Some("note");
     let now = now();
     Ok(view! {
-        screen(page: &page, section: section, now: now, agent: agent.as_ref(), wiki: wiki.as_ref(), files: files.as_ref(), add_session: add_session, plan: plan.as_ref(), agents: agents)
+        screen(page: &page, section: section, now: now, agent: agent.as_ref(), wiki: wiki.as_ref(), files: files.as_ref(), add_session: add_session, add_note: add_note, plan: plan.as_ref(), agents: agents)
     })
 }
 
@@ -162,6 +165,7 @@ pub async fn screen(
     #[default] wiki: Option<&WikiTab>,
     #[default] files: Option<&task_agent::Files>,
     #[default] add_session: bool,
+    #[default] add_note: bool,
     #[default] plan: Option<&crate::agent::plan::Plan>,
     #[default] agents: usize,
 ) -> Result<impl View> {
@@ -172,12 +176,15 @@ pub async fn screen(
         tags,
     } = page;
     let items = task_tabs(&task_url(task.id()), section, rows.len(), agents);
+    let new_note = page_url(&notes_tab_url(&task_url(task.id())), &[("new", Some("note"))]);
     // The page has tabs, so the current tab is the current item and the
     // page's own crumb is plain text.
     let crumbs = trail(&parents.org, Some(&parents.project), Crumb::label("Task"));
     let parts = [section.title("Task"), task.name.as_str()];
     let dialog = if add_session && section == TaskSection::Sessions {
         Some(Child::new(view! { session_modal(task_id: task.id()) }))
+    } else if add_note && section == TaskSection::Notes {
+        Some(Child::new(view! { note_modal(task_id: task.id()) }))
     } else {
         agent
             .and_then(|a| a.roster.compose.as_ref())
@@ -194,7 +201,7 @@ pub async fn screen(
             } else if let (TaskSection::Agent, Some(agent)) = (section, agent) {
                 agent_tab(task_id: task.id(), agent: agent)
             } else if let (TaskSection::Notes, Some(files)) = (section, files) {
-                files_block(id: "notes-title", label: "Notes", noun: "notes", docs: &files.notes)
+                files_block(label: "Notes", noun: "notes", docs: &files.notes, add: Some(AddRow::link(&new_note, "New note\u{2026}")))
             } else if let (TaskSection::Wiki, Some(wiki), Some(files)) = (section, wiki, files) {
                 wiki_tab(tab: wiki, sketches: &files.sketches)
             } else {

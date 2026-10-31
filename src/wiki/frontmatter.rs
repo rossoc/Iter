@@ -22,6 +22,17 @@ pub struct Front {
     pub unknown: Vec<String>,
 }
 
+impl Front {
+    /// The single-valued data properties, by the name the ontology gives them.
+    pub fn scalars(&self) -> [(&'static str, Option<&str>); 3] {
+        [
+            ("description", self.description.as_deref()),
+            ("confidence", self.confidence.as_deref()),
+            ("updated", self.updated.as_deref()),
+        ]
+    }
+}
+
 /// A page split into the YAML text between the dividers (if there is a
 /// front matter) and the markdown below it.
 pub struct Split<'a> {

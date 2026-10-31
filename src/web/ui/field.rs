@@ -60,12 +60,13 @@ async fn labelled(
     hint: &str,
     required: bool,
     invalid: bool,
+    #[default] hide_label: bool,
     child: Child<'_>,
 ) -> Result<impl View> {
     Ok(view! {
         <div class="field">
             <div class="field-head">
-                <label for=(id)>
+                <label for=(id) class=(if hide_label { "sr" } else { "" })>
                     (label)
                     if required { <span class="req" aria-hidden="true">"*"</span> }
                 </label>
@@ -180,12 +181,15 @@ pub async fn textarea(
     #[default] error: Option<&FormError>,
     #[default] required: bool,
     #[default] loaded: &str,
+    // The label stays for screen readers but is not shown: for a lone editor
+    // whose purpose the page already says.
+    #[default] hide_label: bool,
 ) -> Result<impl View> {
     let id = field_id(name);
     let invalid = is_about(error, name);
     let described = described_by(&id, hint, invalid);
     Ok(view! {
-        labelled(id: &id, label: label, hint: hint, required: required, invalid: invalid,
+        labelled(id: &id, label: label, hint: hint, required: required, invalid: invalid, hide_label: hide_label,
             <textarea class="control" id=(id.as_str()) name=(name)
                 if !loaded.is_empty() { data-loaded=(loaded) }
                 if required { aria-required="true" }

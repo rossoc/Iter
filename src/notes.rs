@@ -308,11 +308,11 @@ pub fn project_dir(project: &Project, org: &Option<Organization>) -> Option<Path
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::{self, day};
 
     #[test]
     fn a_section_is_added_once() {
-        let dir = std::env::temp_dir().join(format!("iter-append-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
+        let dir = fixtures::scratch("notes-append");
         let day = NaiveDate::from_ymd_opt(2026, 10, 30).unwrap();
         assert!(append_section(&dir, day, "Task: Fix it", "### a\n\nhello\n").unwrap());
         assert!(!append_section(&dir, day, "Task: Fix it", "other").unwrap());
@@ -326,7 +326,7 @@ mod tests {
 
     #[test]
     fn a_saved_note_reads_back_and_keeps_its_name() {
-        let dir = scratch("save");
+        let dir = fixtures::scratch("notes-save");
         let d = day("2026-10-29");
         create(&dir, d).expect("creates");
         let text = "layout: page\ntitle: Kickoff\ndate: 2026-10-29\n---\n\nnew body\n";
@@ -340,7 +340,7 @@ mod tests {
 
     #[test]
     fn an_unreadable_note_is_refused_and_leaves_the_file() {
-        let dir = scratch("refuse");
+        let dir = fixtures::scratch("notes-refuse");
         let d = day("2026-10-29");
         create(&dir, d).expect("creates");
         let before = raw(&dir, d);
@@ -359,16 +359,6 @@ mod tests {
         // a note that is not there is not created by a save
         assert!(save(&dir, day("2026-10-30"), "x").is_err());
         let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    fn day(d: &str) -> NaiveDate {
-        parse_date(d).expect("a date")
-    }
-
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("iter-notes-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
     }
 
     #[test]
@@ -409,7 +399,7 @@ mod tests {
 
     #[test]
     fn a_created_note_has_the_header_without_an_opening_divider() {
-        let dir = scratch("header");
+        let dir = fixtures::scratch("notes-header");
         create(&dir, day("2026-10-29")).expect("creates");
         let text = std::fs::read_to_string(dir.join("2026-10-29.md")).expect("read");
         assert_eq!(
@@ -427,7 +417,7 @@ mod tests {
 
     #[test]
     fn notes_list_latest_first_and_skip_other_files() {
-        let dir = scratch("list");
+        let dir = fixtures::scratch("notes-list");
         std::fs::create_dir_all(&dir).expect("dir");
         for (name, text) in [
             ("2026-10-27.md", "a"),
@@ -452,7 +442,7 @@ mod tests {
 
     #[test]
     fn creating_a_day_twice_keeps_what_was_written() {
-        let dir = scratch("create");
+        let dir = fixtures::scratch("notes-create");
         create(&dir, day("2026-10-29")).expect("creates");
         let first = get(&dir, day("2026-10-29")).expect("exists");
         assert_eq!((first.title.as_str(), first.body.as_str()), ("29/10", ""));

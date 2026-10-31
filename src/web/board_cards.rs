@@ -84,11 +84,12 @@ mod tests {
     use crate::models::{Duration, Priority, Task, parse_start_time};
 
     fn task(start: Option<&str>, minutes: Option<i64>) -> Task {
-        let mut t = Task::template(1, String::new(), TaskStatus::Queue);
-        t.id = Some(1);
-        t.start_time = start.and_then(parse_start_time);
-        t.duration = minutes.map(Duration);
-        t
+        Task {
+            id: Some(1),
+            start_time: start.and_then(parse_start_time),
+            duration: minutes.map(Duration),
+            ..crate::fixtures::task(1, "")
+        }
     }
 
     #[test]

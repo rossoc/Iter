@@ -9,8 +9,7 @@
 
 use super::task_runs::{Roster, roster_block};
 use super::ui::button::post_button;
-use super::ui::empty_line::empty_line;
-use super::ui::labelled::labelled_section;
+use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::prose::description;
 use super::ui::{CIRCLE, CIRCLE_CHECK, HALF, icon};
 use super::url::{plan_step_url, task_step_url};
@@ -256,20 +255,24 @@ pub async fn plan_block(task_id: i64, plan: Option<&Plan>) -> Result<impl View> 
     })
 }
 
+/// The task folder's notes (or sketches) as a table of the template: a row
+/// per file that opens to its text, the first row `add` (when a person can
+/// write one), and "No <noun> yet." as the last row when there are none.
 #[component]
 pub(super) async fn files_block(
-    id: &str,
     label: &str,
     noun: &str,
     docs: &[Doc],
+    #[default] add: Option<AddRow<'_>>,
 ) -> Result<impl View> {
+    let empty = format!("No {noun} yet.");
+    let columns = [label];
     Ok(view! {
-        labelled_section(id: id, label: label, count: Some(docs.len()), noun: noun,
-            if docs.is_empty() {
-                empty_line("Nothing here yet.")
-            } else {
-                <div class="files">
-                    for doc in docs.iter() {
+        data_table(caption: label, columns: &columns, class: "files", headed: false, add: add,
+            empty: docs.is_empty().then_some(empty.as_str()),
+            for doc in docs.iter() {
+                row(
+                    cell(
                         <details>
                             <summary>(doc.name.as_str())</summary>
                             description(text: &doc.text)
@@ -277,8 +280,8 @@ pub(super) async fn files_block(
                                 <p class="empty-line">"The rest of the file is not shown."</p>
                             }
                         </details>
-                    }
-                </div>
+                    )
+                )
             }
         )
     })
@@ -471,41 +474,18 @@ async fn mark_step(cx: &Cx, Form(form): Form<MarkForm>) -> Result<Response> {
 mod tests {
     use super::*;
     use crate::fixtures;
-    use crate::models::TaskStatus;
-    use std::path::PathBuf;
-
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("iter-webagent-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
-    }
-
-    fn task(project_id: i64) -> Task {
-        Task {
-            id: None,
-            project_id,
-            name: "Fix it".into(),
-            description: String::new(),
-            github_issue: None,
-            status: TaskStatus::Queue,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
-        }
-    }
 
     const PLAN: &str =
         "## Goal\nStop it.\n\n## Checklist\n- [x] {s1} one\n- [ ] {s2} (verify) two\n";
 
     #[test]
     fn the_tab_loads_the_plan_and_the_folder_its_notes_and_sketches() {
-        let notes = scratch("load");
-        let db = fixtures::db();
-        let mut p = fixtures::project("app");
-        p.notes_path = notes.display().to_string();
-        let project_id = db.insert(&p).unwrap();
-        let task_id = db.insert(&task(project_id)).unwrap();
+        let fixtures::World {
+            db,
+            project_id,
+            task_id,
+            ..
+        } = fixtures::world("webagent-load");
         let (project, task) = (
             db.get::<Project>(project_id).unwrap().unwrap(),
             db.get::<Task>(task_id).unwrap().unwrap(),
@@ -542,7 +522,7 @@ mod tests {
     fn a_project_with_nowhere_to_keep_notes_keeps_the_task_in_the_config_folder() {
         let db = fixtures::db();
         let project_id = db.insert(&fixtures::project("bare")).unwrap();
-        let task_id = db.insert(&task(project_id)).unwrap();
+        let task_id = fixtures::add_task(&db, project_id, "Fix it");
         let (project, task) = (
             db.get::<Project>(project_id).unwrap().unwrap(),
             db.get::<Task>(task_id).unwrap().unwrap(),
@@ -557,7 +537,7 @@ mod tests {
 
     #[test]
     fn a_long_file_is_cut_on_a_character_boundary() {
-        let dir = scratch("cut");
+        let dir = fixtures::scratch("webagent-cut");
         std::fs::create_dir_all(&dir).unwrap();
         // two-byte characters, so the byte limit falls inside one
         std::fs::write(dir.join("long.md"), "é".repeat(FILE_BYTES)).unwrap();
@@ -568,7 +548,7 @@ mod tests {
 
     #[test]
     fn a_step_is_moved_by_its_state_name_and_nothing_else_changes() {
-        let dir = TaskDir::new(scratch("mark").join("tasks/1"));
+        let dir = TaskDir::new(fixtures::scratch("webagent-mark").join("tasks/1"));
         assert!(matches!(
             set_state(&dir, "s1", "done"),
             Err(Refusal::Missing)

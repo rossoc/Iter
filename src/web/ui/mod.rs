@@ -21,7 +21,6 @@ pub mod empty_state;
 pub mod field;
 pub mod filter_bar;
 pub mod folded_list;
-pub mod folder_list;
 pub mod form;
 pub mod form_error;
 pub mod frame;
@@ -80,7 +79,6 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("task_card.css"),
     include_str!("drop_zone.css"),
     include_str!("folded_list.css"),
-    include_str!("folder_list.css"),
     include_str!("layout.css"),
     include_str!("day_nav.css"),
     include_str!("hour_grid.css"),

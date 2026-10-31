@@ -147,7 +147,16 @@ fn files_of(dir: &Path, folder: &str) -> Vec<(PathBuf, String)> {
             out.push((path, file.to_string()));
         }
     } else {
-        walk(dir, &dir.join(folder), &mut out);
+        for path in md_files(&dir.join(folder)) {
+            if let Ok(rel) = path.strip_prefix(dir) {
+                let id: Vec<_> = rel
+                    .with_extension("")
+                    .components()
+                    .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                    .collect();
+                out.push((path, id.join("/")));
+            }
+        }
     }
     out.sort_by(|a, b| a.1.cmp(&b.1));
     out
@@ -161,32 +170,27 @@ fn stays_inside(folder: &str) -> bool {
         .all(|c| matches!(c, std::path::Component::Normal(_) | std::path::Component::CurDir))
 }
 
-fn walk(root: &Path, at: &Path, out: &mut Vec<(PathBuf, String)>) {
+/// Every `.md` file under `at`, however deep: dotfiles are skipped, and a
+/// link is not followed (it could lead out of the folder, or round to it).
+pub(super) fn md_files(at: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
     let Ok(entries) = std::fs::read_dir(at) else {
-        return;
+        return out;
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if entry.file_name().to_string_lossy().starts_with('.') {
-            continue;
-        }
-        // a link is not followed: it could lead out of the folder, or round to it
-        if entry.file_type().is_ok_and(|t| t.is_symlink()) {
+        if entry.file_name().to_string_lossy().starts_with('.')
+            || entry.file_type().is_ok_and(|t| t.is_symlink())
+        {
             continue;
         }
         if path.is_dir() {
-            walk(root, &path, out);
-        } else if path.extension().is_some_and(|e| e == "md")
-            && let Ok(rel) = path.strip_prefix(root)
-        {
-            let rel = rel.with_extension("");
-            let rel: Vec<_> = rel
-                .components()
-                .map(|c| c.as_os_str().to_string_lossy())
-                .collect();
-            out.push((path.clone(), rel.join("/")));
+            out.extend(md_files(&path));
+        } else if path.extension().is_some_and(|e| e == "md") {
+            out.push(path);
         }
     }
+    out
 }
 
 impl Wiki {
@@ -388,12 +392,7 @@ impl Wiki {
                 level_iri(&self.levels[node.level].label).into(),
             );
             if let Some(front) = &node.front {
-                let data = [
-                    ("description", front.description.as_deref()),
-                    ("confidence", front.confidence.as_deref()),
-                    ("updated", front.updated.as_deref()),
-                ];
-                for (key, value) in data {
+                for (key, value) in front.scalars() {
                     if let Some(v) = value {
                         add(&node.iri, &ns(key), lit(v));
                     }

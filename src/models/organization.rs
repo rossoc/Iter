@@ -122,9 +122,11 @@ mod tests {
     use crate::models::Named;
 
     fn checked(url: &str) -> bool {
-        let mut org = Organization::default();
-        org.name = "acme".into();
-        org.platform_url = url.into();
+        let mut org = Organization {
+            name: "acme".into(),
+            platform_url: url.into(),
+            ..Default::default()
+        };
         org.validate().is_ok()
     }
 

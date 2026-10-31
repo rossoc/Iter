@@ -8,6 +8,7 @@
 //! `check`, `fix`) are the last resort. Which place an instruction comes from
 //! is its [`Source`].
 
+use crate::agent::error::{AgentError, AgentResult};
 use crate::agent::prompt::{self, Context, Kind};
 use serde_yaml::Value;
 use std::path::{Path, PathBuf};
@@ -110,20 +111,20 @@ fn scalar(v: &Value) -> Option<String> {
 }
 
 /// Reads front matter; an error says what is wrong with it.
-pub fn parse_front(yaml: &str) -> Result<Front, String> {
-    let value: Value = serde_yaml::from_str(yaml).map_err(|e| format!("front matter: {e}"))?;
+pub fn parse_front(yaml: &str) -> AgentResult<Front> {
+    let value: Value = serde_yaml::from_str(yaml).map_err(AgentError::FrontMatterUnreadable)?;
     let map = match value {
         Value::Null => return Ok(Front::default()),
         Value::Mapping(m) => m,
-        _ => return Err("front matter: not a list of `key: value` lines".into()),
+        _ => return Err(AgentError::FrontMatterNotMapping),
     };
     let get = |key: &str| map.get(key);
-    let text = |key: &str| -> Result<Option<String>, String> {
+    let text = |key: &str| -> AgentResult<Option<String>> {
         match get(key) {
             None | Some(Value::Null) => Ok(None),
             Some(v) => scalar(v)
                 .map(Some)
-                .ok_or_else(|| format!("front matter: `{key}` must be text")),
+                .ok_or_else(|| AgentError::FrontMatterNotText(key.to_string())),
         }
     };
     let front = Front {
@@ -142,9 +143,7 @@ pub fn parse_front(yaml: &str) -> Result<Front, String> {
     if let Some(kind) = &front.kind
         && kind_of_key(kind).is_none()
     {
-        return Err(format!(
-            "front matter: `kind` is plan, develop, test, check or fix, not '{kind}'"
-        ));
+        return Err(AgentError::FrontMatterKind(kind.clone()));
     }
     Ok(front)
 }
@@ -174,7 +173,7 @@ impl Instruction {
         let (yaml, body) = split(&raw);
         let (front, problem) = match yaml.map(parse_front) {
             Some(Ok(front)) => (front, None),
-            Some(Err(e)) => (Front::default(), Some(e)),
+            Some(Err(e)) => (Front::default(), Some(e.to_string())),
             None => (Front::default(), None),
         };
         Instruction {
@@ -217,21 +216,19 @@ pub fn is_builtin(name: &str) -> bool {
 /// The name an instruction is saved under, when the form asks for `wanted`:
 /// none when it stays as it is, an error when it cannot be what is asked.
 /// A built-in instruction cannot be renamed, nor another one named like it.
-pub fn rename_target(old: &str, wanted: &str) -> Result<Option<String>, String> {
+pub fn rename_target(old: &str, wanted: &str) -> AgentResult<Option<String>> {
     let wanted = wanted.trim();
     if wanted.is_empty() || wanted == old {
         return Ok(None);
     }
     if !valid_name(wanted) {
-        return Err(format!(
-            "'{wanted}' is not a name: lowercase letters, digits and dashes"
-        ));
+        return Err(AgentError::InvalidName(wanted.to_string()));
     }
     if is_builtin(old) {
-        return Err(format!("'{old}' is built in and keeps its name"));
+        return Err(AgentError::BuiltInKeepsName(old.to_string()));
     }
     if is_builtin(wanted) {
-        return Err(format!("'{wanted}' is the name of a built-in instruction"));
+        return Err(AgentError::BuiltInName(wanted.to_string()));
     }
     Ok(Some(wanted.to_string()))
 }
@@ -295,14 +292,14 @@ pub fn list(layers: &Layers) -> Vec<Instruction> {
 /// Whether `raw` is an instruction that can be kept: its front matter reads,
 /// it has a prompt, and the prompt has no placeholder iter does not know (an
 /// agent must never be told a literal `{{taks}}`).
-pub fn check(name: &str, raw: &str) -> Result<(), String> {
+pub fn check(name: &str, raw: &str) -> AgentResult<()> {
     let (yaml, body) = split(raw);
     let front = match yaml {
         Some(y) => parse_front(y)?,
         None => Front::default(),
     };
     if body.trim().is_empty() {
-        return Err("an instruction needs a prompt under its front matter".into());
+        return Err(AgentError::NoPrompt);
     }
     let kind = kind_of_key(name)
         .or_else(|| front.kind.as_deref().and_then(kind_of_key))
@@ -377,7 +374,7 @@ fn text_value(text: &str) -> Option<Value> {
 /// `existing`'s with the fields written over it (an empty field removes its
 /// key; keys the form knows nothing about stay as they were), then a blank
 /// line and the prompt. An error says which field is wrong.
-pub fn compose(existing: Option<&str>, f: &Fields) -> Result<String, String> {
+pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
     let mut map = existing
         .and_then(|raw| split(raw).0)
         .and_then(|yaml| serde_yaml::from_str::<Value>(yaml).ok())
@@ -400,9 +397,7 @@ pub fn compose(existing: Option<&str>, f: &Fields) -> Result<String, String> {
     );
     if let Some(kind) = f.kind.map(str::trim) {
         if kind_of_key(kind).is_none() {
-            return Err(format!(
-                "kind is plan, develop, test, check or fix, not '{kind}'"
-            ));
+            return Err(AgentError::FieldKind(kind.to_string()));
         }
         put(&mut map, "kind", Some(Value::String(kind.into())));
     }
@@ -416,7 +411,7 @@ pub fn compose(existing: Option<&str>, f: &Fields) -> Result<String, String> {
             match serde_yaml::from_str::<Value>(permission) {
                 Ok(Value::Null) => None,
                 Ok(v) => Some(v),
-                Err(e) => return Err(format!("permission: {e}")),
+                Err(e) => return Err(AgentError::FieldPermission(e)),
             }
         },
     );
@@ -425,19 +420,14 @@ pub fn compose(existing: Option<&str>, f: &Fields) -> Result<String, String> {
     if map.is_empty() {
         return Ok(format!("{prompt}\n"));
     }
-    let yaml = serde_yaml::to_string(&Value::Mapping(map)).map_err(|e| e.to_string())?;
+    let yaml = serde_yaml::to_string(&Value::Mapping(map)).map_err(AgentError::Yaml)?;
     Ok(format!("---\n{yaml}---\n\n{prompt}\n"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("iter-instr-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
-    }
+    use crate::fixtures;
 
     fn write(dir: &Path, name: &str, text: &str) {
         let path = file(dir, name);
@@ -497,7 +487,7 @@ mod tests {
 
     #[test]
     fn the_nearest_layer_wins_and_the_built_in_ones_are_the_last_resort() {
-        let (project, org) = (scratch("p"), scratch("o"));
+        let (project, org) = (fixtures::scratch("instr-p"), fixtures::scratch("instr-o"));
         write(&org, "fix", "---\ndescription: Org fix\n---\nOrg {{task}}");
         write(&org, "review", "Review it");
         write(&project, "review", "Project review");
@@ -612,7 +602,7 @@ mod tests {
             kind: Some("dance"),
             ..fields("x")
         };
-        assert!(compose(None, &bad_kind).unwrap_err().contains("dance"));
+        assert!(compose(None, &bad_kind).unwrap_err().to_string().contains("dance"));
         let bad_yaml = Fields {
             permission: "[1, 2",
             ..fields("x")
@@ -620,6 +610,7 @@ mod tests {
         assert!(
             compose(None, &bad_yaml)
                 .unwrap_err()
+                .to_string()
                 .starts_with("permission")
         );
         // a number that is not one stays text; check() still judges the whole
@@ -649,13 +640,13 @@ mod tests {
 
     #[test]
     fn a_name_can_change_unless_it_is_built_in_or_would_be() {
-        assert_eq!(rename_target("review", "review"), Ok(None));
-        assert_eq!(rename_target("review", "  "), Ok(None));
-        assert_eq!(rename_target("review", " audit "), Ok(Some("audit".into())));
+        assert_eq!(rename_target("review", "review").unwrap(), None);
+        assert_eq!(rename_target("review", "  ").unwrap(), None);
+        assert_eq!(rename_target("review", " audit ").unwrap(), Some("audit".into()));
         assert!(rename_target("review", "Bad Name").is_err());
         assert!(rename_target("review", "fix").is_err());
         assert!(rename_target("fix", "audit").is_err());
-        assert_eq!(rename_target("fix", "fix"), Ok(None));
+        assert_eq!(rename_target("fix", "fix").unwrap(), None);
         assert!(is_builtin("plan") && !is_builtin("review"));
     }
 }

@@ -66,6 +66,7 @@ mod task_panel;
 mod task_query;
 mod task_rows;
 mod task_runs;
+mod task_notes;
 mod task_sessions;
 mod task_wiki;
 mod text;
@@ -106,6 +107,7 @@ fn router() -> Router {
         task_agent::register,
         task_runs::register,
         agents::register,
+        task_notes::register,
         task_sessions::register,
         task_wiki::register,
         daily_notes::register,

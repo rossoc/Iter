@@ -140,24 +140,29 @@ pub fn tasks_list_url(base: &str, q: Option<&str>) -> String {
     page_url(base, &[("tab", Some("tasks")), ("q", q)])
 }
 
+/// `base` opened on the tab `name`.
+fn tab(base: &str, name: &str) -> String {
+    page_url(base, &[("tab", Some(name))])
+}
+
 /// The Notes tab of the organization or project page at `base`.
 pub fn notes_tab_url(base: &str) -> String {
-    page_url(base, &[("tab", Some("notes"))])
+    tab(base, "notes")
 }
 
 /// The Sessions tab of the task page at `base`.
 pub fn sessions_tab_url(base: &str) -> String {
-    page_url(base, &[("tab", Some("sessions"))])
+    tab(base, "sessions")
 }
 
 /// The Projects tab of the organization page at `base`.
 pub fn projects_tab_url(base: &str) -> String {
-    page_url(base, &[("tab", Some("projects"))])
+    tab(base, "projects")
 }
 
 /// The Instructions tab of the project page at `base`.
 pub fn instructions_tab_url(base: &str) -> String {
-    page_url(base, &[("tab", Some("instructions"))])
+    tab(base, "instructions")
 }
 
 /// The list of the global instructions.
@@ -177,12 +182,12 @@ pub fn instruction_url(name: &str, project: Option<i64>) -> String {
 
 /// The Agent tab of the task page at `base`.
 pub fn agent_tab_url(base: &str) -> String {
-    page_url(base, &[("tab", Some("agent"))])
+    tab(base, "agent")
 }
 
 /// The Wiki tab of the task page at `base`.
 pub fn wiki_tab_url(base: &str) -> String {
-    page_url(base, &[("tab", Some("wiki"))])
+    tab(base, "wiki")
 }
 
 /// What a Wiki tab button does. The URL builder and the route read the same
@@ -261,9 +266,28 @@ pub fn run_post_url(id: i64, n: u32) -> String {
     format!("{}/{n}", runs_url(id))
 }
 
-/// Where a button on agent `n` posts: `run` or `cancel`.
-pub fn run_action_url(id: i64, n: u32, action: &str) -> String {
-    format!("{}/{action}", run_post_url(id, n))
+/// What a button on an agent posts to. The URL and the routes
+/// (`task_runs.rs`: `/runs/{n}/run`, `/runs/{n}/cancel`) read the same words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunAction {
+    /// Begin a queued agent now.
+    Run,
+    /// Stop a working agent, or take a queued one out of the line.
+    Cancel,
+}
+
+impl RunAction {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RunAction::Run => "run",
+            RunAction::Cancel => "cancel",
+        }
+    }
+}
+
+/// Where a button on agent `n` posts.
+pub fn run_action_url(id: i64, n: u32, action: RunAction) -> String {
+    format!("{}/{}", run_post_url(id, n), action.as_str())
 }
 
 /// The note of `day` on the page at `base`.
@@ -287,24 +311,6 @@ pub fn notes_today_url(base: &str) -> String {
 
 /// Where the New task pop-up of a task list posts (`task_new.rs`).
 pub const NEW_TASK: &str = "/task/new";
-
-/// The folder browser the project create row opens.
-pub const FOLDERS: &str = "/folders";
-
-/// The folder browser at `path`, for the list `home` (a `Home` token); `name`
-/// is what was typed in the create row, `hidden` shows the folders that start
-/// with a dot.
-pub fn folders_url(home: &str, name: &str, path: &str, hidden: bool) -> String {
-    page_url(
-        FOLDERS,
-        &[
-            ("home", Some(home)),
-            ("name", (!name.is_empty()).then_some(name)),
-            ("base_path", Some(path)),
-            ("hidden", hidden.then_some("1")),
-        ],
-    )
-}
 
 /// Where the create row of board `id`'s project list posts.
 pub fn quick_board_project_url(id: i64) -> String {
@@ -354,7 +360,7 @@ mod tests {
         assert_eq!(runs_url(5), "/task/5/runs");
         assert_eq!(run_url(5, 2), "/agent/5/2");
         assert_eq!(agents_url(), "/agents");
-        assert_eq!(run_action_url(5, 2, "cancel"), "/task/5/runs/2/cancel");
+        assert_eq!(run_action_url(5, 2, RunAction::Cancel), "/task/5/runs/2/cancel");
         assert_eq!(wiki_tab_url("/task/5"), "/task/5?tab=wiki");
         assert_eq!(
             wiki_action_url(5, WikiAction::Accept),
@@ -393,14 +399,6 @@ mod tests {
         );
         assert_eq!(quick_project_url(3), "/org/3/project/quick");
         assert_eq!(quick_board_project_url(2), "/board/2/project/quick");
-        assert_eq!(
-            folders_url("org:3", "my app", "/src", true),
-            "/folders?home=org%3A3&name=my%20app&base_path=%2Fsrc&hidden=1"
-        );
-        assert_eq!(
-            folders_url("board:2", "", "/", false),
-            "/folders?home=board%3A2&base_path=%2F"
-        );
     }
 
     #[test]

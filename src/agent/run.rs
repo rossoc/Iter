@@ -4,6 +4,7 @@
 //! the plan, they are files: `iter task runs` and the Agent tab read the same
 //! ones.
 
+use crate::agent::error::AgentResult;
 use crate::agent::taskdir::TaskDir;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -72,6 +73,29 @@ impl Harness {
     /// The program and the arguments that run `job` once, headless, to the
     /// end.
     pub fn command(self, job: &Invocation) -> (&'static str, Vec<String>) {
+        self.backend().command(job)
+    }
+
+    fn backend(self) -> &'static dyn AgentBackend {
+        match self {
+            Harness::Claude => &ClaudeCode,
+        }
+    }
+}
+
+/// How one agent program is driven: which binary, and the arguments that
+/// make it run an [`Invocation`] headless. [`Harness`] is the closed set of
+/// them and dispatches here, so adding a program means a type implementing
+/// this and an arm in [`Harness::backend`].
+pub trait AgentBackend {
+    fn command(&self, job: &Invocation) -> (&'static str, Vec<String>);
+}
+
+/// Anthropic's `claude` CLI.
+struct ClaudeCode;
+
+impl AgentBackend for ClaudeCode {
+    fn command(&self, job: &Invocation) -> (&'static str, Vec<String>) {
         let Invocation {
             prompt,
             model,
@@ -80,34 +104,30 @@ impl Harness {
             allowed,
             extra,
         } = *job;
-        match self {
-            Harness::Claude => {
-                let mut args = vec!["-p".to_string(), prompt.to_string()];
-                if !model.is_empty() {
-                    args.push("--model".into());
-                    args.push(model.into());
-                }
-                if !effort.is_empty() {
-                    args.push("--effort".into());
-                    args.push(effort.into());
-                }
-                for dir in dirs {
-                    args.push("--add-dir".into());
-                    args.push(dir.display().to_string());
-                }
-                // headless there is nobody to ask: edits are allowed, and so
-                // are the commands the prompts tell the agent to run; the
-                // rest is the harness's own settings
-                args.push("--permission-mode".into());
-                args.push("acceptEdits".into());
-                if !allowed.is_empty() {
-                    args.push("--allowedTools".into());
-                    args.extend(allowed.iter().cloned());
-                }
-                args.extend(extra.iter().cloned());
-                ("claude", args)
-            }
+        let mut args = vec!["-p".to_string(), prompt.to_string()];
+        if !model.is_empty() {
+            args.push("--model".into());
+            args.push(model.into());
         }
+        if !effort.is_empty() {
+            args.push("--effort".into());
+            args.push(effort.into());
+        }
+        for dir in dirs {
+            args.push("--add-dir".into());
+            args.push(dir.display().to_string());
+        }
+        // headless there is nobody to ask: edits are allowed, and so
+        // are the commands the prompts tell the agent to run; the
+        // rest is the harness's own settings
+        args.push("--permission-mode".into());
+        args.push("acceptEdits".into());
+        if !allowed.is_empty() {
+            args.push("--allowedTools".into());
+            args.extend(allowed.iter().cloned());
+        }
+        args.extend(extra.iter().cloned());
+        ("claude", args)
     }
 }
 
@@ -254,7 +274,7 @@ impl TaskDir {
     /// Takes the next number for good: the record file is made, empty, with
     /// a call that fails if it is there, so two runs started at once get two
     /// numbers.
-    pub fn claim_run(&self) -> std::io::Result<u32> {
+    pub fn claim_run(&self) -> AgentResult<u32> {
         std::fs::create_dir_all(self.runs_dir())?;
         loop {
             let n = self.next_run();
@@ -265,26 +285,26 @@ impl TaskDir {
             {
                 Ok(_) => return Ok(n),
                 Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-                Err(e) => return Err(e),
+                Err(e) => return Err(e.into()),
             }
         }
     }
 
-    pub fn read_run(&self, n: u32) -> std::io::Result<Option<RunRecord>> {
+    pub fn read_run(&self, n: u32) -> AgentResult<Option<RunRecord>> {
         match std::fs::read_to_string(self.run_path(n)) {
-            Ok(text) => serde_yaml::from_str(&text)
+            Ok(text) => Ok(serde_yaml::from_str(&text)
                 .map(Some)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e)),
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 
-    pub fn write_run(&self, run: &RunRecord) -> std::io::Result<()> {
+    pub fn write_run(&self, run: &RunRecord) -> AgentResult<()> {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        crate::agent::taskdir::write_whole(&self.runs_dir(), &self.run_path(run.n), &text)
+        Ok(crate::agent::taskdir::write_whole(&self.runs_dir(), &self.run_path(run.n), &text)?)
     }
 
     /// Every run, the first one first. A record that cannot be read is left
@@ -312,10 +332,34 @@ impl TaskDir {
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_harness_dispatches_to_its_backend() {
+        let dirs = [Path::new("/tasks/7")];
+        let allowed = ["Bash(git:*)".to_string()];
+        let extra = ["--verbose".to_string()];
+        let job = Invocation {
+            prompt: "do it",
+            model: "opus",
+            effort: "",
+            dirs: &dirs,
+            allowed: &allowed,
+            extra: &extra,
+        };
+        let (program, args) = Harness::Claude.command(&job);
+        assert_eq!(program, "claude");
+        assert_eq!(
+            args,
+            [
+                "-p", "do it", "--model", "opus", "--add-dir", "/tasks/7",
+                "--permission-mode", "acceptEdits", "--allowedTools", "Bash(git:*)",
+                "--verbose",
+            ]
+        );
+        assert_eq!(ClaudeCode.command(&job), (program, args));
+    }
+
     fn dir(name: &str) -> TaskDir {
-        let root = std::env::temp_dir().join(format!("iter-run-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
-        TaskDir::new(root)
+        TaskDir::new(crate::fixtures::scratch(&format!("run-{name}")))
     }
 
     fn run(n: u32) -> RunRecord {

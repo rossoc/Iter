@@ -272,6 +272,23 @@ impl Header {
             description: non_empty(description),
         }
     }
+
+    /// A header for `item`, whose settings are taken off its own fields.
+    pub fn of<T: Serialize>(
+        name: String,
+        description: &str,
+        item: &T,
+        period: DateRange,
+        total_minutes: i64,
+    ) -> Result<Self> {
+        Ok(Self::new(name, description, settings_of(item)?, period, total_minutes))
+    }
+}
+
+/// Renders `report` in `format` and prints it: the tail of every `info`.
+pub fn print_report(report: &impl Report, format: Format) -> Result<()> {
+    print!("{}", report.render(format)?);
+    Ok(())
 }
 
 /// One row of a session table: when the stretch of work ran, how long it
@@ -820,6 +837,7 @@ impl Md {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::{self, day, dt};
     use chrono::NaiveDate;
 
     fn now() -> NaiveDateTime {
@@ -829,23 +847,10 @@ mod tests {
             .expect("12:00:00 is a valid time")
     }
 
-    fn dt(s: &str) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
-            .unwrap_or_else(|e| panic!("bad test fixture datetime '{s}': {e}"))
-    }
-
-    fn day(s: &str) -> NaiveDate {
-        NaiveDate::parse_from_str(s, "%Y-%m-%d")
-            .unwrap_or_else(|e| panic!("bad test fixture date '{s}': {e}"))
-    }
-
     fn sess(task_id: i64, start: &str, end: Option<&str>, message: Option<&str>) -> Session {
         Session {
-            id: None,
-            task_id,
-            start: dt(start),
-            end: end.map(dt),
             message: message.map(|m| m.to_string()),
+            ..fixtures::session(task_id, dt(start), end.map(dt))
         }
     }
 
@@ -1113,9 +1118,9 @@ mod tests {
         )
     }
 
-    #[test]
-    fn a_text_report_is_front_matter_then_a_markdown_body() {
-        let info = TaskInfo {
+    /// The one-task report the text and YAML renderings are checked against.
+    fn sample_info() -> TaskInfo {
+        TaskInfo {
             header: Header::new(
                 "proj/task".to_string(),
                 "Task notes.",
@@ -1124,7 +1129,12 @@ mod tests {
                 120,
             ),
             sessions: one_row(),
-        };
+        }
+    }
+
+    #[test]
+    fn a_text_report_is_front_matter_then_a_markdown_body() {
+        let info = sample_info();
         assert_eq!(
             info.render(Format::Text).unwrap(),
             "---\n\
@@ -1188,16 +1198,7 @@ mod tests {
 
     #[test]
     fn a_yaml_report_carries_the_same_fields_flat() {
-        let info = TaskInfo {
-            header: Header::new(
-                "proj/task".to_string(),
-                "Task notes.",
-                settings(&[("status", "wip")]),
-                DateRange::day(day("2026-09-04")),
-                120,
-            ),
-            sessions: one_row(),
-        };
+        let info = sample_info();
         let out = info.render(Format::Yaml).unwrap();
         // The header is flattened, not nested under a `header:` key.
         assert!(out.starts_with("name: proj/task\n"), "{out}");

@@ -44,24 +44,6 @@ pub enum Home {
 }
 
 impl Home {
-    /// The token the pop-up and the folder browser carry (`org:3`).
-    pub fn token(self) -> String {
-        match self {
-            Home::Org(id) => format!("org:{id}"),
-            Home::Board(id) => format!("board:{id}"),
-        }
-    }
-
-    pub fn parse(token: &str) -> Option<Home> {
-        let (kind, id) = token.trim().split_once(':')?;
-        let id = id.parse().ok()?;
-        match kind {
-            "org" => Some(Home::Org(id)),
-            "board" => Some(Home::Board(id)),
-            _ => None,
-        }
-    }
-
     /// Where the pop-up posts.
     pub fn quick_url(self) -> String {
         match self {
@@ -84,7 +66,7 @@ impl Home {
     }
 
     /// [`Self::open_url`] with the name and base path to start with (what
-    /// the folder browser sends back); empty ones are left out.
+    /// the URL carries); empty ones are left out.
     pub fn open_url_with(self, name: &str, base_path: &str) -> String {
         let some = |v: &str| (!v.is_empty()).then(|| v.to_string());
         let (name, base_path) = (some(name), some(base_path));
@@ -99,7 +81,7 @@ impl Home {
     }
 
     /// The pop-up as it starts out: `name` and `base_path` (from the folder
-    /// browser, else empty), the template's settings, no error. A 404 when
+    /// URL, else empty), the template's settings, no error. A 404 when
     /// the list is not there.
     pub fn create(self, name: Option<&str>, base_path: Option<&str>) -> Result<ProjectCreate> {
         let template = self.template()?;
@@ -129,11 +111,6 @@ impl Home {
         }
         Ok(template)
     }
-
-    /// The list must exist (a 404 otherwise): the folder browser checks it.
-    pub fn exists(self) -> Result<()> {
-        self.template().map(|_| ())
-    }
 }
 
 /// What the New project pop-up shows: the list it adds to, what is typed
@@ -157,7 +134,6 @@ pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
     Ok(view! {
         modal(id: "new-project-title", title: "New project", close: close.as_str(),
             form_shell(action: create.home.quick_url(), error: error, cancel: close.as_str(), submit_label: "Create project",
-                <input type="hidden" name="home" value=(create.home.token())>
                 field(name: NAME, label: "Name", value: &create.name, required: true, identifier: true, error: error, autofocus: error.is_none())
                 textarea(name: DESCRIPTION, label: "Description", value: &create.description)
                 path_field(name: ProjectForm::BASE_PATH, label: "Base path", value: &create.base_path, required: true, error: error,
@@ -252,13 +228,7 @@ mod tests {
     use crate::web::edit::EditForm;
 
     #[test]
-    fn a_home_round_trips_through_its_token() {
-        for home in [Home::Org(3), Home::Board(7)] {
-            assert_eq!(Home::parse(&home.token()), Some(home));
-        }
-        assert_eq!(Home::parse("org:x"), None);
-        assert_eq!(Home::parse("project:3"), None);
-        assert_eq!(Home::parse("org"), None);
+    fn a_home_knows_its_urls() {
         assert_eq!(Home::Org(3).quick_url(), "/org/3/project/quick");
         assert_eq!(Home::Board(7).quick_url(), "/board/7/project/quick");
         assert_eq!(Home::Board(7).page_url(), "/board/7/info");

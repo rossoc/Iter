@@ -160,43 +160,17 @@ mod tests {
         let db = fixtures::db();
         let project_id = db
             .insert(&Project {
-                id: None,
-                organization_id: None,
-                board_id: None,
-                name: "proj".to_string(),
-                description: String::new(),
-                base_path: "/tmp/proj".to_string(),
-                github: false,
                 tmux: false,
                 auto_branch: false,
-                branch_template: "feat/{task}".to_string(),
-                default_branch: "main".to_string(),
-                github_project: String::new(),
-                notes_path: String::new(),
+                ..fixtures::project("proj")
             })
             .expect("project inserts");
-        let task_id = db
-            .insert(&Task {
-                id: None,
-                project_id,
-                name: "a task".to_string(),
-                description: String::new(),
-                github_issue: None,
-                status: TaskStatus::Wip,
-                branch_prefix: String::new(),
-                matrix_placed: false,
-                start_time: None,
-                duration: None,
-            })
-            .expect("task inserts");
-        db.insert(&Session {
-            id: None,
-            task_id,
-            start: at(9, 0, 0),
-            end: None,
-            message: None,
-        })
-        .expect("session inserts");
+        let task = Task {
+            status: TaskStatus::Wip,
+            ..fixtures::task(project_id, "a task")
+        };
+        let task_id = db.insert(&task).expect("task inserts");
+        fixtures::add_session(&db, task_id, at(9, 0, 0), None);
         (db, task_id)
     }
 

@@ -9,6 +9,13 @@
 .field-row .button{flex:none}
 .field-row .path-pick[hidden]{display:none}
 .field-row .path-pick{padding-inline:10px}
+/* the input and its folder button are one control: no gap, one shared border
+   (the button's overlaps the input's by a pixel), rounded only at the outer
+   corners; whichever has focus is raised so its ring is not covered */
+.field-row:has(.path-pick){gap:0}
+.field-row:has(.path-pick) .control{border-start-end-radius:0;border-end-end-radius:0}
+.field-row:has(.path-pick) .path-pick{margin-inline-start:-1px;border-start-start-radius:0;border-end-start-radius:0}
+.field-row:has(.path-pick) .control:focus,.field-row:has(.path-pick) .path-pick:focus-visible{position:relative;z-index:1}
 .field .hint{margin:0;color:var(--muted);font-size:.8125rem}
 /* a checkbox row: a tap-sized row (padding, not margins), the box on the first
    line, a long unbroken name wrapping inside the row; the note is secondary

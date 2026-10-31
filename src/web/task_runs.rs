@@ -13,12 +13,13 @@
 use super::errors::refused;
 use super::sections::TabQuery;
 use super::task_agent::{Open, step_panel};
-use super::ui::empty_line::empty_line;
 use super::ui::field::{field, select, textarea};
 use super::ui::modal::modal;
 use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::{PLAY, STOP, X, icon};
-use super::url::{agent_tab_url, agent_url, run_action_url, run_post_url, runs_url, task_url};
+use super::url::{
+    RunAction, agent_tab_url, agent_url, run_action_url, run_post_url, runs_url, task_url,
+};
 use super::{Id, open_db};
 use crate::agent::instruction::{self, Layers};
 use crate::agent::plan::Item;
@@ -239,10 +240,10 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
             cell(state_pill(run: run))
             cell(class: "acts",
                 if shown == "queued" {
-                    act(action: run_action_url(task_id, run.n, "run"), label: "Run now", svg: PLAY)
-                    act(action: run_action_url(task_id, run.n, "cancel"), label: "Remove from the queue", svg: X)
+                    act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
+                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
                 } else if shown == "running" {
-                    act(action: run_action_url(task_id, run.n, "cancel"), label: "Stop", svg: STOP)
+                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop", svg: STOP)
                 }
             )
         )
@@ -257,6 +258,7 @@ async fn agents_table(task_id: i64, roster: &Roster) -> Result<impl View> {
     Ok(view! {
         data_table(caption: "Agents of this task, the latest first", columns: &["Agent", "Status"], actions: true,
             class: "tasks agents", add: Some(AddRow::link(&new, "New agent\u{2026}")),
+            empty: roster.runs.is_empty().then_some("No agent has worked on this task yet."),
             for run in roster.runs.iter() {
                 agent_row(task_id: task_id, run: run, current: roster.current == Some(run.n))
             }
@@ -341,7 +343,7 @@ pub async fn compose_modal(task_id: i64, c: &Compose) -> Result<impl View> {
             </form>
             if let Some(n) = c.run {
                 <div class="compose-drop">
-                    act(action: run_action_url(task_id, n, "cancel"), label: "Remove from the queue", svg: X)
+                    act(action: run_action_url(task_id, n, RunAction::Cancel), label: "Remove from the queue", svg: X)
                 </div>
             }
           </div>
@@ -364,9 +366,6 @@ pub async fn roster_block(
                 step_panel(task_id: task_id, item: item)
             }
             agents_table(task_id: task_id, roster: roster)
-            if roster.runs.is_empty() {
-                empty_line("No agent has worked on this task yet.")
-            }
             if let Some(note) = note {
                 <p class="empty-line note">(note)</p>
             }
@@ -381,9 +380,20 @@ struct RunForm {
     model: String,
     effort: String,
     prompt: String,
-    /// `run`, `queue` or `save`: the button that was pressed.
+    /// The button that was pressed.
     #[serde(rename = "do", default)]
-    action: String,
+    action: RunButton,
+}
+
+/// The buttons of the agent form (`name="do"`): `run` begins the agent now;
+/// `queue` and `save` leave it waiting (written down, not started).
+#[derive(Deserialize, Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum RunButton {
+    Run,
+    #[default]
+    Queue,
+    Save,
 }
 
 /// The run a form asks for, or why not. The model and the effort must be
@@ -449,7 +459,7 @@ async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
         Some(&form.instruction),
     )
     .map_err(refused)?;
-    follow_up(&app, &name, n, &form.action)?;
+    follow_up(&app, &name, n, form.action)?;
     Err(see_other(agent_url(id, n)).into())
 }
 
@@ -491,8 +501,8 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
 
 /// What the button pressed asks for, once the run is written: `run` begins
 /// it now; `queue` and `save` leave it waiting (written down, not started).
-fn follow_up(app: &App, name: &str, n: u32, action: &str) -> Result<()> {
-    if action == "run" {
+fn follow_up(app: &App, name: &str, n: u32, action: RunButton) -> Result<()> {
+    if action == RunButton::Run {
         solve::begin(app, name, n, false, &[]).map_err(refused)?;
     }
     Ok(())
@@ -508,7 +518,7 @@ async fn edit_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let (kind, spec) =
         parse_run(&form, &instruction::layers_of(&app.db, &project)).map_err(bad_request)?;
     solve::amend(&app, &name, n, kind, &form.instruction, &spec, &form.prompt).map_err(refused)?;
-    follow_up(&app, &name, n, &form.action)?;
+    follow_up(&app, &name, n, form.action)?;
     Err(see_other(agent_url(id, n)).into())
 }
 
@@ -544,7 +554,7 @@ mod tests {
             model: model.into(),
             effort: effort.into(),
             prompt: "do it".into(),
-            action: "run".into(),
+            action: RunButton::Run,
         }
     }
 

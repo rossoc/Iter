@@ -86,11 +86,12 @@ mod tests {
     use crate::models::TaskStatus;
 
     fn task(id: i64, project_id: i64, issue: Option<i64>) -> Task {
-        let mut t = Task::template(project_id, String::new(), TaskStatus::Wip);
-        t.id = Some(id);
-        t.name = format!("t{id}");
-        t.github_issue = issue;
-        t
+        Task {
+            id: Some(id),
+            status: TaskStatus::Wip,
+            github_issue: issue,
+            ..crate::fixtures::task(project_id, &format!("t{id}"))
+        }
     }
 
     #[test]

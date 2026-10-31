@@ -218,10 +218,11 @@ mod tests {
     use crate::fixtures;
 
     fn task(name: &str, status: TaskStatus, issue: Option<i64>) -> Task {
-        let mut t = Task::template(1, String::new(), status);
-        t.name = name.into();
-        t.github_issue = issue;
-        t
+        Task {
+            status,
+            github_issue: issue,
+            ..fixtures::task(1, name)
+        }
     }
 
     fn tags(names: &[&str]) -> Vec<String> {

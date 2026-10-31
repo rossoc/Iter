@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn a_logged_run_writes_its_output_and_reports_its_code() {
-        let dir = std::env::temp_dir().join(format!("iter-exec-{}", std::process::id()));
+        let dir = crate::fixtures::scratch("exec");
         std::fs::create_dir_all(&dir).unwrap();
         let log_path = dir.join("log");
         let log = std::fs::File::create(&log_path).unwrap();

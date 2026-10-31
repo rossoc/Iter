@@ -34,14 +34,14 @@
 .plan-rail .rail-sum{margin:6px 0 0;color:var(--muted);font-size:.8125rem}
 .plan-rail ol{list-style:none;margin:10px 0 0;padding:0}
 .plan-rail li+li{margin-top:2px}
-.plan-rail a,.plan-rail .loose{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 12px;padding:8px 10px;border-radius:var(--r-md);
+.toc a,.plan-rail a,.plan-rail .loose{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 12px;padding:8px 10px;border-radius:var(--r-md);
   transition:background var(--fast) var(--ease-out)}
 .plan-rail a:hover{background:var(--bg-2)}
 .plan-rail a[aria-current]{background:var(--bg-2);color:var(--accent)}
-.plan-rail .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.toc .name,.plan-rail .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .plan-rail .state{font:.75rem var(--mono);color:var(--muted)}
-.plan-rail .share{grid-column:1/-1;height:3px;border-radius:var(--r-sm);background:var(--bg-3);overflow:hidden}
-.plan-rail .share i{display:block;height:100%;background:var(--accent);border-radius:var(--r-sm)}
+.toc .share,.plan-rail .share{grid-column:1/-1;height:3px;border-radius:var(--r-sm);background:var(--bg-3);overflow:hidden}
+.toc .share i,.plan-rail .share i{display:block;height:100%;background:var(--accent);border-radius:var(--r-sm)}
 .plan-rail li.done .name{color:var(--muted)}
 @media (max-width:900px){.agent-grid{grid-template-columns:minmax(0,1fr);gap:28px}.plan-rail{position:static}}
 

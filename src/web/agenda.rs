@@ -269,11 +269,8 @@ async fn screen(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::dt as at;
     use crate::models::parse_start_time;
-
-    fn at(s: &str) -> NaiveDateTime {
-        crate::models::parse_start_time(s).expect("valid time")
-    }
 
     #[test]
     fn a_bad_or_missing_date_is_today() {

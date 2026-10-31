@@ -367,6 +367,8 @@ impl std::fmt::Display for MarkError {
     }
 }
 
+impl std::error::Error for MarkError {}
+
 /// `content` with step `id` in `state`: only its checkbox changes.
 pub fn mark(content: &str, id: &str, state: State) -> Result<String, MarkError> {
     let plan = parse(content);

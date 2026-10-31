@@ -9,8 +9,9 @@ use crate::error::{IterError, Result};
 use crate::models::Organization;
 use crate::platform::JsonWebhook;
 use crate::process::run_status;
-use crate::push::{self, Gh, Target};
-use crate::reporting::{Header, OrganizationInfo, Report, settings_of};
+use crate::github::GhCli;
+use crate::push::{self, Target};
+use crate::reporting::{Header, OrganizationInfo, print_report};
 use crate::secret::{self, KeyStore, Keychain, Secret};
 use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
@@ -94,17 +95,16 @@ fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result
     // two of them isn't counted twice at the organization level either.
     let total_minutes = total_minutes(&all_sessions, now);
     let info = OrganizationInfo {
-        header: Header::new(
+        header: Header::of(
             organization.name.clone(),
             &organization.description,
-            settings_of(&organization)?,
+            &organization,
             range,
             total_minutes,
-        ),
+        )?,
         projects,
     };
-    print!("{}", info.render(opts.format)?);
-    Ok(())
+    print_report(&info, opts.format)
 }
 
 /// Sets the organization's API key from the first line of stdin (prompting
@@ -238,7 +238,7 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
             ));
         }
     }
-    let items = push::execute(db, &organization, &plan, check, platform, &Gh, app.now)?;
+    let items = push::execute(db, &organization, &plan, check, platform, &GhCli::system(), app.now)?;
     println!();
     for item in &items {
         match item.error {

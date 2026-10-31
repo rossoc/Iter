@@ -373,7 +373,7 @@ async fn note_screen(page: &NotePage) -> Result<impl View> {
             <p class="note-date"><time datetime=(iso.as_str())>(when.as_str())</time></p>
             if *tab == NoteTab::Edit {
                 form_shell(action: here.as_str(), error: error.as_ref(), cancel: here.as_str(),
-                    textarea(name: TEXT, label: "Note (markdown, with its front matter)", value: text.as_str())
+                    textarea(name: TEXT, label: "Note", value: text.as_str(), hide_label: true)
                 )
             } else {
                 if note.body.is_empty() {

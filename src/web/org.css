@@ -59,14 +59,10 @@
 .toc{position:sticky;top:var(--stick-top)}
 .toc ol{list-style:none;margin:10px 0 0;padding:0;counter-reset:toc}
 .toc li+li{margin-top:2px}
-.toc a{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 12px;padding:8px 10px;border-radius:var(--r-md);
-  transition:background var(--fast) var(--ease-out)}
+/* .toc a, .name, .share: the rules it shares with .plan-rail are in ui/steps.css */
 .toc a:hover{background:var(--bg-2)}
-.toc .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .toc a:hover .name{color:var(--accent)}
 .time{font:.8125rem var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.toc .share{grid-column:1/-1;height:3px;border-radius:var(--r-sm);background:var(--bg-3);overflow:hidden}
-.toc .share i{display:block;height:100%;background:var(--accent);border-radius:var(--r-sm)}
 
 .proj{scroll-margin-top:calc(var(--bar-h) + 20px);padding-bottom:28px;margin-bottom:36px;border-bottom:1px solid var(--line)}
 .proj:last-child{border-bottom:0}

@@ -95,7 +95,7 @@ pub async fn data_table(
                 }
                 (child)
                 if let Some(text) = empty {
-                    <tr class="empty" role="row">
+                    <tr class="no-rows" role="row">
                         cell(colspan: span.as_str(), (text))
                     </tr>
                 }

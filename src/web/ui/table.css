@@ -7,7 +7,7 @@
 .tbl td:first-child{overflow-wrap:anywhere}  /* a long name wraps, also at 320px */
 .tbl th:first-child,.tbl td:first-child{padding-left:4px}
 .tbl tbody tr{position:relative;transition:background var(--fast) var(--ease-out)}
-.tbl tbody tr:not(.add,.section,.empty):hover{background:var(--bg-2)}
+.tbl tbody tr:not(.add,.section,.no-rows):hover{background:var(--bg-2)}
 .tbl .muted{color:var(--muted)}
 /* a link that is the whole row (a note's date): its ::after covers the row */
 .tbl a.cover::after{content:"";position:absolute;inset:0}
@@ -23,15 +23,17 @@
   transition:color var(--fast) var(--ease-out)}
 .tbl .add-link::after{content:"";position:absolute;inset:0}
 .tbl tr.add:hover .add-link{color:var(--accent)}
-.tbl:not(:has(tbody tr:not(.add,.section,.empty):hover)) tr.add{background:var(--bg-2)}
+.tbl:not(:has(tbody tr:not(.add,.section,.no-rows):hover)) tr.add{background:var(--bg-2)}
 .tbl .add-link:focus-visible{outline:none}
 .tbl tr.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
 
 /* a group of rows under a heading (a month) */
 .tbl tr.section td{padding:20px 4px 8px;border-bottom:1px solid var(--line)}
 .tbl tr.add + tr.section td{padding-top:24px}
-/* nothing to show: a quiet line, spaced and indented like a row */
-.tbl tr.empty td{color:var(--muted);border-bottom:0}
+/* nothing to show: a quiet line in the table's last row, with room around it;
+   not a row to point at (no hover, see above) and the last line of the table
+   is the add row's, so it has no line of its own */
+.tbl tr.no-rows td{padding-block:28px;color:var(--muted);border-bottom:0}
 
 /* narrow screens: each row stacks -- the first cell, then the others beside
    each other (`.inline`: all of them on one line) */
@@ -41,9 +43,9 @@
   .tbl td{display:block;padding:0;border:0}
   .tbl td:first-child{flex-basis:100%;padding:0}
   .tbl.inline td:first-child{flex-basis:auto}
-  .tbl tbody tr.add,.tbl tbody tr.empty,.tbl tbody tr.section{display:block;padding:0}
+  .tbl tbody tr.add,.tbl tbody tr.no-rows,.tbl tbody tr.section{display:block;padding:0}
   .tbl tr.section td{padding:16px 0 6px}
-  .tbl tr.empty td{padding:12px 4px}
+  .tbl tr.no-rows td{padding:24px 4px}
 }
 
 /* the tasks table */

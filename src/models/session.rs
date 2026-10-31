@@ -54,11 +54,7 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::START_TIME_FMT;
-
-    fn at(text: &str) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(text, START_TIME_FMT).unwrap()
-    }
+    use crate::fixtures::dt as at;
 
     #[test]
     fn duration_text_is_hhmm_and_open_sessions_count_to_now() {

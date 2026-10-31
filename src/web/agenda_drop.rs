@@ -62,7 +62,7 @@ mod tests {
     use super::*;
 
     fn task() -> Task {
-        Task::template(1, String::new(), crate::models::TaskStatus::Queue)
+        crate::fixtures::task(1, "")
     }
 
     #[test]

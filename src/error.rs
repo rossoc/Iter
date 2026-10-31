@@ -57,6 +57,10 @@ pub enum IterError {
     #[error("{0}")]
     CommandFailed(String),
 
+    /// The agent workflow's own errors, which print as they always have.
+    #[error("{0}")]
+    Agent(#[from] crate::agent::error::AgentError),
+
     /// No API key for the organization's time platform: set one with
     /// `iter org key`, or `ITER_PLATFORM_KEY`.
     #[error("no API key for organization '{0}': run `iter org key {0}` or set ITER_PLATFORM_KEY")]

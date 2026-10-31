@@ -164,8 +164,7 @@ mod tests {
     use crate::wiki::ontology::LevelKind;
 
     fn level(name: &str, settings: Option<&str>) -> Level {
-        let dir = std::env::temp_dir().join(format!("iter-ingest-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
+        let dir = crate::fixtures::scratch(&format!("ingest-{name}"));
         std::fs::create_dir_all(dir.join("wiki")).unwrap();
         if let Some(text) = settings {
             std::fs::write(dir.join("wiki/settings.yaml"), text).unwrap();

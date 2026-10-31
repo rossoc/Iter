@@ -80,11 +80,7 @@ mod tests {
 
     #[test]
     fn copy_dir_excluding_git_skips_dot_git_at_any_depth() {
-        let tmp = std::env::temp_dir().join(format!(
-            "iter-scaffold-test-{}-{}",
-            std::process::id(),
-            chrono::Local::now().format("%Y%m%d%H%M%S%f")
-        ));
+        let tmp = crate::fixtures::scratch("scaffold-copy");
         let src = tmp.join("src");
         let dst = tmp.join("dst");
         std::fs::create_dir_all(src.join(".git")).unwrap();

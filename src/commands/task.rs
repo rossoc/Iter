@@ -13,7 +13,7 @@ use crate::md_edit::edited;
 use crate::models::require_name;
 use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
 use crate::reporting::{
-    Header, Report, TaskInfo, WeekdayReport, session_rows, settings_of, weekday_averages,
+    Header, TaskInfo, WeekdayReport, print_report, session_rows, weekday_averages,
 };
 use crate::utils::clock::close_open_session;
 use crate::utils::output::print_yaml;
@@ -23,7 +23,8 @@ use crate::utils::resolve::{
     task_display,
 };
 use crate::utils::workspace::teardown_and_kill;
-use crate::{git, github};
+use crate::github::{self, GhCli, IssueTracker};
+use crate::git;
 
 /// Note that bare `iter task` is handled in `main` rather than here: it
 /// means the unfinished work across every project, a filter no
@@ -106,12 +107,12 @@ impl Run for TaskCommand {
                 project,
                 task,
                 body,
-            } => task_pull(app, project.as_deref(), task.as_deref(), *body),
+            } => task_pull(app, &GhCli::system(), project.as_deref(), task.as_deref(), *body),
             Self::Push {
                 project,
                 task,
                 body,
-            } => task_push(app, project.as_deref(), task.as_deref(), *body),
+            } => task_push(app, &GhCli::system(), project.as_deref(), task.as_deref(), *body),
             Self::Weekday { task } => task_weekday(app, task.as_deref()),
         }
     }
@@ -129,7 +130,7 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
     );
     if let Some(issue_number) = issue {
         require_github(&project)?;
-        let issue = github::fetch_issue(&project.base_path, issue_number)?;
+        let issue = GhCli::system().fetch(&project.base_path, issue_number)?;
         template.name = issue.title;
         template.description = issue.body;
         template.github_issue = Some(issue.number);
@@ -232,17 +233,16 @@ fn task_info(app: &App, task_ref: Option<&str>, opts: &ReportOpts) -> Result<()>
     let total_minutes = total_minutes(&sessions, now);
 
     let info = TaskInfo {
-        header: Header::new(
+        header: Header::of(
             task_display(&project, &task),
             &task.description,
-            settings_of(&task)?,
+            &task,
             range,
             total_minutes,
-        ),
+        )?,
         sessions: session_rows(&sessions, now, range.single_day().is_none()),
     };
-    print!("{}", info.render(opts.format)?);
-    Ok(())
+    print_report(&info, opts.format)
 }
 
 /// Prints `<project>/<task>` for every task matching both filters, as a
@@ -392,8 +392,7 @@ fn task_weekday(app: &App, task_ref: Option<&str>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Project, Session, TaskStatus};
-    use chrono::NaiveDate;
+    use crate::models::{Project, TaskStatus};
 
     /// A command driven against an in-memory database -- no config file, no
     /// `$XDG_CONFIG_HOME`, no editor. This is what `App::with_db` is for.
@@ -403,32 +402,14 @@ mod tests {
 
     fn seed(app: &App) -> (i64, i64) {
         let project = Project {
-            id: None,
-            organization_id: None,
-            board_id: None,
-            name: "proj".to_string(),
-            description: String::new(),
-            base_path: "/tmp/proj".to_string(),
-            github: false,
             tmux: false,
             auto_branch: false,
-            branch_template: "feat/{task}".to_string(),
-            default_branch: "main".to_string(),
-            github_project: String::new(),
-            notes_path: String::new(),
+            ..crate::fixtures::project("proj")
         };
         let project_id = app.db.insert(&project).expect("project inserts");
         let task = Task {
-            id: None,
-            project_id,
-            name: "a task".to_string(),
-            description: String::new(),
-            github_issue: None,
             status: TaskStatus::Wip,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
+            ..crate::fixtures::task(project_id, "a task")
         };
         let task_id = app.db.insert(&task).expect("task inserts");
         (project_id, task_id)
@@ -441,17 +422,8 @@ mod tests {
     fn marking_a_task_done_closes_its_open_session_and_persists_the_status() {
         let app = app();
         let (_, task_id) = seed(&app);
-        let open = Session {
-            id: None,
-            task_id,
-            start: NaiveDate::from_ymd_opt(2026, 9, 1)
-                .expect("valid date")
-                .and_hms_opt(9, 0, 0)
-                .expect("valid time"),
-            end: None,
-            message: None,
-        };
-        app.db.insert(&open).expect("session inserts");
+        let start = crate::fixtures::dt("2026-09-01 09:00");
+        crate::fixtures::add_session(&app.db, task_id, start, None);
 
         task_done(&app, Some("proj/a task"), false).expect("task done succeeds");
 
@@ -501,16 +473,8 @@ mod tests {
         let app = app();
         seed(&app);
         let done = Task {
-            id: None,
-            project_id: 1,
-            name: "finished".to_string(),
-            description: String::new(),
-            github_issue: None,
             status: TaskStatus::Done,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
+            ..crate::fixtures::task(1, "finished")
         };
         app.db.insert(&done).expect("task inserts");
 

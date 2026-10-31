@@ -15,7 +15,8 @@ use crate::db::Table;
 use crate::error::Result;
 use crate::models::{Project, Task, TaskStatus};
 use crate::utils::resolve::{find_task_or_err, github_project, linked_issue, task_display};
-use crate::{git, github, sync};
+use crate::github::{self, IssueTracker};
+use crate::{git, sync};
 
 /// Sets a task's issue link, status and description -- in the database, and
 /// in the copy in hand. Both, because a pull plans each issue against the
@@ -47,16 +48,17 @@ fn relink_task(
 /// A `--task` that tracks no issue is an error rather than a no-op: there
 /// is no other issue such a pull could have meant.
 fn issues_to_pull(
+    gh: &dyn IssueTracker,
     db: &Db,
     project: &Project,
     task_name: Option<&str>,
 ) -> Result<Vec<github::Issue>> {
     let Some(task_name) = task_name else {
-        return github::list_issues(&project.base_path);
+        return gh.list(&project.base_path);
     };
     let task = find_task_or_err(db, project, task_name)?;
     let number = linked_issue(project, &task)?;
-    Ok(vec![github::fetch_issue(&project.base_path, number)?])
+    Ok(vec![gh.fetch(&project.base_path, number)?])
 }
 
 /// `iter task pull <project>` -- every issue in the project's repo brought
@@ -71,6 +73,7 @@ fn issues_to_pull(
 /// business -- `iter task push` is.
 pub(crate) fn task_pull(
     app: &App,
+    gh: &dyn IssueTracker,
     project_name: Option<&str>,
     task_name: Option<&str>,
     body: bool,
@@ -80,7 +83,7 @@ pub(crate) fn task_pull(
     let project_id = project.id();
     let branch_prefix = git::branch_prefix(&project.branch_template);
 
-    let issues = issues_to_pull(db, &project, task_name)?;
+    let issues = issues_to_pull(gh, db, &project, task_name)?;
     // Read once, then kept current as the pull goes: each issue is planned
     // against what the ones before it did, so two issues sharing a title
     // read as the clash they are rather than colliding on the name index.
@@ -181,6 +184,7 @@ enum Pushed {
 /// one task's failure is a `Result` the caller can absorb, the way
 /// `issues_to_pull` already splits the pull side up.
 fn push_task(
+    gh: &dyn IssueTracker,
     db: &Db,
     project: &Project,
     task: &mut Task,
@@ -189,8 +193,8 @@ fn push_task(
     body: bool,
 ) -> Result<Pushed> {
     match sync::plan_push(task, issues, body) {
-        sync::Push::Create { state } => {
-            let number = github::create_issue(
+        sync::PushAction::Create { state } => {
+            let number = gh.create(
                 &project.base_path,
                 &task.name,
                 &task.description,
@@ -209,23 +213,23 @@ fn push_task(
                 ),
             }
             if state == github::IssueState::Closed {
-                sign_and_close(project, number, display)?;
+                sign_and_close(gh, project, number, display)?;
             }
             Ok(Pushed::Opened)
         }
-        sync::Push::Update {
+        sync::PushAction::Update {
             number,
             state,
             body,
         } => {
             if body {
-                github::set_issue_body(&project.base_path, number, &task.description)?;
+                gh.set_body(&project.base_path, number, &task.description)?;
                 println!("issue #{number} <- '{display}': body updated");
             }
             match state {
-                Some(github::IssueState::Closed) => sign_and_close(project, number, display)?,
+                Some(github::IssueState::Closed) => sign_and_close(gh, project, number, display)?,
                 Some(github::IssueState::Open) => {
-                    github::set_issue_state(&project.base_path, number, github::IssueState::Open)?;
+                    gh.set_state(&project.base_path, number, github::IssueState::Open)?;
                     println!(
                         "reopened issue #{number} -- '{display}' is {}",
                         task.status.as_str()
@@ -235,8 +239,8 @@ fn push_task(
             }
             Ok(Pushed::Edited)
         }
-        sync::Push::Unchanged => Ok(Pushed::Nothing),
-        sync::Push::Missing { number } => {
+        sync::PushAction::Unchanged => Ok(Pushed::Nothing),
+        sync::PushAction::Missing { number } => {
             eprintln!("warning: '{display}' skipped -- issue #{number} isn't in this repo");
             Ok(Pushed::Nothing)
         }
@@ -256,6 +260,7 @@ fn push_task(
 /// when an issue is reopened.
 pub(crate) fn task_push(
     app: &App,
+    gh: &dyn IssueTracker,
     project_name: Option<&str>,
     task_name: Option<&str>,
     body: bool,
@@ -269,7 +274,7 @@ pub(crate) fn task_push(
         None => db.tasks_for_project(project_id)?,
     };
 
-    let issues = issues_to_push(&project, task_name.is_some(), &tasks)?;
+    let issues = issues_to_push(gh, &project, task_name.is_some(), &tasks)?;
 
     let (mut opened, mut edited, mut failed) = (0, 0, 0);
     for task in &mut tasks {
@@ -279,7 +284,7 @@ pub(crate) fn task_push(
         // the backlog through -- the warn-and-continue a `Missing` issue
         // already got. Ending the run there instead would also swallow the
         // summary below, leaving no way to tell how far the push got.
-        match push_task(db, &project, task, &issues, &display, body) {
+        match push_task(gh, db, &project, task, &issues, &display, body) {
             Ok(Pushed::Opened) => opened += 1,
             Ok(Pushed::Edited) => edited += 1,
             Ok(Pushed::Nothing) => {}
@@ -307,12 +312,13 @@ pub(crate) fn task_push(
 /// one at a time; a `--task` push fetches just the one issue that task
 /// tracks (none, if it tracks none), instead of the whole backlog.
 fn issues_to_push(
+    gh: &dyn IssueTracker,
     project: &Project,
     single: bool,
     tasks: &[Task],
 ) -> Result<HashMap<i64, github::Issue>> {
     let issues = match single {
-        false => github::list_issues(&project.base_path)?,
+        false => gh.list(&project.base_path)?,
         // A fetch that fails -- the issue deleted or transferred, most
         // often -- is warned about and left out, so the task reaches the
         // same warn-and-skip `Missing` plan a whole-project push gives it.
@@ -320,7 +326,7 @@ fn issues_to_push(
             .iter()
             .filter_map(|t| t.github_issue)
             .filter_map(
-                |number| match github::fetch_issue(&project.base_path, number) {
+                |number| match gh.fetch(&project.base_path, number) {
                     Ok(issue) => Some(issue),
                     Err(e) => {
                         eprintln!("warning: couldn't fetch issue #{number}: {e}");
@@ -341,11 +347,11 @@ fn issues_to_push(
 /// needs write access to the repo, and losing the state sync -- the part
 /// that keeps a task and its issue agreeing -- over a signature would be
 /// the worse trade.
-fn sign_and_close(project: &Project, number: i64, display: &str) -> Result<()> {
-    if let Err(e) = github::assign_self(&project.base_path, number) {
+fn sign_and_close(gh: &dyn IssueTracker, project: &Project, number: i64, display: &str) -> Result<()> {
+    if let Err(e) = gh.assign_self(&project.base_path, number) {
         eprintln!("warning: couldn't assign yourself to issue #{number}: {e}");
     }
-    github::set_issue_state(&project.base_path, number, github::IssueState::Closed)?;
+    gh.set_state(&project.base_path, number, github::IssueState::Closed)?;
     println!("closed issue #{number} -- '{display}' is done");
     Ok(())
 }

@@ -156,12 +156,9 @@ pub(crate) fn project_reports(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::dt;
     use crate::fixtures;
     use crate::models::TaskStatus;
-
-    fn dt(s: &str) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").expect("fixture datetime")
-    }
 
     /// The per-project loop the batch replaced, kept as the reference.
     fn per_project(
@@ -204,14 +201,11 @@ mod tests {
     }
 
     fn session(db: &Db, task_id: i64, start: &str, end: Option<&str>) {
-        db.insert(&Session {
-            id: None,
-            task_id,
-            start: dt(start),
-            end: end.map(dt),
+        let session = Session {
             message: Some("note".into()),
-        })
-        .expect("session");
+            ..fixtures::session(task_id, dt(start), end.map(dt))
+        };
+        db.insert(&session).expect("session");
     }
 
     #[test]

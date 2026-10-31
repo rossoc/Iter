@@ -643,29 +643,24 @@ impl Db {
     /// a slow read into no read at all; instead the index appears on the
     /// first run where the schema can take it.
     fn create_indexes(&self) {
-        let _ = self.conn.execute_batch(
+        const INDEXES: [&str; 5] = [
             "CREATE INDEX IF NOT EXISTS idx_sessions_task_start
                 ON sessions(task_id, start);",
-        );
-        let _ = self.conn.execute_batch(
             "CREATE INDEX IF NOT EXISTS idx_projects_organization
                 ON projects(organization_id);",
-        );
-        let _ = self.conn.execute_batch(
             "CREATE INDEX IF NOT EXISTS idx_projects_board
                 ON projects(board_id);",
-        );
-        // Every tmux hook resolves its session this way.
-        let _ = self.conn.execute_batch(
+            // Every tmux hook resolves its session this way.
             "CREATE INDEX IF NOT EXISTS idx_session_configs_tmux
                 ON session_configs(tmux_session_name);",
-        );
-        // `task_tags`' primary key leads with `task_id`, so it can't answer
-        // "which tasks carry tag X" -- the priority lookup.
-        let _ = self.conn.execute_batch(
+            // `task_tags`' primary key leads with `task_id`, so it can't
+            // answer "which tasks carry tag X" -- the priority lookup.
             "CREATE INDEX IF NOT EXISTS idx_task_tags_tag
                 ON task_tags(tag_id);",
-        );
+        ];
+        for sql in INDEXES {
+            let _ = self.conn.execute_batch(sql);
+        }
     }
 
     /// Columns added to a table after it was first created. `CREATE TABLE
@@ -1430,19 +1425,9 @@ impl<T: Column> Column for Option<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixtures::{board, db};
+    use crate::fixtures::{self, board, day, db, dt};
     use crate::models::Organization;
     use crate::models::Settings;
-
-    fn day(s: &str) -> NaiveDate {
-        NaiveDate::parse_from_str(s, "%Y-%m-%d")
-            .unwrap_or_else(|e| panic!("bad test fixture date '{s}': {e}"))
-    }
-
-    fn dt(s: &str) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
-            .unwrap_or_else(|e| panic!("bad test fixture datetime '{s}': {e}"))
-    }
 
     /// Runs every migration again, as on a database from before versioning
     /// -- what the tests that hand-build an old schema need.
@@ -1484,19 +1469,13 @@ mod tests {
 
     fn project(name: &str) -> Project {
         Project {
-            id: None,
-            organization_id: None,
-            board_id: None,
-            name: name.to_string(),
             description: "notes".to_string(),
-            base_path: format!("/tmp/{name}"),
             github: true,
             tmux: false,
-            auto_branch: true,
             branch_template: "fix/{task}".to_string(),
-            default_branch: "main".to_string(),
             github_project: "Roadmap".to_string(),
             notes_path: "/tmp/notes".to_string(),
+            ..fixtures::project(name)
         }
     }
 
@@ -1506,16 +1485,11 @@ mod tests {
 
     fn insert_task(db: &Db, project_id: i64, name: &str) -> i64 {
         let task = Task {
-            id: None,
-            project_id,
-            name: name.to_string(),
             description: "task notes".to_string(),
             github_issue: Some(7),
             status: TaskStatus::Wip,
             branch_prefix: "fix/".to_string(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
+            ..fixtures::task(project_id, name)
         };
         db.insert(&task).expect("task inserts")
     }
@@ -1709,13 +1683,7 @@ mod tests {
             "2025-03-05 23:59:59", // last instant of `to` -- in
             "2025-03-06 00:00:00", // first instant after `to` -- out
         ] {
-            let session = Session {
-                id: None,
-                task_id: task,
-                start: dt(&start[..16]),
-                end: None,
-                message: None,
-            };
+            let session = fixtures::session(task, dt(&start[..16]), None);
             db.insert(&session).expect("session inserts");
         }
 
@@ -1743,13 +1711,7 @@ mod tests {
         let db = db();
         let project = insert_project(&db, "proj");
         let task = insert_task(&db, project, "t");
-        let session = Session {
-            id: None,
-            task_id: task,
-            start: dt("2025-03-04 12:00"),
-            end: None,
-            message: None,
-        };
+        let session = fixtures::session(task, dt("2025-03-04 12:00"), None);
         db.insert(&session).expect("session inserts");
         db.conn
             .execute(
@@ -1778,13 +1740,7 @@ mod tests {
         let db = db();
         let project = insert_project(&db, "proj");
         let task = insert_task(&db, project, "t");
-        let session = Session {
-            id: None,
-            task_id: task,
-            start: dt("1970-01-02 03:04"),
-            end: None,
-            message: None,
-        };
+        let session = fixtures::session(task, dt("1970-01-02 03:04"), None);
         db.insert(&session).expect("session inserts");
 
         assert_eq!(
@@ -1811,13 +1767,7 @@ mod tests {
             (elsewhere, "2025-03-03 10:00"), // another project -- excluded
             (a, "2025-03-09 09:00"),         // outside the range -- excluded
         ] {
-            let session = Session {
-                id: None,
-                task_id: task,
-                start: dt(start),
-                end: None,
-                message: None,
-            };
+            let session = fixtures::session(task, dt(start), None);
             db.insert(&session).expect("session inserts");
         }
 
@@ -1849,18 +1799,7 @@ mod tests {
             (alpha, "queued", TaskStatus::Queue),
             (alpha, "finished", TaskStatus::Done),
         ] {
-            let task = Task {
-                id: None,
-                project_id: project,
-                name: name.to_string(),
-                description: String::new(),
-                github_issue: None,
-                status,
-                branch_prefix: String::new(),
-                matrix_placed: false,
-                start_time: None,
-                duration: None,
-            };
+            let task = Task { status, ..fixtures::task(project, name) };
             db.insert(&task).expect("task inserts");
         }
 
@@ -1906,18 +1845,7 @@ mod tests {
         let db = db();
         let project = insert_project(&db, "proj");
         insert_task(&db, project, "in progress"); // inserted as `wip`
-        let queued = Task {
-            id: None,
-            project_id: project,
-            name: "queued".to_string(),
-            description: String::new(),
-            github_issue: None,
-            status: TaskStatus::Queue,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
-        };
+        let queued = fixtures::task(project, "queued");
         db.insert(&queued).expect("task inserts");
 
         assert_eq!(
@@ -2047,18 +1975,7 @@ mod tests {
         }
         check(&project("alpha"));
         check(&Organization::template(&Settings::default()));
-        check(&Task {
-            id: None,
-            project_id: 1,
-            name: "t".to_string(),
-            description: String::new(),
-            github_issue: None,
-            status: TaskStatus::Queue,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
-        });
+        check(&fixtures::task(1, "t"));
         check(&SessionConfig {
             id: None,
             task_id: 1,
@@ -2066,13 +1983,7 @@ mod tests {
             github_branch: None,
             worktree_path: None,
         });
-        check(&Session {
-            id: None,
-            task_id: 1,
-            start: dt("2026-09-01 09:00"),
-            end: None,
-            message: None,
-        });
+        check(&fixtures::session(1, dt("2026-09-01 09:00"), None));
     }
 
     #[test]
@@ -2302,18 +2213,7 @@ mod tests {
     fn task_github_issue_round_trips_as_null_when_absent() {
         let db = db();
         let project_id = insert_project(&db, "alpha");
-        let task = Task {
-            id: None,
-            project_id,
-            name: "no issue".to_string(),
-            description: String::new(),
-            github_issue: None,
-            status: TaskStatus::Queue,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
-        };
+        let task = fixtures::task(project_id, "no issue");
         let id = db.insert(&task).expect("task inserts");
         let loaded = db
             .get::<Task>(id)
@@ -2374,19 +2274,14 @@ mod tests {
         let task_id = insert_task(&db, project_id, "build it");
 
         let closed = Session {
-            id: None,
-            task_id,
-            start: dt("2026-09-01 09:00"),
-            end: Some(dt("2026-09-01 10:00")),
             message: Some("did a thing".to_string()),
+            ..fixtures::session(
+                task_id,
+                dt("2026-09-01 09:00"),
+                Some(dt("2026-09-01 10:00")),
+            )
         };
-        let open = Session {
-            id: None,
-            task_id,
-            start: dt("2026-09-01 11:00"),
-            end: None,
-            message: None,
-        };
+        let open = fixtures::session(task_id, dt("2026-09-01 11:00"), None);
         db.insert(&closed).expect("closed session inserts");
         let open_id = db.insert(&open).expect("open session inserts");
 
@@ -2407,13 +2302,7 @@ mod tests {
         let project_id = insert_project(&db, "alpha");
         let task_id = insert_task(&db, project_id, "build it");
         let at = |h, m, s| day("2026-09-01").and_hms_opt(h, m, s).expect("valid time");
-        let session = |start, end| Session {
-            id: None,
-            task_id,
-            start,
-            end,
-            message: None,
-        };
+        let session = |start, end| fixtures::session(task_id, start, end);
         db.insert(&session(at(9, 0, 0), Some(at(9, 0, 59))))
             .expect("59s");
         db.insert(&session(at(10, 0, 0), Some(at(10, 0, 0))))
@@ -2440,13 +2329,7 @@ mod tests {
         let project_id = insert_project(&db, "alpha");
         let task_id = insert_task(&db, project_id, "build it");
 
-        let session = Session {
-            id: None,
-            task_id,
-            start: dt("2026-09-01 09:00"),
-            end: None,
-            message: None,
-        };
+        let session = fixtures::session(task_id, dt("2026-09-01 09:00"), None);
         let id = db.insert(&session).expect("session inserts");
 
         let mut closed = session;
@@ -2482,14 +2365,8 @@ mod tests {
         let other_task = insert_task(&db, other_project, "elsewhere");
 
         for task_id in [one, two, other_task] {
-            let session = Session {
-                id: None,
-                task_id,
-                start: dt("2026-09-01 09:00"),
-                end: Some(dt("2026-09-01 10:00")),
-                message: None,
-            };
-            db.insert(&session).expect("session inserts");
+            let (start, end) = (dt("2026-09-01 09:00"), dt("2026-09-01 10:00"));
+            fixtures::add_session(&db, task_id, start, Some(end));
         }
 
         let mut task_ids: Vec<i64> = db
@@ -3080,7 +2957,7 @@ mod tests {
     /// without `board_id`; opening one must add it.
     #[test]
     fn migration_adds_board_id_to_a_projects_table_that_lacks_it() {
-        let dir = std::env::temp_dir().join(format!("iter-board-mig-{}", std::process::id()));
+        let dir = fixtures::scratch("board-mig");
         std::fs::create_dir_all(&dir).expect("temp dir");
         let path = dir.join("iter.db");
         let _ = std::fs::remove_file(&path);
@@ -3117,7 +2994,7 @@ mod tests {
         assert_eq!(found.start_time, Some(dt("2026-09-28 09:30")));
         assert_eq!(found.duration, Some(Duration(90)));
 
-        let dir = std::env::temp_dir().join(format!("iter-task-mig-{}", std::process::id()));
+        let dir = fixtures::scratch("task-mig");
         std::fs::create_dir_all(&dir).expect("temp dir");
         let path = dir.join("iter.db");
         let _ = std::fs::remove_file(&path);

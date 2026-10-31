@@ -193,7 +193,7 @@ pub async fn wiki_tab(tab: &WikiTab, sketches: &[Doc]) -> Result<impl View> {
             changes_block(task_id: *task_id, review: review, files: files)
             waiting_block(task_id: *task_id, review: review)
         }
-        files_block(id: "sketches-title", label: "Sketches", noun: "sketches", docs: sketches)
+        files_block(label: "Sketches", noun: "sketches", docs: sketches)
     })
 }
 

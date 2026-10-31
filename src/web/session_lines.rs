@@ -56,18 +56,12 @@ pub fn task_lines(sessions: &[Session], now: NaiveDateTime) -> Vec<SessionLine<'
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn at(text: &str) -> NaiveDateTime {
-        NaiveDateTime::parse_from_str(text, START_TIME_FMT).unwrap()
-    }
+    use crate::fixtures::dt as at;
 
     fn session(start: &str, end: Option<&str>, message: Option<&str>) -> Session {
         Session {
-            id: None,
-            task_id: 1,
-            start: at(start),
-            end: end.map(at),
             message: message.map(String::from),
+            ..crate::fixtures::session(1, at(start), end.map(at))
         }
     }
 

@@ -7,7 +7,8 @@ use crate::agent::prompt::{self, Context, Kind};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
 use crate::db::Table;
-use crate::error::{Result, failed};
+use crate::agent::error::AgentError;
+use crate::error::Result;
 use crate::md_edit::edit_text;
 use crate::models::{Organization, Project, Task};
 use crate::notes;
@@ -72,7 +73,7 @@ pub struct Saved {
 /// Checklist is saved, and says so.
 pub fn save_plan(dir: &TaskDir, text: &str) -> Result<Saved> {
     if text.trim().is_empty() {
-        return Err(failed("the plan is empty: nothing was saved"));
+        return Err(AgentError::EmptyPlan.into());
     }
     let mut text = plan::normalize(text);
     if !text.ends_with('\n') {
@@ -98,9 +99,8 @@ pub fn save_plan(dir: &TaskDir, text: &str) -> Result<Saved> {
 /// Puts step `id` of the plan of `dir` in `state`; the plan's progress after.
 pub fn mark_step(dir: &TaskDir, id: &str, state: State) -> Result<Progress> {
     dir.update_plan(|content| {
-        let content = content
-            .ok_or_else(|| failed("there is no plan yet: write one with `iter task plan`"))?;
-        let marked = plan::mark(&content, id, state).map_err(|e| failed(e.to_string()))?;
+        let content = content.ok_or(AgentError::NoPlan)?;
+        let marked = plan::mark(&content, id, state).map_err(AgentError::from)?;
         let progress = plan::parse(&marked).progress();
         Ok((Some(marked), progress))
     })
@@ -123,7 +123,7 @@ pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
     let word = prompt::shell_word(&name);
     if let [step, state] = req.mark {
         let state = <State as clap::ValueEnum>::from_str(state, true)
-            .map_err(|_| failed(format!("`{state}` is not a state: todo, doing or done")))?;
+            .map_err(|_| AgentError::UnknownState(state.clone()))?;
         let p = mark_step(&dir, step, state)?;
         println!("{step}: {} -- {}", state.label(), progress_line(&p));
         return Ok(());
@@ -267,7 +267,10 @@ pub fn prompt_for(
     let text = match template {
         Some(path) => std::fs::read_to_string(path)
             .map(|t| crate::agent::instruction::split(&t).1.to_string())
-            .map_err(|e| failed(format!("cannot read {}: {e}", path.display())))?,
+            .map_err(|source| AgentError::TemplateUnreadable {
+                path: path.to_path_buf(),
+                source,
+            })?,
         None => prompt::template(kind, &override_dirs(app, &project, &dir)?).1,
     };
     let known = match onboarding_wanted {
@@ -291,7 +294,7 @@ pub fn prompt_for(
         plan: plan_text.as_deref(),
         onboarding: &known,
     };
-    prompt::render(&text, kind, &ctx).map_err(failed)
+    Ok(prompt::render(&text, kind, &ctx)?)
 }
 
 pub fn prompt_cmd(
@@ -312,40 +315,16 @@ pub fn prompt_cmd(
 mod tests {
     use super::*;
     use crate::fixtures;
-    use crate::models::TaskStatus;
-
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("iter-agentcmd-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        dir
-    }
 
     /// An app with the project `app` (notes in a scratch folder) and its task `Fix it`.
     fn world(name: &str) -> (App, PathBuf) {
-        let notes = scratch(name);
-        let db = fixtures::db();
-        let mut p = fixtures::project("app");
-        p.notes_path = notes.display().to_string();
-        let project = db.insert(&p).expect("project");
-        db.insert(&Task {
-            id: None,
-            project_id: project,
-            name: "Fix it".into(),
-            description: "Retries hammer the api.".into(),
-            github_issue: None,
-            status: TaskStatus::Queue,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
-        })
-        .expect("task");
-        (App::with_db(db), notes)
+        let world = fixtures::world(&format!("agentcmd-{name}"));
+        (App::with_db(world.db), world.notes)
     }
 
     #[test]
     fn saving_numbers_the_steps_and_says_what_is_missing() {
-        let dir = TaskDir::new(scratch("save").join("tasks/1"));
+        let dir = TaskDir::new(fixtures::scratch("agentcmd-save").join("tasks/1"));
         let saved = save_plan(
             &dir,
             "## Goal\nx\n\n## Checklist\n- [ ] a\n- [ ] (verify) b",
@@ -374,7 +353,7 @@ mod tests {
 
     #[test]
     fn marking_a_step_edits_only_its_checkbox_and_reports_progress() {
-        let dir = TaskDir::new(scratch("mark").join("tasks/1"));
+        let dir = TaskDir::new(fixtures::scratch("agentcmd-mark").join("tasks/1"));
         assert!(
             mark_step(&dir, "s1", State::Done)
                 .unwrap_err()
@@ -491,19 +470,7 @@ mod tests {
     fn no_notes_folder_means_the_task_is_kept_in_the_config_folder() {
         let db = fixtures::db();
         let project = db.insert(&fixtures::project("bare")).unwrap();
-        db.insert(&Task {
-            id: None,
-            project_id: project,
-            name: "x".into(),
-            description: String::new(),
-            github_issue: None,
-            status: TaskStatus::Queue,
-            branch_prefix: String::new(),
-            matrix_placed: false,
-            start_time: None,
-            duration: None,
-        })
-        .unwrap();
+        fixtures::add_task(&db, project, "x");
         let app = App::with_db(db);
         // only looked at: nothing is written to the real config folder here
         let (_, _, dir) = locate(&app, Some("bare/x")).unwrap();

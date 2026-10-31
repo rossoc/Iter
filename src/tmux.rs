@@ -1,22 +1,120 @@
 use crate::error::Result;
-use crate::process::{Tmux, Tool};
+use crate::process::{Runner, SYSTEM};
 use chrono::{DateTime, Local, NaiveDateTime};
 use std::path::{Path, PathBuf};
 
-/// Creates a new detached tmux session named `name`, starting in `cwd`.
-pub fn create_session(name: &str, cwd: &str) -> Result<()> {
-    Tmux.run(&["new-session", "-d", "-s", name, "-c", cwd])
+/// The terminal multiplexer `iter` keeps one session per task in, behind a
+/// trait so what it asks of tmux can be tested without a server.
+pub trait Multiplexer {
+    /// Creates a new detached session named `name`, starting in `cwd`.
+    fn create_session(&self, name: &str, cwd: &str) -> Result<()>;
+
+    /// Kills a session if it's running. Not an error if it's already gone.
+    fn kill_session(&self, name: &str);
+
+    /// Puts the user in the session named `name`: attaching (this blocks,
+    /// handing the terminal over until the user detaches) or, when we're
+    /// already inside tmux, switching the current client over to it.
+    fn attach_session(&self, name: &str) -> Result<()>;
+
+    fn session_exists(&self, name: &str) -> bool;
+
+    /// The names of every session on the server; empty when there is no
+    /// server.
+    fn list_sessions(&self) -> Vec<String>;
+
+    /// Kills the server, and with it every session and client on it.
+    fn kill_server(&self) -> Result<()>;
+
+    /// Whether any client is still attached to `session`.
+    ///
+    /// One session can have several clients on it -- a second terminal, or
+    /// someone pairing -- and each of them detaches separately. Without
+    /// this, the first detach closes the task's session while another
+    /// client is still working in it, and every minute after that goes
+    /// unrecorded.
+    ///
+    /// This is only usable from a hook because of *when* the hook runs.
+    /// Measured on tmux 3.6: by the time `client-detached` or
+    /// `client-session-changed` fires, the client that left is already off
+    /// the session's list, so what this counts is exactly the clients that
+    /// remain.
+    ///
+    /// Any failure is a `false` -- no tmux, or a session that's already
+    /// gone, which is exactly the `session-closed` case -- so the caller
+    /// closes the session, which is what it did before this existed.
+    fn any_client_attached(&self, session: &str) -> bool;
+
+    /// The session name of the pane this process is running in, if any
+    /// (i.e. we're inside a tmux client). Used by `iter t`.
+    fn current_session_name(&self) -> Option<String>;
+
+    /// Records that `client` now shows `session`, for
+    /// [`Multiplexer::take_client_session`] to read back when it detaches.
+    fn remember_client_session(&self, client: &str, session: &str) -> Result<()>;
+
+    /// The session `client` was last recorded on, consumed so a later
+    /// client that reuses the same tty starts from nothing. `None` for a
+    /// client that attached before the hooks were installed.
+    fn take_client_session(&self, client: &str) -> Option<String>;
+
+    /// Installs the global hooks that drive `iter internal hook <event>
+    /// <session> [previous]`, for any event that doesn't already have a
+    /// working one. Safe to call every time a session is created.
+    ///
+    /// "Already working" is deliberately not "already ours": a hook wired up
+    /// in `tmux.conf` is left exactly as it is. That's the difference
+    /// between a path baked in here -- `current_exe`, i.e. whichever build
+    /// last ran `session new`, which can be a debug binary in a worktree
+    /// that later gets deleted -- and a stable one the user chose.
+    fn ensure_hooks_installed(&self, iter_bin: &str) -> Result<()>;
+
+    /// Takes the detach message off `session`, if something left one there:
+    /// returns it and unsets the option, so it's consumed once rather than
+    /// re-attached to every later session of the same task.
+    ///
+    /// Every failure is a `None`: the hook this serves fires for every
+    /// session, most of which have no such option (and, on `session-closed`,
+    /// no longer exist to be asked).
+    fn take_detach_message(&self, session: &str) -> Option<String>;
+
+    /// When the running server started, in local time; `None` when there is
+    /// no server. What tells a clock this server opened from one a previous
+    /// server left open -- a reboot takes the server down without
+    /// `iter internal kill-server`, so nothing closed it.
+    fn server_start_time(&self) -> Option<NaiveDateTime>;
+
+    /// When tmux-resurrect last saved, in local time: the modification time
+    /// of the save `last` points at. That's the last moment the previous
+    /// server is known to have been running, and so the best end there is
+    /// for a clock it left open. `None` when resurrect has never saved.
+    ///
+    /// The directory is found the way resurrect finds it: `@resurrect-dir`
+    /// (with `~` and `$HOME` expanded), else `~/.tmux/resurrect` if it
+    /// exists, else `$XDG_DATA_HOME/tmux/resurrect`.
+    fn last_resurrect_save(&self) -> Option<NaiveDateTime>;
+
+    /// Creates the detached session named `name` in `cwd` and makes sure
+    /// the hooks that track it are installed -- the two steps `iter session
+    /// new` needs done together, and the part of it that can fail, which is
+    /// why its unwind path guards exactly this call.
+    fn start_tracked_session(&self, name: &str, cwd: &str) -> Result<()> {
+        self.create_session(name, cwd)?;
+        self.install_hooks_for_current_exe()
+    }
+
+    /// [`Multiplexer::ensure_hooks_installed`] pointing at the binary that's
+    /// running now.
+    fn install_hooks_for_current_exe(&self) -> Result<()> {
+        let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
+        self.ensure_hooks_installed(&iter_bin)
+    }
 }
 
 /// A tmux target that names exactly this session: a bare name would match by
 /// prefix (`web/a` also hits `web/ab`) and treat `*`/`?` as globs.
 fn exact(name: &str) -> String {
     format!("={name}")
-}
-
-/// Kills a tmux session if it's running. Not an error if it's already gone.
-pub fn kill_session(name: &str) {
-    let _ = Tmux.run(&["kill-session", "-t", &exact(name)]);
 }
 
 /// Whether this process is itself running inside a tmux client -- which
@@ -26,65 +124,189 @@ fn inside_tmux() -> bool {
     std::env::var_os("TMUX").is_some()
 }
 
-/// Puts the user in the session named `name`: attaching (this blocks,
-/// handing the terminal to tmux until the user detaches) or, when we're
-/// already inside tmux, switching the current client over to it.
-pub fn attach_session(name: &str) -> Result<()> {
-    let verb = if inside_tmux() {
-        "switch-client"
-    } else {
-        "attach-session"
-    };
-    Tmux.run(&[verb, "-t", &exact(name)])
+/// The `tmux` binary, driven through a [`Runner`].
+pub struct TmuxClient<'a> {
+    runner: &'a dyn Runner,
+    /// Whether we are inside a tmux client; see [`inside_tmux`].
+    inside: bool,
 }
 
-pub fn session_exists(name: &str) -> bool {
-    Tmux.succeeds(&["has-session", "-t", &exact(name)])
-}
-
-/// The names of every session on the server; empty when there is no server.
-pub fn list_sessions() -> Vec<String> {
-    Tmux.output(&["list-sessions", "-F", "#{session_name}"])
-        .map(|names| names.lines().map(str::to_string).collect())
-        .unwrap_or_default()
-}
-
-/// Kills the tmux server, and with it every session and client on it.
-pub fn kill_server() -> Result<()> {
-    Tmux.run(&["kill-server"])
-}
-
-/// Whether any client is still attached to `session`.
-///
-/// One tmux session can have several clients on it -- a second terminal, or
-/// someone pairing -- and each of them detaches separately. Without this,
-/// the first detach closes the task's session while another client is still
-/// working in it, and every minute after that goes unrecorded.
-///
-/// This is only usable from a hook because of *when* the hook runs.
-/// Measured on tmux 3.6: by the time `client-detached` or
-/// `client-session-changed` fires, the client that left is already off the
-/// session's list, so what this counts is exactly the clients that remain.
-///
-/// Any failure is a `false` -- no tmux, or a session that's already gone,
-/// which is exactly the `session-closed` case -- so the caller closes the
-/// session, which is what it did before this existed.
-pub fn any_client_attached(session: &str) -> bool {
-    let Ok(clients) = Tmux.output(&["list-clients", "-t", session, "-F", "#{client_name}"]) else {
-        return false;
-    };
-    !clients.trim().is_empty()
-}
-
-/// The tmux session name of the pane this process is running in, if any
-/// (i.e. we're inside a tmux client). Used by `iter t`.
-pub fn current_session_name() -> Option<String> {
-    // Outside tmux the answer is already known, and asking costs a
-    // fork+exec on every command that defaults to "the task I'm in".
-    if !inside_tmux() {
-        return None;
+impl TmuxClient<'static> {
+    /// The real `tmux`, inside a client iff `$TMUX` says so.
+    pub fn system() -> Self {
+        TmuxClient {
+            runner: &SYSTEM,
+            inside: inside_tmux(),
+        }
     }
-    Tmux.output_trimmed(&["display-message", "-p", "#S"])
+}
+
+impl<'a> TmuxClient<'a> {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn new(runner: &'a dyn Runner, inside: bool) -> Self {
+        TmuxClient { runner, inside }
+    }
+
+    fn run(&self, args: &[&str]) -> Result<()> {
+        self.runner.run("tmux", None, args)
+    }
+
+    fn output(&self, args: &[&str]) -> Result<String> {
+        self.runner.output("tmux", None, args)
+    }
+
+    fn output_trimmed(&self, args: &[&str]) -> Option<String> {
+        self.runner.output_trimmed("tmux", None, args)
+    }
+
+    /// Whether `event`'s installed hook already passes exactly the format
+    /// variables `args` calls for.
+    ///
+    /// That comparison, rather than a string match on the whole action, is
+    /// what lets a `tmux.conf` hook -- different path, different quoting,
+    /// same variables -- count as current, while a hook from an older `iter`
+    /// (which passed `#{hook_session_name}` to every event, and so did
+    /// nothing) does not and gets replaced.
+    fn hook_is_current(&self, event: &str, args: &str) -> bool {
+        let Ok(existing) = self.output(&["show-options", "-gv", event]) else {
+            return false; // no tmux, or no such option: install ours
+        };
+        !existing.trim().is_empty() && format_variables(&existing) == format_variables(args)
+    }
+}
+
+impl Multiplexer for TmuxClient<'_> {
+    fn create_session(&self, name: &str, cwd: &str) -> Result<()> {
+        self.run(&["new-session", "-d", "-s", name, "-c", cwd])
+    }
+
+    fn kill_session(&self, name: &str) {
+        let _ = self.run(&["kill-session", "-t", &exact(name)]);
+    }
+
+    fn attach_session(&self, name: &str) -> Result<()> {
+        let verb = if self.inside {
+            "switch-client"
+        } else {
+            "attach-session"
+        };
+        self.run(&[verb, "-t", &exact(name)])
+    }
+
+    fn session_exists(&self, name: &str) -> bool {
+        self.runner
+            .succeeds("tmux", None, &["has-session", "-t", &exact(name)])
+    }
+
+    fn list_sessions(&self) -> Vec<String> {
+        self.output(&["list-sessions", "-F", "#{session_name}"])
+            .map(|names| names.lines().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
+    fn kill_server(&self) -> Result<()> {
+        self.run(&["kill-server"])
+    }
+
+    fn any_client_attached(&self, session: &str) -> bool {
+        let Ok(clients) = self.output(&["list-clients", "-t", session, "-F", "#{client_name}"])
+        else {
+            return false;
+        };
+        !clients.trim().is_empty()
+    }
+
+    fn current_session_name(&self) -> Option<String> {
+        // Outside tmux the answer is already known, and asking costs a
+        // fork+exec on every command that defaults to "the task I'm in".
+        if !self.inside {
+            return None;
+        }
+        self.output_trimmed(&["display-message", "-p", "#S"])
+    }
+
+    fn remember_client_session(&self, client: &str, session: &str) -> Result<()> {
+        self.run(&["set-option", "-g", &client_session_option(client), session])
+    }
+
+    fn take_client_session(&self, client: &str) -> Option<String> {
+        let option = client_session_option(client);
+        let session = self.output_trimmed(&["show-options", "-gv", &option])?;
+        let _ = self.run(&["set-option", "-gu", &option]);
+        Some(session)
+    }
+
+    fn ensure_hooks_installed(&self, iter_bin: &str) -> Result<()> {
+        if iter_bin.contains('\'') {
+            return Err(crate::error::IterError::CommandFailed(format!(
+                "cannot install the tmux hooks for a binary path containing a quote: {iter_bin}"
+            )));
+        }
+        for (event, args) in HOOKS {
+            if self.hook_is_current(event, args) {
+                continue;
+            }
+            let action = hook_action(iter_bin, event, args);
+            self.run(&["set-hook", "-g", event, &action])?;
+        }
+        Ok(())
+    }
+
+    fn take_detach_message(&self, session: &str) -> Option<String> {
+        let value =
+            self.output_trimmed(&["show-options", "-t", session, "-v", DETACH_MESSAGE_OPTION])?;
+        let _ = self.run(&["set-option", "-t", session, "-u", DETACH_MESSAGE_OPTION]);
+        Some(value)
+    }
+
+    fn server_start_time(&self) -> Option<NaiveDateTime> {
+        let epoch: i64 = self
+            .output_trimmed(&["display-message", "-p", "#{start_time}"])?
+            .parse()
+            .ok()?;
+        let utc = DateTime::from_timestamp(epoch, 0)?;
+        Some(utc.with_timezone(&Local).naive_local())
+    }
+
+    fn last_resurrect_save(&self) -> Option<NaiveDateTime> {
+        let home = std::env::var("HOME").ok()?;
+        let dir = match self.output_trimmed(&["show-options", "-gqv", "@resurrect-dir"]) {
+            Some(dir) if !dir.is_empty() => {
+                crate::config::expand_home(&dir.replace("$HOME", &home))
+            }
+            _ => {
+                let legacy = Path::new(&home).join(".tmux/resurrect");
+                match legacy.is_dir() {
+                    true => legacy,
+                    false => std::env::var("XDG_DATA_HOME")
+                        .map(PathBuf::from)
+                        .unwrap_or_else(|_| Path::new(&home).join(".local/share"))
+                        .join("tmux/resurrect"),
+                }
+            }
+        };
+        // `metadata` follows the symlink, so this is the save itself.
+        let modified = std::fs::metadata(dir.join("last")).ok()?.modified().ok()?;
+        Some(DateTime::<Local>::from(modified).naive_local())
+    }
+}
+
+/// Free-function forms over the real `tmux`, for the plumbing (clocks,
+/// workspace teardown) that has no client to hand.
+pub fn kill_session(name: &str) {
+    TmuxClient::system().kill_session(name)
+}
+
+pub fn current_session_name() -> Option<String> {
+    TmuxClient::system().current_session_name()
+}
+
+pub fn take_detach_message(session: &str) -> Option<String> {
+    TmuxClient::system().take_detach_message(session)
+}
+
+pub fn any_client_attached(session: &str) -> bool {
+    TmuxClient::system().any_client_attached(session)
 }
 
 /// The prefix of the server-wide tmux option that records which session a
@@ -101,22 +323,6 @@ const CLIENT_SESSION_OPTION_PREFIX: &str = "@iter_client_session_";
 
 fn client_session_option(client: &str) -> String {
     format!("{CLIENT_SESSION_OPTION_PREFIX}{client}")
-}
-
-/// Records that `client` now shows `session`, for [`take_client_session`]
-/// to read back when it detaches.
-pub fn remember_client_session(client: &str, session: &str) -> Result<()> {
-    Tmux.run(&["set-option", "-g", &client_session_option(client), session])
-}
-
-/// The session `client` was last recorded on, consumed so a later client
-/// that reuses the same tty starts from nothing. `None` for a client that
-/// attached before the hooks were installed.
-pub fn take_client_session(client: &str) -> Option<String> {
-    let option = client_session_option(client);
-    let session = Tmux.output_trimmed(&["show-options", "-gv", &option])?;
-    let _ = Tmux.run(&["set-option", "-gu", &option]);
-    Some(session)
 }
 
 /// The session-scoped tmux option a detach message is left in: something
@@ -158,48 +364,6 @@ const HOOKS: [(&str, &str); 3] = [
     ("session-closed", "#{q:hook_session_name}"),
 ];
 
-/// Installs the global tmux hooks that drive `iter internal hook <event>
-/// <session> [previous]`, for any event that doesn't already have a working
-/// one. Safe to call every time a session is created.
-///
-/// "Already working" is deliberately not "already ours": a hook wired up in
-/// `tmux.conf` is left exactly as it is. That's the difference between a
-/// path baked in here -- `current_exe`, i.e. whichever build last ran
-/// `session new`, which can be a debug binary in a worktree that later gets
-/// deleted -- and a stable one the user chose. Installing over it every time
-/// would quietly re-point the hooks at a binary that may not outlive the
-/// afternoon.
-pub fn ensure_hooks_installed(iter_bin: &str) -> Result<()> {
-    if iter_bin.contains('\'') {
-        return Err(crate::error::IterError::CommandFailed(format!(
-            "cannot install the tmux hooks for a binary path containing a quote: {iter_bin}"
-        )));
-    }
-    for (event, args) in HOOKS {
-        if hook_is_current(event, args) {
-            continue;
-        }
-        let action = hook_action(iter_bin, event, args);
-        Tmux.run(&["set-hook", "-g", event, &action])?;
-    }
-    Ok(())
-}
-
-/// Whether `event`'s installed hook already passes exactly the format
-/// variables `args` calls for.
-///
-/// That comparison, rather than a string match on the whole action, is what
-/// lets a `tmux.conf` hook -- different path, different quoting, same
-/// variables -- count as current, while a hook from an older `iter` (which
-/// passed `#{hook_session_name}` to every event, and so did nothing) does
-/// not and gets replaced.
-fn hook_is_current(event: &str, args: &str) -> bool {
-    let Ok(existing) = Tmux.output(&["show-options", "-gv", event]) else {
-        return false; // no tmux, or no such option: install ours
-    };
-    !existing.trim().is_empty() && format_variables(&existing) == format_variables(args)
-}
-
 /// The variables named by the `#{...}` in a hook body, in order, without the
 /// braces or a `q:` quoting modifier: that quoting differs between what we
 /// write (`#{q:x}`, so a name with a quote or `$(...)` stays one word for the
@@ -224,78 +388,6 @@ fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
     // be written at all; everything else is quoted for the shell it runs in.
     let bin = crate::agent::prompt::shell_word(iter_bin);
     format!("run-shell '{bin} internal hook {event} {args}'")
-}
-
-/// Takes the detach message off `session`, if something left one there:
-/// returns it and unsets the option, so it's consumed once rather than
-/// re-attached to every later session of the same task.
-///
-/// Every failure is a `None`: the hook this serves fires for every tmux
-/// session, most of which have no such option (and, on `session-closed`,
-/// no longer exist to be asked).
-pub fn take_detach_message(session: &str) -> Option<String> {
-    let value =
-        Tmux.output_trimmed(&["show-options", "-t", session, "-v", DETACH_MESSAGE_OPTION])?;
-    let _ = Tmux.run(&["set-option", "-t", session, "-u", DETACH_MESSAGE_OPTION]);
-    Some(value)
-}
-
-/// Creates the detached session named `name` in `cwd` and makes sure the
-/// hooks that track it are installed -- the two steps `iter session new`
-/// needs done together, and the part of it that can fail, which is why its
-/// unwind path guards exactly this call.
-pub fn start_tracked_session(name: &str, cwd: &str) -> Result<()> {
-    create_session(name, cwd)?;
-    install_hooks_for_current_exe()
-}
-
-/// [`ensure_hooks_installed`] pointing at the binary that's running now.
-pub fn install_hooks_for_current_exe() -> Result<()> {
-    let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
-    ensure_hooks_installed(&iter_bin)
-}
-
-/// When the running tmux server started, in local time; `None` when there
-/// is no server. What tells a clock this server opened from one a previous
-/// server left open -- a reboot takes the server down without
-/// `iter internal kill-server`, so nothing closed it.
-pub fn server_start_time() -> Option<NaiveDateTime> {
-    let epoch: i64 = Tmux
-        .output_trimmed(&["display-message", "-p", "#{start_time}"])?
-        .parse()
-        .ok()?;
-    let utc = DateTime::from_timestamp(epoch, 0)?;
-    Some(utc.with_timezone(&Local).naive_local())
-}
-
-/// When tmux-resurrect last saved, in local time: the modification time of
-/// the save `last` points at. That's the last moment the previous server is
-/// known to have been running, and so the best end there is for a clock it
-/// left open. `None` when resurrect has never saved.
-///
-/// The directory is found the way resurrect finds it: `@resurrect-dir`
-/// (with `~` and `$HOME` expanded), else `~/.tmux/resurrect` if it exists,
-/// else `$XDG_DATA_HOME/tmux/resurrect`.
-pub fn last_resurrect_save() -> Option<NaiveDateTime> {
-    let home = std::env::var("HOME").ok()?;
-    let dir = match Tmux.output_trimmed(&["show-options", "-gqv", "@resurrect-dir"]) {
-        Some(dir) if !dir.is_empty() => {
-            crate::config::expand_home(&dir.replace("$HOME", &home))
-        }
-        _ => {
-            let legacy = Path::new(&home).join(".tmux/resurrect");
-            match legacy.is_dir() {
-                true => legacy,
-                false => std::env::var("XDG_DATA_HOME")
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|_| Path::new(&home).join(".local/share"))
-                    .join("tmux/resurrect"),
-            }
-        }
-    };
-    // `metadata` follows the symlink, so this is the save itself.
-    let modified = std::fs::metadata(dir.join("last")).ok()?.modified().ok()?;
-    Some(DateTime::<Local>::from(modified).naive_local())
 }
 
 #[cfg(test)]
@@ -401,5 +493,193 @@ mod tests {
             action_for("client-detached"),
             "run-shell '/usr/bin/iter internal hook client-detached #{q:hook_client}'"
         );
+    }
+
+    use crate::process::fake::FakeRunner;
+
+    fn client(runner: &FakeRunner, inside: bool) -> TmuxClient<'_> {
+        TmuxClient::new(runner, inside)
+    }
+
+    /// A bare name would match by prefix and treat `*` as a glob; every
+    /// session-targeting command goes through `=name`.
+    #[test]
+    fn sessions_are_targeted_exactly() {
+        let runner = FakeRunner::default();
+        let tmux = client(&runner, false);
+        tmux.kill_session("web/a");
+        assert!(tmux.session_exists("web/a*"));
+        tmux.attach_session("web/a").unwrap();
+        assert_eq!(
+            runner.calls(),
+            [
+                "tmux kill-session -t =web/a",
+                "tmux has-session -t =web/a*",
+                "tmux attach-session -t =web/a",
+            ]
+        );
+    }
+
+    #[test]
+    fn inside_tmux_attaching_switches_the_client() {
+        let runner = FakeRunner::default();
+        client(&runner, true).attach_session("web/a").unwrap();
+        assert_eq!(runner.calls(), ["tmux switch-client -t =web/a"]);
+    }
+
+    #[test]
+    fn a_missing_session_is_reported_as_absent() {
+        let runner = FakeRunner::default();
+        runner.fail("tmux has-session");
+        assert!(!client(&runner, false).session_exists("nope"));
+    }
+
+    #[test]
+    fn killing_a_gone_session_is_not_an_error() {
+        let runner = FakeRunner::default();
+        runner.fail("tmux kill-session");
+        client(&runner, false).kill_session("gone");
+    }
+
+    #[test]
+    fn outside_tmux_the_current_session_is_not_asked_for() {
+        let runner = FakeRunner::default();
+        assert_eq!(client(&runner, false).current_session_name(), None);
+        assert!(runner.calls().is_empty());
+    }
+
+    #[test]
+    fn sessions_are_listed_one_per_line() {
+        let runner = FakeRunner::default();
+        runner.reply("tmux list-sessions", "a/b\nc/d\n");
+        assert_eq!(client(&runner, false).list_sessions(), ["a/b", "c/d"]);
+    }
+
+    /// The hooks are installed with every variable `#{q:...}`-quoted, so a
+    /// session name with a quote stays one shell word.
+    #[test]
+    fn missing_hooks_are_installed_with_quoted_format_variables() {
+        let runner = FakeRunner::default();
+        client(&runner, false)
+            .ensure_hooks_installed("/usr/bin/iter")
+            .unwrap();
+        let installs: Vec<String> = runner
+            .calls()
+            .into_iter()
+            .filter(|c| c.starts_with("tmux set-hook"))
+            .collect();
+        assert_eq!(
+            installs,
+            [
+                "tmux set-hook -g client-session-changed run-shell '/usr/bin/iter internal hook client-session-changed #{q:hook_client} #{q:session_name} #{q:client_last_session}'",
+                "tmux set-hook -g client-detached run-shell '/usr/bin/iter internal hook client-detached #{q:hook_client}'",
+                "tmux set-hook -g session-closed run-shell '/usr/bin/iter internal hook session-closed #{q:hook_session_name}'",
+            ]
+        );
+    }
+
+    /// A hook already wired in `tmux.conf` with the right variables is left
+    /// alone; a stale one is replaced.
+    #[test]
+    fn a_current_hook_is_left_alone_and_a_stale_one_replaced() {
+        let runner = FakeRunner::default();
+        runner.reply(
+            "tmux show-options -gv client-detached",
+            "run-shell \"~/bin/iter internal hook client-detached '#{hook_client}'\"",
+        );
+        runner.reply(
+            "tmux show-options -gv session-closed",
+            "run-shell '/old/iter internal hook session-closed #{session_name}'",
+        );
+        client(&runner, false)
+            .ensure_hooks_installed("/usr/bin/iter")
+            .unwrap();
+        let installed: Vec<String> = runner
+            .calls()
+            .into_iter()
+            .filter(|c| c.starts_with("tmux set-hook"))
+            .map(|c| c.split_whitespace().nth(3).unwrap().to_string())
+            .collect();
+        assert_eq!(installed, ["client-session-changed", "session-closed"]);
+    }
+
+    #[test]
+    fn a_binary_path_with_a_quote_is_refused_before_touching_tmux() {
+        let runner = FakeRunner::default();
+        assert!(client(&runner, false).ensure_hooks_installed("/o'brien/iter").is_err());
+        assert!(runner.calls().is_empty());
+    }
+
+    #[test]
+    fn a_client_session_is_remembered_and_consumed() {
+        let runner = FakeRunner::default();
+        runner.reply("tmux show-options -gv @iter_client_session_/dev/ttys1", "web/a\n");
+        let tmux = client(&runner, false);
+        tmux.remember_client_session("/dev/ttys1", "web/a").unwrap();
+        assert_eq!(tmux.take_client_session("/dev/ttys1").as_deref(), Some("web/a"));
+        assert_eq!(
+            runner.calls(),
+            [
+                "tmux set-option -g @iter_client_session_/dev/ttys1 web/a",
+                "tmux show-options -gv @iter_client_session_/dev/ttys1",
+                "tmux set-option -gu @iter_client_session_/dev/ttys1",
+            ]
+        );
+    }
+
+    /// Against a real tmux server, which is why it is `#[ignore]`d and refuses
+    /// to run on anything but a throwaway one. Run it with
+    ///
+    /// ```text
+    /// TMUX_TMPDIR=$(mktemp -d /tmp/itx.XXXX) cargo test real_tmux -- --ignored
+    /// ```
+    ///
+    /// (a short path: a socket's is limited to ~100 bytes). `TMUX_TMPDIR` is
+    /// where tmux keeps its socket, so this server is not the user's own.
+    #[test]
+    #[ignore = "needs tmux, and TMUX_TMPDIR on a throwaway directory"]
+    fn real_tmux_targets_exactly_and_quotes_what_the_hooks_are_told() {
+        let tmp = std::env::var("TMUX_TMPDIR").expect("set TMUX_TMPDIR to a throwaway directory");
+        assert!(tmp.starts_with("/tmp/itx"), "not a throwaway directory: {tmp}");
+        assert!(std::env::var("TMUX").is_err(), "run outside tmux (unset TMUX)");
+        let tmux = TmuxClient::system();
+        let dir = std::path::PathBuf::from(&tmp);
+
+        // a name is a name, not a prefix: killing `web-a` leaves `web-ab`
+        tmux.create_session("web-a", "/tmp").unwrap();
+        tmux.create_session("web-ab", "/tmp").unwrap();
+        tmux.kill_session("web-a");
+        assert!(!tmux.session_exists("web-a"));
+        assert!(tmux.session_exists("web-ab"));
+        tmux.kill_session("web-a"); // already gone: not an error, and `web-ab` stays
+        assert!(tmux.session_exists("web-ab"));
+        assert_eq!(tmux.list_sessions(), ["web-ab"]);
+
+        // the hooks get a hostile session name as one argument and run nothing
+        let stub = dir.join("iter stub"); // a space in the path, on purpose
+        let out = dir.join("args.out");
+        std::fs::write(
+            &stub,
+            format!("#!/bin/sh\nprintf '%s\\n' \"$@\" >> '{}'\n", out.display()),
+        )
+        .unwrap();
+        std::fs::set_permissions(&stub, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        tmux.ensure_hooks_installed(stub.to_str().unwrap()).unwrap();
+        // no `.` or `:` in it: those mean pane and window in a tmux target
+        let marker = std::path::Path::new("/tmp/itx_PWNED_marker");
+        let _ = std::fs::remove_file(marker);
+        let hostile = format!("ev\"il$(touch {})", marker.display());
+        tmux.create_session(&hostile, "/tmp").unwrap();
+        tmux.kill_session(&hostile);
+        for _ in 0..40 {
+            if out.exists() && std::fs::read_to_string(&out).is_ok_and(|t| t.contains("session-closed")) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        let seen = std::fs::read_to_string(&out).expect("the hook ran the stub");
+        assert!(seen.contains(&hostile), "the name arrived whole: {seen}");
+        assert!(!marker.exists(), "the name was run as shell");
+        tmux.kill_server().unwrap();
     }
 }
