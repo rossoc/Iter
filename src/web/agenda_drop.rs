@@ -1,6 +1,4 @@
-//! The agenda's POST route (`POST /board/{id}/schedule`): what a drop on an
-//! hour, or a pick form, does to a task. The form and the transaction are
-//! `drop.rs`, shared with the matrix.
+//! The agenda's POST route (`POST /board/{id}/schedule`); the form and transaction are in `drop.rs`.
 
 use super::Id;
 use super::agenda_pick::links;
@@ -21,9 +19,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(schedule_task)
 }
 
-/// Applies an agenda drop. `target` is empty to unschedule, or the
-/// `yyyy-mm-dd hh:mm` an hour slot starts at. A task with no duration gets an
-/// hour, so it has a length on the agenda.
+/// A task with no duration gets an hour, so it has a length on the agenda.
 fn schedule(task: &mut Task, target: &str) -> std::result::Result<(), String> {
     let target = target.trim();
     if target.is_empty() {
@@ -37,17 +33,12 @@ fn schedule(task: &mut Task, target: &str) -> std::result::Result<(), String> {
     Ok(())
 }
 
-/// Where a pick form lands after its move: the agenda of the day it named,
-/// on the card that moved (the keyboard is back on it), saying so. The day is
-/// parsed and the URL rebuilt from it, never taken from the request text.
-/// `None` for a post with no (or a bad) day: `board.js`, which reloads itself.
+/// The URL is rebuilt from the parsed day, never taken from the request text.
 fn schedule_back(id: i64, date: Option<&str>, task: i64) -> Option<String> {
     let day = parse_day(date?).ok()?;
     Some(links(id, day).moved(task))
 }
 
-/// `POST /board/{id}/schedule`: a [`Drop`] with the task and the hour (or
-/// empty, to unschedule); a pick form also sends the day to land back on.
 #[route(POST "/board/{id}/schedule")]
 async fn schedule_task(cx: &Cx, Form(drop): Form<Drop>) -> Result<Json<bool>> {
     let id = *path_param::<Id>(cx)?;

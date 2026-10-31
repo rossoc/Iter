@@ -1,6 +1,4 @@
-//! Writing a note into a task's folder by hand: the pop-up over the Notes tab
-//! (`?tab=notes&new=note`) and the route that stores it. The agents write the
-//! folder's other files; this is how a person adds one.
+//! Writing a note into a task's folder by hand: the pop-up over the Notes tab (`?tab=notes&new=note`) and its route.
 
 use super::ui::field::{field, textarea};
 use super::ui::form::form_shell;
@@ -29,8 +27,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(add_note)
 }
 
-/// The New note pop-up: a name (it becomes the file's) and the text. The first
-/// row of the Notes tab opens it.
 #[component]
 pub async fn note_modal(task_id: i64) -> Result<impl View> {
     let close = notes_tab_url(&task_url(task_id));
@@ -70,7 +66,6 @@ fn stem(name: &str) -> std::result::Result<String, String> {
     }
 }
 
-/// Writes the note into `dir` as `<stem>.md`, refusing one that exists.
 fn write(dir: &Path, form: &NoteForm) -> std::result::Result<(), String> {
     let stem = stem(&form.name)?;
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -90,7 +85,6 @@ fn write(dir: &Path, form: &NoteForm) -> std::result::Result<(), String> {
     file.write_all(body.as_bytes()).map_err(|e| e.to_string())
 }
 
-/// `POST /task/{id}/notes`: stores the note and shows the tab.
 #[route(POST "/task/{id}/notes")]
 async fn add_note(cx: &Cx, Form(form): Form<NoteForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;

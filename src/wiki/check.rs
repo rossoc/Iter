@@ -1,7 +1,4 @@
-//! `check`: the lint that needs no LLM. It reads what the graph builder found
-//! and reports what is wrong with it, what is missing, and (as information)
-//! what could be done next. Contradictions between what pages say need
-//! judgement and are the agent's lint, not this one.
+//! `check`: the lint that needs no LLM; contradictions between pages are the agent's lint.
 
 use super::graph::{Wiki, md_files};
 use super::ontology::{LevelKind, NS, ns};
@@ -30,17 +27,13 @@ pub struct Issue {
     pub message: String,
 }
 
-/// Why a note has to be (re)ingested.
 #[derive(Debug, PartialEq)]
 pub enum Dirty {
-    /// No page has it as a source.
     New,
-    /// It changed after the pages that came from it were updated.
     Changed,
 }
 
-/// `updated` as a moment: a date means the end of that day, so a note
-/// written during it does not look newer than a page updated that day.
+/// `updated` as a moment: a date means the end of that day, so a note written during it is not newer than a page updated that day.
 pub fn parse_updated(text: &str) -> Option<NaiveDateTime> {
     let text = text.trim();
     if let Ok(t) = DateTime::parse_from_rfc3339(text) {
@@ -56,9 +49,7 @@ pub fn parse_updated(text: &str) -> Option<NaiveDateTime> {
         .and_hms_opt(23, 59, 59)
 }
 
-/// The notes that no page has been made from since they last changed, by
-/// comparing the file's modification time with the `updated` of the pages
-/// that name it as a source. No hash and no ledger: the pages say it.
+/// Notes no page has been made from since they last changed: file mtime against the `updated` of the pages naming it as source. No hash, no ledger.
 pub fn dirty_notes(wiki: &Wiki) -> Vec<(usize, Dirty)> {
     let mut out = Vec::new();
     for (i, node) in wiki.nodes.iter().enumerate() {
@@ -99,8 +90,7 @@ fn local(prop: &oxigraph::model::NamedNode) -> &str {
     prop.as_str().strip_prefix(NS).unwrap_or(prop.as_str())
 }
 
-/// Lints the wiki; `from` is the level ids are written from. Sorted: errors
-/// first.
+/// Lints the wiki; `from` is the level ids are written from. Errors sort first.
 pub fn check(wiki: &Wiki, from: usize) -> Vec<Issue> {
     let mut issues = Vec::new();
     let onto = &wiki.ontology;
@@ -263,8 +253,6 @@ pub fn check(wiki: &Wiki, from: usize) -> Vec<Issue> {
     issues
 }
 
-/// Why `prop` may not go from node `s` to node `t`, by the property's domain
-/// and range.
 fn violation(wiki: &Wiki, prop: &oxigraph::model::NamedNode, s: usize, t: usize) -> Option<String> {
     let onto = &wiki.ontology;
     let fits = |node: usize, wanted: Vec<_>| {
@@ -312,16 +300,13 @@ mod tests {
         let got = codes(&issues);
         assert!(got.contains(&("dangling", "wiki/entities/ci")), "{got:?}");
         assert!(got.contains(&("missing-tags", "wiki/concepts/backoff")));
-        // sketches only have to parse
         assert!(!got.iter().any(|(_, id)| id.contains("sketches")));
-        // errors come first
         assert_eq!(issues[0].severity, Severity::Error);
     }
 
     #[test]
     fn a_note_is_dirty_until_a_page_updated_after_it_names_it() {
         let w = build(&fixture("dirty"));
-        // the idea was updated 2026-10-28; the note was just written
         assert_eq!(dirty_notes(&w), [(note_of(&w), Dirty::Changed)]);
 
         let root = fixture("clean");
@@ -361,7 +346,6 @@ mod tests {
     #[test]
     fn the_ontology_constrains_relations() {
         let root = fixture("constraint");
-        // include wants a page; the target is a note
         write(
             &root.join("acme/app"),
             "wiki/concepts/bad.md",
@@ -444,7 +428,6 @@ mod tests {
         let promote: Vec<_> = issues.iter().filter(|i| i.code == "promote").collect();
         assert_eq!(promote.len(), 1);
         assert!(promote[0].message.starts_with("3 ideas are tagged `cache`"));
-        // once a concept is built from one of them, the suggestion goes
         write(
             &app,
             "wiki/concepts/cache.md",

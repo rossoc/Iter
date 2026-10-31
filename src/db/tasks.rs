@@ -3,24 +3,20 @@
 use super::*;
 
 impl Db {
-    /// Every task on board `id`'s projects as a [`Card`], ordered by
-    /// project, then task. Three queries however big the board.
+    /// Every task on board `id`'s projects as a [`Card`], by project then task; three queries.
     pub fn cards(&self, board_id: i64) -> Result<Vec<Card>> {
         let mut tasks = self.tasks_of::<Board>(board_id, false)?;
         Self::sort_by_project(&mut tasks);
         self.with_priorities(board_id, tasks, false)
     }
 
-    /// [`Self::cards`] of the unfinished tasks only (`status <> 'done'`
-    /// is in the SQL, so finished work is never read), in no particular
-    /// order: the caller sorts once, its own way.
+    /// [`Self::cards`] of unfinished tasks only (filtered in SQL), unordered.
     #[cfg(feature = "web")]
     pub fn cards_unfinished(&self, board_id: i64) -> Result<Vec<Card>> {
         let tasks = self.tasks_of::<Board>(board_id, true)?;
         self.with_priorities(board_id, tasks, true)
     }
 
-    /// `tasks` as cards: one query for the flags of the whole board.
     pub(super) fn with_priorities(
         &self,
         board_id: i64,
@@ -38,8 +34,7 @@ impl Db {
             .collect())
     }
 
-    /// The colors of the Urgent and Important tags, in that order, in one
-    /// query. Both tags are seeded, so a missing one is an error.
+    /// Urgent and Important tag colors, in that order; both are seeded, so a missing one is an error.
     #[cfg(feature = "web")]
     pub fn priority_colors(&self) -> Result<(String, String)> {
         let rows: HashMap<String, String> = self
@@ -59,9 +54,7 @@ impl Db {
         Ok((color(URGENT_TAG)?, color(IMPORTANT_TAG)?))
     }
 
-    /// The [`Priority`] of every task in group `id`, by task id -- one
-    /// query for a listing of many, reading only that group's tag rows. A
-    /// task missing from the map has neither flag.
+    /// The [`Priority`] of every task in group `id`, by task id; absent means neither flag.
     /// Finished tasks are left out when `unfinished`.
     pub(super) fn priorities_of<G: ProjectGroup>(
         &self,
@@ -96,9 +89,8 @@ impl Db {
         Ok(out)
     }
 
-    /// Stores `task` as row `id` and, when `priority` is some, makes its
-    /// flags that, in one transaction: a board's drop changes both or
-    /// neither (never a task placed with the old flags).
+    /// Stores `task` as row `id` and, when `priority` is some, sets its flags in the same
+    /// transaction, so a board drop changes both or neither.
     #[cfg(any(test, feature = "web"))]
     pub fn update_placed(&self, id: i64, task: &Task, priority: Option<Priority>) -> Result<()> {
         self.atomically(|| {
@@ -110,7 +102,6 @@ impl Db {
         })
     }
 
-    /// Makes `task_id`'s flags `priority`, by adding or removing the tags.
     #[cfg(any(test, feature = "web"))]
     pub fn set_priority(&self, task_id: i64, priority: Priority) -> Result<()> {
         for (tag, on) in [
@@ -134,7 +125,6 @@ impl Db {
         Ok(())
     }
 
-    /// Every tag attached to `task_id`, in name order.
     pub fn tags_for_task(&self, task_id: i64) -> Result<Vec<Tag>> {
         self.find_all(
             "WHERE id IN (SELECT tag_id FROM task_tags WHERE task_id = ?1) ORDER BY name",
@@ -142,14 +132,12 @@ impl Db {
         )
     }
 
-    /// Replaces the tags on `task_id` with exactly `tag_ids`, in one
-    /// transaction.
+    /// Replaces the tags on `task_id` with exactly `tag_ids`.
     pub fn set_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
         self.atomically(|| self.replace_task_tags(task_id, tag_ids))
     }
 
-    /// [`Self::set_task_tags`] without its own transaction, for a caller
-    /// that has one open.
+    /// [`Self::set_task_tags`] for a caller with a transaction open.
     pub(super) fn replace_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
         self.conn
             .execute("DELETE FROM task_tags WHERE task_id = ?1", params![task_id])?;
@@ -162,9 +150,8 @@ impl Db {
         Ok(())
     }
 
-    /// Writes `task` with exactly `tag_ids`, in one transaction: a new row
-    /// when `id` is `None`, else over row `id`. Returns the task's id. A new
-    /// task without tags skips the tag write altogether.
+    /// Writes `task` with exactly `tag_ids` in one transaction (insert when `id` is `None`);
+    /// returns its id.
     #[cfg(feature = "web")]
     pub fn save_task(&self, id: Option<i64>, task: &Task, tag_ids: &[i64]) -> Result<i64> {
         self.atomically(|| {
@@ -189,8 +176,7 @@ impl Db {
         )
     }
 
-    /// How many tasks project `project_id` holds, without reading them (a
-    /// tab badge).
+    /// Task count of a project, unread (tab badge).
     #[cfg(feature = "web")]
     pub fn count_tasks_for_project(&self, project_id: i64) -> Result<usize> {
         let n: i64 = self
@@ -204,9 +190,7 @@ impl Db {
         self.find_all("WHERE project_id = ?1 ORDER BY name", params![project_id])
     }
 
-    /// Every task of any of `project_ids`, by project then name -- one query
-    /// for a whole set of projects (the ids travel as one JSON array, as in
-    /// `assign_projects`).
+    /// Every task of any of `project_ids`, by project then name; one query.
     pub fn tasks_for_projects(&self, project_ids: &[i64]) -> Result<Vec<Task>> {
         self.find_all(
             "WHERE project_id IN (SELECT value FROM json_each(?1)) ORDER BY project_id, name",
@@ -214,8 +198,7 @@ impl Db {
         )
     }
 
-    /// The names of the tags of each of `ids`, in one query (the ids travel
-    /// as one JSON array). A task with no tag is not in the map.
+    /// Tag names per task id, one query; untagged tasks are absent.
     #[cfg(feature = "web")]
     pub fn tag_names_for_tasks(&self, ids: &[i64]) -> Result<HashMap<i64, Vec<String>>> {
         let rows = self.query_all(
@@ -233,14 +216,8 @@ impl Db {
         Ok(names)
     }
 
-    /// Every task as a [`task_ref`], in `<project>/<task>` order, optionally narrowed to one project and/or a set of statuses.
-    /// An empty `statuses` means every status, the same way `None` for
-    /// `project` means every project.
-    ///
-    /// One join rather than a listing plus a query per project: this runs
-    /// on every TAB keypress, where the per-project round trips were the
-    /// dominant cost and every task's other columns were loaded only to be
-    /// dropped.
+    /// Every task as a [`task_ref`], in `<project>/<task>` order, optionally narrowed by project
+    /// and/or statuses (empty `statuses` = all). One join: this runs on every TAB.
     pub fn task_refs(&self, project: Option<&str>, statuses: &[TaskStatus]) -> Result<Vec<String>> {
         let mut sql = String::from(
             "SELECT p.name, t.name FROM tasks t JOIN projects p ON p.id = t.project_id",
@@ -259,8 +236,7 @@ impl Db {
         }
         sql.push_str(" ORDER BY p.name, t.name");
 
-        // Anonymous `?` bound positionally, so the filters compose without
-        // each combination needing its own `query_map` arm.
+        // Anonymous `?` so the filters compose.
         let mut values: Vec<Value> = Vec::new();
         values.extend(project.map(|name| Value::Text(name.to_string())));
         values.extend(statuses.iter().map(|s| Value::Text(s.as_str().to_string())));
@@ -273,9 +249,7 @@ impl Db {
         })
     }
 
-    /// Every distinct task name in the database, sorted -- what `task
-    /// pull/push --task` completes, which takes a bare name rather than a
-    /// `<project>/<task>` pair. SQL does the dedup and the ordering.
+    /// Every distinct task name, sorted: what `task pull/push --task` completes (a bare name).
     pub fn task_names(&self) -> Result<Vec<String>> {
         self.query_all("SELECT DISTINCT name FROM tasks ORDER BY name", [], |row| {
             row.get(0)

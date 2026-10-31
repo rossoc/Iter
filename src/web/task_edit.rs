@@ -1,7 +1,4 @@
-//! The task edit form (`/task/{id}/edit`), the twin of New task
-//! (`task_new.rs`): the routes, the loading and the view. The page is
-//! `edit_page` and the controls are `task_fields`, the same ones as New
-//! task; this supplies the crumbs.
+//! The task edit form (`/task/{id}/edit`), the twin of New task (`task_new.rs`); the controls are in `task_fields`.
 
 use super::crumbs::trail;
 use super::edit::{Loaded, load, submit};
@@ -31,13 +28,10 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(show).page(save)
 }
 
-/// What the form starts out showing for `task`: its own values, and its tag
-/// names comma-separated (one query). The twin of `task_new::blank`.
 pub fn values(db: &Db, task: &Task) -> IterResult<TaskForm> {
     Ok(TaskForm::of(task, &joined(&db.tags_for_task(task.id())?)))
 }
 
-/// Every project as `(id, name)`, for the Project select.
 fn project_options(db: &Db) -> IterResult<Vec<(String, String)>> {
     Ok(db
         .list::<Project>()?
@@ -65,7 +59,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
 #[page(POST "/task/{id}/edit")]
 async fn save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    // `form` is what was typed; `refused.stored` the stored task.
     let refused = submit(id, &form, |db, task| {
         Ok((parents_of(db, task.project_id)?, project_options(db)?))
     })?;
@@ -75,10 +68,6 @@ async fn save(cx: &Cx, Form(form): Form<TaskForm>) -> Result<impl View> {
     })
 }
 
-/// `stored` is the task as stored (the breadcrumb and title of the page, not
-/// what was typed), `parents` its project and organization; `values` is what
-/// the form shows: [`values`] on GET, what was typed after a refused submit.
-/// `error` is the refusal, if any. Same arguments as `task_new::screen`.
 #[component]
 pub async fn screen(
     stored: &Task,
@@ -89,7 +78,6 @@ pub async fn screen(
 ) -> Result<impl View> {
     let base = task_url(stored.id());
     let crumbs = trail(&parents.org, Some(&parents.project), Crumb::label("Task"));
-    // the badges the task page itself shows
     let db = open_db()?;
     let sessions_n = db.sessions_for_task(stored.id())?.len();
     let agents_n = taskdir::of(&db, &parents.project, stored)

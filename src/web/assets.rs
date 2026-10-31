@@ -1,8 +1,4 @@
-//! The static files (`/style.css`, `/board.js`, `/org.js`, `/favicon.ico`) are
-//! compiled in and only change with the binary. Each is served with an ETag
-//! (a hash of its text, computed once) and `Cache-Control: no-cache`, so the
-//! browser revalidates on every page and gets a 304 with no body instead of
-//! downloading the file again.
+//! Static files are compiled in and served with an ETag and `no-cache`: the browser revalidates and gets a bodiless 304.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -53,7 +49,6 @@ impl Asset {
         })
     }
 
-    /// The file, or a bodiless 304 when the browser already has this version.
     pub fn respond(&self, cx: &Cx) -> Result<Response> {
         let tag = self.tag();
         let cached = matches(headers(cx).get(IF_NONE_MATCH), tag);
@@ -76,7 +71,6 @@ impl Asset {
     }
 }
 
-/// Whether an `If-None-Match` value (a list of tags, or `*`) names `tag`.
 fn matches(value: Option<&HeaderValue>, tag: &str) -> bool {
     let Some(value) = value.and_then(|v| v.to_str().ok()) else {
         return false;

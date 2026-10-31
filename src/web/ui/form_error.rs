@@ -1,17 +1,13 @@
-//! Why a form was refused: the message, and the control it is about.
 
 use crate::error::IterError;
 
-/// `field` is the `name` of the control the error is about, if it is about
-/// one. The controls (`field.rs`) mark themselves invalid from it, and the
-/// error notice (`notice::error_box`) links to it.
+/// `field` is the `name` of the control the error is about, if any; controls and the error notice use it.
 pub struct FormError {
     pub message: String,
     pub field: Option<&'static str>,
 }
 
 impl FormError {
-    /// The refusal `error` says, about the control `field` if it is about one.
     pub fn new(error: &IterError, field: Option<&'static str>) -> FormError {
         FormError {
             message: sentence(&error.to_string()),
@@ -19,14 +15,12 @@ impl FormError {
         }
     }
 
-    /// Whether the error is about the control named `name`.
     pub fn is_about(&self, name: &str) -> bool {
         self.field == Some(name)
     }
 }
 
-/// `message` as the page says it: a capitalised sentence with a period. The
-/// CLI prints the same messages as fragments, so the wording is mapped here.
+/// `message` as a capitalised sentence with a period (the CLI prints fragments).
 pub fn sentence(message: &str) -> String {
     let message = message.trim().replace(" github ", " GitHub ");
     let mut chars = message.chars();
@@ -41,7 +35,6 @@ pub fn sentence(message: &str) -> String {
     out
 }
 
-/// Whether `error` is about the control named `name` (no error: no).
 pub fn is_about(error: Option<&FormError>, name: &str) -> bool {
     error.is_some_and(|e| e.is_about(name))
 }

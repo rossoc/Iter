@@ -1,7 +1,4 @@
-/* a hairline box with a top edge in the cards' edge colors (edge.css). The
-   numeral's width (--num-w) is also the label's indent, so the rule lines up
-   with the name. The inner list is a hairline, not a box: dashed only when it
-   is empty or a card is over it. */
+/* the numeral's width (--num-w) is also the label's indent. The inner list is dashed only when empty or a card is over it. */
 .quad{--num-w:24px;--head-gap:10px;--pad-x:4px;position:relative;min-width:0;display:flex;flex-direction:column;gap:2px;
   padding:16px 12px 12px;border:1px solid var(--line);border-radius:var(--r-lg)}
 .quad::before{content:"";position:absolute;left:-1px;right:-1px;top:-1px;height:var(--edge-w);border-radius:var(--r-lg) var(--r-lg) 0 0;

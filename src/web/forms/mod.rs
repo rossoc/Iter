@@ -1,9 +1,4 @@
 //! What the edit forms submit, and how it lands on a model.
-//!
-//! Each form is applied to the *existing* row rather than building a fresh
-//! one, so everything the form doesn't show (`project_id`,
-//! `organization_id`, ids) is carried through untouched -- the same rule
-//! the YAML editor follows in `commands`.
 
 use crate::error::{IterError, Result};
 use crate::models::{Named, Settings};
@@ -19,14 +14,10 @@ pub use org::OrgForm;
 pub use project::ProjectForm;
 pub use task::TaskForm;
 
-/// The names of the controls every edit form has (also the names of the
-/// submitted fields), shared by the forms' [`EditForm::field`] and the
-/// pages (`edit_page.rs`).
 pub const NAME: &str = "name";
 pub const DESCRIPTION: &str = "description";
 
-/// A checkbox is present in the submission (as `on`) only when ticked: for
-/// `#[serde(default, deserialize_with = "ticked")]` on a `bool`.
+/// Present (as `on`) only when ticked: for `deserialize_with = "ticked"` on a `bool`.
 fn ticked<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> std::result::Result<bool, D::Error> {
@@ -39,17 +30,13 @@ pub fn text(value: &str) -> String {
     value.replace("\r\n", "\n")
 }
 
-/// The fields of a submission read as `(name, value)` pairs, for a form a
-/// struct can't hold (repeated fields, one per ticked box).
 struct Pairs<'a>(&'a [(String, String)]);
 
 impl Pairs<'_> {
-    /// The first value submitted for `key`, or "".
     fn first(&self, key: &str) -> String {
         self.get(key).unwrap_or_default().to_string()
     }
 
-    /// The first value submitted for `key`, if any (a ticked checkbox).
     fn get(&self, key: &str) -> Option<&str> {
         self.0
             .iter()
@@ -57,8 +44,6 @@ impl Pairs<'_> {
             .map(|(_, v)| v.as_str())
     }
 
-    /// The ids submitted under `key` (repeated, one per ticked box), once
-    /// each and in order; what isn't an id is dropped.
     fn ids(&self, key: &str) -> Vec<i64> {
         let mut ids: Vec<i64> = self
             .0
@@ -72,7 +57,6 @@ impl Pairs<'_> {
     }
 }
 
-/// A comma-separated list of names, trimmed and without blanks.
 pub fn names(value: &str) -> Vec<String> {
     value
         .split(',')
@@ -81,7 +65,6 @@ pub fn names(value: &str) -> Vec<String> {
         .collect()
 }
 
-/// The inverse of [`names`]: `items`' names, comma-separated.
 pub fn joined<T: Named>(items: &[T]) -> String {
     items.iter().map(Named::name).collect::<Vec<_>>().join(", ")
 }
@@ -103,8 +86,6 @@ fn optional<T>(
     Ok(())
 }
 
-/// The six [`Settings`] fields as a form submits them -- flattened into
-/// both the organization and the project form.
 #[derive(Deserialize)]
 pub struct SettingsForm {
     #[serde(default, deserialize_with = "ticked")]
@@ -119,8 +100,6 @@ pub struct SettingsForm {
 }
 
 impl SettingsForm {
-    /// The names of its controls (also the names of the submitted fields),
-    /// used by `settings_fields.rs`.
     pub const GITHUB: &'static str = "github";
     pub const TMUX: &'static str = "tmux";
     pub const AUTO_BRANCH: &'static str = "auto_branch";
@@ -152,8 +131,6 @@ impl SettingsForm {
     }
 }
 
-/// The name of the checkboxes of a group's projects (also the name of the
-/// submitted field), shared by [`OrgForm`], [`BoardForm`] and their pages.
 pub const PROJECTS: &str = "project";
 
 #[cfg(test)]
@@ -163,8 +140,6 @@ mod tests {
     use crate::models::{Organization, Task, TaskStatus};
     use crate::web::edit::EditForm;
 
-    /// The errors of the name belong to the Name field on every form, and
-    /// the others to none.
     #[test]
     fn name_errors_belong_to_the_name_field_by_default() {
         assert_eq!(
@@ -181,8 +156,6 @@ mod tests {
         assert_eq!(OrgForm::field(&IterError::CommandFailed("x".into())), None);
     }
 
-    /// An organization or a task whose name is taken is refused on its Name
-    /// field, in words.
     #[test]
     fn taken_organization_and_task_names_read_as_sentences() {
         let db = fixtures::db();

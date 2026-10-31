@@ -1,7 +1,4 @@
-//! The global settings page (`/settings`): the config file's defaults (the
-//! editor, the pause gap, the status of a new task, the defaults of a new
-//! project) as a plain form. Saving writes the config file and replaces the
-//! running config, so the next page already follows it.
+//! The global settings page (`/settings`): the config file's defaults as a form; saving writes the config file.
 
 use super::forms::SettingsForm;
 use super::settings_fields::settings_fields;
@@ -27,8 +24,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(show).page(save)
 }
 
-/// The names of the controls an error can be about (also the submitted
-/// fields).
 const EDITOR: &str = "editor";
 const PAUSE_GAP: &str = "pause_gap_minutes";
 const STATUS: &str = "status";
@@ -39,7 +34,6 @@ struct SavedQuery {
     saved: Option<String>,
 }
 
-/// What the page submits.
 #[derive(Deserialize)]
 struct SettingsPage {
     editor: String,
@@ -50,8 +44,7 @@ struct SettingsPage {
 }
 
 impl SettingsPage {
-    /// `config` with the submission applied, or the refusal (the field it is
-    /// about, and why). Nothing is changed when it is refused.
+    /// Nothing is changed when it is refused.
     fn apply(&self, mut config: Config) -> std::result::Result<Config, (IterError, &'static str)> {
         let bad = |about: &'static str, message: String| (IterError::CommandFailed(message), about);
         let editor = self.editor.trim();
@@ -90,7 +83,6 @@ impl SettingsPage {
     }
 }
 
-/// What the form shows: the values, as text.
 struct Values {
     editor: String,
     pause_gap: String,

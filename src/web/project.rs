@@ -1,6 +1,4 @@
-//! The project page (`/project/{id}`), the sibling of the organization
-//! page: the route, the loading (`load`) and the view. Nothing here has
-//! rules of its own: it is all shared components (`ui/`).
+//! The project page (`/project/{id}`): route, loading and view, built from shared components.
 
 use super::Id;
 use super::crumbs::trail;
@@ -35,8 +33,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(show)
 }
 
-/// The tab a `?tab=` value asks for: a project has no Report, so that is
-/// Info.
+/// A project has no Report tab: that value falls to Info.
 pub fn section(tab: Option<&str>) -> Section {
     match Section::of(tab) {
         Section::Report => Section::Info,
@@ -44,19 +41,13 @@ pub fn section(tab: Option<&str>) -> Section {
     }
 }
 
-/// What the project page shows.
 pub struct Loaded {
     pub parents: Parents,
-    /// Only for the Tasks tab.
     pub tasks: Vec<Task>,
-    /// The tab badge: one `COUNT` on Info, the rows counted on Tasks.
     pub task_count: usize,
-    /// The notes' folder; the notes themselves only for the Notes tab.
     pub notes: NotesTab,
 }
 
-/// Loads project `id` for `section`: the organization only when it has
-/// one, the task rows only for the Tasks tab.
 pub fn load(db: &Db, id: i64, section: Section, q: Option<&str>) -> Result<Loaded> {
     let parents = parents_of(db, id)?;
     let (tasks, task_count) = tasks_or_count(
@@ -91,7 +82,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
         notes,
     } = page;
     let q = query.q.as_deref();
-    // `?new=task` on the Tasks tab: the New task pop-up over the list
     let create = (tab == Section::Tasks && query.new.as_deref() == Some("task"))
         .then(|| TaskCreate::in_project(&project, q));
     Ok(view! {
@@ -99,7 +89,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
     })
 }
 
-/// The Info tab: description and base path, the Settings aside.
 #[component]
 async fn project_info(project: &Project) -> Result<impl View> {
     Ok(view! {
@@ -116,8 +105,6 @@ async fn project_info(project: &Project) -> Result<impl View> {
     })
 }
 
-/// `tasks` is loaded only for the Tasks tab; `task_count` is the badge.
-/// `task_create` is the New task pop-up, when it is open.
 #[component]
 pub async fn screen(
     project: &Project,

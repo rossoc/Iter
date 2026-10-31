@@ -1,9 +1,5 @@
-//! The life of an agent run on a task: written down (`create`), edited while
-//! it waits (`amend`), begun (`begin`: workspace, prompt, harness), stopped
-//! (`cancel`) and carried out by the detached worker (`worker`). The files of
-//! a run are `run`'s; the harness is whatever `Harness` says to start. Shared
-//! by `iter task solve` and the web page; neither prints from here: what a
-//! caller may want to say goes through an [`Observer`].
+//! The life of an agent run: `create`, `amend`, `begin`, `cancel` and the detached `worker`; shared by `iter task solve` and the web page.
+//! Callers hear what happens through an [`Observer`]; nothing prints here.
 
 use crate::agent::error::AgentError;
 use crate::agent::exec;
@@ -21,17 +17,13 @@ use crate::wiki::ingest_job::{Auto, Trigger, auto};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-/// What a caller may want to say while a run begins. Every method does
-/// nothing unless implemented.
+/// What a caller may hear while a run begins; every method defaults to nothing.
 pub trait Observer {
-    /// The automatic ingest a first run triggers did (or did not) start.
     fn ingest(&self, _project: &Project, _outcome: &Auto) {}
-    /// A run of `name` that is waited for is about to work.
     fn working(&self, _name: &str, _run: &RunRecord) {}
 }
 
-/// How a run begins: waited for or detached, what the harness is passed as
-/// it is, and who is told what happens.
+/// How a run begins: waited for or detached, harness settings, and who is told.
 pub struct Launch<'a> {
     pub wait: bool,
     pub extra: &'a [String],
@@ -39,7 +31,6 @@ pub struct Launch<'a> {
 }
 
 impl Launch<'_> {
-    /// Detached, with nothing extra and nobody told.
     #[cfg(feature = "web")]
     pub const fn detached() -> Launch<'static> {
         Launch {
@@ -50,15 +41,13 @@ impl Launch<'_> {
     }
 }
 
-/// An [`Observer`] that says nothing.
 #[cfg(feature = "web")]
 pub struct Quiet;
 
 #[cfg(feature = "web")]
 impl Observer for Quiet {}
 
-/// What a run is told to be -- the harness, the model, how hard to work --
-/// and the front matter of the buffer `solve` opens.
+/// A run's harness, model and effort, and the front matter of the buffer `solve` opens.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Spec {
     pub agent: Harness,
@@ -66,9 +55,7 @@ pub struct Spec {
     pub effort: String,
 }
 
-/// The worktree the run happens in: the task's own when it has one, else a
-/// new one (with the branch), recorded so `task done` finds it. `(branch,
-/// path)`; neither when the project does not use branches.
+/// The run's worktree as `(branch, path)`: the task's own, else a new one recorded so `task done` finds it; neither without branches.
 fn workspace(
     app: &App,
     project: &Project,
@@ -96,7 +83,6 @@ fn workspace(
         crate::utils::workspace::remove_worktree_and_branch(project, Some(&path), Some(&branch));
         return Err(e);
     }
-    // a task that is done or already going keeps its status
     if task.status == TaskStatus::Queue {
         task.status = TaskStatus::Wip;
         db.update(task.id(), task)?;
@@ -104,8 +90,7 @@ fn workspace(
     Ok((Some(branch), Some(path)))
 }
 
-/// A task an agent starts on is work in progress, if it was only queued (a
-/// task that is done stays done).
+/// Marks a queued task in progress when an agent starts on it; a done task stays done.
 fn start_work(app: &App, task: &mut Task) -> Result<()> {
     if task.status == TaskStatus::Queue {
         task.status = TaskStatus::Wip;
@@ -118,9 +103,7 @@ fn now() -> String {
     chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
-/// Starts a run of `kind` on `name` (`<project>/<task>`) with `description`
-/// as the task: writes it down ([`create`]) and begins it ([`begin`]),
-/// detached unless `wait`. The number of the run. One run at a time per task.
+/// Starts a run of `kind` on `name` (`create` then `begin`), detached unless `wait`; returns its number. One run at a time per task.
 pub fn start(
     app: &App,
     name: &str,
@@ -142,10 +125,7 @@ pub fn start(
     Ok(n)
 }
 
-/// Writes a run down without starting it: its record (`queued`) and its
-/// prompt, which is `prompt` or else the one `kind` makes for the task;
-/// `instruction` is the name of the instruction it comes from. The
-/// prompt may say `{{worktree}}`: where that is is known when the run begins.
+/// Writes a run down without starting it (`queued`); `{{worktree}}` in the prompt is resolved at `begin`.
 pub fn create(
     app: &App,
     name: &str,
@@ -189,8 +169,7 @@ pub fn create(
     Ok(n)
 }
 
-/// Changes what a queued run will do. Only a run that has not begun can be
-/// edited.
+/// Changes a queued run; one that has begun cannot be edited.
 #[cfg(feature = "web")]
 pub fn amend(
     app: &App,
@@ -216,10 +195,7 @@ pub fn amend(
     Ok(())
 }
 
-/// Begins queued run `n` of `name`: makes the workspace if the kind changes
-/// code and there is none, tells the prompt where it is, and starts the
-/// harness, detached unless `wait`. A run that cannot begin is recorded as
-/// failed.
+/// Begins queued run `n`: makes the workspace if the kind changes code, starts the harness (detached unless `wait`); a run that cannot begin is recorded as failed.
 pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
     let Launch { wait, extra, say } = *launch;
     let (project, mut task, dir) = locate(app, Some(name))?;
@@ -246,9 +222,8 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
         e
     };
     let kind = run.kind;
-    // a run that only reads has no use for a branch of its own; one that
-    // changes code works where the task's workspace is, made now if need be.
-    // Before the prompt, so that it names the right directory.
+    // read-only runs need no branch; code-changing ones get the task's workspace first,
+    // so that the prompt names the right directory
     let placed = (|| -> Result<(Option<String>, Option<String>)> {
         let (branch, worktree) = if kind.changes_code() {
             workspace(app, &project, &mut task)?
@@ -266,7 +241,6 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
         Ok((branch, worktree)) => (run.branch, run.worktree) = (branch, worktree),
         Err(e) => return Err(fail(run, e)),
     }
-    // an agent working on the task makes it work in progress (a done task stays done)
     if let Err(e) = start_work(app, &mut task) {
         return Err(fail(run, e));
     }
@@ -276,8 +250,7 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
     run.status = Status::Running;
     run.started = now();
     run.pid = wait.then(std::process::id);
-    // whatever goes wrong from here on, the record says so rather than
-    // staying `running` for good
+    // whatever goes wrong from here on is recorded, not left `running`
     let launched = (|| -> Result<()> {
         dir.write_run(&run)?;
         if wait {
@@ -305,8 +278,7 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
     Ok(())
 }
 
-/// Stops run `n` of `name`: a waiting one is dropped, a working one is told
-/// to stop. Either ends `cancelled`.
+/// Stops run `n`: a waiting one is dropped, a working one is told to stop; both end `cancelled`.
 #[cfg(feature = "web")]
 pub fn cancel(app: &App, name: &str, n: u32) -> Result<()> {
     let (_, _, dir) = locate(app, Some(name))?;
@@ -330,8 +302,7 @@ pub fn cancel(app: &App, name: &str, n: u32) -> Result<()> {
     Ok(())
 }
 
-/// Starts the harness of `run` and waits for it; its output goes to the
-/// run's log.
+/// Starts the harness of `run` and waits for it; output goes to the run's log.
 fn launch(
     project: &Project,
     dir: &TaskDir,
@@ -353,9 +324,7 @@ fn launch(
     Ok(exec::exit_code(status))
 }
 
-/// Runs the harness of `run` in its worktree to the end and records how it
-/// went. A run that cannot start is recorded as failed, with the reason in
-/// its log.
+/// Runs the harness to the end and records the outcome; a run that cannot start is failed, reason in its log.
 fn work(
     project: &Project,
     dir: &TaskDir,
@@ -399,7 +368,6 @@ fn work(
     Ok(run)
 }
 
-/// What a detached `solve` runs.
 pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
     let task = app.db.get::<Task>(task_id)?.ok_or(AgentError::TaskGone)?;
     let project = app
@@ -447,7 +415,6 @@ mod tests {
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
         assert!(run.is_queued() && run.pid.is_none());
-        // the prompt is the kind's, with the task in it and the worktree left to be told
         let told = std::fs::read_to_string(dir.run_prompt_path(n)).unwrap();
         assert!(told.contains("Retries.") && told.contains("{{worktree}}"));
 
@@ -468,7 +435,6 @@ mod tests {
             "Do it my way"
         );
 
-        // a prompt of one's own is kept as it is
         let m = create(
             &app,
             name,
@@ -488,7 +454,6 @@ mod tests {
         cancel(&app, name, n).unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
         assert_eq!((run.status, run.ended.is_some()), (Status::Cancelled, true));
-        // a run that is over cannot be edited, begun or stopped
         assert!(amend(&app, name, n, Kind::Fix, "fix", &spec("opus"), "x").is_err());
         assert!(begin(&app, name, n, &Launch::detached()).is_err());
         assert!(cancel(&app, name, n).is_err());

@@ -1,9 +1,6 @@
-//! One task on a board, as a card: the title (a link to the task), when it
-//! is (its start), its status when work is under way,
-//! and one small link to act on it. The card is what `board.js` drags: a
-//! draggable card carries `data-task` (the script makes it draggable and
-//! shows the grab cursor; without script it is a plain card). What a card says is the caller's business (see
-//! `web/board_cards.rs`); this only lays it out.
+//! One task on a board as a card: title link, start, status when under way, and
+//! one action link. `board.js` drags it: a card with `data-task` is made
+//! draggable by the script, and is a plain card without.
 
 use super::status::status;
 use crate::models::{Priority, TaskStatus};
@@ -12,20 +9,17 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The colored left edge: what the card's priority looks like at a glance.
-/// Never the only cue (a chip with the word says the priority too).
+/// The colored left edge for priority; never the only cue (a chip says it too).
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Edge {
     None,
     Urgent,
     Important,
-    /// Urgent and important: the two colors, one above the other.
     Both,
 }
 
 impl Edge {
-    /// The edge of a priority: the one place the two flags become an edge
-    /// (a card's, a quadrant's).
+    /// The edge of a priority (a card's, a quadrant's).
     pub fn of(priority: Priority) -> Edge {
         match (priority.urgent, priority.important) {
             (true, true) => Edge::Both,
@@ -35,8 +29,7 @@ impl Edge {
         }
     }
 
-    /// The classes that set the edge's two colors (`edge.css`: `--q1`,
-    /// `--q2`): what a card and a quadrant's top edge share.
+    /// The classes setting the edge's colors (`edge.css`), shared by card and quadrant.
     pub fn modifier(self) -> &'static str {
         match self {
             Edge::None => "edge",
@@ -48,9 +41,7 @@ impl Edge {
 }
 
 impl Edge {
-    /// The flags in words, one per set flag, Urgent first: a chip each, so the
-    /// priority is read by sighted users too (the edge is a color, never the
-    /// only cue). Empty when there is no flag.
+    /// The flags in words, Urgent first, shown as chips so priority is not only a color.
     pub fn words(self) -> &'static [&'static str] {
         match self {
             Edge::None => &[],
@@ -61,39 +52,32 @@ impl Edge {
     }
 }
 
-/// The card's own link ("Schedule"). `label` is followed by the card's title
-/// as hidden text, so the link's purpose is clear on its own.
+/// The card's link ("Schedule"); `label` is followed by the title as hidden text.
 pub struct CardAction<'a> {
     pub label: &'a str,
     pub href: String,
 }
 
-/// Everything a card shows.
 pub struct CardView<'a> {
     pub id: i64,
     pub href: String,
     pub title: &'a str,
-    /// A date ("Tue 29 Sep") for an overdue card, else empty: a card has no
-    /// time (the hour row it sits in says it).
+    /// A date for an overdue card, else empty (the hour row gives the time).
     pub time: String,
     pub edge: Edge,
-    /// Only shown for work in progress (the others are the default).
+    /// Shown only for work in progress.
     pub status: Option<TaskStatus>,
     pub action: Option<CardAction<'a>>,
-    /// The card being moved (the pick mode): `aria-current`, and marked in
-    /// words (not only by its look).
+    /// The card being moved (pick mode): `aria-current`, and marked in words.
     pub picked: bool,
 }
 
-/// The id of the card of task `id`: what a link to it (`#card-7`) lands on,
-/// so the keyboard is back on the card after an action.
+/// The card's id, the `#card-7` anchor that returns the keyboard to it after an action.
 pub fn card_id(id: i64) -> String {
     format!("card-{id}")
 }
 
-/// `draggable` gives the card the `data-task` the script drags by; a list
-/// that does not take part in a drag (or a page without `board.js`) leaves
-/// it off.
+/// `draggable` gives the card the `data-task` the script drags by.
 #[component]
 pub async fn task_card(card: CardView<'_>, #[default] draggable: bool) -> Result<impl View> {
     let id = card_id(card.id);

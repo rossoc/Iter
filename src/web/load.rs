@@ -5,8 +5,6 @@ use crate::models::{Board, Card, Organization, Project, ProjectGroup, Task};
 use std::collections::HashMap;
 use topcoat::router::error::RouterErrorExt;
 
-/// The organization `project` is in, if any: one lookup by key, none when
-/// the project has no organization.
 pub fn org_of(db: &Db, project: &Project) -> crate::error::Result<Option<Organization>> {
     Ok(match Organization::group_of(project) {
         Some(id) => db.get(id)?,
@@ -14,23 +12,16 @@ pub fn org_of(db: &Db, project: &Project) -> crate::error::Result<Option<Organiz
     })
 }
 
-/// The organization `project` is in among `orgs`, for the breadcrumb: a
-/// lookup in a list already read.
 pub fn org_in<'a>(orgs: &'a [Organization], project: &Project) -> Option<&'a Organization> {
     let id = project.organization_id?;
     orgs.iter().find(|o| o.id() == id)
 }
 
-/// The groups of one kind (boards or organizations) with their projects,
-/// and the projects in none.
 pub struct Grouped<G> {
     pub groups: Vec<(G, Vec<Project>)>,
-    /// Projects that belong to no group of this kind.
     pub loose: Vec<Project>,
 }
 
-/// Every `G` with the projects in it: two queries however many groups there
-/// are, grouped in one pass (not one query per group).
 pub fn grouped<G: Table + ProjectGroup>(db: &Db) -> crate::error::Result<Grouped<G>> {
     let mut members: HashMap<Option<i64>, Vec<Project>> = HashMap::new();
     for project in db.list::<Project>()? {
@@ -53,23 +44,18 @@ pub fn grouped<G: Table + ProjectGroup>(db: &Db) -> crate::error::Result<Grouped
     })
 }
 
-/// Board `id`: one lookup by key. No such board is a 404.
 pub fn board_of(db: &Db, id: i64) -> topcoat::Result<Board> {
     Ok(db.get::<Board>(id)?.ok_or_not_found()?)
 }
 
-/// Every unfinished card of board `id`, urgent first, then by label. Finished
-/// tasks are left out in the SQL (never read), and the sort happens once,
-/// here.
+/// Unfinished cards, urgent first, then by label; finished tasks are left out in the SQL.
 pub fn unfinished(db: &Db, board_id: i64) -> crate::error::Result<Vec<Card>> {
     let mut cards = db.cards_unfinished(board_id)?;
     cards.sort_by(|a, b| (b.priority.urgent, &a.label).cmp(&(a.priority.urgent, &b.label)));
     Ok(cards)
 }
 
-/// What a Tasks tab needs: the rows (`rows`) only when `wanted` (the tab is
-/// the one shown) and their count for the tab badge. On another tab there are
-/// no rows, and the badge is one `COUNT` query (`count`).
+/// Rows only when `wanted`; on other tabs just a `COUNT` for the badge.
 pub fn tasks_or_count<T>(
     wanted: bool,
     rows: impl FnOnce() -> crate::error::Result<Vec<T>>,
@@ -84,28 +70,21 @@ pub fn tasks_or_count<T>(
     }
 }
 
-/// A project and its organization: what the pages under a project need
-/// beside their own row (the crumbs, the project's settings).
 pub struct Parents {
     pub project: Project,
     pub org: Option<Organization>,
 }
 
-/// Project `id`: one lookup by key. No such project is a 404.
 pub fn project_of(db: &Db, id: i64) -> topcoat::Result<Project> {
     Ok(db.get::<Project>(id)?.ok_or_not_found()?)
 }
 
-/// Task `id` and the project it is in: two lookups by key. No such task (or
-/// project) is a 404.
 pub fn task_with_project(db: &Db, id: i64) -> topcoat::Result<(Task, Project)> {
     let task = db.get::<Task>(id)?.ok_or_not_found()?;
     let project = project_of(db, task.project_id)?;
     Ok((task, project))
 }
 
-/// Loads project `id` and its organization (only when it has one): two
-/// lookups by key. No such project is a 404.
 pub fn parents_of(db: &Db, id: i64) -> topcoat::Result<Parents> {
     let project = project_of(db, id)?;
     let org = org_of(db, &project)?;

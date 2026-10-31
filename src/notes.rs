@@ -1,9 +1,5 @@
-//! Daily notes: one markdown file per day, `YYYY-MM-DD.md`, in a folder an
-//! organization or a project names (`notes_path`). The files are the only
-//! store; nothing is kept in the database.
-//!
-//! A note is the day, a `title` (`dd/mm` unless the file says otherwise), a
-//! `layout` and the markdown body below the front matter:
+//! Daily notes: one `YYYY-MM-DD.md` per day in a folder an organization or project names
+//! (`notes_path`). The files are the only store.
 //!
 //! ```text
 //! layout: page
@@ -13,11 +9,9 @@
 //! what happened today
 //! ```
 //!
-//! The settings come first, one per line, closed by a `---` line; what
-//! follows is the description. Reading is forgiving -- a journal written by
-//! hand drifts: an opening `---` is accepted too, the header may be missing
-//! altogether, and the body may be empty. The day is always the file name's, so a file whose name is
-//! not a date is not a note.
+//! Settings come first, closed by `---`; the rest is the description. Reading is forgiving: an
+//! opening `---` is accepted, the header may be missing, the body empty. The day is always the
+//! file name's, so a file not named for a date is not a note.
 
 use crate::config::expand_home;
 use crate::error::Result;
@@ -28,7 +22,6 @@ use serde::Deserialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-/// The layout a note has when its front matter does not say.
 pub const DEFAULT_LAYOUT: &str = "page";
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,7 +29,6 @@ pub struct Note {
     pub date: NaiveDate,
     pub title: String,
     pub layout: String,
-    /// Markdown.
     pub body: String,
 }
 
@@ -54,7 +46,6 @@ impl FrontMatter {
     }
 }
 
-/// `dd/mm`: what a note is called unless it says otherwise.
 pub fn default_title(date: NaiveDate) -> String {
     date.format("%d/%m").to_string()
 }
@@ -100,7 +91,6 @@ fn split(content: &str) -> (FrontMatter, &str) {
     }
 }
 
-/// The note of `date` written as `content`.
 pub fn parse(date: NaiveDate, content: &str) -> Note {
     let (front, body) = split(content);
     let _ = front.date; // the file name is the day; a date in the file may be stale
@@ -138,7 +128,6 @@ pub fn list(dir: &Path) -> Vec<Note> {
     notes
 }
 
-/// How many notes `dir` holds (the files [`list`] would read, unread).
 #[cfg(any(feature = "web", test))]
 pub fn count(dir: &Path) -> usize {
     std::fs::read_dir(dir).map_or(0, |entries| {
@@ -149,7 +138,6 @@ pub fn count(dir: &Path) -> usize {
     })
 }
 
-/// A file named `YYYY-MM-DD.md`: its day, if so.
 fn note_day(path: &Path) -> Option<NaiveDate> {
     parse_date(path.file_stem()?.to_str()?).filter(|_| path.extension().is_some_and(|e| e == "md"))
 }
@@ -159,13 +147,11 @@ fn is_note_file(path: &Path) -> bool {
     note_day(path).is_some()
 }
 
-/// The note of `date` in `dir`, if there is one.
 pub fn get(dir: &Path, date: NaiveDate) -> Option<Note> {
     let content = std::fs::read_to_string(dir.join(file_name(date))).ok()?;
     Some(parse(date, &content))
 }
 
-/// The text of the note's file, as it is on disk.
 #[cfg(any(feature = "web", test))]
 pub fn raw(dir: &Path, date: NaiveDate) -> Option<String> {
     std::fs::read_to_string(dir.join(file_name(date))).ok()
@@ -219,8 +205,8 @@ pub fn save(dir: &Path, date: NaiveDate, content: &str) -> Result<()> {
     Ok(())
 }
 
-/// Makes sure the note of `day` exists, creating the folder and a file with
-/// only its front matter if need be. A note already there is left alone.
+/// Makes sure the note exists, creating the folder and a front-matter-only file; an existing
+/// note is left alone.
 pub fn create(dir: &Path, day: NaiveDate) -> Result<()> {
     std::fs::create_dir_all(dir)?;
     let file = std::fs::OpenOptions::new()
@@ -285,7 +271,6 @@ pub fn task_dir(project_dir: &Path, id: i64) -> PathBuf {
     project_dir.join("tasks").join(id.to_string())
 }
 
-/// Where an organization keeps its notes, if it says.
 pub fn org_dir(org: &Organization) -> Option<PathBuf> {
     resolve(&org.notes_path)
 }

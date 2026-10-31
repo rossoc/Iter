@@ -1,14 +1,11 @@
-//! The count badge of a heading ("Sessions 3"). The number is for the eye;
-//! a screen reader hears "(3 sessions)" (the tabs' own badge keeps its plain
-//! number).
+//! The count badge of a heading; a screen reader hears "(3 sessions)".
 
 use topcoat::{
     Result,
     view::{View, component, view},
 };
 
-/// The screen-reader text for `n` of `noun` (the plural, "tasks"): "1 task",
-/// "3 tasks".
+/// Screen-reader text: "1 task", "3 tasks".
 fn counted(n: usize, noun: &str) -> String {
     let noun = if n == 1 {
         noun.strip_suffix('s').unwrap_or(noun)
@@ -18,8 +15,7 @@ fn counted(n: usize, noun: &str) -> String {
     format!("{n} {noun}")
 }
 
-/// `noun` is the plural of what is counted ("tasks"); without one (the
-/// heading already names it) the badge is the bare number.
+/// `noun` is the plural; without one the badge is the bare number.
 #[component]
 pub async fn count_badge(n: usize, #[default] noun: &str) -> Result<impl View> {
     Ok(view! {

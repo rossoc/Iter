@@ -1,10 +1,5 @@
-//! A page's front matter and body links.
-//!
-//! The front matter is strict YAML between a first line `---` and the next
-//! one. A page may have none (then it has no description, which `check` reports);
-//! a note is never parsed at all. Besides the four data keys, any key the
-//! ontology marks `iter:authorable` is a relation, and its value is a target
-//! or a list of them. Any other key is kept in `unknown` so `check` can say so.
+//! A page's front matter (strict YAML between a first line `---` and the next) and body links.
+//! `iter:authorable` ontology properties are relations; any other key goes to `unknown` for `check`. A note is never parsed.
 
 use crate::md_edit::split_at_divider;
 use serde_yaml::Value;
@@ -15,15 +10,11 @@ pub struct Front {
     pub tags: Vec<String>,
     pub confidence: Option<String>,
     pub updated: Option<String>,
-    /// `(key, targets)` in the order written, for the keys the ontology
-    /// allows as relations.
     pub relations: Vec<(String, Vec<String>)>,
-    /// Keys that are neither data nor a known relation.
     pub unknown: Vec<String>,
 }
 
 impl Front {
-    /// The single-valued data properties, by the name the ontology gives them.
     pub fn scalars(&self) -> [(&'static str, Option<&str>); 3] {
         [
             ("description", self.description.as_deref()),
@@ -33,15 +24,12 @@ impl Front {
     }
 }
 
-/// A page split into the YAML text between the dividers (if there is a
-/// front matter) and the markdown below it.
 pub struct Split<'a> {
     pub yaml: Option<&'a str>,
     pub body: &'a str,
 }
 
-/// Splits `content`. The front matter must open on the first line: a `---`
-/// further down is a rule in the markdown, not a divider.
+/// Splits `content`; the front matter must open on the first line, a later `---` is a markdown rule.
 pub fn split(content: &str) -> Split<'_> {
     let content = content.strip_prefix('\u{feff}').unwrap_or(content);
     let Some(rest) = content.strip_prefix("---\n") else {
@@ -71,7 +59,6 @@ fn scalar(v: &Value) -> Option<String> {
     }
 }
 
-/// One value or a list of them, as strings; `None` if it is neither.
 fn strings(v: &Value) -> Option<Vec<String>> {
     match v {
         Value::Sequence(items) => items.iter().map(scalar).collect(),
@@ -80,9 +67,7 @@ fn strings(v: &Value) -> Option<Vec<String>> {
     }
 }
 
-/// Reads `yaml`. `relations` are the keys allowed as relations (the
-/// ontology's authorable properties). Fails, saying why, if the text is not a
-/// mapping or a value has the wrong shape.
+/// Reads `yaml`; `relations` are the keys allowed as relations. Fails if it is not a mapping or a value has the wrong shape.
 pub fn parse(yaml: &str, relations: &[&str]) -> Result<Front, String> {
     let value: Value = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
     let map = match value {
@@ -114,9 +99,7 @@ pub fn parse(yaml: &str, relations: &[&str]) -> Result<Front, String> {
     Ok(front)
 }
 
-/// The targets of the `[[wikilinks]]` in `body`, in order, outside fenced
-/// code. `[[target|label]]` and `[[target#heading]]` link to `target`; a
-/// trailing `.md` is dropped.
+/// Targets of the `[[wikilinks]]` in `body`, outside fenced code; `|label`, `#heading` and a trailing `.md` are dropped.
 pub fn wikilinks(body: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut fenced = false;
@@ -147,7 +130,6 @@ pub fn wikilinks(body: &str) -> Vec<String> {
     out
 }
 
-/// The first `# Heading` of `body`: what a page is called.
 pub fn title(body: &str) -> Option<String> {
     body.lines()
         .find_map(|l| l.strip_prefix("# "))

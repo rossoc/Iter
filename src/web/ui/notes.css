@@ -1,17 +1,13 @@
-/* the Notes tab: rows of the table (table.css) under their month, the day in
-   mono, the note's own title if it has one, and the start of its text,
-   muted and cut to one line */
 .notes td.note-day{width:1%;white-space:nowrap}
 .notes .note-day a{color:var(--muted);font:.8125rem var(--mono);font-variant-numeric:tabular-nums}
 .notes tr:hover .note-day a{color:var(--accent)}
-.notes td.note-text{width:100%;max-width:0;padding-left:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}  /* one line, cut */
+.notes td.note-text{width:100%;max-width:0;padding-left:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .notes .note-title{font-weight:600;margin-right:12px}
 .notes .note-preview{font-size:.875rem;color:var(--muted)}
 @media (max-width:600px){
   .notes td.note-day{width:auto}
   .notes td.note-text{flex:1 1 0;width:auto;max-width:none;min-width:0}
 }
-/* a note's page: the way to the days either side of it */
 .note-date{margin:0 0 16px;color:var(--muted);font-size:.875rem}
 .note-nav{display:flex;justify-content:space-between;gap:16px;margin-top:32px;padding-top:14px;border-top:1px solid var(--line)}
 .note-nav a{display:flex;flex-direction:column;gap:2px;max-width:48%;color:var(--fg)}

@@ -1,12 +1,7 @@
-//! The search palette: press `/` (or the bar's Search button) and a box opens
-//! over the page, Telescope-style: a query on top, the matching pages on the
-//! left, and on the right a live preview of the selected one. The preview is
-//! the page itself in a frame, so it is interactive; inside a frame the bar,
-//! the footer and this palette are hidden (`search.css`, `search.js`).
-//!
-//! All of it is script: `search.js` fills the list from `GET /search?q=`
-//! (`web/search_index.rs`) and shows the box. Without script the button
-//! stays hidden and the box never opens.
+//! The search palette: `/` (or the bar's button) opens a box with a query, matching
+//! pages and a live preview in a frame (bar, footer and palette hidden inside it).
+//! All script: `search.js` fills the list from `GET /search?q=`
+//! (`web/search_index.rs`); without script the button stays hidden.
 
 use super::{BUILDING, FILE_TEXT, FOLDER, KANBAN, SEARCH, SQUARE_CHECK, icon};
 use topcoat::{
@@ -14,7 +9,6 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The bar's button; `search.js` shows it and wires it.
 #[component]
 pub async fn search_button() -> Result<impl View> {
     Ok(view! {
@@ -26,7 +20,6 @@ pub async fn search_button() -> Result<impl View> {
     })
 }
 
-/// The box, closed (`hidden`) until `search.js` opens it.
 #[component]
 pub async fn palette() -> Result<impl View> {
     Ok(view! {

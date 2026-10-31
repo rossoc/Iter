@@ -1,6 +1,4 @@
-//! The agenda's side of the pick mode (`pick.rs` is what both boards share):
-//! its words (Scheduling / Moving, where the task is now) and the links that
-//! keep the day.
+//! The agenda's side of the pick mode (`pick.rs` is shared): its words and the day-keeping links.
 
 use super::pick::{PickLinks, PickWords, Picked};
 use super::url::board_day_url;
@@ -12,19 +10,14 @@ const SCHEDULING: PickWords = PickWords {
 };
 
 impl Picked {
-    /// It has a start, so it can be unscheduled (and it is moved, not
-    /// scheduled).
     pub fn scheduled(&self) -> bool {
         self.start.is_some()
     }
 
-    /// The pick mode's words: a scheduled task is moved, any other scheduled.
     pub fn words(&self) -> PickWords {
         PickWords::of(self.scheduled(), SCHEDULING)
     }
 
-    /// Where the task is, for the banner ("Wed 30 Sep, 09:00") and for a
-    /// finished move; empty when it is not scheduled.
     pub fn state(&self) -> String {
         self.start
             .map(|s| s.format("%a %-d %b, %H:%M").to_string())
@@ -32,14 +25,10 @@ impl Picked {
     }
 }
 
-/// The pick-mode links of `day`'s agenda of board `id`.
 pub fn links(id: i64, day: NaiveDate) -> PickLinks {
     PickLinks::new(board_day_url(id, day))
 }
 
-/// The agenda of `day`, keeping the pick mode (and landing on its banner)
-/// when a task is `picked`: what the day links use, so the task can be moved
-/// to another day.
 pub fn day_url(id: i64, day: NaiveDate, picked: Option<i64>) -> String {
     match picked {
         Some(task) => links(id, day).pick(task),

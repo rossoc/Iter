@@ -3,9 +3,7 @@
 use super::*;
 
 impl Db {
-    /// The sessions of `task_id` that *start* within the range, oldest
-    /// first -- the filter every report applies, answered by SQL instead of
-    /// by loading a task's whole history and discarding most of it.
+    /// Sessions of `task_id` that *start* within the range, oldest first.
     pub fn sessions_for_task_in_range(
         &self,
         task_id: i64,
@@ -19,9 +17,7 @@ impl Db {
         )
     }
 
-    /// Every session in the range belonging to any task of `project_id`,
-    /// oldest first. One query for the whole project rather than one per
-    /// task; the caller groups by `task_id`, which each row carries.
+    /// Sessions in range of any task of `project_id`, oldest first; one query, each row carries `task_id`.
     pub fn sessions_for_project_in_range(
         &self,
         project_id: i64,
@@ -31,8 +27,7 @@ impl Db {
         self.sessions_for_projects_in_range(&[project_id], from, to)
     }
 
-    /// The same for a whole set of projects at once: one query, oldest
-    /// first, each row carrying its `task_id` for the caller to group by.
+    /// The same for a set of projects.
     pub fn sessions_for_projects_in_range(
         &self,
         project_ids: &[i64],

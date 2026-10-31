@@ -1,6 +1,4 @@
-//! `iter task plan` and `iter task prompt`: the plan of a task and the prompts
-//! that send an agent to work on it. The files are `agent::taskdir`'s; this is
-//! only what the command line says about them.
+//! `iter task plan` and `iter task prompt`: what the command line says about the plan and the prompts; the files are `agent::taskdir`'s.
 
 use crate::agent::error::AgentError;
 use crate::agent::plan::{self, Plan, Progress, State};

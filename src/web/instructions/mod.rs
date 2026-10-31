@@ -1,13 +1,4 @@
-//! Instructions in the browser: the list of them (`/instructions`, global,
-//! and the Instructions tab of a project, which adds what the project and its
-//! organization keep), and the page of one (`/instruction/{name}`) with its
-//! Info and Agents tabs. The files and their format are
-//! `agent::instruction`'s; this reads them, writes the ones the page edits,
-//! and finds the agents that used them in the runs of the tasks.
-//!
-//! A page is about the global instructions, or, with `?project=<id>`, about
-//! those that apply to a project: saving writes the project's own file, and
-//! "use the inherited one" removes it.
+//! Instructions in the browser: the list (`/instructions`) and the page of one (`/instruction/{name}`).
 
 use super::crumbs::trail;
 use super::open_db;
@@ -71,18 +62,14 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .route(save_instruction)
 }
 
-/// Which instructions a page is about, and where it writes.
 pub struct Scope {
     pub project: Option<Project>,
     pub org: Option<Organization>,
     pub layers: Layers,
-    /// The folder a save goes to: the project's notes, or iter's config
-    /// folder. None when there is nowhere to write.
     pub home: Option<PathBuf>,
 }
 
 impl Scope {
-    /// The instructions of iter's config folder alone.
     pub fn global() -> Scope {
         let home = instruction::global();
         Scope {
@@ -93,7 +80,6 @@ impl Scope {
         }
     }
 
-    /// The instructions that apply to project `id`.
     pub fn of_project(db: &Db, id: i64) -> Result<Scope> {
         let project = db.get::<Project>(id)?.ok_or_not_found()?;
         let org = match project.organization_id {
@@ -108,7 +94,6 @@ impl Scope {
         })
     }
 
-    /// The scope a request's `?project=` asks for.
     fn asked(db: &Db, project: Option<&str>) -> Result<Scope> {
         match project.filter(|p| !p.is_empty()) {
             Some(p) => {
@@ -123,7 +108,6 @@ impl Scope {
         self.project.as_ref().map(|p| p.id())
     }
 
-    /// The source whose file this page edits.
     fn own(&self) -> Source {
         if self.project.is_some() {
             Source::Project
@@ -137,15 +121,12 @@ impl Scope {
     }
 }
 
-/// One use of an instruction: the run, and the task it was on.
 pub struct Use {
     pub task_id: i64,
     pub task: String,
     pub run: RunRecord,
 }
 
-/// Every run that was given an instruction, in the tasks of `only` (a
-/// project) or of all projects, the latest first.
 pub fn usage(db: &Db, only: Option<i64>) -> Vec<Use> {
     let mut projects: HashMap<i64, Option<Project>> = HashMap::new();
     let mut uses = Vec::new();
@@ -173,7 +154,6 @@ pub fn usage(db: &Db, only: Option<i64>) -> Vec<Use> {
     uses
 }
 
-/// A row of the list of instructions.
 pub struct ListRow {
     pub name: String,
     pub href: String,

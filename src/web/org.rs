@@ -1,7 +1,4 @@
-//! The organization page (`/org/{id}`): the route, the loading and the
-//! view of the Info and Tasks tabs. The Report tab is `org_report.rs`. The
-//! page's own rules are in `org.css` (the report tab only, bundled into
-//! `/style.css`); the shared ones are the components in `ui/`.
+//! The organization page (`/org/{id}`): route, loading and view of the tabs; the Report tab is `org_report.rs`.
 
 use super::Id;
 use super::assets::Asset;
@@ -51,23 +48,15 @@ async fn script(cx: &Cx) -> Result<Response> {
     ORG_JS.respond(cx)
 }
 
-/// What the organization page shows.
 pub struct Loaded {
     pub org: Organization,
     pub projects: Vec<Project>,
-    /// Only for the Tasks tab.
     pub tasks: Vec<(String, Task)>,
-    /// The tab badge: one `COUNT` on the other tabs, the rows counted on
-    /// Tasks.
     pub task_count: usize,
-    /// The notes' folder; the notes themselves only for the Notes tab.
     pub notes: NotesTab,
-    /// Only for the Report tab.
     pub report: Option<Report>,
 }
 
-/// Loads organization `id` for `section`: the rows of the Tasks tab or the
-/// report only for their own tab. `from`/`to` are the report's period.
 pub fn load(
     db: &Db,
     id: i64,
@@ -117,7 +106,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
         now,
     )?;
     let q = query.q.as_deref();
-    // `?new=`: the New task pop-up over Tasks, New project over Info
     let task_create = match (section, query.new.as_deref()) {
         (Section::Tasks, Some("task")) => TaskCreate::in_org(id, &page.projects, q),
         _ => None,
@@ -128,7 +116,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
         }
         _ => None,
     };
-    // `?share=1`: the Share pop-up over the Report tab
     let share_dialog = match (section, query.share.as_deref(), &page.report) {
         (Section::Report, Some(_), Some(report)) if !report.projects.is_empty() => {
             let base = org_url(id);
@@ -146,7 +133,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
     })
 }
 
-/// The Info tab: description and notes path, the Settings aside.
 #[component]
 async fn info(org: &Organization) -> Result<impl View> {
     Ok(view! {
@@ -162,7 +148,6 @@ async fn info(org: &Organization) -> Result<impl View> {
     })
 }
 
-/// The Projects tab: the search box, the list, its first row opening New project.
 #[component]
 async fn projects_tab(
     org: &Organization,
@@ -176,10 +161,6 @@ async fn projects_tab(
     })
 }
 
-/// `q` is the page's search (the Tasks tab's or the project list's, by
-/// `section`). `task_create` and `project_create` are the New task and New
-/// project pop-ups, when one is open (also when it comes back refused, with
-/// what was typed and why).
 #[component]
 pub async fn screen(
     page: &Loaded,

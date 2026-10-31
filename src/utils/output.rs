@@ -8,15 +8,13 @@ use crate::error::{IterError, Result};
 use crate::models::Named;
 use serde::Serialize;
 
-/// Prints `value` as YAML -- what every `list` command emits, and the one
-/// place `serde_yaml` is reached for outside the report renderers.
+/// Prints `value` as YAML: what every `list` emits.
 pub(crate) fn print_yaml<T: serde::Serialize>(value: &T) -> Result<()> {
     print!("{}", serde_yaml::to_string(value)?);
     Ok(())
 }
 
-/// `iter <entity> list`: every `T`'s name as a YAML list. One command body
-/// for every named entity.
+/// `iter <entity> list`: every `T`'s name as a YAML list.
 pub(crate) fn list_names<T: Table + Named>(db: &Db) -> Result<()> {
     print_yaml(&db.names::<T>()?)
 }

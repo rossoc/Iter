@@ -1,6 +1,4 @@
-//! The SQLite conversions `rusqlite` has no impl for: the model types
-//! `Duration` and `TaskStatus`, and `NaiveDateTime` (through the `datetime`
-//! helpers below, which `#[table(with = "...")]` selects).
+//! SQLite conversions `rusqlite` lacks: `Duration`, `TaskStatus` and `NaiveDateTime` (via `datetime`).
 
 use super::*;
 use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput};
@@ -41,9 +39,7 @@ pub(crate) mod datetime {
         Ok(ToSqlOutput::Owned(Value::Text(dt_to_str(*value))))
     }
 
-    /// A malformed value fails the read rather than panicking, so one bad
-    /// row is an error page, not a crashed request. The message names the
-    /// value and its column, since that is all the person has to go on.
+    /// A malformed value fails the read (naming value and column) instead of panicking.
     pub(crate) fn read(row: &Row, index: usize) -> rusqlite::Result<NaiveDateTime> {
         let text = row.get::<_, String>(index)?;
         str_to_dt(&text).map_err(|error| {
@@ -56,7 +52,6 @@ pub(crate) mod datetime {
         })
     }
 
-    /// The same for a nullable column.
     pub(crate) mod opt {
         use super::*;
 

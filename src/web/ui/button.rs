@@ -1,6 +1,4 @@
-//! Buttons: `.button` (one look, `button.css`), with the "+" add row link as
-//! the shared instance. A submit button is `<button class="button primary">`
-//! (see `form::form_shell`).
+//! `.button` (look in `button.css`) and the "+" add row link.
 
 use super::{PLUS, icon};
 use topcoat::view::Child;
@@ -9,9 +7,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The link that adds an entity (a "+" then `label`): the first row of a
-/// list or a table, which opens the New pop-up (`modal.rs`). Its look is the
-/// add row's (`table.css`).
+/// The "+" link that adds an entity: first row of a list or table, opens the New pop-up.
 #[component]
 pub async fn add_link(href: &str, label: &str) -> Result<impl View> {
     Ok(view! {
@@ -19,8 +15,7 @@ pub async fn add_link(href: &str, label: &str) -> Result<impl View> {
     })
 }
 
-/// The add row's other form: a button that posts to `action` (it adds
-/// today's note, or opens it), looking like [`add_link`].
+/// The add row's POST form, looking like [`add_link`].
 #[component]
 pub async fn add_post(action: &str, label: &str) -> Result<impl View> {
     Ok(view! {
@@ -30,10 +25,7 @@ pub async fn add_post(action: &str, label: &str) -> Result<impl View> {
     })
 }
 
-/// A button that posts `fields` (hidden inputs) to `action`: a state change
-/// that needs no script (the pick mode's "Schedule here"). `small` is the
-/// compact size for rows; `class` is a variant of the form (`slot`, see
-/// `pick_here`).
+/// A button that posts hidden `fields` to `action`; `small` is the row size, `class` a variant.
 #[component]
 pub async fn post_button(
     #[into] action: String,

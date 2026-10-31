@@ -1,11 +1,6 @@
-//! Agents writing the wiki, and the review of what they wrote: the lock that
-//! lets one job write a project's wiki at a time, the detached ingest process,
-//! the git-based review (pending changes, accept, revert), the bridge from a
-//! finished task's notes into the note of the day, and the `ingest` setting's
-//! automatic trigger. Shared by the command line and the web page; nothing
-//! here prints. The reading and the prompts are `wiki::ingest`'s; the harness
-//! is `agent::run`'s. What the agent changes is left uncommitted in the notes'
-//! git repository: accepting is a commit.
+//! Agents writing the wiki and the review of what they wrote: lock, detached ingest, git-based review, bridge, automatic trigger.
+//! Shared by the CLI and the web; nothing prints. The agent's changes stay uncommitted in the notes' git repository: accepting is a commit.
+//! See `doc/architecture_agent_wiki.md`.
 
 use crate::agent::error::AgentError;
 use crate::agent::exec;
@@ -36,8 +31,6 @@ pub use review::*;
 pub use spawn::ingest_in_background;
 pub use spawn::{run_agent, spawn_ingest};
 
-/// How the agent of an ingest is run: the harness, the model, and what is
-/// passed to the harness as it is.
 #[derive(Debug, Default)]
 pub struct HarnessChoice {
     pub agent: Option<Harness>,
@@ -45,7 +38,6 @@ pub struct HarnessChoice {
     pub extra: Vec<String>,
 }
 
-/// A project's wiki, and where it is kept.
 pub struct Target {
     pub project: Project,
     pub wiki: Wiki,
@@ -67,7 +59,6 @@ impl Target {
         })
     }
 
-    /// The `--project` flag that names this wiki on the command line.
     pub fn scope(&self) -> String {
         format!(
             "--project {}",
@@ -95,26 +86,19 @@ pub fn now() -> String {
     chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()
 }
 
-/// When a task starts or finishes.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Trigger {
     TaskStart,
     TaskDone,
 }
 
-/// What [`auto`] did.
 pub enum Auto {
-    /// An ingest was started in the background.
     Started,
-    /// The setting asks for nothing now, or there is nothing to do.
     Idle,
-    /// It could not be started; the reason.
     Failed(String),
 }
 
-/// Does what the project's `ingest` setting asks for at `trigger`: starts an
-/// ingest in the background. It never fails the command it is called from:
-/// what goes wrong is [`Auto::Failed`].
+/// Does what the project's `ingest` setting asks for at `trigger`; never fails the caller: problems are [`Auto::Failed`].
 pub fn auto(app: &App, project: &Project, task: &Task, trigger: Trigger) -> Auto {
     let outcome = (|| -> Result<bool> {
         let Ok(target) = Target::new(&app.db, project.clone()) else {

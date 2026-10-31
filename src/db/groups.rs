@@ -11,11 +11,8 @@ impl Db {
         )
     }
 
-    /// Every organization in name order, each with its first `limit`
-    /// projects by name and its total project count. An organization with no
-    /// projects comes back too, with none and a total of 0. One query: the
-    /// window functions count over every project, but only `limit` rows per
-    /// organization are read.
+    /// Every organization by name with its first `limit` projects and total project count; one
+    /// query (window functions). Organizations with no projects are included.
     #[cfg(feature = "web")]
     pub fn organizations_with_projects(
         &self,
@@ -77,9 +74,8 @@ impl Db {
         self.first_by_name("WHERE organization_id IS NULL", limit)
     }
 
-    /// The first `limit` rows of `T` matching `filter` (a `WHERE` clause, or
-    /// empty), by name, and how many rows match in all. One query: the count
-    /// is a window over the matches, computed before the `LIMIT` cuts them.
+    /// First `limit` rows of `T` matching `filter` (a `WHERE` clause or empty) by name, and the
+    /// total match count: a window computed before the `LIMIT`.
     #[cfg(feature = "web")]
     pub fn first_by_name<T: Table>(&self, filter: &str, limit: usize) -> Result<(Vec<T>, usize)> {
         let sql = format!(
@@ -95,8 +91,7 @@ impl Db {
         Ok((rows.into_iter().map(|(item, _)| item).collect(), total))
     }
 
-    /// Every project's id, name and the id of the `G` it is in, in name
-    /// order: the three columns a checklist of projects needs, not whole rows.
+    /// Every project's id, name and `G` id in name order: a checklist's three columns.
     #[cfg(feature = "web")]
     pub fn project_owners<G: ProjectGroup>(&self) -> Result<Vec<(i64, String, Option<i64>)>> {
         self.query_all(
@@ -109,19 +104,15 @@ impl Db {
         )
     }
 
-    /// Makes `project_ids` exactly the projects in group `id`: the ones
-    /// listed move in (out of whichever group they were in), the ones left
-    /// off move out to none. Only membership changes -- a project keeps its
-    /// own settings either way.
+    /// Makes `project_ids` exactly group `id`'s projects: listed ones move in, the rest move out
+    /// to none. Only membership changes.
     #[cfg(test)]
     pub fn set_projects<G: ProjectGroup>(&self, id: i64, project_ids: &[i64]) -> Result<()> {
         self.atomically(|| self.assign_projects::<G>(id, project_ids))
     }
 
-    /// The membership write, for a caller that has a transaction open. Two
-    /// set-based statements that touch only the rows that change; the ids
-    /// travel as one JSON array (`json_each`), so a roster of any length is
-    /// one bound variable, and a repeated or unknown id is harmless.
+    /// The membership write for a caller with a transaction open. Ids travel as one JSON array
+    /// (`json_each`); repeated or unknown ids are harmless.
     pub(super) fn assign_projects<G: ProjectGroup>(
         &self,
         id: i64,
@@ -159,9 +150,8 @@ impl Db {
         })
     }
 
-    /// Every task of every project in group `id`, paired with its project's
-    /// name and ordered by project, then task. Two queries however many
-    /// projects the group holds.
+    /// Every task of every project in group `id` with its project's name, by project then task;
+    /// two queries.
     #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub fn tasks_in<G: ProjectGroup>(&self, id: i64) -> Result<Vec<(String, Task)>> {
         let mut tasks = self.tasks_of::<G>(id, false)?;
@@ -173,8 +163,7 @@ impl Db {
         tasks.sort_by(|(a, x), (b, y)| (a, &x.name).cmp(&(b, &y.name)));
     }
 
-    /// [`Self::tasks_in`] in no order, leaving out finished tasks when
-    /// `unfinished` (in the SQL).
+    /// [`Self::tasks_in`] unordered, skipping finished tasks when `unfinished`.
     pub(super) fn tasks_of<G: ProjectGroup>(
         &self,
         id: i64,
@@ -201,8 +190,7 @@ impl Db {
             .collect())
     }
 
-    /// How many tasks the projects in group `id` hold: [`Self::tasks_in`]
-    /// without reading them, for a badge.
+    /// Task count for group `id` without reading them (badge).
     #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub fn count_tasks_in<G: ProjectGroup>(&self, id: i64) -> Result<usize> {
         let sql = format!(

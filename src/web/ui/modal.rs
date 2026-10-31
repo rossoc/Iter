@@ -1,11 +1,8 @@
-//! A pop-up over the page, without script: the page links to its own URL
-//! with a flag (`?new=task`), and the server renders the page with the modal
-//! on top. The page behind is `inert` (`frame`'s `dialog`), so focus, clicks
-//! and screen readers stay in the modal; closing is a link back to the URL
-//! without the flag -- the ✕, the form's Cancel, and the blurred backdrop
-//! itself. Esc and the focus trap come from `/modal.js` (`frame` loads it
-//! with the dialog) when the script runs; without it, Esc does nothing and
-//! Tab can leave the pop-up for the site footer.
+//! A pop-up without script: the page links to its own URL with a flag
+//! (`?new=task`) and the server renders the modal over it. The page behind is
+//! `inert`; closing is a link back to the URL without the flag (the ✕, Cancel, the
+//! backdrop). `/modal.js` adds Esc and the focus trap; without it Esc does
+//! nothing and Tab can leave the pop-up.
 
 use super::{X, icon};
 use topcoat::{
@@ -13,9 +10,7 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// `id` is the heading's id, unique on the page (`aria-labelledby`); `close`
-/// the URL of the page without the modal. The child nodes are the body (a
-/// form, with its own Cancel to `close`).
+/// `id` is the heading's unique id; `close` the URL without the modal; children are the body (a form).
 #[component]
 pub async fn modal(
     id: &str,

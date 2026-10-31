@@ -1,18 +1,13 @@
-/* projects: rows of the table (table.css), the name then the path on the same
-   line. The name wraps when it must (it breaks anywhere); the path never
-   wraps: when it does not fit, its start is cut with an ellipsis (a
-   right-to-left box, the path isolated inside it in its own order), so the
-   last segment always shows. */
+/* the name wraps; the path never does: when it does not fit, its start is cut (a right-to-left
+   box, the path isolated inside) so the last segment shows */
 .projects td:first-child{white-space:nowrap}
-.projects td.path-cell{width:100%;max-width:0;padding-left:0}  /* takes what the name leaves, and cuts */
+.projects td.path-cell{width:100%;max-width:0;padding-left:0}
 .path{display:block;min-width:3rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left;
   font:.75rem var(--mono);color:var(--muted)}
 .path-in{direction:ltr;unicode-bidi:isolate}
 .path .leaf{color:var(--fg);font-weight:600}
-/* the last segment is what tells projects apart: strong; the directories
-   before it stay muted. With a mouse, the path shows only on the row under
-   it (or holding focus); its space stays reserved, so nothing moves. Touch
-   screens always show it. */
+/* with a mouse the path shows only on the row under the pointer or holding focus; its space
+   stays reserved. Touch screens always show it. */
 @media (hover:hover){
   .projects .path,.project-list .path{opacity:0;transition:opacity var(--fast) var(--ease-out)}
   .projects tr:hover .path,.projects tr:focus-within .path,
@@ -22,7 +17,6 @@
   .projects td:first-child{white-space:normal}
   .projects td.path-cell{flex:1 1 0;width:auto;max-width:none;min-width:0}
 }
-/* inside a card: a plain list, no highlight, dashed separators, tighter */
 .project-list{list-style:none;margin:0;padding:0}
 .project-list li{display:flex;align-items:baseline;gap:12px;padding:5px 0;border-top:1px dashed var(--line)}
 .project-list li:first-child{border-top:0}

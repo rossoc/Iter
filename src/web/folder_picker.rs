@@ -1,24 +1,15 @@
-//! The system's own folder picker, opened by the server. A web page cannot
-//! learn the absolute path of a folder the user picks (`<input type=file>`
-//! hides it), but this server runs on the user's machine (loopback only,
-//! `guard.rs`), so it can open the picker itself: `choose folder` through
-//! `osascript` on macOS, `zenity` elsewhere. The request waits while the
-//! picker is open (`blocking.rs` keeps that off the workers).
+//! The system's folder picker (`osascript` on macOS, `zenity` elsewhere): a page cannot learn a picked folder's path, but the server runs on the user's machine (loopback only, `guard.rs`).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// What the picker gave back.
 #[derive(Debug, PartialEq)]
 pub enum Picked {
     Folder(PathBuf),
-    /// The user closed the picker without a choice.
     Cancelled,
-    /// There is no picker on this system (or it would not start).
     Unavailable,
 }
 
-/// Opens the picker at `start` (a folder that exists).
 pub fn pick(start: &Path) -> Picked {
     let run = if cfg!(target_os = "macos") {
         // the folder goes in as an argument, never into the script's text
@@ -59,8 +50,6 @@ pub fn pick(start: &Path) -> Picked {
     }
 }
 
-/// The folder in what the picker printed: one line, maybe with a trailing
-/// `/` (osascript's `POSIX path` of a folder has one), kept only for `/`.
 fn chosen(output: &str) -> Option<PathBuf> {
     let line = output.trim_end_matches(['\n', '\r']);
     if line.is_empty() {

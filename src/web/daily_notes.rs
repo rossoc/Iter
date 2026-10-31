@@ -1,7 +1,4 @@
-//! The daily notes of an organization or a project: the Notes tab (the
-//! list), a note's page (`/{org,project}/{id}/notes/{date}`) and the button
-//! that opens today's note. The files and their reading are `crate::notes`;
-//! this is the routes and the view.
+//! The daily notes of an organization or project: the Notes tab, a note's page (`/{org,project}/{id}/notes/{date}`) and the today's-note button.
 
 use super::Id;
 use super::crumbs::trail;
@@ -44,19 +41,16 @@ use topcoat::{
 
 path_param!(date: String, error = bad_request);
 
-/// The note page's query: which tab is open (`?tab=`, see [`NoteTab`]).
 #[query_params(error = bad_request)]
 pub struct NoteQuery {
     pub tab: Option<String>,
 }
 
-/// The editor's submission: the note's whole file text.
 #[derive(Deserialize)]
 pub struct NoteForm {
     text: String,
 }
 
-/// The name of the editor's textarea (and of the submitted field).
 const TEXT: &str = "text";
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -69,9 +63,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .route(org_today)
 }
 
-/// What a page knows of its notes: the folder (none when no path is set),
-/// and the notes themselves only on the Notes tab -- the other tabs need
-/// the count, for the tab's badge.
+/// Notes are read only on the Notes tab; the other tabs just count them (the badge).
 #[derive(Default)]
 pub struct NotesTab {
     pub dir: Option<PathBuf>,
@@ -80,8 +72,6 @@ pub struct NotesTab {
 }
 
 impl NotesTab {
-    /// Reads the notes in `dir` when `full` (the Notes tab), else counts
-    /// them.
     pub fn load(dir: Option<PathBuf>, full: bool) -> NotesTab {
         let (notes, count) = match &dir {
             Some(dir) if full => {
@@ -95,13 +85,11 @@ impl NotesTab {
         NotesTab { dir, notes, count }
     }
 
-    /// The tab's badge: none when the page has no folder.
     pub fn badge(tab: Option<&NotesTab>) -> Option<usize> {
         tab.filter(|t| t.dir.is_some()).map(|t| t.count)
     }
 }
 
-/// `clip` as a one-line preview.
 fn preview(note: &Note) -> String {
     const MAX: usize = 140;
     let line = super::notes::first_line(&note.body);
@@ -111,7 +99,6 @@ fn preview(note: &Note) -> String {
     }
 }
 
-/// The rows of `notes` (latest first) for the page at `base`, a month each.
 fn months<'a>(base: &str, notes: &'a [Note]) -> Vec<Month<'a>> {
     let mut months: Vec<(i32, u32, Month<'a>)> = Vec::new();
     for note in notes {
@@ -143,7 +130,6 @@ fn months<'a>(base: &str, notes: &'a [Note]) -> Vec<Month<'a>> {
     months.into_iter().map(|(_, _, m)| m).collect()
 }
 
-/// The Notes tab of the page at `base`.
 #[component]
 pub async fn notes_section(base: &str, notes: &NotesTab) -> Result<impl View> {
     let months = months(base, &notes.notes);
@@ -154,18 +140,14 @@ pub async fn notes_section(base: &str, notes: &NotesTab) -> Result<impl View> {
     })
 }
 
-/// A note's page, ready to show.
 pub struct NotePage {
-    /// The name of the organization or project the notes are of.
     owner: String,
     crumbs: Vec<Crumb>,
     note: Note,
     prev: Option<NoteLink>,
     next: Option<NoteLink>,
-    /// The page's own URL base (the owner's), for the tabs and the form.
     base: String,
     tab: NoteTab,
-    /// The file's text, as the editor starts out (or as typed, if refused).
     text: String,
     error: Option<FormError>,
 }
@@ -179,11 +161,8 @@ fn day_of(cx: &Cx) -> topcoat::Result<NaiveDate> {
     Ok(journal::parse_date(text).ok_or_not_found()?)
 }
 
-/// Whose notes a page shows: a project (with the organization it is in) or
-/// an organization, with the folder they are in and the page they belong to.
 struct Owner {
     name: String,
-    /// The owner's own page, which the notes' URLs hang from.
     base: String,
     dir: PathBuf,
     org: Option<Organization>,
@@ -217,7 +196,6 @@ impl Owner {
         })
     }
 
-    /// The crumbs up to the Notes tab.
     fn crumbs(&self) -> Vec<Crumb> {
         trail(
             &self.org,
@@ -253,9 +231,7 @@ impl Owner {
         })
     }
 
-    /// Saves the editor's `text` as the file of `day`, then goes back to
-    /// the Info tab (an `Err`, as every redirect here is). A text that will
-    /// not do comes back as the editor again, filled in, with the error.
+    /// Saves `text`, then goes back to the Info tab; a refused text comes back as the editor with the error.
     fn save(&self, day: NaiveDate, text: &str) -> topcoat::Result<NotePage> {
         let text = forms::text(text);
         match journal::save(&self.dir, day, &text) {
@@ -269,8 +245,7 @@ impl Owner {
         }
     }
 
-    /// Makes sure today's note exists, then redirects to it: always an
-    /// `Err`, as every redirect here is.
+    /// Redirects (an `Err`, as every redirect here) to today's note, creating it first.
     fn open_today(&self) -> Result<Response> {
         let today = now().date();
         journal::create(&self.dir, today)?;
@@ -308,7 +283,6 @@ async fn org_note(cx: &Cx) -> Result<impl View> {
     Ok(view! { note_screen(page: &page) })
 }
 
-/// `POST /project/{id}/notes/{date}`: saves the editor.
 #[page(POST "/project/{id}/notes/{date}")]
 async fn project_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
@@ -317,7 +291,6 @@ async fn project_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl V
     Ok(view! { note_screen(page: &page) })
 }
 
-/// `POST /org/{id}/notes/{date}`: as the project's.
 #[page(POST "/org/{id}/notes/{date}")]
 async fn org_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
@@ -326,21 +299,18 @@ async fn org_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View>
     Ok(view! { note_screen(page: &page) })
 }
 
-/// `POST /project/{id}/notes/today`: makes today's note, then shows it.
 #[route(POST "/project/{id}/notes/today")]
 async fn project_today(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     Owner::project(&open_db()?, id)?.open_today()
 }
 
-/// `POST /org/{id}/notes/today`: as the project's.
 #[route(POST "/org/{id}/notes/today")]
 async fn org_today(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     Owner::org(&open_db()?, id)?.open_today()
 }
 
-/// The Info and Edit tabs of the note of `day` on the page at `base`.
 fn note_tabs(base: &str, day: NaiveDate, current: NoteTab) -> Vec<Tab> {
     super::sections::tabs_for(
         current,

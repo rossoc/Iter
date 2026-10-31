@@ -1,39 +1,25 @@
-//! The day's split of a board's cards: which are waiting (important or
-//! not), which sit at which hour of the shown day, which are overdue. A task
-//! scheduled for a later day than the one shown is not shown at all (it is not
-//! a worry yet). Pure functions, no markup.
+//! Pure split of a board's cards for one day: waiting, per hour, overdue. Tasks of a later day are left out.
 
 use crate::models::{Card, START_TIME_FMT, TaskStatus};
 use chrono::{NaiveDate, Timelike};
 
-/// A board's unfinished cards, sorted for one day.
 #[derive(Default)]
 pub struct Day {
-    /// Not scheduled, flagged important.
     pub important: Vec<Card>,
-    /// Not scheduled, urgent but not important.
     pub other: Vec<Card>,
-    /// Not scheduled, neither urgent nor important: the backlog.
     pub backlog: Vec<Card>,
-    /// Scheduled on the day, by the hour they start in.
     pub hours: [Vec<Card>; 24],
-    /// Scheduled before today and still open, oldest first: they are on no
-    /// hour of this page (unless it is their day), so they get a list of
-    /// their own.
+    /// Scheduled before today and still open, oldest first: on no hour of this page.
     pub overdue: Vec<Card>,
-    /// How many start after today, on a day other than the one shown: not
-    /// shown, but they are tasks of the board (the page is not empty).
+    /// Starts on a later day: not shown, but counted so the page is not empty.
     pub later: usize,
 }
 
 impl Day {
-    /// How many tasks the Unscheduled column holds: those waiting to be
-    /// scheduled (the three lists) and the overdue ones.
     pub fn unscheduled(&self) -> usize {
         self.important.len() + self.other.len() + self.backlog.len() + self.overdue.len()
     }
 
-    /// No card at all: the board has no unfinished task.
     pub fn is_empty(&self) -> bool {
         self.important.is_empty()
             && self.other.is_empty()
@@ -44,13 +30,7 @@ impl Day {
     }
 }
 
-/// Sorts `cards` (already in list order) in one pass: a card with no start
-/// goes to a list, one starting on `day` to its hour, one that started before
-/// `today` (and is not on `day`) to `overdue`, any other (a later day) is
-/// left out. Within an hour, cards are ordered by start; the sort is stable,
-/// so equal starts keep the list order. The three lists (the two of waiting
-/// cards and `overdue`) put the urgent cards first, then those in progress
-/// (`rank`); `overdue` then goes by start, oldest first.
+/// Sorts `cards` in one pass; waiting lists and `overdue` put urgent cards first, then those in progress (`rank`); a later day is dropped.
 pub fn split(cards: Vec<Card>, day: NaiveDate, today: NaiveDate) -> Day {
     let mut out = Day::default();
     for card in cards {
@@ -73,24 +53,18 @@ pub fn split(cards: Vec<Card>, day: NaiveDate, today: NaiveDate) -> Day {
     out
 }
 
-/// Where a waiting card sits in its list: the urgent ones first, then those
-/// in progress, then the rest (the sort is stable, so each group keeps the
-/// list order).
 fn rank(card: &Card) -> (bool, bool) {
     (!card.priority.urgent, card.task.status != TaskStatus::Wip)
 }
 
-/// The days before and after `day` (`day` itself at the ends of the calendar).
 pub fn neighbours(day: NaiveDate) -> (NaiveDate, NaiveDate) {
     (day.pred_opt().unwrap_or(day), day.succ_opt().unwrap_or(day))
 }
 
-/// The label of hour `h`: "09:00".
 pub fn hour_label(h: usize) -> String {
     format!("{h:02}:00")
 }
 
-/// What a drop on hour `h` of `day` posts: `yyyy-mm-dd hh:mm`.
 pub fn hour_target(day: NaiveDate, h: usize) -> String {
     day.and_hms_opt(h as u32, 0, 0)
         .expect("hour is in range")
@@ -220,7 +194,6 @@ mod tests {
             )
             .is_empty()
         );
-        // a task that is later is hidden but still a task of the board
         assert!(
             !split(
                 vec![card("a", Some("2026-12-01 09:00"), false)],

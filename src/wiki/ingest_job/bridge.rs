@@ -2,9 +2,8 @@
 
 use super::*;
 
-/// On `task done`: the task's own notes, appended to the project's note of
-/// today under `## Task: <name>`, one `###` per file. How many files went in;
-/// none when there was nothing to add or the note already had the section.
+/// On `task done`: appends the task's notes to the project's note of today under `## Task: <name>`, one `###` per file.
+/// Returns how many files went in; none if there was nothing to add or the section exists.
 pub fn bridge_task_notes(app: &App, project: &Project, task: &Task) -> Result<usize> {
     let dir = crate::agent::taskdir::of(&app.db, project, task)?;
     let files = crate::agent::taskdir::TaskDir::files(&dir.notes_dir());

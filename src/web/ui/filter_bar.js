@@ -1,7 +1,5 @@
-// The syntax tip of the filter bar ("?", filter_bar.rs) closes with Escape
-// (WCAG 1.4.13): the tip shows on hover and focus, and Escape hides it until
-// the "?" is focused or hovered again (`.dismissed`, filter_bar.css). An
-// enhancement: without it the tip shows as the CSS alone shows it.
+// Escape closes the syntax tip of the filter bar (WCAG 1.4.13) until the "?" is focused
+// or hovered again (`.dismissed`). Without it the tip shows as CSS alone shows it.
 (function () {
   document.querySelectorAll(".filter-help").forEach(function (help) {
     var btn = help.querySelector(".filter-help-btn");

@@ -1,32 +1,13 @@
-//! The state a single `iter` run is carried out against.
-//!
-//! Two things, both of which every command wants and neither of which it
-//! should fetch for itself:
-//!
-//! * the database — opened once, at the top, instead of by each command
-//!   body in turn;
-//! * `now` — taken once, so every duration and every report in one run
-//!   measures against the same instant. Read per command, a long `task
-//!   push` followed by a report could straddle a minute boundary and
-//!   disagree with itself.
-//!
-//! This is ergonomics and consistency, not speed: exactly one database open
-//! happens per process either way.
-//!
-//! Deliberately no `config` field. [`crate::config::config`] already hands
-//! out a `&'static Config` from a `OnceLock`, reachable from anywhere; a
-//! field aliasing it would only make `App` look like it owns something it
-//! doesn't.
-//!
-//! Note that shell completion does **not** run against an `App` — see
-//! [`crate::completion`] for why it must not.
+//! The state one `iter` run is carried out against: the database (opened once) and `now` (taken
+//! once, so every duration and report in a run measures against the same instant). No `config`
+//! field: [`crate::config::config`] is already global. Shell completion does not run against an
+//! `App` (see [`crate::completion`]).
 
 use crate::db::{Db, open_db};
 use chrono::{Local, NaiveDateTime};
 
 pub struct App {
     pub db: Db,
-    /// One instant for the whole run.
     pub now: NaiveDateTime,
 }
 

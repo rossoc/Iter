@@ -1,29 +1,5 @@
-//! The plan of a task: a markdown file (`tasks/<id>/plan.md`) with a Goal, a
-//! How and a Checklist.
-//!
-//! ```text
-//! ## Goal
-//! What done looks like, in a few lines.
-//!
-//! ## How
-//! The approach, and what is hard about it.
-//!
-//! ## Checklist
-//! - [x] {s1} Write the parser
-//! - [~] {s2} Wire it into the CLI
-//! - [ ] {s3} (verify) `cargo test` passes
-//!     detail lines indented under a step belong to it
-//! ```
-//!
-//! The file is the only store. Reading is forgiving -- a person edits it too,
-//! any other `##` section is kept and ignored here, and a step needs nothing
-//! but its checkbox. Writing is careful: ticking a step edits that one
-//! character (`[ ]`, `[~]`, `[x]`) and nothing else, so whatever was written
-//! around it survives.
-//!
-//! Each step has an id (`{s3}`), given once and never reused while the step
-//! exists, so a step can be named from a link, a button or an agent however
-//! the plan is reordered or reworded.
+//! The plan of a task: `tasks/<id>/plan.md`, a markdown file with Goal, How and Checklist sections.
+//! A step is `- [ ] {s1} (verify) text`; the file is the only store. Format and rules: `doc/architecture_agent_wiki.md`.
 
 use serde::Serialize;
 
@@ -73,12 +49,9 @@ pub struct Item {
     /// A step that checks the work rather than doing it: `(verify)`.
     pub verify: bool,
     pub text: String,
-    /// The indented lines under the step, outdented.
     pub detail: String,
-    /// The big step it is under (`### name` in the checklist): an index into
-    /// [`Plan::phases`]; none for a step above the first heading.
+    /// Index into [`Plan::phases`]; none above the first `###` heading.
     pub phase: Option<usize>,
-    /// The step's line in the file, counting from 0.
     #[serde(skip)]
     pub line: usize,
 }
@@ -88,7 +61,6 @@ pub struct Plan {
     pub goal: String,
     pub how: String,
     pub items: Vec<Item>,
-    /// The big steps: the `### ` headings of the checklist, in order.
     pub phases: Vec<String>,
     /// The headings of the other sections, which are left alone.
     pub other: Vec<String>,
@@ -118,7 +90,6 @@ impl Plan {
         p
     }
 
-    /// How far big step `phase` is: `(done, total)` of its small steps.
     pub fn phase_progress(&self, phase: usize) -> (usize, usize) {
         let mine = self.items.iter().filter(|i| i.phase == Some(phase));
         let (mut done, mut total) = (0, 0);
@@ -142,7 +113,6 @@ enum Section {
     Other,
 }
 
-/// `## Name` (exactly two hashes): the section it opens.
 fn heading(line: &str) -> Option<&str> {
     line.strip_prefix("## ").map(str::trim)
 }
@@ -217,7 +187,6 @@ fn step(line: &str) -> Option<Step<'_>> {
     })
 }
 
-/// The front matter's end: the first line the plan proper starts at.
 fn body_start(content: &str) -> usize {
     let Some(rest) = content.strip_prefix("---\n") else {
         return 0;
@@ -286,13 +255,11 @@ pub fn parse(content: &str) -> Plan {
     plan
 }
 
-/// The numeric part of an id like `s12`.
 fn number(id: &str) -> Option<usize> {
     id.strip_prefix('s')?.parse().ok()
 }
 
-/// Rewrites line `n` of `content` with `edit`, leaving every other byte as it
-/// was (including the final newline, or its absence).
+/// Rewrites line `n` of `content` with `edit`, every other byte as it was.
 fn edit_line(content: &str, n: usize, edit: impl Fn(&str) -> String) -> String {
     let mut out = String::with_capacity(content.len() + 8);
     for (i, line) in content.split_inclusive('\n').enumerate() {
@@ -308,8 +275,7 @@ fn edit_line(content: &str, n: usize, edit: impl Fn(&str) -> String) -> String {
     out
 }
 
-/// `content` with every step numbered: a step with no id, or an id another
-/// step already has, gets the next free `s<n>`. Nothing else changes.
+/// `content` with every step numbered: a missing or duplicate id gets the next free `s<n>`.
 pub fn normalize(content: &str) -> String {
     let plan = parse(content);
     let mut taken: Vec<String> = Vec::new();
@@ -334,7 +300,6 @@ pub fn normalize(content: &str) -> String {
             let tail = if item.id.is_empty() {
                 tail.trim_start().to_string()
             } else {
-                // a duplicated id: drop the old `{...}`
                 let t = tail.trim_start();
                 t.split_once('}')
                     .map_or(t, |(_, r)| r)
@@ -353,7 +318,6 @@ pub fn normalize(content: &str) -> String {
 
 #[derive(Debug, PartialEq)]
 pub enum MarkError {
-    /// No step has that id; the ids there are.
     NoSuchStep(String, Vec<String>),
 }
 
@@ -385,8 +349,7 @@ pub fn mark(content: &str, id: &str, state: State) -> Result<String, MarkError> 
     }))
 }
 
-/// What is missing from a plan that most want, said once; none stops it
-/// being saved (a task may need another shape).
+/// What a plan lacks that most want; it never stops the plan being saved.
 pub fn problems(content: &str) -> Vec<String> {
     let plan = parse(content);
     let mut out = Vec::new();
@@ -406,7 +369,6 @@ pub fn problems(content: &str) -> Vec<String> {
     out
 }
 
-/// What the editor opens on for a task with no plan.
 pub fn skeleton(description: &str) -> String {
     let goal = description.trim();
     let goal = goal.split("\n\n").next().unwrap_or("").trim();
@@ -446,7 +408,6 @@ mod tests {
             ]
         );
         assert_eq!(p.items[1].detail, "detail one\ndetail two");
-        // only indented lines are a step's detail: a plain bullet is not
         assert_eq!(p.items[2].detail, "");
         assert_eq!(
             p.progress(),
@@ -502,7 +463,6 @@ mod tests {
         assert_eq!(back, PLAN);
         let doing = mark(PLAN, "s1", State::Doing).expect("marks");
         assert_eq!(doing, PLAN.replace("- [x] {s1}", "- [~] {s1}"));
-        // no trailing newline, CRLF-less, and the last line works too
         let bare = "## Checklist\n- [ ] {s1} only";
         assert_eq!(
             mark(bare, "s1", State::Done).unwrap(),
@@ -526,7 +486,6 @@ mod tests {
             n,
             "## Checklist\n- [ ] {s5} first\n- [x] {s4} kept\n- [~] {s6} (verify) third\n  detail\n- [ ] {s7} clash\n"
         );
-        // stable: nothing left to number
         assert_eq!(normalize(&n), n);
         assert_eq!(normalize(PLAN), PLAN);
     }
@@ -559,7 +518,6 @@ mod tests {
         assert_eq!(p.goal, "Make it fast.");
         assert_eq!(p.items.len(), 2);
         assert!(p.items[1].verify);
-        // the tag last, as an agent writes it
         let late = parse(
             "## Checklist\n- [ ] run the tests (verify)\n- [ ] look at the diff (Verify: git diff)\n- [ ] verify the thing (not a tag)\n- [ ] run it (verify) then (clean up)\n",
         );
@@ -583,7 +541,6 @@ mod tests {
         // a `## Goal` inside the front matter's YAML would be a comment, not a heading
         let p = parse("---\ndescription: x\n---\n## Goal\ng\n");
         assert_eq!(p.goal, "g");
-        // a front matter that never closes is not one
         assert_eq!(parse("---\nunclosed\n## Goal\ng\n").goal, "g");
     }
 
@@ -596,9 +553,7 @@ mod tests {
         let phases: Vec<Option<usize>> = p.items.iter().map(|i| i.phase).collect();
         assert_eq!(phases, [None, Some(0), Some(0), Some(1)]);
         assert_eq!((p.phase_progress(0), p.phase_progress(1)), ((1, 2), (0, 1)));
-        // a plan without headings has no big steps
         assert!(parse("## Checklist\n- [ ] a\n").phases.is_empty());
-        // ticking a step still edits that character only
         let marked = mark(
             "## Checklist\n### develop\n- [ ] {s1} a\n",
             "s1",

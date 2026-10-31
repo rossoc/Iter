@@ -15,7 +15,6 @@ fn glyph(state: TaskStatus) -> &'static str {
     }
 }
 
-/// `status.css`'s class for `state`.
 fn class(state: TaskStatus) -> &'static str {
     match state {
         TaskStatus::Queue => "status queue",

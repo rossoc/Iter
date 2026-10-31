@@ -1,9 +1,4 @@
-//! A board's day agenda (`/board/{id}?date=`). The page is the day (the
-//! hero) beside the lists of tasks not yet scheduled; a card is dragged into
-//! an hour with `board.js`, or moved with the pick mode (`?pick=`, `pick.rs`),
-//! plain links and forms. The POST route is `agenda_drop.rs`, the cards and
-//! the side lists `agenda_cards.rs`. Nothing here has rules of its own: it is
-//! all shared components (`ui/`). The loading is here too.
+//! A board's day agenda (`/board/{id}?date=`): the day beside the lists of unscheduled tasks.
 
 use super::agenda_cards::{Cards, Fold, NOT_SCHEDULED, side};
 use super::agenda_day::{Day, hour_label, hour_target, neighbours, split};
@@ -32,17 +27,13 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// The id of the day's heading: the hours are labelled by it.
 const DAY_TITLE: &str = "day-title";
 
 #[query_params(error = bad_request)]
 struct AgendaQuery {
     date: Option<String>,
-    /// The task being moved (the pick mode).
     pick: Option<String>,
-    /// The task that was just moved (the note says so).
     moved: Option<String>,
-    /// `off`: the Unscheduled column is folded into its rail.
     side: Option<String>,
 }
 
@@ -50,7 +41,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(show)
 }
 
-/// The day asked for: `date` when it is a valid `yyyy-mm-dd`, else `today`.
 fn day_from(date: Option<&str>, today: NaiveDate) -> NaiveDate {
     date.and_then(|d| parse_day(d).ok()).unwrap_or(today)
 }
@@ -71,8 +61,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
     })
 }
 
-/// The now line of the hour `h`, when the agenda shows today and `h` is the
-/// current hour: how far into the hour it is.
 fn now_line(now: NaiveDateTime, day: NaiveDate, h: usize) -> Option<Now> {
     (now.date() == day && now.hour() as usize == h).then(|| Now {
         at: (now.minute() as f32 * 60.0 + now.second() as f32) / 3600.0,
@@ -80,8 +68,6 @@ fn now_line(now: NaiveDateTime, day: NaiveDate, h: usize) -> Option<Now> {
     })
 }
 
-/// The Today link: the current hour when nothing is picked (`#now`), else
-/// the banner (the pick mode goes along).
 fn today_url(id: i64, today: NaiveDate, picked: Option<i64>, folded: bool) -> String {
     with_side(today_link(id, today, picked), folded)
 }
@@ -93,8 +79,6 @@ fn today_link(id: i64, today: NaiveDate, picked: Option<i64>) -> String {
     }
 }
 
-/// Where a moved task is, in words: its slot ("Wed 30 Sep, 09:00"), or the
-/// lists.
 fn moved_to(task: &Picked) -> String {
     match task.state() {
         state if state.is_empty() => "Unscheduled".to_string(),
@@ -102,33 +86,21 @@ fn moved_to(task: &Picked) -> String {
     }
 }
 
-/// What the screen shows beside the cards, worked out from the page: the
-/// screen only lays it out.
 struct Model {
-    /// The parts of the document title.
     title: Vec<String>,
-    /// The custom properties of the priority colors.
     style: String,
-    /// What a move says, once done.
     note: String,
-    /// Where drops and the pick forms post.
     schedule: String,
-    /// The picked task's slot, in words (empty when it has none).
     state: String,
-    /// The day as `yyyy-mm-dd`, and in words.
     date: String,
     heading: String,
-    /// The label of each hour.
     labels: Vec<String>,
     previous: DayLink,
     next: DayLink,
     today: String,
     is_today: bool,
-    /// The task being moved, if any.
     pick: Option<i64>,
-    /// The Unscheduled column is folded into its rail.
     folded: bool,
-    /// The links that fold and unfold it.
     fold: Fold,
 }
 

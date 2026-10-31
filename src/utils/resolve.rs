@@ -1,31 +1,22 @@
-//! Addressing: turning what the user typed -- or the tmux session they are
-//! sitting in -- into the project, task or organization it names.
-//!
-//! Every command starts here, which is why these live together rather than
-//! with any one of them: `<project>/<task>` is parsed by `session`, `task`
-//! and `comment` alike, and the "or the current tmux session" fallback is
-//! shared by all three plus `project` and `organization`.
+//! Addressing: turning what the user typed, or the tmux session they are in, into the project,
+//! task or organization it names.
 
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::models::{Project, ProjectGroup, Task, split_task_ref, task_ref};
 use crate::{git, tmux};
 
-/// How a task is named everywhere the CLI speaks about one: the exact
-/// `<project>/<task>` syntax [`parse_task_ref`] reads back, written in the
-/// one place its inverse lives so the two can't drift apart.
+/// A task as `<project>/<task>`, the syntax [`parse_task_ref`] reads back.
 pub(crate) fn task_display(project: &Project, task: &Task) -> String {
     task_ref(&project.name, &task.name)
 }
 
-/// The number of the issue `task` tracks, or the "no linked issue" error
-/// for a command that has nothing to do without one.
+/// The task's issue number, or the "no linked issue" error.
 pub(crate) fn linked_issue(project: &Project, task: &Task) -> Result<i64> {
     task.github_issue
         .ok_or_else(|| IterError::NoLinkedIssue(task_display(project, task)))
 }
 
-/// Splits `<project>/<task>` on the first `/`.
 pub(crate) fn parse_task_ref(reference: &str) -> Result<(&str, &str)> {
     split_task_ref(reference).ok_or_else(|| IterError::InvalidTaskRef(reference.to_string()))
 }
@@ -55,8 +46,7 @@ fn follow<T: Table>(db: &Db, id: i64, what: &'static str, of: &'static str) -> R
     db.get::<T>(id)?.ok_or(IterError::Orphan { what, of })
 }
 
-/// Resolves the project + task for the tmux session this process is
-/// running inside -- the same lookup `iter t` prints.
+/// The project + task of the tmux session this process runs in.
 pub(crate) fn current_session_task(db: &Db) -> Result<(Project, Task)> {
     let name = tmux::current_session_name().ok_or(IterError::NotInTmux)?;
     let session_config = db
@@ -67,8 +57,6 @@ pub(crate) fn current_session_task(db: &Db) -> Result<(Project, Task)> {
     Ok((project, task))
 }
 
-/// Resolves an explicit `<project>/<task>` ref, or -- when none is given --
-/// the task of the tmux session this process is running inside.
 pub(crate) fn resolve_task_or_current(db: &Db, task_ref: Option<&str>) -> Result<(Project, Task)> {
     match task_ref {
         Some(r) => resolve_task(db, r),
@@ -76,8 +64,6 @@ pub(crate) fn resolve_task_or_current(db: &Db, task_ref: Option<&str>) -> Result
     }
 }
 
-/// Resolves an explicit project name, or -- when none is given -- the
-/// project of the tmux session this process is running inside.
 pub(crate) fn resolve_project_or_current(db: &Db, name: Option<&str>) -> Result<Project> {
     match name {
         Some(n) => db.resolve(n),
@@ -85,10 +71,8 @@ pub(crate) fn resolve_project_or_current(db: &Db, name: Option<&str>) -> Result<
     }
 }
 
-/// Resolves an explicit board/organization name, or -- when none is given
-/// -- the one the tmux session's project is in. Erroring when that project
-/// is in none is deliberate: membership is optional by design, so there's
-/// no sensible "current" one to fall back to.
+/// An explicit board/organization name, else the one the tmux session's project is in. Erroring
+/// when it is in none is deliberate: membership is optional, so there is no sensible "current" one.
 pub(crate) fn resolve_group_or_current<G: ProjectGroup>(db: &Db, name: Option<&str>) -> Result<G> {
     if let Some(name) = name {
         return db.resolve(name);
@@ -101,8 +85,6 @@ pub(crate) fn resolve_group_or_current<G: ProjectGroup>(db: &Db, name: Option<&s
     follow(db, id, G::KIND, "project")
 }
 
-/// One named task of `project`, or the same "no such task" error a
-/// `<project>/<task>` ref would have raised.
 pub(crate) fn find_task_or_err(db: &Db, project: &Project, name: &str) -> Result<Task> {
     db.find_task(project.id(), name)?
         .ok_or_else(|| IterError::TaskNotFound {
@@ -111,10 +93,8 @@ pub(crate) fn find_task_or_err(db: &Db, project: &Project, name: &str) -> Result
         })
 }
 
-/// The project a `task pull`/`task push` runs against: resolved the usual
-/// way, then held to the two things `gh` needs of it -- the project has to
-/// be marked `github`, and `base_path` has to really be a repo, since that
-/// is the only way `gh` learns which repo it's talking about.
+/// The project a `task pull`/`push` runs against: resolved as usual, then held to `github` and a
+/// real repo, which is how `gh` learns the repo.
 pub(crate) fn github_project(db: &Db, name: Option<&str>) -> Result<Project> {
     let project = resolve_project_or_current(db, name)?;
     require_github(&project)?;
@@ -122,8 +102,6 @@ pub(crate) fn github_project(db: &Db, name: Option<&str>) -> Result<Project> {
     Ok(project)
 }
 
-/// Holds `project` to having the github integration switched on. The check
-/// a command makes when it is about to talk to `gh` at all.
 pub(crate) fn require_github(project: &Project) -> Result<()> {
     match project.github {
         true => Ok(()),
@@ -131,12 +109,9 @@ pub(crate) fn require_github(project: &Project) -> Result<()> {
     }
 }
 
-/// Holds `project`'s `base_path` to really being a repo. Separate from
-/// [`require_github`] because they fail for different reasons and not every
-/// caller needs both: `gh` infers the repo from the directory's remote, so
-/// a project marked github whose path is not a repo leaves `gh` guessing --
-/// while `iter session new` needs the repo (for the worktree) whether or
-/// not anything is going to talk to `gh`.
+/// Holds `project`'s `base_path` to being a repo. Separate from [`require_github`]: `gh` infers the
+/// repo from the directory's remote, while `iter session new` needs it for the worktree whether or
+/// not `gh` is involved.
 pub(crate) fn require_git_repo(project: &Project) -> Result<()> {
     match git::is_git_repo(&project.base_path) {
         true => Ok(()),

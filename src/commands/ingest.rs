@@ -1,8 +1,4 @@
-//! `iter wiki ingest`, `build-concept` and `pending`: agents writing the
-//! wiki, and the review of what they wrote. The reading and the prompts are
-//! `wiki::ingest`'s; the harness is `agent::run`'s. What the agent changes is
-//! left uncommitted in the notes' git repository: `pending` shows it, and
-//! accepting is a commit.
+//! `iter wiki ingest`, `build-concept` and `pending`: agents writing the wiki and the review of what they wrote (`wiki::ingest_job`).
 
 use crate::agent::error::AgentError;
 use crate::app::App;
@@ -18,7 +14,6 @@ use crate::wiki::ingest_job::{
 use crate::wiki::schema;
 use std::path::PathBuf;
 
-/// The harness the command line chose, as the service takes it.
 fn choice(opts: &HarnessOpts) -> HarnessChoice {
     HarnessChoice {
         agent: opts.agent,
@@ -199,14 +194,11 @@ pub fn pending(app: &App, project: Option<&str>, accept: bool, revert: bool) -> 
     Ok(())
 }
 
-/// Does what the project's `ingest` setting asks for at `trigger` and says
-/// so. It never fails the command it is called from: what goes wrong is a
-/// warning.
+/// Does what the project's `ingest` setting asks for at `trigger` and says so; problems are warnings, never a failure.
 pub fn auto(app: &App, project: &Project, task: &Task, trigger: Trigger) {
     say_auto(project, &wiki_auto(app, project, task, trigger));
 }
 
-/// What the command line says about what [`auto`] did.
 pub fn say_auto(project: &Project, outcome: &Auto) {
     match outcome {
         Auto::Started => println!(

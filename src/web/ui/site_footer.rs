@@ -1,58 +1,46 @@
-//! The footer every page ends with: a large wordmark and, as a second menu,
-//! the organizations with their projects, the boards, the projects that are
-//! in no organization, the link to the global settings and the project's
-//! link. No models here: `web/footer.rs` builds the data. Pure markup and
-//! CSS, no script.
+//! The footer of every page: wordmark and a second menu of organizations with
+//! their projects, boards, loose projects and settings. Markup and CSS only; data
+//! comes from `web/footer.rs`.
 
 use topcoat::{
     Result,
     view::{View, component, view},
 };
 
-/// A link with its text.
 pub struct FooterLink {
     pub name: String,
     pub href: String,
 }
 
-/// An organization: its link and its projects' (compact, muted). `projects`
-/// may be the first few of `projects_total`; the rest end the list as a link
-/// to the organization's page.
+/// An organization link with its projects (compact, muted); `projects` may be the
+/// first few of `projects_total`, the rest ending in a link to the organization.
 pub struct FooterGroup {
     pub link: FooterLink,
     pub projects: Vec<FooterLink>,
     pub projects_total: usize,
 }
 
-/// Everything the footer shows. Each list may be cut to its first few
-/// links, with its total; a cut list ends with a "N more…" link to its
-/// `_href`.
+/// Everything the footer shows; a cut list ends with a "N more…" link to its `_href`.
 pub struct FooterData {
     pub orgs: Vec<FooterGroup>,
     pub boards: Vec<FooterLink>,
     pub boards_total: usize,
     pub boards_href: &'static str,
-    /// Projects that belong to no organization.
     pub loose: Vec<FooterLink>,
     pub loose_total: usize,
     pub loose_href: &'static str,
-    /// The page of the global settings.
     pub settings_href: String,
     pub version: &'static str,
 }
 
-/// Where the project lives.
 pub const GITHUB: &str = "https://github.com/rossoc/Iter";
 
-/// The text of the link that ends a cut list: how many of its `total` the
-/// `shown` links leave out. `None` when nothing is cut.
+/// The link text ending a cut list; `None` when nothing is cut.
 fn more(shown: usize, total: usize) -> Option<String> {
     (total > shown).then(|| format!("{} more\u{2026}", total - shown))
 }
 
-/// A column's title and a flat list of links, or `none` when there are no
-/// links. A list cut short (`total` above the links shown) ends with the
-/// link to `more_href`.
+/// A column's title and links, or `none`; a cut list ends with the link to `more_href`.
 #[component]
 async fn link_column(
     id: &str,

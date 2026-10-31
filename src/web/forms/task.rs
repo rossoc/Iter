@@ -13,25 +13,18 @@ use serde::Deserialize;
 pub struct TaskForm {
     pub name: String,
     pub description: String,
-    /// The issue number, or empty for none.
     pub github_issue: String,
     pub status: String,
     pub branch_prefix: String,
-    /// `yyyy-mm-dd hh:mm`, or empty for unscheduled.
     pub start_time: String,
-    /// `hh:mm`, or empty for none.
     pub duration: String,
-    /// Tag names, comma-separated.
     pub tags: String,
-    /// Id of the project to move the task to; empty or absent leaves it
-    /// where it is. Only the edit form shows it.
+    /// Empty or absent leaves the task where it is; only the edit form shows it.
     #[serde(default)]
     pub move_to: String,
 }
 
 impl TaskForm {
-    /// The names of the controls an error can be about (also the names of
-    /// the submitted fields), shared by [`EditForm::field`] and the page.
     pub const BRANCH_PREFIX: &'static str = "branch_prefix";
     pub const STATUS: &'static str = "status";
     pub const GITHUB_ISSUE: &'static str = "github_issue";
@@ -40,10 +33,7 @@ impl TaskForm {
     pub const TAGS: &'static str = "tags";
     pub const MOVE_TO: &'static str = "move_to";
 
-    /// The form as it starts out for `task` with the tags named `tags`: each
-    /// input as the text it shows. A refused submission is shown again as
-    /// itself, so what was typed (also an issue number that doesn't parse)
-    /// is what comes back.
+    /// A refused submission is shown again as typed (also an issue number that doesn't parse).
     pub fn of(task: &Task, tags: &str) -> TaskForm {
         TaskForm {
             name: task.name.clone(),
@@ -58,8 +48,7 @@ impl TaskForm {
         }
     }
 
-    /// The tags the form names, resolved first so an unknown name writes
-    /// nothing.
+    /// Tags are resolved first so an unknown name writes nothing.
     fn tag_ids(&self, db: &Db) -> Result<Vec<i64>> {
         db.ids_by_name::<Tag>(&names(&self.tags))
     }
@@ -137,9 +126,7 @@ impl EditForm for TaskForm {
         (task, valid)
     }
 
-    /// The tags too, resolved first so an unknown name writes nothing (so an
-    /// unknown tag is reported before a taken name: the name is only checked
-    /// by the write).
+    /// Tags are resolved first, so an unknown tag is reported before a taken name (only the write checks the name).
     fn save(&self, db: &Db, id: i64, task: &Task) -> Result<()> {
         let tag_ids = self.tag_ids(db)?;
         let mut task = task.clone();
@@ -159,7 +146,6 @@ impl EditForm for TaskForm {
         Ok(())
     }
 
-    /// The new task and its tags, in one transaction.
     fn insert(&self, db: &Db, task: &Task) -> Result<i64> {
         db.save_task(None, task, &self.tag_ids(db)?)
     }
@@ -189,7 +175,6 @@ mod tests {
         crate::fixtures::task(7, "")
     }
 
-    /// Each task error that belongs to a field says which.
     #[test]
     fn task_errors_name_their_field() {
         let error = |form: TaskForm| form.apply(task()).1.expect_err("refused");
@@ -212,8 +197,6 @@ mod tests {
         assert_eq!(TaskForm::field(&unknown), Some(TaskForm::TAGS));
     }
 
-    /// The form of a task shows each input as text, and a form built from a
-    /// task applies back to the same task.
     #[test]
     fn a_task_makes_the_form_that_applies_back_to_it() {
         let mut t = task();
@@ -234,8 +217,7 @@ mod tests {
         );
     }
 
-    /// Creating validates, resolves tags and inserts atomically: a refusal
-    /// (bad issue, unknown tag) leaves no task behind.
+    /// Atomic: a refusal (bad issue, unknown tag) leaves no task behind.
     #[test]
     fn create_writes_the_task_with_its_tags_or_nothing() {
         let db = fixtures::db();

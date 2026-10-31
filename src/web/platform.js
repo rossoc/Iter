@@ -1,8 +1,6 @@
-// The activities suggested for a time platform project (platform_pick.rs).
-// An enhancement: the lists are filled by the server for the project stored;
-// when the project field changes, the activities of the new one are fetched
-// and put in the activities' <datalist>. Without script, or when the platform
-// does not answer, the fields are plain text.
+// Activities suggested for a time platform project (platform_pick.rs): when the
+// project field changes, the new project's activities are fetched into the
+// <datalist>. Without script or an answer the fields are plain text.
 (function () {
   var list = document.getElementById("platform-activities");
   // the combobox (combobox.js) takes `list` off the field, so it is found by id

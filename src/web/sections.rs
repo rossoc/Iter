@@ -14,38 +14,27 @@ pub struct TabQuery {
     pub tab: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
-    /// The Tasks tab's search (see `task_query.rs`), or the Info tab's
-    /// project search.
     pub q: Option<String>,
     /// The pop-up open over the page: `task` (New task, on Tasks) or
     /// `project` (New project, on Info).
     pub new: Option<String>,
-    /// The Report tab's Share pop-up is open (`?share=1`).
     pub share: Option<String>,
-    /// What New project starts with, when the URL carries it.
     pub name: Option<String>,
     pub base_path: Option<String>,
-    /// The task page's Agent tab: the step open over the agents.
     pub step: Option<String>,
     /// The Agent tab: the agent open (`?run=3`), and the instruction a new
     /// one starts with (`?new=agent&instruction=fix`; `new` is shared with
     /// the other pages' pop-ups).
     pub run: Option<String>,
-    /// An agent's Output tab: the text as it is (`?tab=output&raw=1`).
     pub raw: Option<String>,
     pub instruction: Option<String>,
-    /// An instruction page: which tab is open is `tab`; `edit` opens its form.
     pub edit: Option<String>,
-    /// An instruction page: the project whose instructions apply (none: the
-    /// global ones).
     pub project: Option<String>,
 }
 
-/// The query of a page that is only a search (`?q=`): a board's Info.
 #[query_params(error = bad_request)]
 pub struct InfoQuery {
     pub q: Option<String>,
-    /// As on [`TabQuery`]: `project` opens New project.
     pub new: Option<String>,
     pub name: Option<String>,
     pub base_path: Option<String>,
@@ -58,12 +47,10 @@ pub enum Section {
     Tasks,
     Notes,
     Report,
-    /// An organization's: its projects.
     Projects,
 }
 
 impl Section {
-    /// The section a `?tab=` value asks for: anything unknown is Info.
     pub fn of(tab: Option<&str>) -> Section {
         match tab {
             Some("tasks") => Section::Tasks,
@@ -74,8 +61,7 @@ impl Section {
         }
     }
 
-    /// The page title of the section: Info is the page itself (`page`, e.g.
-    /// "Project"), the others say which one they are.
+    /// Info is the page itself (`page`); the others say which one they are.
     pub fn title(self, page: &'static str) -> &'static str {
         match self {
             Section::Info => page,
@@ -87,8 +73,6 @@ impl Section {
     }
 }
 
-/// The tabs of a page whose sections are the values of `S`: one per entry,
-/// the one for `current` marked. Every page's tab row is built with this.
 pub fn tabs_for<S: PartialEq>(current: S, entries: impl IntoIterator<Item = (S, Tab)>) -> Vec<Tab> {
     entries
         .into_iter()
@@ -96,16 +80,10 @@ pub fn tabs_for<S: PartialEq>(current: S, entries: impl IntoIterator<Item = (S, 
         .collect()
 }
 
-/// The last tab of a page that can be edited: Settings, which leads to the
-/// edit form (`{base}/edit`). `current` is whether the form is showing.
 pub fn settings_tab(base: &str, current: bool) -> Tab {
     Tab::link("Settings", format!("{base}/edit")).marked(current)
 }
 
-/// The Info, Projects (when `projects` says how many), Tasks and Notes tabs of
-/// the page at `base` (the Tasks one with its count, the Notes one with `notes`, the number of notes when the page
-/// has a folder for them), and the Report tab when the page has one:
-/// `report` is its URL.
 pub fn section_tabs(
     base: &str,
     current: Section,
@@ -140,7 +118,6 @@ pub fn section_tabs(
     tabs_for(current, entries)
 }
 
-/// The tabs of a task page.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum TaskSection {
     Info,
@@ -148,12 +125,10 @@ pub enum TaskSection {
     Agent,
     Notes,
     Wiki,
-    /// The edit form (`/task/{id}/edit`), which shows the page's tab row.
     Settings,
 }
 
 impl TaskSection {
-    /// The section a `?tab=` value asks for: anything unknown is Info.
     pub fn of(tab: Option<&str>) -> TaskSection {
         match tab {
             Some("sessions") => TaskSection::Sessions,
@@ -164,8 +139,7 @@ impl TaskSection {
         }
     }
 
-    /// The page title of the section: Info is the page itself (`page`, "Task"),
-    /// the others say which one they are.
+    /// Info is the page itself (`page`); the others say which one they are.
     pub fn title(self, page: &'static str) -> &'static str {
         match self {
             TaskSection::Info => page,
@@ -178,8 +152,6 @@ impl TaskSection {
     }
 }
 
-/// The Info, Sessions (with its count), Agent and Wiki tabs of the task page at
-/// `base`.
 pub fn task_tabs(base: &str, current: TaskSection, sessions: usize, agents: usize) -> Vec<Tab> {
     tabs_for(
         current,
@@ -203,9 +175,7 @@ pub fn task_tabs(base: &str, current: TaskSection, sessions: usize, agents: usiz
     )
 }
 
-/// The tabs of a daily note's page (`?tab=`): the rendered note, and its
-/// editor. The one place the names are spelled: the URL builder
-/// (`url::note_tab_url`) and the parser both go through here.
+/// The one place the names are spelled: `url::note_tab_url` and the parser both go through here.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum NoteTab {
     #[default]
@@ -230,7 +200,6 @@ impl NoteTab {
         }
     }
 
-    /// The tab a `?tab=` value asks for: anything unknown or missing is Info.
     pub fn of(tab: Option<&str>) -> NoteTab {
         tab.and_then(|t| t.parse().ok()).unwrap_or_default()
     }

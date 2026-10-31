@@ -1,11 +1,6 @@
-//! The session clock: opening and closing the stretches of time a task is
-//! worked in.
-//!
-//! Deliberately not on `Db`: these encode policy -- don't double-start,
-//! carry a detach message onto the session it belongs to, only the last
-//! client out stops the clock -- rather than storage. Shared by `iter
-//! session start/stop`, by `iter task done`, and by the tmux hooks, which
-//! is why they answer to none of those modules.
+//! The session clock: opening and closing the stretches a task is worked in. Not on `Db`: it
+//! encodes policy (no double-start, a detach message follows its session, only the last client out
+//! stops the clock), shared by session start/stop, `task done` and the tmux hooks.
 
 use crate::db::{Db, Table};
 use crate::error::Result;
@@ -28,15 +23,11 @@ pub(crate) fn start_session(db: &Db, task_id: i64) -> Result<()> {
     Ok(())
 }
 
-/// What closing a task's clock did.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Closed {
-    /// The task had no open session.
     Nothing,
-    /// The session was closed and kept.
     Kept,
-    /// The session ran under [`Session::MIN_SECONDS`], so it was deleted
-    /// rather than closed.
+    /// The session ran under [`Session::MIN_SECONDS`] and was deleted, not closed.
     Discarded,
 }
 
@@ -70,16 +61,11 @@ fn close_open_session_at(
     Ok(Closed::Kept)
 }
 
-/// Closes `task_id`'s open session if a previous tmux server left it open:
-/// one that started before `server_start`, the running server's start. A
-/// reboot takes the server down without anything closing the clock, which
-/// otherwise runs on through the time the machine was off.
-///
-/// It's closed at `last_save` -- tmux-resurrect's last save, the last
-/// moment the old server is known to have been up -- when that falls
-/// between the two; otherwise the end is unknown and the session is
-/// deleted. A session this server opened is left alone (`Closed::Nothing`),
-/// which is what makes running this again harmless.
+/// Closes `task_id`'s open session if a previous tmux server left it open (started before
+/// `server_start`): a reboot closes nothing, so the clock would run through the downtime. Closed at
+/// `last_save` (tmux-resurrect) when that falls between the two, else the end is unknown and the
+/// session is deleted. A session of this server is left alone (`Closed::Nothing`), so rerunning is
+/// harmless.
 pub(crate) fn close_stale_session(
     db: &Db,
     task_id: i64,
@@ -101,9 +87,8 @@ pub(crate) fn close_stale_session(
     }
 }
 
-/// Starts the session of whatever task `tmux_session` belongs to. A name
-/// `iter` doesn't know is not an error: these hooks are global, so they
-/// fire for every tmux session on the server, not just ours.
+/// Starts the session of the task `tmux_session` belongs to. An unknown name is not an error: the
+/// hooks are global and fire for every tmux session.
 pub(crate) fn start_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     match db.find_session_config_by_tmux_name(tmux_session)? {
         Some(session_config) => start_session(db, session_config.task_id),
@@ -111,11 +96,8 @@ pub(crate) fn start_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> 
     }
 }
 
-/// Closes the open session of whatever task `tmux_session` belongs to,
-/// carrying over a message left in the tmux option by whatever detached
-/// (see `tmux::DETACH_MESSAGE_OPTION`) so a note typed on the way out lands
-/// on the session it belongs to. A name `iter` doesn't know is ignored, as
-/// in [`start_for_tmux_session`].
+/// Closes the open session of the task `tmux_session` belongs to, carrying a detach message (see
+/// `tmux::DETACH_MESSAGE_OPTION`) onto it. Unknown names are ignored.
 pub(crate) fn stop_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     let Some(session_config) = db.find_session_config_by_tmux_name(tmux_session)? else {
         return Ok(()); // not one of ours -- ignore
@@ -125,14 +107,8 @@ pub(crate) fn stop_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     Ok(())
 }
 
-/// A client has left `tmux_session` (detached, or switched elsewhere):
-/// stops its clock if that was the last client on it.
-///
-/// A tmux session can have several clients on it -- a second terminal, or
-/// someone pairing -- and it's still being worked as long as one of them is
-/// there. The client that left is already off tmux's list by the time the
-/// hook runs, so what's left on it is exactly what "still being worked"
-/// means.
+/// A client left `tmux_session`: stops its clock if that was the last client. The leaving client is
+/// already off tmux's list when the hook runs, so what remains is exactly who is still working.
 pub(crate) fn client_left_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
     if tmux::any_client_attached(tmux_session) {
         return Ok(()); // somebody else is still in there
@@ -154,8 +130,7 @@ mod tests {
             .expect("valid time")
     }
 
-    /// An in-memory database holding one task with a session open since
-    /// 09:00:00. Returns the database and the task's id.
+    /// An in-memory database with one task whose session opened at 09:00:00; returns it and the id.
     fn open_at_nine() -> (Db, i64) {
         let db = fixtures::db();
         let project_id = db

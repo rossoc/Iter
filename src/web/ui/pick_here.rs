@@ -1,6 +1,4 @@
-//! The button of the pick mode that puts the picked task in a place ("Schedule
-//! here", "Move here"): a form of hidden fields, no script. `at` names the
-//! place for a screen reader ("11:00").
+//! The pick-mode button that puts the picked task in a place: a form of hidden fields, no script.
 
 use super::button::post_button;
 use topcoat::{
@@ -8,9 +6,8 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// `verb` is "Schedule" / "Move" / "Place"; `fields` are what the form posts
-/// (see `web/pick.rs`). A `slot` fills its place (the agenda's hour) with a
-/// big dashed box that names the place in words; any other is a small button.
+/// `fields` are what the form posts (see `web/pick.rs`). A `slot` fills its place
+/// with a dashed box naming it; any other is a small button.
 #[component]
 pub async fn pick_here(
     #[into] action: String,

@@ -1,13 +1,11 @@
-//! The two ways iter starts a process for an agent, in one place: waited
-//! for with its output in a log, and detached to outlive the caller.
+//! Starting agent processes: waited for with a log, or detached.
 
 use crate::error::{IterError, Result};
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
-/// Runs `program` in `cwd` to the end, its stdout and stderr appended to
-/// `log` and nothing on stdin.
+/// Runs `program` in `cwd` to the end, output appended to `log`, stdin closed.
 pub fn run_logged(
     program: &'static str,
     args: &[String],
@@ -27,18 +25,13 @@ pub fn run_logged(
         })
 }
 
-/// The exit code a run records: `0` for success, else the code the process
-/// ended with, or `-1` when a signal ended it.
+/// The exit code a run records: `0` on success, `-1` when a signal ended it.
 pub fn exit_code(status: ExitStatus) -> Option<i32> {
     status.code().or(Some(-1))
 }
 
-/// Starts `command` (always iter itself) as a process of its own (its own group, so a signal to
-/// iter's does not reach it, and nothing on stdio) and returns its pid.
-///
-/// The child is waited for on a thread of this process, so that when this
-/// process lives on (the web server) it does not stay a zombie that still
-/// looks alive.
+/// Starts `command` (iter itself) in its own process group, so a signal to iter's does not reach it; returns the pid.
+/// A thread waits for the child so it does not linger as a zombie in a long-lived process.
 pub fn spawn_detached(command: &mut Command) -> Result<u32> {
     let mut child = command
         .stdin(Stdio::null())

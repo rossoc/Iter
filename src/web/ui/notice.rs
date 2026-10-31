@@ -7,18 +7,13 @@ use topcoat::{
     view::{Child, Unescaped, View, component, view},
 };
 
-/// The id of the form's error notice, which the controls it is about point
-/// at (`aria-describedby`).
+/// Id of the form's error notice (`aria-describedby` target).
 pub const ERROR_ID: &str = "form-error";
 
-/// `id` names it for `aria-describedby`. `focus` moves focus to it when the
-/// page loads (one inline line, which runs as soon as the notice is parsed;
-/// `autofocus` was skipped by Chromium on half of the pages a submit came
-/// back with), so a screen reader reads it and a keyboard user starts at
-/// it; `focus` needs an `id`. An error is always `role="alert"`, so a
-/// browser that cannot run the script (no JavaScript) still announces it.
-/// The script drops the role just before it moves focus: a notice that takes
-/// focus is read as the focus target, and would be read twice with the role.
+/// `focus` moves focus to the notice on load via an inline script (`autofocus`
+/// was skipped by Chromium on submit-back pages) and needs an `id`. An error is
+/// `role="alert"` so it is announced without script; the script drops the role
+/// before focusing, or it would be read twice.
 #[component]
 pub async fn notice(
     #[default] error: bool,
@@ -31,9 +26,8 @@ pub async fn notice(
         id.bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
     );
-    // The id goes into an inline script unescaped, so only characters that
-    // cannot end the string are let through (all of the callers' ids already
-    // are such): a `debug_assert!` alone would not hold in a release build.
+    // The id goes into an inline script unescaped: only characters that cannot end
+    // the string pass (`debug_assert!` alone would not hold in release).
     let script_id: String = id
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
@@ -51,9 +45,7 @@ pub async fn notice(
     })
 }
 
-/// The error a form comes back with, if any, focused on load. "Error: " is
-/// read first (hidden, since the box's border says it to the eye). When the
-/// error is about a control, the message links to it.
+/// The form's error, focused on load; "Error: " is read first (hidden), and the message links to its control.
 #[component]
 pub async fn error_box(error: Option<&FormError>) -> Result<impl View> {
     Ok(view! {

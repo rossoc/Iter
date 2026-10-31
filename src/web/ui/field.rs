@@ -1,9 +1,5 @@
-//! The controls of a form. Every control has a real `<label for>`, its id
-//! derived from its name by [`field_id`], so the form needs no ARIA beyond
-//! `aria-describedby` (hint, error), `aria-invalid` and `aria-required`.
-//!
-//! A control is told the form's error (`error`) and works out for itself
-//! whether it is the one the error is about.
+//! Form controls. Each has a real `<label for>` (id from [`field_id`]), so only
+//! `aria-describedby`, `aria-invalid` and `aria-required` are needed.
 
 use super::empty_line::empty_line;
 use super::form_error::{FormError, is_about};
@@ -25,8 +21,7 @@ pub(super) fn hint_id(id: &str) -> String {
     format!("{id}-hint")
 }
 
-/// The `aria-describedby` of a control: its hint (if it has one) and, when
-/// the form's error is about this control, the error notice.
+/// A control's `aria-describedby`: its hint and, if the error is about it, the error notice.
 fn described_by(id: &str, hint: &str, invalid: bool) -> String {
     let mut ids = Vec::new();
     if !hint.is_empty() {
@@ -38,11 +33,9 @@ fn described_by(id: &str, hint: &str, invalid: bool) -> String {
     ids.join(" ")
 }
 
-/// The text that marks a control the form's error is about, beside its label:
-/// the control's own border is a colour and a thickness, this is the cue
-/// that is neither. It is `aria-hidden` and outside the label: a screen
-/// reader gets `aria-invalid` and the error notice (`aria-describedby`)
-/// instead, and the control's name stays its label.
+/// Cue beside the label for the control the error is about, for those who
+/// cannot rely on the border colour. `aria-hidden` and outside the label, so
+/// screen readers get `aria-invalid` and the error notice instead.
 #[component]
 pub async fn invalid_cue() -> Result<impl View> {
     Ok(view! {
@@ -50,9 +43,7 @@ pub async fn invalid_cue() -> Result<impl View> {
     })
 }
 
-/// A control's label (with the marker of a required one, and the
-/// [`invalid_cue`] beside it when `invalid`) and, under it, its hint. The
-/// control itself is the child.
+/// A control's label (required marker, [`invalid_cue`]) and its hint; the control is the child.
 #[component]
 async fn labelled(
     id: &str,
@@ -80,18 +71,11 @@ async fn labelled(
     })
 }
 
-/// A single-line text control. `identifier` is for a value that is a name,
-/// a path or a template rather than prose: no spelling help, no
-/// capitalization, no autofill (the names of organizations, projects and
-/// tasks are such values too: they are what the CLI addresses them by).
-/// `numeric` brings up the number keypad. `required` is announced and
-/// marked, but left to the server to enforce, so its message is the form's
-/// own. `autofocus` is for the first control of a pop-up (`modal.rs`).
-/// `beside` is a control on the input's line, after it (a button that fills
-/// the field in). `input_type` is `datetime-local` and the like; text when empty. `list` is the id
-/// of a `<datalist>` that suggests values (any text may still be typed); `form`
-/// the id of the form the input belongs to when it sits outside it; `autoload`
-/// has `modal.js` submit that form when the value changes.
+/// A single-line text control. `identifier`: names, paths, templates (no spelling
+/// help, capitalization or autofill). `required` is announced but enforced by the
+/// server. `autofocus` is for a pop-up's first control. `beside` sits after the
+/// input on its line. `input_type` defaults to text. `list` is a `<datalist>` id;
+/// `form` the owning form's id; `autoload` has `modal.js` submit it on change.
 #[component]
 pub async fn field(
     name: &str,
@@ -142,12 +126,8 @@ pub async fn field(
     })
 }
 
-/// A control for a filesystem path, the one place any form asks for one: the
-/// text input of a [`field`] (so a typed path always works) and, on its right,
-/// a folder-icon button that has `path_pick.js` open the system's folder
-/// chooser (`POST /folders/pick`, `folders.rs`) and fill the input. The button
-/// is `hidden` until that script runs, so without script there is no dead
-/// control.
+/// A filesystem path control: a [`field`] plus a folder button that `path_pick.js`
+/// wires to `POST /folders/pick`. The button is `hidden` until the script runs.
 #[component]
 pub async fn path_field(
     name: &str,
@@ -181,8 +161,7 @@ pub async fn textarea(
     #[default] error: Option<&FormError>,
     #[default] required: bool,
     #[default] loaded: &str,
-    // The label stays for screen readers but is not shown: for a lone editor
-    // whose purpose the page already says.
+    // Label kept for screen readers but not shown.
     #[default] hide_label: bool,
 ) -> Result<impl View> {
     let id = field_id(name);
@@ -210,9 +189,7 @@ pub async fn checkbox(name: &str, label: &str, on: bool) -> Result<impl View> {
     })
 }
 
-/// One box of a [`checklist`]: what it posts (`value`), what it is called
-/// (`label`), a `note` beside the label (secondary text, part of the
-/// accessible name; left out when empty) and whether it is `on`.
+/// One box of a [`checklist`]; `note` is secondary text, part of the accessible name.
 pub struct CheckOption {
     pub value: String,
     pub label: String,
@@ -220,12 +197,8 @@ pub struct CheckOption {
     pub on: bool,
 }
 
-/// A group of checkboxes that go together under one `name` (each posts
-/// `name=value`), for a choice of several. A `group` (fieldset, legend
-/// `label`) with the hint and error like the other controls: the fieldset is
-/// described by them, and the group is the control the error is about when
-/// `error` names `name`. With no `options` the group says `empty`. Each
-/// box's id is [`choice_id`].
+/// Checkboxes sharing one `name`, in a fieldset described by the hint and
+/// error; with no `options` it says `empty`. Box ids are [`choice_id`].
 #[component]
 pub async fn checklist(
     name: &str,
@@ -265,8 +238,7 @@ fn choice_id(name: &str, index: usize) -> String {
     format!("{}-{index}", field_id(name))
 }
 
-/// The options of a select that may be left without a choice: `empty`
-/// (value "") first, then `items` as `(id, name)`. Pair it with [`id_text`].
+/// Select options with an optional blank: `empty` (value "") first, then `items` as `(id, name)`.
 pub fn optional_options<'a>(
     empty: &str,
     items: impl IntoIterator<Item = (i64, &'a str)>,
@@ -280,8 +252,7 @@ pub fn optional_options<'a>(
         .collect()
 }
 
-/// The `current` of a select over [`optional_options`]: the id, or "" for
-/// none.
+/// The `current` of a select over [`optional_options`]: the id, or "".
 pub fn id_text(id: Option<i64>) -> String {
     id.map(|id| id.to_string()).unwrap_or_default()
 }

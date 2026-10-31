@@ -2,13 +2,8 @@ use crate::models::Duration;
 use chrono::NaiveDateTime;
 use iter_macros::Table;
 
-/// One stretch of work on a task: a start time, an optional end (`None`
-/// means still open/ongoing), and an optional note. Started/stopped by
-/// `iter session start`/`iter session stop` (manually) or the tmux
-/// `client-attached`/`client-detached` hooks (automatically). Always keyed
-/// by `task_id`, never by `SessionConfig` -- so a project's daily total is
-/// just the union of every task's sessions that day, independent of how
-/// many tmux sessions came and went (see
+/// One stretch of work on a task; `end` of `None` means still open. Keyed by `task_id`, never
+/// `SessionConfig`, so a day's total is the union of a project's task sessions (see
 /// `crate::reporting::merged_total_minutes`).
 #[derive(Debug, Clone, PartialEq, Table)]
 #[table(name = "sessions")]
@@ -23,31 +18,24 @@ pub struct Session {
 }
 
 impl Session {
-    /// The shortest stretch of work worth keeping. Anything shorter is an
-    /// attach/detach blip -- a quick look at a tmux session, a start undone
-    /// by a stop -- not work, and is never stored (see
+    /// The shortest stretch worth keeping; shorter is an attach/detach blip, never stored (see
     /// `utils::clock::close_open_session`).
     pub const MIN_SECONDS: i64 = 60;
 
-    /// Whether this session, ended at `end`, is too short to keep.
     pub fn too_short(&self, end: NaiveDateTime) -> bool {
         (end - self.start).num_seconds() < Self::MIN_SECONDS
     }
 
-    /// Whether this session is still open, i.e. has no `end` recorded yet.
     pub fn is_ongoing(&self) -> bool {
         self.end.is_none()
     }
 
-    /// Minutes spent in this session, measured against `end` when closed,
-    /// or against `now` when still ongoing. Never negative.
+    /// Minutes against `end`, or `now` when open. Never negative.
     pub fn duration_minutes(&self, now: NaiveDateTime) -> i64 {
         let end = self.end.unwrap_or(now);
         (end - self.start).num_minutes().max(0)
     }
 
-    /// [`Self::duration_minutes`] as `hh:mm`: the one way a session's length
-    /// is written (reports, the task page).
     pub fn duration_text(&self, now: NaiveDateTime) -> String {
         Duration(self.duration_minutes(now)).to_string()
     }
@@ -70,7 +58,6 @@ mod tests {
         assert_eq!(s.duration_text(at("2025-03-09 00:00")), "01:30");
         s.end = None;
         assert_eq!(s.duration_text(at("2025-03-03 09:05")), "00:05");
-        // Never negative.
         assert_eq!(s.duration_text(at("2025-03-03 08:00")), "00:00");
     }
 }

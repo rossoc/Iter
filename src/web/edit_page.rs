@@ -1,11 +1,4 @@
-//! The skeleton every edit (and create) page shares: frame, page header with
-//! the breadcrumb, the form with its error box, the Name and Description
-//! controls every entity has, and Save / Cancel. A page supplies only what
-//! is its own -- the crumbs, and the controls that come between Description
-//! and the buttons (a relation, then Settings) -- as the child nodes.
-//!
-//! It lives here and not in `ui/` because it knows the forms' shared field
-//! names (`forms::NAME`, `DESCRIPTION`); `ui/` knows no page code.
+//! The skeleton of every edit and create page: frame, header, form with error box, Name and Description, Save / Cancel.
 
 use super::forms::{DESCRIPTION, NAME};
 use super::ui::breadcrumb::Crumb;
@@ -20,9 +13,6 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// The heading and the document title's parts of the page: "Edit {subject}"
-/// for an edit, "New {kind}" for a create (`subject` is then what the new
-/// one goes in).
 fn heading(kind: &str, subject: &str, creating: bool) -> (String, [String; 2]) {
     if creating {
         let title = format!("New {kind}");
@@ -35,9 +25,6 @@ fn heading(kind: &str, subject: &str, creating: bool) -> (String, [String; 2]) {
     }
 }
 
-/// The tab row of a page seen from its Settings tab: the tabs `entries`
-/// names (label, link, badge: the counts the page itself shows), then
-/// Settings, marked.
 pub fn settings_row(base: &str, entries: &[(&'static str, String, Option<usize>)]) -> Vec<Tab> {
     entries
         .iter()
@@ -52,9 +39,7 @@ pub fn settings_row(base: &str, entries: &[(&'static str, String, Option<usize>)
         .collect()
 }
 
-/// The frame, titled `head - subject - iter`. (A component only so the two
-/// parts can be borrowed from its parameters: `frame` takes a slice of
-/// `&str`.)
+/// A component only so the two parts can borrow from its parameters (`frame` takes `&str`s).
 #[component]
 async fn titled(
     head: &str,
@@ -69,14 +54,6 @@ async fn titled(
     })
 }
 
-/// `kind` is what the page edits ("organization"); `subject` its stored name
-/// (not what was typed), which the title uses. `name` and `description` are
-/// what the form shows. `crumbs` is where the page sits (`crumbs::trail`, or the board's own);
-/// `action` is where the form posts and `cancel` where Cancel goes. `error`
-/// is the refusal, if any. `creating` is for a new entity: the heading is
-/// "New {kind}", and `submit_label` names the button. `current` is the `href`
-/// of the top bar item the page belongs to (Board pages), if any. `sections` is
-/// the tab row of the page the form is the Settings tab of (an edit only).
 #[component]
 pub async fn edit_page(
     kind: &str,

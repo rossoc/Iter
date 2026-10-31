@@ -6,14 +6,11 @@ pub fn git(target: &Target, args: &[&str]) -> Result<String> {
     process::output("git", Some(&target.notes_dir.display().to_string()), args)
 }
 
-/// One page of the wiki that differs from the last commit.
 #[derive(Debug, PartialEq)]
 pub struct Change {
     /// Relative to the notes folder (`wiki/ideas/x.md`).
     pub path: String,
-    /// `new`, `changed` or `deleted`.
     pub kind: &'static str,
-    /// A unified diff; for a new file, all of it as added lines.
     pub diff: String,
 }
 
@@ -22,10 +19,7 @@ pub fn literal(path: &str) -> String {
     format!(":(literal){path}")
 }
 
-/// The pages (`.md`) under `wiki/` that are not committed, by path. What an
-/// agent writes is pages; the settings and the ontology extension in the same
-/// folder are the user's own and are not listed. Nothing is written, not even
-/// git's index.
+/// The uncommitted pages (`.md`) under `wiki/`, by path; the user's settings and ontology extension are not listed. Writes nothing, not even git's index.
 pub fn changes(target: &Target) -> Result<Vec<Change>> {
     // the notes folder may be inside a bigger repository: git reports paths
     // from the repository's root
@@ -80,16 +74,12 @@ pub fn changes(target: &Target) -> Result<Vec<Change>> {
     Ok(out)
 }
 
-/// What the wiki of a project has that nobody has accepted, and what is
-/// still to be ingested: the page of a task shows it.
 pub struct Review {
     pub changes: Vec<Change>,
     pub waiting: Vec<ingest::Waiting>,
     pub mode: Mode,
-    /// Whether the notes folder is in a git repository (else there is
-    /// nothing to review against, and an ingest is refused).
+    /// Whether the notes folder is in a git repository (else nothing to review against and an ingest is refused).
     pub in_git: bool,
-    /// An agent is writing in the wiki now.
     pub busy: bool,
     pub notes_dir: PathBuf,
 }
@@ -111,8 +101,7 @@ pub fn review(db: &Db, project: &Project) -> Result<Review> {
     })
 }
 
-/// Commits (`accept`) or throws away the pages that are pending under
-/// `wiki/` -- those and no other file. The paths it touched.
+/// Commits (`accept`) or discards the pending pages under `wiki/`, and no other file; returns the paths touched.
 pub fn settle(db: &Db, project: &Project, accept: bool) -> Result<Vec<String>> {
     let target = Target::new(db, project.clone())?;
     target.require_git()?;

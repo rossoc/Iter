@@ -1,8 +1,4 @@
-//! The inputs of the Settings group, shared by the organization and project
-//! forms: `SettingsForm` read back, and the write-side twin of
-//! `settings_panel.rs`. The names are `SettingsForm`'s. The hints follow the
-//! pattern of every form: what it is, then "Leave empty for X" when empty is
-//! allowed.
+//! The inputs of the Settings group shared by the organization and project forms: the write-side twin of `settings_panel.rs`.
 
 use super::forms::SettingsForm as S;
 use super::ui::field::{checkbox, field};

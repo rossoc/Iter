@@ -8,8 +8,6 @@ use crate::error::Result;
 use crate::md_edit::{edit_in_editor, edited, no_changes};
 use crate::models::{Editable, GroupEdit, Named, Project, ProjectGroup};
 
-/// `iter <entity> new`: opens `template`, validates what comes back and
-/// inserts it.
 pub(crate) fn create<T: Named + Editable>(db: &Db, template: &T) -> Result<()> {
     edited(template, T::KIND, "created", |mut item| {
         item.validate()?;
@@ -18,14 +16,9 @@ pub(crate) fn create<T: Named + Editable>(db: &Db, template: &T) -> Result<()> {
     })
 }
 
-/// `iter <entity> edit`: opens `existing`, lets `fixup` restore what the
-/// buffer doesn't carry (and refuse what it mustn't change), validates and
-/// writes it back over the same row.
-///
-/// `pending` says `existing` already differs from the stored row in a way
-/// the buffer can't show -- a field set from a command-line flag, like
-/// `project edit --board`. Quitting the editor without changes then still
-/// saves `existing`, rather than dropping the flag as "no changes".
+/// `iter <entity> edit`: `fixup` restores what the buffer doesn't carry (or refuses changes).
+/// `pending` says `existing` already differs from the stored row in a way the buffer can't show
+/// (a flag like `project edit --board`), so quitting without changes still saves it.
 pub(crate) fn update<T: Named + Editable + Clone>(
     db: &Db,
     existing: &T,
@@ -47,9 +40,7 @@ pub(crate) fn update<T: Named + Editable + Clone>(
     Ok(())
 }
 
-/// `iter board edit`/`iter organization edit`: edits the group and its
-/// roster together -- the buffer lists the projects in it by name, and
-/// saving makes that list the membership.
+/// Edits a group and its roster together; saving makes the listed projects the membership.
 pub(crate) fn update_group<G: ProjectGroup + Table + Editable>(db: &Db, existing: G) -> Result<()> {
     let id = existing.id();
     let projects = db
@@ -72,9 +63,8 @@ pub(crate) fn update_group<G: ProjectGroup + Table + Editable>(db: &Db, existing
     })
 }
 
-/// Deletes a board/organization row only. Its projects survive -- the
-/// schema's `ON DELETE SET NULL` just detaches them -- and the message says
-/// how many were kept.
+/// Deletes a board/organization row only; `ON DELETE SET NULL` detaches its projects, and the
+/// message says how many.
 pub(crate) fn delete_group<G: ProjectGroup>(db: &Db, group: &G) -> Result<()> {
     let id = group.id();
     let kept = db.projects_in::<G>(id)?.len();

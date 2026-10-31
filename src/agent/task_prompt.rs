@@ -1,6 +1,4 @@
-//! The prompt that sends an agent to work on a task: which task, which
-//! template, what the project's wiki adds. Shared by the command line and the
-//! web page; neither prints or renders anything here.
+//! The prompt that sends an agent to work on a task; shared by the CLI and the web page.
 
 use crate::agent::error::AgentError;
 use crate::agent::prompt::{self, Context, Kind};
@@ -13,17 +11,13 @@ use crate::notes;
 use crate::utils::resolve::{resolve_task_or_current, task_display};
 use std::path::{Path, PathBuf};
 
-/// The task a command is about, with its project and its folder.
 pub fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)> {
     let (project, task) = resolve_task_or_current(&app.db, task)?;
     let dir = taskdir::of(&app.db, &project, &task)?;
     Ok((project, task, dir))
 }
 
-/// What the project's wiki knows that bears on the task, as a few lines for
-/// the prompt. This is the only place the agent side reaches for the wiki:
-/// to use another source of knowledge, change this function. It never fails
-/// the prompt: no wiki, nothing found or any error all give no text.
+/// What the project's wiki knows about the task, for the prompt. The only place the agent side reaches for the wiki; never fails: any problem gives no text.
 fn onboarding(app: &App, project: &Project, task: &Task) -> String {
     use crate::wiki::{retrieve, scope};
     let spec = scope::Spec {
@@ -57,8 +51,7 @@ fn onboarding(app: &App, project: &Project, task: &Task) -> String {
     lines.join("\n")
 }
 
-/// The words of a task worth looking up: its name and the start of its
-/// description, lowercased, short words dropped, at most a dozen.
+/// Words worth looking up: name and start of description, lowercased, short words dropped, at most a dozen.
 fn keywords(name: &str, description: &str) -> String {
     let start: String = description.chars().take(300).collect();
     let mut words: Vec<String> = Vec::new();
@@ -74,8 +67,7 @@ fn keywords(name: &str, description: &str) -> String {
     words.join(" ")
 }
 
-/// The folders that may hold an `instructions/<kind>.md` for this task, nearest
-/// first: the task's, its project's notes, its organization's notes.
+/// Folders that may hold `instructions/<kind>.md`, nearest first.
 fn override_dirs(app: &App, project: &Project, dir: &TaskDir) -> Result<Vec<PathBuf>> {
     let org = match project.organization_id {
         Some(id) => app.db.get::<Organization>(id)?,
@@ -84,14 +76,11 @@ fn override_dirs(app: &App, project: &Project, dir: &TaskDir) -> Result<Vec<Path
     let mut dirs = vec![dir.root().to_path_buf()];
     dirs.extend(notes::project_dir(project, &org));
     dirs.extend(org.as_ref().and_then(notes::org_dir));
-    // what every project of the user shares: iter's own config folder
     dirs.extend(crate::config::config_dir().ok());
     Ok(dirs)
 }
 
-/// The prompt of `kind` for the task: the template (`template` if given,
-/// else the nearest override, else the built-in one) filled from the task and
-/// the plan, with `onboarding` from the wiki if asked.
+/// The prompt of `kind`: `template`, else the nearest override, else the built-in, filled from the task and plan.
 pub fn prompt_text(
     app: &App,
     task: Option<&str>,
@@ -102,10 +91,7 @@ pub fn prompt_text(
     prompt_for(app, task, kind, template, onboarding_wanted, None, false)
 }
 
-/// As [`prompt_text`], with `description` told to the agent in place of the
-/// task's own (`solve` lets it be edited for one run). `defer_worktree` keeps
-/// `{{worktree}}` in the text when the task has no worktree yet: a prompt that
-/// is shown and edited before its run begins does not know where that will be.
+/// As [`prompt_text`] with `description` in place of the task's; `defer_worktree` keeps `{{worktree}}` when there is no worktree yet.
 pub fn prompt_for(
     app: &App,
     task: Option<&str>,
@@ -116,7 +102,7 @@ pub fn prompt_for(
     defer_worktree: bool,
 ) -> Result<String> {
     let (project, task, dir) = locate(app, task)?;
-    // an agent following the prompt writes sketches here: have the folder
+    // the folder the agent writes sketches in must exist
     dir.ensure()?;
     let plan_text = dir.read_plan()?;
     let worktree = app
@@ -163,7 +149,6 @@ mod tests {
     use crate::fixtures;
     use std::path::PathBuf;
 
-    /// An app with the project `app` (notes in a scratch folder) and its task `Fix it`.
     fn world(name: &str) -> (App, PathBuf) {
         let world = fixtures::world(&format!("agentcmd-{name}"));
         (App::with_db(world.db), world.notes)
@@ -186,7 +171,6 @@ mod tests {
         assert!(text.contains("(there is no plan yet)"));
         assert!(text.contains(&notes.join("tasks/1/sketches").display().to_string()));
         assert!(!text.contains("{{"));
-        // the folder the agent is told to write sketches in exists
         assert!(notes.join("tasks/1/sketches").is_dir());
 
         save_plan(
@@ -227,7 +211,6 @@ mod tests {
             prompt_text(&app, Some("app/Fix it"), Kind::Plan, None, false).unwrap(),
             "Plan Fix it as a haiku."
         );
-        // the other kinds are still built in
         assert!(
             prompt_text(&app, Some("app/Fix it"), Kind::Fix, None, false)
                 .unwrap()
@@ -239,7 +222,6 @@ mod tests {
             e.to_string().contains("unknown placeholder {{task.nmae}}"),
             "{e}"
         );
-        // an explicit template beats the override
         let file = notes.join("mine.md");
         std::fs::write(&file, "mine: {{task}}").unwrap();
         assert_eq!(
@@ -254,11 +236,9 @@ mod tests {
         let project = db.insert(&fixtures::project("bare")).unwrap();
         fixtures::add_task(&db, project, "x");
         let app = App::with_db(db);
-        // only looked at: nothing is written to the real config folder here
         let (_, _, dir) = locate(&app, Some("bare/x")).unwrap();
         assert!(dir.root().starts_with(crate::config::config_dir().unwrap()));
         assert!(dir.root().ends_with("tasks/1"));
-        // a task by its number, as an agent says it
         assert_eq!(locate(&app, Some("1")).unwrap().1.name, "x");
         assert!(locate(&app, Some("99")).is_err());
         let e = locate(&app, Some("bare/missing")).unwrap_err();

@@ -1,10 +1,5 @@
-//! `mv`: renaming a file inside its level without breaking what points at it.
-//!
-//! Ids are paths, so moving a page (which changes its class when the folder
-//! changes) must rewrite every reference to it: the front matter values and
-//! `[[links]]` of the pages that resolve to it. Each reference keeps its
-//! spelling: a level prefix stays, and so does a missing `wiki/`. Raw notes
-//! are the user's and are never rewritten.
+//! `mv`: renames a file inside its level and rewrites every reference to it (front matter values and `[[links]]`),
+//! each keeping its spelling. Raw notes are never rewritten.
 
 use super::graph::Wiki;
 use crate::agent::taskdir::write_atomic;
@@ -26,7 +21,6 @@ pub struct Moved {
     pub rewrites: Vec<Rewrite>,
 }
 
-/// `target`, which names `old_rel` in `label`'s level, as it names `new_rel`.
 fn respell(target: &str, label: &str, old_rel: &str, new_rel: &str) -> String {
     let (prefix, rest) = match target.split_once(':') {
         Some((l, r)) if l == label => (format!("{l}:"), r),
@@ -49,8 +43,6 @@ fn path_char(c: char) -> bool {
     c.is_alphanumeric() || "_./:-".contains(c)
 }
 
-/// `text` with each whole-word `old` replaced by `new`: not part of a longer
-/// path. How many were replaced.
 fn replace_token(text: &str, old: &str, new: &str) -> (String, usize) {
     let (mut out, mut from, mut n) = (String::new(), 0, 0);
     while let Some(found) = text[from..].find(old) {
@@ -72,7 +64,6 @@ fn replace_token(text: &str, old: &str, new: &str) -> (String, usize) {
     (out, n)
 }
 
-/// The `[[target]]`s of `body` that are `old`, rewritten.
 fn replace_links(body: &str, old: &str, new: &str) -> (String, usize) {
     let (mut out, mut rest, mut n) = (String::new(), body, 0);
     while let Some(open) = rest.find("[[") {
@@ -98,8 +89,6 @@ fn replace_links(body: &str, old: &str, new: &str) -> (String, usize) {
     (out, n)
 }
 
-/// `content` with the references in `renames` (`old spelling -> new`)
-/// rewritten in the front matter and in the links of the body.
 fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
     let (head, yaml, body) = match content.strip_prefix("---\n").and_then(split_at_divider) {
         Some((yaml, body)) => ("---\n", yaml.to_string(), body.to_string()),
@@ -118,8 +107,7 @@ fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
     }
 }
 
-/// Moves `node` to the path `to` (no `.md`) in its own level and rewrites the
-/// references to it. With `dry_run`, only says what it would do.
+/// Moves `node` to path `to` (no `.md`) in its level and rewrites references; `dry_run` only says what it would do.
 pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
     let n = &wiki.nodes[node];
     let level = &wiki.levels[n.level];
@@ -166,7 +154,6 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
         return Err(failed(format!("{} already exists", target.display())));
     }
 
-    // what refers to it, and how each spells it
     let mut plans = Vec::new();
     for (i, page) in wiki.nodes.iter().enumerate() {
         let Some(front) = &page.front else {
@@ -209,14 +196,11 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
         std::fs::rename(&n.path, &target)?;
         let mut written: Vec<(PathBuf, String)> = Vec::new();
         for (path, original, content) in edits {
-            // the moved file itself may refer to itself
             let path = if path == n.path { target.clone() } else { path };
             match write_atomic(&path, &content) {
                 Ok(()) => written.push((path, original)),
                 Err(e) => {
-                    // Half a move leaves references that dangle: put back
-                    // what was changed, as far as that works, and report the
-                    // original error.
+                    // half a move leaves dangling references: put back what was changed, report the original error
                     for (done, original) in written {
                         let _ = write_atomic(&done, &original);
                     }
@@ -233,8 +217,6 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
     })
 }
 
-/// The spellings in `page` (front matter `targets` and body links) that name
-/// `node`, with how they are written once it is at `new_rel`.
 fn collect(
     wiki: &Wiki,
     page: &super::graph::Node,
@@ -303,7 +285,6 @@ mod tests {
         assert_eq!(moved.to, "wiki/syntheses/backoff");
         let mut ids: Vec<_> = moved.rewrites.iter().map(|r| r.id.as_str()).collect();
         ids.sort();
-        // the idea's body link, the org entity's prefixed link, the sketch's `ref`
         assert_eq!(
             ids,
             [
@@ -326,7 +307,6 @@ mod tests {
         let sketch = std::fs::read_to_string(app.join("tasks/7/sketches/s.md")).expect("sketch");
         assert!(sketch.contains("ref: syntheses/backoff"), "{sketch}");
 
-        // the graph is whole again: only the link that was already broken is left
         let again = build(&root);
         assert_eq!(again.dangling.len(), 1);
         assert_eq!(again.dangling[0].target, "missing");

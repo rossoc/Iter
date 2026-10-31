@@ -1,6 +1,4 @@
-//! What a board's cards show: the mapping from [`Card`]s and the board's
-//! priority colors to `ui::task_card::CardView`, shared by the agenda and
-//! the matrix. `ui/` takes no models, so it happens here.
+//! Maps [`Card`]s and the board's priority colors to `ui::task_card::CardView` (`ui/` takes no models).
 
 use super::ui::task_card::{CardAction, CardView, Edge};
 use super::url::task_url;
@@ -8,28 +6,21 @@ use crate::db::{Db, Table};
 use crate::error::Result;
 use crate::models::{Card, TaskStatus, is_hex_color};
 
-/// The hint of a board with no unfinished task (`ui::empty_state`, with the
-/// board icon), on either page.
 pub const BOARD_EMPTY: &str =
     "No unfinished tasks yet. Add some to the board's projects, and they show up here.";
 
-/// The colors of the Urgent and Important tags: what the board draws with.
-/// Both tags are seeded and can't be deleted.
 pub struct Colors {
     urgent: String,
     important: String,
 }
 
 impl Colors {
-    /// Both colors in one query.
     pub fn load(db: &Db) -> Result<Colors> {
         let (urgent, important) = db.priority_colors()?;
         Ok(Colors { urgent, important })
     }
 
-    /// The custom properties the cards' edges use (`--urgent`,
-    /// `--important`); a color that is not a `#rrggbb` is left out (the
-    /// edge then falls back to a neutral one).
+    /// Custom properties for the cards' edges; a color that is not `#rrggbb` is left out.
     pub fn style(&self) -> String {
         let mut style = String::new();
         for (name, color) in [("urgent", &self.urgent), ("important", &self.important)] {
@@ -46,19 +37,14 @@ impl Colors {
     }
 }
 
-/// The clock format of the cards and the now line.
 pub const CLOCK_FMT: &str = "%H:%M";
 
-/// What every card of a board page shares: the task being moved (the pick
-/// mode), which its card marks.
 #[derive(Clone, Copy)]
 pub struct CardCtx {
     pub picked: Option<i64>,
 }
 
 impl CardCtx {
-    /// The card of a board: the one builder the agenda and the matrix
-    /// share. `label` and `href` are its own link (see `CardAction`).
     pub fn view<'a>(&self, card: &'a Card, label: &'static str, href: String) -> CardView<'a> {
         let Card {
             label: title,

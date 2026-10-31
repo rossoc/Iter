@@ -1,9 +1,4 @@
-//! What can go wrong in the agent workflow, as a type of its own.
-//!
-//! Every message here is the one the CLI and the pages have always shown;
-//! the point of the type is that a caller can now tell a busy run from a
-//! missing one without reading the text. It converts into [`IterError`] with
-//! `?` (see `IterError::Agent`), which prints it unchanged.
+//! Errors of the agent workflow; they convert into [`IterError`] with `?` and print unchanged.
 
 use crate::agent::plan::MarkError;
 use std::path::PathBuf;
@@ -16,12 +11,10 @@ pub enum AgentError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    // ---- runs
     #[error("no such run")]
     RunNotFound(u32),
     #[error("the run vanished")]
     RunVanished(u32),
-    /// Another run of the same task is still working.
     #[error("run {run} is still working on '{task}': wait for it, or stop it first")]
     RunBusy { run: u32, task: String },
     #[error("run {run} is {status}, not queued")]
@@ -39,13 +32,11 @@ pub enum AgentError {
     #[error("{0} is not a git repository")]
     NotAGitRepo(String),
 
-    // ---- the buffer `solve` opens
     #[error("the buffer lost its front matter (the lines between `---`)")]
     BufferLostFront,
     #[error("front matter: {0}")]
     BufferFront(serde_yaml::Error),
 
-    // ---- plans
     #[error("the plan is empty: nothing was saved")]
     EmptyPlan,
     #[error("there is no plan yet: write one with `iter task plan`")]
@@ -55,7 +46,6 @@ pub enum AgentError {
     #[error("`{0}` is not a state: todo, doing or done")]
     UnknownState(String),
 
-    // ---- prompts and instructions
     #[error("cannot read {}: {source}", .path.display())]
     TemplateUnreadable {
         path: PathBuf,
@@ -86,11 +76,8 @@ pub enum AgentError {
     #[error("{0}")]
     Yaml(serde_yaml::Error),
 
-    // ---- the wiki
-    /// An agent holds the wiki's lock.
     #[error("an agent is already writing in this wiki")]
     WikiBusy,
-    /// Its changes are being settled while an agent is still writing.
     #[error("an agent is writing in the wiki: wait for it to finish")]
     WikiWriting,
     #[error("an ingest is already running")]
@@ -115,8 +102,7 @@ mod tests {
     use super::*;
     use crate::error::IterError;
 
-    /// The messages are part of the interface: the CLI prints them and the
-    /// pages show them.
+    /// Messages are shown verbatim by the CLI and the pages.
     #[test]
     fn messages_read_as_they_always_have() {
         let busy = AgentError::RunBusy {

@@ -1,6 +1,4 @@
-//! The task page (`/task/{id}`), the sibling of the project page: the route,
-//! the loading (`load`) and the view. Nothing here has rules of its own: it
-//! is all shared components (`ui/`).
+//! The task page (`/task/{id}`): route, loading and view, built from shared components.
 
 use super::Id;
 use super::crumbs::trail;
@@ -38,19 +36,13 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(show)
 }
 
-/// What the task page shows.
 pub struct Loaded {
     pub task: Task,
     pub parents: Parents,
-    /// By start, oldest first (the database's order).
     pub sessions: Vec<Session>,
-    /// By name.
     pub tags: Vec<Tag>,
 }
 
-/// Loads task `id`: its project, the project's organization (only when it
-/// has one), its tags and its sessions. Five lookups by key or index, none
-/// per row.
 pub fn load(db: &Db, id: i64) -> Result<Loaded> {
     let task = db.get::<Task>(id)?.ok_or_not_found()?;
     let parents = parents_of(db, task.project_id)?;
@@ -71,7 +63,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let section = TaskSection::of(query.tab.as_deref());
     let db = open_db()?;
     let page = load(&db, id)?;
-    // the plan and the folder are read only for the tab that shows them
     let agent = match section {
         TaskSection::Agent => {
             // the prompts of a new agent are made with the commands' own code, which wants an app
@@ -98,7 +89,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
         TaskSection::Wiki => Some(task_wiki::load(&db, &page.parents.project, &page.task)),
         _ => None,
     };
-    // the notes and the sketches are the task folder's, read for their own tabs
     let files = match section {
         TaskSection::Notes | TaskSection::Wiki => {
             Some(task_agent::files(&db, &page.parents.project, &page.task))
@@ -118,9 +108,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
     })
 }
 
-/// The Sessions block: the table, or "No sessions yet.". Oldest first, the order
-/// the work happened in (the database's order): a log reads downward, and the
-/// open session, if any, is the last row.
+/// Oldest first, the order the work happened in: the open session, if any, is the last row.
 #[component]
 async fn sessions_block(
     task: &Task,
@@ -138,7 +126,6 @@ async fn sessions_block(
     })
 }
 
-/// The Info tab: the description, the Details aside.
 #[component]
 async fn task_info(
     task: &Task,

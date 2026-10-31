@@ -3,18 +3,13 @@
 
 use crate::models::{Card, Priority, Task};
 
-/// One quadrant: what a drop on it posts, the flags it stands for and its
-/// words. The order is the reading order (row by row: 1 2 / 3 4).
+/// The order is the reading order (row by row: 1 2 / 3 4).
 pub struct Quadrant {
-    /// What `board.js` posts as the drop's target.
     pub target: &'static str,
-    /// The heading's id.
     pub id: &'static str,
     pub flags: Priority,
     pub name: &'static str,
-    /// What puts a task here, in words.
     pub rule: &'static str,
-    /// The line shown when it holds no card.
     pub empty: &'static str,
 }
 
@@ -22,10 +17,7 @@ const fn flags(urgent: bool, important: bool) -> Priority {
     Priority { urgent, important }
 }
 
-/// The flags of quadrant `n` (an index into [`QUADRANTS`]) and, the other way,
-/// [`quadrant_index`]: the two halves of one rule, kept side by side. The
-/// bits are "not urgent" (1) and "not important" (2), so the reading order
-/// is: both (0), important (1), urgent (2), neither (3).
+/// The flags of quadrant `n` and, the other way, [`quadrant_index`]: two halves of one rule. The bits are "not urgent" (1) and "not important" (2).
 const fn flags_at(n: usize) -> Priority {
     flags(n & 1 == 0, n & 2 == 0)
 }
@@ -65,14 +57,10 @@ pub const QUADRANTS: [Quadrant; 4] = [
     },
 ];
 
-/// The quadrant a priority belongs to (an index into [`QUADRANTS`]): the
-/// two flags are the two bits, no scan of the table.
 pub fn quadrant_index(priority: Priority) -> usize {
     usize::from(!priority.urgent) | usize::from(!priority.important) << 1
 }
 
-/// A board's unfinished cards: those not placed yet and, for each quadrant,
-/// those placed in it.
 #[derive(Default)]
 pub struct Matrix {
     pub waiting: Vec<Card>,
@@ -80,15 +68,11 @@ pub struct Matrix {
 }
 
 impl Matrix {
-    /// No card at all: the board has no unfinished task.
     pub fn is_empty(&self) -> bool {
         self.waiting.is_empty() && self.placed.iter().all(Vec::is_empty)
     }
 }
 
-/// Sorts `cards` (already in list order) in one pass: a placed card goes to
-/// the quadrant its flags say, any other to the waiting list. Each keeps its
-/// place in the list order.
 pub fn split(cards: Vec<Card>) -> Matrix {
     let mut out = Matrix::default();
     for card in cards {
@@ -104,8 +88,6 @@ pub fn split(cards: Vec<Card>) -> Matrix {
     out
 }
 
-/// Applies a matrix drop. `target` is `left` (back to the side list, flags
-/// untouched) or a quadrant, whose flags the task then gets.
 pub fn place(task: &mut Task, target: &str) -> Result<Option<Priority>, String> {
     if target == "left" {
         task.matrix_placed = false;

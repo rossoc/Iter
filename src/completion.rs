@@ -1,25 +1,14 @@
-//! Shell completion callbacks, wired to the CLI by `ArgValueCompleter` in
-//! [`crate::args`].
-//!
-//! They live in their own module rather than beside the commands because
-//! `args` needs to name them: with them in the binary root, the CLI
-//! *definition* had to import from the crate root that in turn imports it.
-//!
-//! Every one of them answers on a keystroke and has nowhere to report a
-//! failure to, so each asks the database for exactly the strings it will
-//! offer -- never a listing per project -- and treats any error as "nothing
-//! to offer here".
+//! Shell completion callbacks, wired by `ArgValueCompleter` in [`crate::args`]. They answer on a
+//! keystroke with nowhere to report failure, so each queries exactly the strings it offers and treats
+//! any error as no candidates. Kept out of the binary root so `args` can name them without a cycle.
 
 use crate::db::{Db, open_db};
 use crate::error::Result;
 use crate::models::{Board, Organization, Project, Tag, TaskStatus};
 use clap_complete::engine::CompletionCandidate;
 
-/// The candidates a completer offers, out of the names `names` produces.
-///
-/// Every failure is silently no candidates: non-UTF-8 input, an unreadable
-/// database and an empty table all mean the same thing to a shell waiting
-/// on a TAB.
+/// The candidates out of `names`. Every failure (non-UTF-8 input, unreadable database, empty
+/// table) is no candidates.
 fn candidates(
     current: &std::ffi::OsStr,
     names: impl FnOnce(&Db) -> Result<Vec<String>>,
@@ -37,23 +26,18 @@ fn candidates(
         .collect()
 }
 
-/// Dynamic completer for arguments naming a project (`project edit/delete/info`,
-/// `task new --project`).
 pub(crate) fn project_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     candidates(current, Db::names::<Project>)
 }
 
-/// Dynamic completer for arguments naming a board.
 pub(crate) fn board_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     candidates(current, Db::names::<Board>)
 }
 
-/// Dynamic completer for arguments naming a tag.
 pub(crate) fn tag_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     candidates(current, Db::names::<Tag>)
 }
 
-/// Dynamic completer for arguments naming an organization.
 pub(crate) fn organization_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     candidates(current, Db::names::<Organization>)
 }
@@ -68,15 +52,12 @@ fn task_completer_at(
     candidates(current, |db| db.task_refs(None, statuses))
 }
 
-/// Dynamic completer for arguments naming any task.
 pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     task_completer_at(current, &[])
 }
 
-/// Dynamic completer for `task pull/push --task`, which takes a bare task
-/// name rather than a `<project>/<task>` pair -- the project is already the
-/// positional argument. Completion can't see that positional, so this
-/// offers every task name there is and leaves narrowing to what you type.
+/// For `task pull/push --task`, a bare name: completion can't see the project positional, so it
+/// offers every name.
 pub(crate) fn task_name_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     candidates(current, Db::task_names)
 }

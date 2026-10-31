@@ -10,7 +10,6 @@ use crate::notes;
 use crate::utils::resolve::resolve_project_or_current;
 use std::path::PathBuf;
 
-/// The folder the notes of `scope` are in.
 fn dir(app: &App, scope: &NotesScope) -> Result<PathBuf> {
     let db = &app.db;
     let found = match &scope.org {

@@ -27,17 +27,14 @@ mod tests;
 
 pub(crate) use sqltypes::datetime;
 
-/// How many names one `ids_by_name` query binds (older SQLite builds allow
-/// 999 bound variables).
+/// Names bound per `ids_by_name` query (older SQLite allows 999 variables).
 const NAME_CHUNK: usize = 500;
 
 /// The condition of the unfinished tasks (a task is finished when `done`).
 const NOT_DONE: &str = "status <> 'done'";
 
-/// The write error `error` to table `table` is: a `UNIQUE` violation (by
-/// SQLite's extended result code, not its message) on one of the tables with
-/// a unique name is [`IterError::NameTaken`]; anything else is a database
-/// error.
+/// A `UNIQUE` violation (by extended result code, not message) on a unique-name table is
+/// [`IterError::NameTaken`]; anything else is a database error.
 fn write_error(error: rusqlite::Error, table: &str) -> IterError {
     let unique = matches!(
         &error,
@@ -69,8 +66,7 @@ fn str_to_dt(s: &str) -> chrono::ParseResult<NaiveDateTime> {
     NaiveDateTime::parse_from_str(s, DATETIME_FMT)
 }
 
-/// `ids` as a JSON array, for a `json_each` subquery: one bound variable
-/// however many ids there are.
+/// `ids` as a JSON array for `json_each`: one bound variable however many ids.
 fn json_ids(ids: &[i64]) -> String {
     format!(
         "[{}]",
@@ -78,17 +74,9 @@ fn json_ids(ids: &[i64]) -> String {
     )
 }
 
-/// The half-open `[from 00:00:00, to+1day 00:00:00)` window a date range
-/// covers, as the text `start` is stored in.
-///
-/// Half-open on purpose: an inclusive `<= to 23:59:59` would drop a session
-/// started later in that final second if the stored format ever gained
-/// sub-second precision. An absent `from` reaches back to the beginning of
-/// time, which is what an open-ended range means.
-///
-/// Comparing these as text is exact rather than lucky: [`DATETIME_FMT`] is
-/// fixed-width and zero-padded, so lexicographic order *is* chronological
-/// order.
+/// The half-open `[from 00:00:00, to+1day 00:00:00)` window of a date range, as stored text.
+/// Half-open so no sub-second tail is dropped; an absent `from` is open-ended. Text comparison
+/// is exact because [`DATETIME_FMT`] is fixed-width and zero-padded.
 fn range_bounds(from: Option<NaiveDate>, to: NaiveDate) -> (String, String) {
     let lower = from.map_or_else(
         || "0000-01-01 00:00:00".to_string(),
@@ -101,24 +89,13 @@ fn range_bounds(from: Option<NaiveDate>, to: NaiveDate) -> (String, String) {
     (lower, upper)
 }
 
-/// How one type is laid out in SQLite: which table it lives in, which
-/// columns it writes, how a row is read back, and how an instance is bound
-/// for writing. `Db`'s generic CRUD methods below derive every statement
-/// (`SELECT`/`INSERT`/`UPDATE`/`DELETE`) from these items, so no CRUD SQL
-/// is written by hand per table.
-///
-/// Don't implement this by hand -- put `#[derive(Table)]` on the struct.
-/// The derive reads the columns off the struct's own fields, so `COLUMNS`,
-/// the column indices `from_row` reads and the order `values` binds all
-/// come from one place and cannot drift; there is no column list to
-/// maintain alongside the struct at all.
+/// A type's SQLite layout: table, writable columns, row reader and bound values. `Db`'s
+/// generic CRUD derives every statement from these. Use `#[derive(Table)]`, which reads the
+/// columns off the struct fields so they cannot drift.
 pub(crate) trait Table: Sized {
-    /// The table this type is stored in.
     const NAME: &'static str;
 
-    /// The writable columns, in the order `values` binds them. `id` is
-    /// deliberately absent: SQLite assigns it on insert, and it's the key
-    /// (not a payload) on update.
+    /// Writable columns in `values` order; `id` is absent (assigned on insert, key on update).
     const COLUMNS: &'static [&'static str];
 
     /// Trailing clause for a bare `Db::list`, e.g. `"ORDER BY name"`.
@@ -127,32 +104,19 @@ pub(crate) trait Table: Sized {
     /// Reads a row shaped `id, {COLUMNS}` -- the shape `select_sql` builds.
     fn from_row(row: &Row) -> rusqlite::Result<Self>;
 
-    /// This item's column values, in `COLUMNS` order.
     fn values(&self) -> rusqlite::Result<Vec<ToSqlOutput<'_>>>;
 
-    /// The primary key as stored on the item: `None` for one that hasn't
-    /// been inserted yet (the blank template the editor opens), `Some`
-    /// from the moment it comes back out of the database.
+    /// `None` until inserted.
     fn row_id(&self) -> Option<i64>;
 
-    /// The primary key of a row that came *out* of the database, where the
-    /// `Option` above is always `Some`. Panicking here rather than at each
-    /// call site is the point: the invariant is stated once, in the trait
-    /// that owns identity, instead of at every use of an id.
+    /// The id of a row read from the database; panics otherwise, so the invariant is stated once.
     fn id(&self) -> i64 {
         self.row_id()
             .expect("a row loaded from the database always has an id")
     }
 }
 
-// ---- statement builders -------------------------------------------------
-//
-// The four statements every table needs, derived from its `Table` items.
-// Kept together (and free functions rather than inline `format!`s) so the
-// generated SQL can be asserted directly in the tests below.
-
-/// `SELECT id, {columns} FROM {table} {tail}`, where `tail` is a caller's
-/// `WHERE`/`ORDER BY` clause. The only place a select list is spelled out.
+/// `SELECT id, {columns} FROM {table} {tail}`; the only place a select list is spelled out.
 fn select_sql<T: Table>(tail: &str) -> String {
     format!(
         "SELECT id, {} FROM {} {tail}",
@@ -161,8 +125,7 @@ fn select_sql<T: Table>(tail: &str) -> String {
     )
 }
 
-/// `INSERT INTO {table} ({columns}) VALUES (?1, ..., ?n)` -- `n` bindings
-/// in `COLUMNS` order, which is the order `Table::values` returns them.
+/// `INSERT INTO {table} ({columns}) VALUES (?1, ..., ?n)` in `COLUMNS` order.
 fn insert_sql<T: Table>() -> String {
     let placeholders: Vec<String> = (1..=T::COLUMNS.len()).map(|i| format!("?{i}")).collect();
     format!(
@@ -173,8 +136,7 @@ fn insert_sql<T: Table>() -> String {
     )
 }
 
-/// `UPDATE {table} SET c1 = ?1, ... WHERE id = ?n+1` -- the same bindings
-/// as `insert_sql`, with the row's id appended as the final one.
+/// `UPDATE {table} SET c1 = ?1, ... WHERE id = ?n+1`: `insert_sql`'s bindings plus the id.
 fn update_sql<T: Table>() -> String {
     let assignments: Vec<String> = T::COLUMNS
         .iter()
@@ -193,10 +155,7 @@ fn delete_sql<T: Table>() -> String {
     format!("DELETE FROM {} WHERE id = ?1", T::NAME)
 }
 
-/// Opens the configured database, or exits reporting why. Every command
-/// and every completion callback starts here: nothing downstream can do
-/// anything useful without the database, so a failure to reach it is fatal
-/// rather than threaded through as an error.
+/// Opens the configured database or exits with the reason: nothing downstream works without it.
 pub fn open_db() -> Db {
     let path = config().db_path().unwrap_or_else(|e| {
         eprintln!("error: {e}");
@@ -212,12 +171,8 @@ pub struct Db {
     conn: Connection,
 }
 
-/// Puts the database in WAL mode. The mode is stored in the file, so this
-/// is a no-op after the first run -- but on that first run, two processes
-/// opening a brand-new file at once (a tmux hook and a web request, say)
-/// can race to switch it, and SQLite reports the loser as busy straight
-/// away rather than through `busy_timeout`. So a busy switch is retried,
-/// for about as long as the timeout would have waited.
+/// Switches to WAL (stored in the file). On a brand-new file two processes can race and SQLite
+/// reports the loser busy at once, bypassing `busy_timeout`, so retry for about that long.
 fn enable_wal(conn: &Connection) -> Result<()> {
     const ATTEMPTS: u32 = 500;
     for attempt in 1.. {
@@ -234,10 +189,7 @@ fn enable_wal(conn: &Connection) -> Result<()> {
 }
 
 impl Db {
-    /// Opens (creating if need be) the SQLite file at `path`, along with
-    /// the directory holding it -- the configured location is allowed to
-    /// be somewhere that doesn't exist yet, including the default
-    /// `~/.config/iter` on a machine that has never run `iter`.
+    /// Opens the file, creating it and its directory (which may not exist yet).
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         if let Some(parent) = path.parent() {
@@ -254,7 +206,6 @@ impl Db {
         Ok(db)
     }
 
-    /// The single row matching `tail` (a `WHERE ...` clause), if any.
     fn find_one<T: Table>(&self, tail: &str, params: impl Params) -> Result<Option<T>> {
         Ok(self
             .conn
@@ -263,13 +214,10 @@ impl Db {
             .optional()?)
     }
 
-    /// Every row matching `tail` (a `WHERE`/`ORDER BY` clause).
     fn find_all<T: Table>(&self, tail: &str, params: impl Params) -> Result<Vec<T>> {
         self.query_all(&select_sql::<T>(tail), params, T::from_row)
     }
 
-    /// Every row `sql` returns, each read by `map` -- the one
-    /// prepare/query/collect sequence every multi-row read goes through.
     fn query_all<R>(
         &self,
         sql: &str,
@@ -283,14 +231,10 @@ impl Db {
         Ok(rows)
     }
 
-    /// The `T` named `name`, if any. Every table with a unique, user-facing
-    /// `name` column is looked up exactly this way, so the lookup is
-    /// generic rather than written once per entity.
     pub fn find_by_name<T: Named>(&self, name: &str) -> Result<Option<T>> {
         self.find_one("WHERE name = ?1", params![name])
     }
 
-    /// The `T` named `name`, or the "no such <kind>" error.
     pub fn resolve<T: Named>(&self, name: &str) -> Result<T> {
         self.find_by_name(name)?.ok_or_else(|| IterError::NotFound {
             kind: T::KIND,
@@ -298,11 +242,8 @@ impl Db {
         })
     }
 
-    /// The ids of the `T`s named `names` (each once, in the order first
-    /// listed), all or nothing: an unknown name is an error before anything
-    /// is written, so a typo can't half-apply a roster. One query per
-    /// [`NAME_CHUNK`] names (`name` is `UNIQUE`, so it is indexed), which
-    /// keeps a long list under SQLite's limit on bound variables.
+    /// Ids of the `T`s named `names`, all or nothing: an unknown name errors before anything is
+    /// written. Chunked by [`NAME_CHUNK`].
     pub fn ids_by_name<T: Named>(&self, names: &[String]) -> Result<Vec<i64>> {
         let mut seen = HashSet::new();
         let wanted: Vec<&str> = names
@@ -330,10 +271,7 @@ impl Db {
             .collect()
     }
 
-    /// Every `T`'s name, in `T`'s listing order -- what `iter <entity>
-    /// list` prints and what shell completion offers. A listing of names is
-    /// a query, so it lives here rather than in either caller. Only the
-    /// `name` column is read: completion runs this on every TAB.
+    /// Every `T`'s name in listing order. Reads only `name`: completion runs this on every TAB.
     pub fn names<T: Named>(&self) -> Result<Vec<String>> {
         self.query_all(
             &format!("SELECT name FROM {} {}", T::NAME, T::LIST_TAIL),
@@ -342,9 +280,7 @@ impl Db {
         )
     }
 
-    /// Runs `writes` as one transaction that commits only if it succeeds:
-    /// an error rolls everything it wrote back. `writes` must not open a
-    /// transaction of its own.
+    /// One transaction; an error rolls everything back. `writes` must not open its own.
     pub fn atomically<R>(&self, writes: impl FnOnce() -> Result<R>) -> Result<R> {
         let tx = self.conn.unchecked_transaction()?;
         let done = writes()?;
@@ -352,11 +288,8 @@ impl Db {
         Ok(done)
     }
 
-    /// Runs `writes` as one transaction, so a burst of row writes costs one
-    /// commit (and one fsync) rather than one each. Whatever `writes` got
-    /// done is committed even when it then fails -- this batches commits,
-    /// it doesn't make the batch all-or-nothing. `writes` must not open a
-    /// transaction of its own.
+    /// One transaction to batch commits (one fsync). Work done is committed even if `writes` then
+    /// fails. `writes` must not open its own.
     pub fn batched<R>(&self, writes: impl FnOnce() -> Result<R>) -> Result<R> {
         let tx = self.conn.unchecked_transaction()?;
         let result = writes();
@@ -364,7 +297,6 @@ impl Db {
         result
     }
 
-    /// Writes `item` as a new row and returns the id SQLite assigned it.
     pub fn insert<T: Table>(&self, item: &T) -> Result<i64> {
         self.conn
             .prepare_cached(&insert_sql::<T>())?
@@ -373,7 +305,6 @@ impl Db {
         Ok(self.conn.last_insert_rowid())
     }
 
-    /// Overwrites row `id` with `item`'s columns.
     pub fn update<T: Table>(&self, id: i64, item: &T) -> Result<()> {
         let mut values = item.values()?;
         values.push(id.into());
@@ -395,7 +326,6 @@ impl Db {
         self.find_one("WHERE id = ?1", params![id])
     }
 
-    /// Every row of `T`, in `T::LIST_TAIL` order.
     #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub fn list<T: Table>(&self) -> Result<Vec<T>> {
         self.find_all(T::LIST_TAIL, [])

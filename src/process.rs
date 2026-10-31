@@ -1,10 +1,6 @@
-//! Running the external tools `iter` drives (`git`, `gh`, `tmux`, `nvim`).
-//!
-//! Every one of them fails the same two ways -- couldn't be spawned at all
-//! (`IterError::Spawn`, carrying the `io::Error`) or ran and exited nonzero
-//! (`IterError::CommandFailed`, which has no structured cause to carry, so
-//! the message names the command instead). These helpers are where that
-//! distinction is made, once, rather than at each of the call sites.
+//! Running external tools (`git`, `gh`, `tmux`, `nvim`). A failure is either unspawnable
+//! (`IterError::Spawn`) or a nonzero exit (`IterError::CommandFailed`, whose message names the
+//! command); these helpers draw that distinction once.
 
 use crate::error::{IterError, Result};
 use std::ffi::OsStr;
@@ -28,11 +24,8 @@ fn failure_message<S: AsRef<OsStr>>(tool: &str, args: &[S]) -> String {
     format!("{tool} {} failed", args.join(" "))
 }
 
-/// Runs `tool` to completion in `dir` (or the current directory), letting it
-/// inherit stdio, and reports whether it exited zero. Only a failure to
-/// *spawn* is an error here -- callers that read a nonzero exit as a plain
-/// "no" rather than a failure (an editor quit without saving, say) use this
-/// instead of [`run`].
+/// Runs `tool` with inherited stdio and reports whether it exited zero. Only a spawn failure is
+/// an error: for callers where nonzero is a plain "no" (an editor quit without saving).
 pub fn run_status<S: AsRef<OsStr>>(
     tool: &'static str,
     dir: Option<&str>,
@@ -53,9 +46,7 @@ pub fn run<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -
     }
 }
 
-/// Runs `tool` and captures its stdout verbatim -- untrimmed, so callers
-/// decide what whitespace is significant. A nonzero exit reports `stderr`
-/// alongside the command, since a captured run prints nothing itself.
+/// Captures stdout verbatim (untrimmed). A nonzero exit reports `stderr` with the command.
 pub fn output<S: AsRef<OsStr>>(
     tool: &'static str,
     dir: Option<&str>,
@@ -73,17 +64,12 @@ pub fn output<S: AsRef<OsStr>>(
             false => format!("{message}: {stderr}"),
         }));
     }
-    // Moves the buffer rather than copying it: `gh issue list` output can
-    // run to megabytes, and it is valid UTF-8 in every case but a broken
-    // one, which still falls back rather than failing.
+    // Moves the buffer rather than copying: `gh issue list` output can run to megabytes.
     Ok(String::from_utf8(output.stdout)
         .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned()))
 }
 
-/// [`output`] trimmed, with every failure -- couldn't spawn, nonzero exit,
-/// nothing but whitespace printed -- collapsed into `None`. What the
-/// probe-style readers want, which would otherwise each re-spell the same
-/// `.ok()?` / trim / is-empty dance.
+/// [`output`] trimmed; every failure, including empty output, is `None`.
 pub fn output_trimmed<S: AsRef<OsStr>>(
     tool: &'static str,
     dir: Option<&str>,
@@ -97,9 +83,8 @@ pub fn output_trimmed<S: AsRef<OsStr>>(
     }
 }
 
-/// Whether `tool` ran *and* exited zero -- for the probe-style checks where
-/// "couldn't run it" and "it said no" mean the same thing to the caller.
-/// Suppresses stdio so the probe stays silent even when it fails.
+/// Whether `tool` ran and exited zero, silently. For probes where "couldn't run" and "said no"
+/// mean the same.
 pub fn succeeds<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -> bool {
     command(tool, dir, args)
         .stdout(std::process::Stdio::null())
@@ -108,23 +93,13 @@ pub fn succeeds<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[
         .is_ok_and(|status| status.success())
 }
 
-/// An external binary `iter` drives, bound to the directory it runs in.
-///
-/// The five free functions above are the mechanism -- each encodes a
-/// different failure policy, and that distinction is the point of this
-/// module. This trait adds nothing to it; it only stops every call site
-/// from repeating the tool's name and threading a `dir` that, for some
-/// tools, can never be anything but `None`.
-///
-/// Not object-safe, and deliberately so: the methods stay generic over the
-/// argument type, and nothing here needs `dyn`.
+/// An external binary `iter` drives, bound to its run directory. It only saves call sites from
+/// repeating the tool name and `dir`; the free functions above hold the failure policies. Not
+/// object-safe on purpose.
 pub trait Tool {
-    /// The binary's name, as it is looked up on `PATH`.
     const BIN: &'static str;
 
-    /// The directory to run in. `None` -- the default -- is the current
-    /// one, which is right for a tool that takes its target as an argument
-    /// rather than inferring it from the working directory.
+    /// The directory to run in; `None` is the current one.
     fn dir(&self) -> Option<&str> {
         None
     }
@@ -133,10 +108,8 @@ pub trait Tool {
         run(Self::BIN, self.dir(), args)
     }
 
-    /// [`run_status`] for a tool: the exit status as a plain yes/no, with
-    /// the tool's own output left on the terminal. For the callers that
-    /// read a nonzero exit as an answer rather than a failure -- a merge
-    /// that stops on a conflict, say, whose output *is* the report.
+    /// [`run_status`] for a tool: a nonzero exit is an answer, not a failure (a merge stopping on a
+    /// conflict, whose output is the report).
     fn run_status<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<bool> {
         run_status(Self::BIN, self.dir(), args)
     }
@@ -158,13 +131,8 @@ impl Tool for Git<'_> {
     }
 }
 
-/// The command runner behind the tool clients (`GhCli`, `TmuxClient`), as an
-/// object-safe trait so a fake can record argv instead of spawning anything.
-///
-/// [`Tool`] stays the ergonomic, generic spelling for the callers that run
-/// a real binary directly; this is the seam for the ones that must be
-/// testable. The arguments are `&[&str]` rather than generic for the sake of
-/// object safety.
+/// The command runner behind the tool clients (`GhCli`, `TmuxClient`): object-safe, so a fake can
+/// record argv instead of spawning.
 pub trait Runner {
     /// See [`run_status`].
     fn run_status(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<bool>;
@@ -197,7 +165,6 @@ pub trait Runner {
     }
 }
 
-/// The [`Runner`] that really spawns processes.
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {
@@ -212,7 +179,6 @@ impl Runner for SystemRunner {
     }
 }
 
-/// The one process-wide [`SystemRunner`], for the `system()` constructors.
 pub static SYSTEM: SystemRunner = SystemRunner;
 
 /// A [`Runner`] that records every invocation as `tool arg arg...` and

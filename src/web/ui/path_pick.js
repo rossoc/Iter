@@ -1,8 +1,6 @@
-// The folder button of a path field (field.rs `path_field`). An enhancement:
-// the button is `hidden` until this runs, and the path can always be typed.
-// A click asks the server to open the system's folder chooser at the typed
-// path (POST /folders/pick, a same-origin fetch like the other scripts'),
-// waits while it is open, and puts the folder chosen in the input.
+// The folder button of a path field (field.rs `path_field`). The button is `hidden`
+// until this runs; the path can always be typed. A click asks the server to open the
+// system's folder chooser (POST /folders/pick) and puts the chosen folder in the input.
 (function () {
   document.querySelectorAll("button[data-path-pick]").forEach(function (button) {
     var input = document.getElementById(button.dataset.pathPick);

@@ -1,18 +1,5 @@
 //! The query box of a task list (`?q=`): a few GitHub-style terms in one
 //! text field, parsed here and matched against tasks. Pure, no markup.
-//!
-//! | term | meaning |
-//! |---|---|
-//! | `is:open` | queued or work in progress (the default query: what the links into a list carry) |
-//! | `is:done`, `is:wip`, `is:queue` | one status |
-//! | `is:all` | every status; so is a query with no `is:` term, and an empty one (no `q`: the server reads an empty `q=` as none) |
-//! | `tag:name`, `tag:"two words"` | has the tag (case-insensitive) |
-//! | `project:name` | the project's name contains it |
-//! | `-term` | the opposite of any term (`-tag:agent`) |
-//! | anything else | the task's name contains it; `#12` is the issue |
-//!
-//! A term is never an error: an unknown `key:value` is text to look for in
-//! the name.
 
 use crate::db::Db;
 use crate::models::{Task, TaskStatus};
@@ -23,15 +10,10 @@ pub const DEFAULT: &str = "is:open";
 
 #[derive(Debug, PartialEq)]
 enum Kind {
-    /// Any of these statuses.
     Status(Vec<TaskStatus>),
-    /// A tag's name, lowercased.
     Tag(String),
-    /// Part of a project's name, lowercased.
     Project(String),
-    /// Part of the task's name, lowercased.
     Name(String),
-    /// The task's GitHub issue.
     Issue(i64),
 }
 
@@ -41,14 +23,11 @@ struct Term {
     kind: Kind,
 }
 
-/// A parsed query: every term must hold.
 #[derive(Debug, PartialEq)]
 pub struct TaskQuery {
     terms: Vec<Term>,
 }
 
-/// Splits `q` into words on blanks; a `"` opens or closes a quoted stretch
-/// (blanks inside it stay) and is dropped.
 fn words(q: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut word = String::new();
@@ -113,7 +92,6 @@ fn kind_of(word: &str) -> Option<Kind> {
 }
 
 impl TaskQuery {
-    /// The query `q` says; blank is everything.
     pub fn parse(q: &str) -> TaskQuery {
         let terms = words(q)
             .iter()
@@ -130,22 +108,18 @@ impl TaskQuery {
         TaskQuery { terms }
     }
 
-    /// The query of a `?q=`: absent (or empty) means every task.
     pub fn of(q: Option<&str>) -> TaskQuery {
         TaskQuery::parse(q.unwrap_or(""))
     }
 
-    /// What the search box shows for a `?q=`.
     pub fn text(q: Option<&str>) -> &str {
         q.unwrap_or("")
     }
 
-    /// Whether the query asks about tags (so they are worth loading).
     pub fn needs_tags(&self) -> bool {
         self.terms.iter().any(|t| matches!(t.kind, Kind::Tag(_)))
     }
 
-    /// Whether `task` of `project` with the tag names `tags` passes every term.
     pub fn matches(&self, task: &Task, project: &str, tags: &[String]) -> bool {
         self.terms.iter().all(|term| {
             let holds = match &term.kind {
@@ -159,8 +133,7 @@ impl TaskQuery {
         })
     }
 
-    /// For each `(task, project name)`, whether it passes. Tags are read
-    /// (one query) only when the query asks about them.
+    /// Tags are read (one query) only when the query asks about them.
     fn keep(&self, db: &Db, items: &[(&Task, &str)]) -> crate::error::Result<Vec<bool>> {
         let tags = if self.needs_tags() {
             let ids: Vec<i64> = items.iter().filter_map(|(t, _)| t.id).collect();
@@ -180,7 +153,6 @@ impl TaskQuery {
             .collect())
     }
 
-    /// The tasks of one project (named `project`) that pass, in order.
     pub fn filter_tasks(
         &self,
         db: &Db,
@@ -196,7 +168,6 @@ impl TaskQuery {
             .collect())
     }
 
-    /// The `(project name, task)` rows of a group that pass, in order.
     pub fn filter_named(
         &self,
         db: &Db,
@@ -255,7 +226,6 @@ mod tests {
         ] {
             assert!(all.matches(&open, "p", &[]) && all.matches(&done, "p", &[]));
         }
-        // no `is:` term: every status
         assert!(TaskQuery::of(Some("a")).matches(&done, "p", &[]));
         assert_eq!(TaskQuery::text(None), "");
         assert_eq!(TaskQuery::text(Some("is:open")), "is:open");
@@ -319,7 +289,6 @@ mod tests {
             "",
             &[]
         ));
-        // a lone dash is skipped
         assert_eq!(TaskQuery::parse("-"), TaskQuery::parse(""));
     }
 

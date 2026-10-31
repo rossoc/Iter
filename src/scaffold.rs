@@ -5,21 +5,15 @@
 use crate::error::Result;
 use std::path::{Path, PathBuf};
 
-/// Resolves `path` (relative or absolute) against the current directory
-/// into an absolute string suitable for storing as a project's
-/// `base_path` -- so it stays valid however/wherever `iter` is next run
-/// from, unlike a relative path that only meant something from today's cwd.
-///
-/// A leading `~` is expanded first: a path typed into the editor buffer or
-/// a web form never went through a shell that would have done it.
+/// Resolves `path` against the cwd into an absolute string for `base_path`, so it stays valid
+/// wherever `iter` runs next. A leading `~` is expanded first: editor buffers and web forms never
+/// saw a shell.
 pub fn absolute_path(path: &str) -> Result<String> {
     let path = crate::config::expand_home(path);
     Ok(std::path::absolute(path)?.to_string_lossy().to_string())
 }
 
-/// The final component of `path` (e.g. `"foo"` for `"./bar/foo"`), used as
-/// the default project name for `iter new`/`init`. Empty if `path` has no
-/// final component (e.g. `"/"`).
+/// The final component of `path` (the default project name); empty if none.
 pub fn dir_name(path: &str) -> String {
     Path::new(path)
         .file_name()
@@ -27,10 +21,8 @@ pub fn dir_name(path: &str) -> String {
         .unwrap_or_default()
 }
 
-/// Recursively copies `src`'s contents into `dst` (`dst` must already
-/// exist), skipping any `.git` entry at any depth. Used by `iter clone` to
-/// seed a new project's `base_path` from another project's, as a template,
-/// without dragging that project's git history along.
+/// Recursively copies `src` into the existing `dst`, skipping `.git` at any depth, so a cloned
+/// template brings no history.
 pub fn copy_dir_excluding_git(src: &Path, dst: &Path) -> Result<()> {
     for entry in std::fs::read_dir(src)? {
         let entry = entry?;

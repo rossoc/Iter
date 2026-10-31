@@ -1,12 +1,5 @@
-//! The user's config file: where the database lives, and what the values
-//! `iter` would otherwise hardcode are set to.
-//!
-//! It's read from `iter.yaml` in `iter`'s config directory -- `$XDG_CONFIG_HOME/iter`,
-//! or `$HOME/.config/iter` when that isn't set (`%APPDATA%\iter` off unix) --
-//! and every key is optional: a missing file, an empty one, or one that
-//! only sets `pause_gap_minutes` all leave the rest at the built-in
-//! defaults below. The database sits next to the config file by default, so
-//! the two live together and moving the directory moves both.
+//! The user's `iter.yaml` in `$XDG_CONFIG_HOME/iter` (`$HOME/.config/iter`; `%APPDATA%\iter` off
+//! unix). Every key is optional; the database sits next to it by default.
 
 use crate::error::{IterError, Result};
 use crate::models::{Settings, TaskStatus};
@@ -20,9 +13,7 @@ const APP_DIR: &str = "iter";
 const CONFIG_FILE: &str = "iter.yaml";
 const DB_FILE: &str = "iter.db";
 
-/// A gap between one session's end and the next one's start shorter than
-/// this many minutes is treated as a pause within one continuous span (e.g.
-/// a quick interruption) rather than a real break between sessions.
+/// Gaps between sessions shorter than this many minutes count as one continuous span.
 pub const DEFAULT_PAUSE_GAP_MINUTES: i64 = 17;
 
 /// The editor opened to fill in a new/edited organization, project or task.
@@ -36,18 +27,15 @@ fn default_editor() -> String {
     DEFAULT_EDITOR.to_string()
 }
 
-/// The settings a new task starts from. `branch_prefix` isn't here: it's
-/// read off the owning project's `branch_template`, which is the project
-/// default that already covers it.
+/// Settings a new task starts from; `branch_prefix` comes from the project's `branch_template`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TaskDefaults {
     pub status: TaskStatus,
 }
 
-/// What a headless agent (`iter task solve`, `iter wiki ingest`) may do. Nobody
-/// is there to approve a command, so what is not allowed here (or by the
-/// harness's own settings) is refused.
+/// What a headless agent (`iter task solve`, `iter wiki ingest`) may do. Nobody can approve a
+/// command, so anything not allowed here or by the harness's settings is refused.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct AgentConfig {
@@ -91,18 +79,13 @@ impl Default for AgentConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
-    /// Where the SQLite file lives. `None` -- the default -- means
-    /// `iter.db` beside the config file. A leading `~` is expanded; a
-    /// relative path is left as it is, resolved against the current
-    /// directory the way any other relative path would be.
+    /// Where the SQLite file lives; `None` means `iter.db` beside the config. A leading `~` is expanded.
     #[serde(skip_serializing_if = "Option::is_none")]
     db_path: Option<String>,
 
-    /// See [`DEFAULT_PAUSE_GAP_MINUTES`].
     #[serde(default = "default_pause_gap_minutes")]
     pub pause_gap_minutes: i64,
 
-    /// The editor `new`/`edit` opens the markdown buffer in.
     #[serde(default = "default_editor")]
     pub editor: String,
 
@@ -125,11 +108,8 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Reads the config file. A file that isn't there at all is not an
-    /// error -- `iter` has always run without one -- and neither is an
-    /// empty (or all-comments) one; both give the built-in defaults. A file
-    /// that *is* there but doesn't parse is fatal rather than silently
-    /// ignored, so a typo can't quietly put the database somewhere else.
+    /// Reads the config file. A missing, empty or all-comments file gives the defaults; an
+    /// unparseable one is fatal, so a typo can't quietly move the database.
     pub fn load() -> Result<Self> {
         let path = config_file()?;
         let text = match std::fs::read_to_string(&path) {
@@ -148,9 +128,8 @@ impl Config {
         })
     }
 
-    /// Writes the config file (creating its directory): every key, so what
-    /// the file did not say becomes explicit. Comments in the file are not
-    /// kept. The database path is written back as it was read.
+    /// Writes every key (creating the directory), making implicit values explicit. Comments in the
+    /// file are not kept.
     #[cfg(feature = "web")]
     pub fn save(&self) -> Result<()> {
         let path = config_file()?;
@@ -166,8 +145,6 @@ impl Config {
         Ok(())
     }
 
-    /// The database file to open: `db_path` if it's set, and otherwise
-    /// `iter.db` in the config directory.
     pub fn db_path(&self) -> Result<PathBuf> {
         Ok(self.db_path_within(&config_dir()?, home_dir().as_deref()))
     }
@@ -180,23 +157,17 @@ impl Config {
     }
 }
 
-/// Parses the config file's text. Deserializing through `Option` is what
-/// makes an empty file -- or one that's still nothing but comments -- the
-/// defaults rather than a "invalid type: unit value" error: YAML reads both
-/// as null.
+/// Parses config text. Going through `Option` makes an empty or all-comments file (YAML null) the
+/// defaults, not an "invalid type: unit value" error.
 fn parse(text: &str) -> std::result::Result<Config, serde_yaml::Error> {
     Ok(serde_yaml::from_str::<Option<Config>>(text)?.unwrap_or_default())
 }
 
-/// The process's config. Behind a lock so the settings page can replace it
-/// (`replace`); each value is leaked once, so `config()` can hand out a
-/// `&'static` as it always has (a few hundred bytes per save).
+/// The process's config, replaceable by the settings page; each value is leaked once so
+/// `config()` can hand out `&'static` (a few hundred bytes per save).
 static CONFIG: OnceLock<RwLock<&'static Config>> = OnceLock::new();
 
-/// The process's config, read from disk the first time it's asked for and
-/// held from then on -- every command, and every completion callback the
-/// shell fires, sees the same one. A config that can't be read is fatal
-/// here rather than propagated: nothing downstream can do anything useful
+/// Read on first use and held. An unreadable config is fatal here: nothing downstream works
 /// without knowing where the database is.
 pub fn config() -> &'static Config {
     let cell = CONFIG.get_or_init(|| {
@@ -209,8 +180,7 @@ pub fn config() -> &'static Config {
     *cell.read().unwrap_or_else(|e| e.into_inner())
 }
 
-/// Makes `new` the process's config (after the settings page saved it), so
-/// what a server already running does next follows the file.
+/// Makes `new` the process's config after the settings page saved it.
 #[cfg(feature = "web")]
 pub fn replace(new: Config) {
     config();
@@ -219,20 +189,15 @@ pub fn replace(new: Config) {
     }
 }
 
-/// `iter`'s own config directory, `<config home>/iter`.
 pub fn config_dir() -> Result<PathBuf> {
     Ok(config_home().ok_or(IterError::NoConfigDir)?.join(APP_DIR))
 }
 
-/// The config file itself, `<config home>/iter/iter.yaml`.
 pub fn config_file() -> Result<PathBuf> {
     Ok(config_dir()?.join(CONFIG_FILE))
 }
 
-/// The directory per-user config lives under. On unix that's the XDG one --
-/// `$XDG_CONFIG_HOME`, or `$HOME/.config`, which is what the variable
-/// defaults to when it isn't set -- so `iter` follows wherever the user has
-/// pointed it. Elsewhere it's `%APPDATA%`, the equivalent convention.
+/// Per-user config home: `$XDG_CONFIG_HOME` or `$HOME/.config` on unix, `%APPDATA%` elsewhere.
 #[cfg(unix)]
 fn config_home() -> Option<PathBuf> {
     var("XDG_CONFIG_HOME")
@@ -263,14 +228,11 @@ fn var(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
 }
 
-/// [`expand_tilde`] against the user's home directory.
 pub(crate) fn expand_home(path: &str) -> PathBuf {
     expand_tilde(path, home_dir().as_deref())
 }
 
-/// Expands a leading `~` (the shell would have done it for a path typed on
-/// the command line, but not for one written in a config file). Anything
-/// else -- including a `~` mid-path -- is left alone.
+/// Expands a leading `~` (the shell doesn't in a config file); a mid-path `~` is left alone.
 fn expand_tilde(path: &str, home: Option<&Path>) -> PathBuf {
     let Some(home) = home else {
         return PathBuf::from(path);
@@ -292,8 +254,6 @@ mod tests {
         parse(yaml).expect("config parses")
     }
 
-    /// The whole file is optional, and so is every key in it -- a config
-    /// that sets one thing must not reset everything else to nothing.
     #[test]
     fn an_absent_key_keeps_its_default() {
         let config = from_yaml("pause_gap_minutes: 42\n");
@@ -310,14 +270,11 @@ mod tests {
         let config = from_yaml("project:\n  github: true\n  branch_template: fix/{task}\n");
         assert!(config.project.github);
         assert_eq!(config.project.branch_template, "fix/{task}");
-        // Untouched by the block that set the two above.
         assert!(config.project.tmux);
         assert!(config.project.auto_branch);
         assert_eq!(config.project.github_project, "");
     }
 
-    /// `github_project` defaults to "file it nowhere", and travels into a
-    /// new project the same way the rest of the block does.
     #[test]
     fn a_github_project_board_can_be_defaulted() {
         let config = from_yaml("project:\n  github_project: Roadmap\n");
@@ -338,8 +295,7 @@ mod tests {
         );
     }
 
-    /// A mistyped key is a mistake worth reporting: silently ignoring it
-    /// would leave the user with a setting they think they set.
+    /// A mistyped key is reported, not silently ignored.
     #[test]
     fn an_unknown_key_is_rejected() {
         assert!(parse("pause_gap: 5\n").is_err());
@@ -390,8 +346,6 @@ mod tests {
         assert_eq!(expand_tilde("~/db", None), PathBuf::from("~/db"));
     }
 
-    /// An empty file (or one that's nothing but comments) is a config the
-    /// user has started but not filled in -- the defaults, not an error.
     #[test]
     fn a_comment_only_file_is_not_a_parse_error() {
         assert_eq!(

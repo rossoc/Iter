@@ -3,123 +3,71 @@ use crate::process::{Runner, SYSTEM};
 use chrono::{DateTime, Local, NaiveDateTime};
 use std::path::{Path, PathBuf};
 
-/// The terminal multiplexer `iter` keeps one session per task in, behind a
-/// trait so what it asks of tmux can be tested without a server.
+/// The terminal multiplexer, behind a trait so tests need no server.
 pub trait Multiplexer {
-    /// Creates a new detached session named `name`, starting in `cwd`.
     fn create_session(&self, name: &str, cwd: &str) -> Result<()>;
 
-    /// Kills a session if it's running. Not an error if it's already gone.
+    /// Not an error if already gone.
     fn kill_session(&self, name: &str);
 
-    /// Puts the user in the session named `name`: attaching (this blocks,
-    /// handing the terminal over until the user detaches) or, when we're
-    /// already inside tmux, switching the current client over to it.
+    /// Attaches (blocking), or switches the client when already inside tmux.
     fn attach_session(&self, name: &str) -> Result<()>;
 
     fn session_exists(&self, name: &str) -> bool;
 
-    /// The names of every session on the server; empty when there is no
-    /// server.
     fn list_sessions(&self) -> Vec<String>;
 
-    /// Kills the server, and with it every session and client on it.
     fn kill_server(&self) -> Result<()>;
 
-    /// Whether any client is still attached to `session`.
-    ///
-    /// One session can have several clients on it -- a second terminal, or
-    /// someone pairing -- and each of them detaches separately. Without
-    /// this, the first detach closes the task's session while another
-    /// client is still working in it, and every minute after that goes
-    /// unrecorded.
-    ///
-    /// This is only usable from a hook because of *when* the hook runs.
-    /// Measured on tmux 3.6: by the time `client-detached` or
-    /// `client-session-changed` fires, the client that left is already off
-    /// the session's list, so what this counts is exactly the clients that
-    /// remain.
-    ///
-    /// Any failure is a `false` -- no tmux, or a session that's already
-    /// gone, which is exactly the `session-closed` case -- so the caller
-    /// closes the session, which is what it did before this existed.
+    /// Whether another client is still attached. The hooks fire after the leaving
+    /// client is off the list (tmux 3.6), so this counts exactly the remaining ones.
+    /// Any failure is `false` (no tmux, or session already gone).
     fn any_client_attached(&self, session: &str) -> bool;
 
-    /// The session name of the pane this process is running in, if any
-    /// (i.e. we're inside a tmux client). Used by `iter t`.
+    /// The session of the pane this process runs in, if inside tmux.
     fn current_session_name(&self) -> Option<String>;
 
-    /// Records that `client` now shows `session`, for
-    /// [`Multiplexer::take_client_session`] to read back when it detaches.
     fn remember_client_session(&self, client: &str, session: &str) -> Result<()>;
 
-    /// The session `client` was last recorded on, consumed so a later
-    /// client that reuses the same tty starts from nothing. `None` for a
-    /// client that attached before the hooks were installed.
+    /// Consumed on read, so a reused tty starts clean. `None` if attached before the hooks.
     fn take_client_session(&self, client: &str) -> Option<String>;
 
-    /// Installs the global hooks that drive `iter internal hook <event>
-    /// <session> [previous]`, for any event that doesn't already have a
-    /// working one. Safe to call every time a session is created.
-    ///
-    /// "Already working" is deliberately not "already ours": a hook wired up
-    /// in `tmux.conf` is left exactly as it is. That's the difference
-    /// between a path baked in here -- `current_exe`, i.e. whichever build
-    /// last ran `session new`, which can be a debug binary in a worktree
-    /// that later gets deleted -- and a stable one the user chose.
+    /// Installs the hooks that lack a working one. A `tmux.conf` hook is left alone: ours
+    /// bakes in `current_exe`, which may be a deleted debug build.
     fn ensure_hooks_installed(&self, iter_bin: &str) -> Result<()>;
 
-    /// Takes the detach message off `session`, if something left one there:
-    /// returns it and unsets the option, so it's consumed once rather than
-    /// re-attached to every later session of the same task.
-    ///
-    /// Every failure is a `None`: the hook this serves fires for every
-    /// session, most of which have no such option (and, on `session-closed`,
-    /// no longer exist to be asked).
+    /// Takes and unsets the detach message, so it is consumed once. Any failure is `None`:
+    /// most sessions have no such option.
     fn take_detach_message(&self, session: &str) -> Option<String>;
 
-    /// When the running server started, in local time; `None` when there is
-    /// no server. What tells a clock this server opened from one a previous
-    /// server left open -- a reboot takes the server down without
-    /// `iter internal kill-server`, so nothing closed it.
+    /// Server start time, local; `None` without a server. Separates clocks this server
+    /// opened from ones a rebooted server left open.
     fn server_start_time(&self) -> Option<NaiveDateTime>;
 
-    /// When tmux-resurrect last saved, in local time: the modification time
-    /// of the save `last` points at. That's the last moment the previous
-    /// server is known to have been running, and so the best end there is
-    /// for a clock it left open. `None` when resurrect has never saved.
-    ///
-    /// The directory is found the way resurrect finds it: `@resurrect-dir`
-    /// (with `~` and `$HOME` expanded), else `~/.tmux/resurrect` if it
-    /// exists, else `$XDG_DATA_HOME/tmux/resurrect`.
+    /// Mtime of the save tmux-resurrect's `last` points at: the last moment the previous
+    /// server is known to have run. `None` if never saved. Dir: `@resurrect-dir`, else
+    /// `~/.tmux/resurrect`, else `$XDG_DATA_HOME/tmux/resurrect`.
     fn last_resurrect_save(&self) -> Option<NaiveDateTime>;
 
-    /// Creates the detached session named `name` in `cwd` and makes sure
-    /// the hooks that track it are installed -- the two steps `iter session
-    /// new` needs done together, and the part of it that can fail, which is
-    /// why its unwind path guards exactly this call.
+    /// Session plus hooks: the part of `session new` that can fail, so its unwind guards this call.
     fn start_tracked_session(&self, name: &str, cwd: &str) -> Result<()> {
         self.create_session(name, cwd)?;
         self.install_hooks_for_current_exe()
     }
 
-    /// [`Multiplexer::ensure_hooks_installed`] pointing at the binary that's
-    /// running now.
+    /// [`Multiplexer::ensure_hooks_installed`] for the running binary.
     fn install_hooks_for_current_exe(&self) -> Result<()> {
         let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
         self.ensure_hooks_installed(&iter_bin)
     }
 }
 
-/// A tmux target that names exactly this session: a bare name would match by
-/// prefix (`web/a` also hits `web/ab`) and treat `*`/`?` as globs.
+/// A target naming exactly this session: a bare name matches by prefix and treats `*`/`?` as globs.
 fn exact(name: &str) -> String {
     format!("={name}")
 }
 
-/// Whether this process is itself running inside a tmux client -- which
-/// decides how `attach_session` gets the user there: a client can't attach
-/// to a second session from within one, it switches to it instead.
+/// Whether this process runs inside a tmux client (which must switch, not attach).
 fn inside_tmux() -> bool {
     std::env::var_os("TMUX").is_some()
 }
@@ -127,12 +75,10 @@ fn inside_tmux() -> bool {
 /// The `tmux` binary, driven through a [`Runner`].
 pub struct TmuxClient<'a> {
     runner: &'a dyn Runner,
-    /// Whether we are inside a tmux client; see [`inside_tmux`].
     inside: bool,
 }
 
 impl TmuxClient<'static> {
-    /// The real `tmux`, inside a client iff `$TMUX` says so.
     pub fn system() -> Self {
         TmuxClient {
             runner: &SYSTEM,
@@ -159,14 +105,9 @@ impl<'a> TmuxClient<'a> {
         self.runner.output_trimmed("tmux", None, args)
     }
 
-    /// Whether `event`'s installed hook already passes exactly the format
-    /// variables `args` calls for.
-    ///
-    /// That comparison, rather than a string match on the whole action, is
-    /// what lets a `tmux.conf` hook -- different path, different quoting,
-    /// same variables -- count as current, while a hook from an older `iter`
-    /// (which passed `#{hook_session_name}` to every event, and so did
-    /// nothing) does not and gets replaced.
+    /// Whether `event`'s installed hook already passes the format variables `args` calls
+    /// for. Comparing variables, not the whole action, keeps a `tmux.conf` hook current and
+    /// replaces one from an old `iter` that passed `#{hook_session_name}` everywhere.
     fn hook_is_current(&self, event: &str, args: &str) -> bool {
         let Ok(existing) = self.output(&["show-options", "-gv", event]) else {
             return false; // no tmux, or no such option: install ours
@@ -217,8 +158,7 @@ impl Multiplexer for TmuxClient<'_> {
     }
 
     fn current_session_name(&self) -> Option<String> {
-        // Outside tmux the answer is already known, and asking costs a
-        // fork+exec on every command that defaults to "the task I'm in".
+        // Outside tmux the answer is known; asking costs a fork+exec per command.
         if !self.inside {
             return None;
         }
@@ -291,8 +231,7 @@ impl Multiplexer for TmuxClient<'_> {
     }
 }
 
-/// Free-function forms over the real `tmux`, for the plumbing (clocks,
-/// workspace teardown) that has no client to hand.
+/// Free-function forms over the real `tmux`, for plumbing with no client to hand.
 pub fn kill_session(name: &str) {
     TmuxClient::system().kill_session(name)
 }
@@ -309,65 +248,33 @@ pub fn any_client_attached(session: &str) -> bool {
     TmuxClient::system().any_client_attached(session)
 }
 
-/// The prefix of the server-wide tmux option that records which session a
-/// client is on, e.g. `@iter_client_session_/dev/pts/3`.
-///
-/// It exists because `client-detached` can't name the session the client
-/// left: measured on tmux 3.6, `#{session_name}` there is whichever session
-/// is most recently active -- often one another client is still working in
-/// -- and the client itself is already gone, so it can't be asked.
-/// `#{hook_client}` does still name it, so the session is recorded under
-/// that name on every `client-session-changed`, which *is* told the
-/// session, and looked up again on the way out.
+/// Server-wide option prefix recording which session a client is on, e.g.
+/// `@iter_client_session_/dev/pts/3`. `client-detached` cannot name the session the
+/// client left, so `client-session-changed` records it under `#{hook_client}`.
 const CLIENT_SESSION_OPTION_PREFIX: &str = "@iter_client_session_";
 
 fn client_session_option(client: &str) -> String {
     format!("{CLIENT_SESSION_OPTION_PREFIX}{client}")
 }
 
-/// The session-scoped tmux option a detach message is left in: something
-/// bound to `detach-client` sets it just before detaching, and the
-/// `client-detached` hook takes it back off again and stores it on the
-/// session it closes. Named as it is because it's a shell-visible
-/// interface, not an internal one -- a `bind` in `tmux.conf` writes it.
+/// Session option a `detach-client` bind sets before detaching; the `client-detached` hook
+/// moves it onto the session it closes. Shell-visible: `tmux.conf` binds write it.
 pub const DETACH_MESSAGE_OPTION: &str = "@iter_detach_message";
 
-/// The hooks `iter` drives, each with the format variables it's passed.
-///
-/// Which variable is right differs per event, and getting it wrong fails
-/// *silently* -- the hook still runs, it just names the wrong session or
-/// none at all. Measured on tmux 3.6:
-///
-/// | event                    | `hook_client` | `session_name`    | `hook_session_name` |
-/// |--------------------------|---------------|-------------------|---------------------|
-/// | `client-session-changed` | the client    | the new session   | empty               |
-/// | `client-detached`        | the client    | *some other one*  | empty               |
-/// | `session-closed`         | --            | *some other one*  | the session         |
-///
-/// `#{client_name}` is no substitute for `#{hook_client}`: on a
-/// `switch-client` it can name a different client entirely. And since
-/// `client-detached` can't name its session, it's only passed the client,
-/// and the session comes from what `client-session-changed` recorded (see
-/// [`remember_client_session`]).
-///
-/// `client-session-changed` rather than `client-attached` is what starts a
-/// session: it fires on a plain attach *and* on `switch-client`, so hopping
-/// between two tasks inside tmux is seen.
+/// The hooks `iter` drives, with the format variables each is passed. Wrong variables fail
+/// silently, so the per-event table is in `doc/architecture_core.md`.
 const HOOKS: [(&str, &str); 3] = [
     (
         "client-session-changed",
         "#{q:hook_client} #{q:session_name} #{q:client_last_session}",
     ),
     ("client-detached", "#{q:hook_client}"),
-    // The backstop for a session torn down another way (`tmux kill-session`,
-    // the shell in it exiting) while still attached.
+    // Backstop for a session torn down another way while still attached.
     ("session-closed", "#{q:hook_session_name}"),
 ];
 
-/// The variables named by the `#{...}` in a hook body, in order, without the
-/// braces or a `q:` quoting modifier: that quoting differs between what we
-/// write (`#{q:x}`, so a name with a quote or `$(...)` stays one word for the
-/// shell) and what a `tmux.conf` does.
+/// The variables named by the `#{...}` in a hook body, in order, without braces or `q:`
+/// (we write `#{q:x}`, a `tmux.conf` may not).
 fn format_variables(action: &str) -> Vec<&str> {
     action
         .match_indices("#{")
@@ -379,13 +286,9 @@ fn format_variables(action: &str) -> Vec<&str> {
         .collect()
 }
 
-/// The `set-hook` body for one entry of [`HOOKS`]. Split out so the format
-/// variables can be asserted without a tmux server, since naming the wrong
-/// one is invisible at runtime -- the hook fires and quietly matches no
-/// session.
+/// The `set-hook` body for one entry of [`HOOKS`]; split out so variables are testable.
 fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
-    // The action is a tmux command, and inside its single quotes a `'` cannot
-    // be written at all; everything else is quoted for the shell it runs in.
+    // Inside the action's single quotes a `'` cannot be written; the rest is shell-quoted.
     let bin = crate::agent::prompt::shell_word(iter_bin);
     format!("run-shell '{bin} internal hook {event} {args}'")
 }
@@ -402,9 +305,7 @@ mod tests {
         hook_action("/usr/bin/iter", event, args)
     }
 
-    /// Both client hooks are told the client by `#{hook_client}`: it's the
-    /// only name `client-detached` has to find its session by, and
-    /// `#{client_name}` can name a different client on a switch.
+    /// `#{hook_client}` is the only name `client-detached` has; `#{client_name}` can differ on a switch.
     #[test]
     fn the_client_hooks_are_told_the_client_by_hook_client() {
         for event in ["client-session-changed", "client-detached"] {
@@ -414,9 +315,7 @@ mod tests {
         }
     }
 
-    /// The bug this guards: `client-detached` was told `#{session_name}`,
-    /// which names the most recently active session -- so one client
-    /// detaching stopped the clock of a session another client was still in.
+    /// Guards `client-detached` being told `#{session_name}` (the most recently active session).
     #[test]
     fn client_detached_is_not_told_a_session() {
         assert_eq!(
@@ -425,8 +324,7 @@ mod tests {
         );
     }
 
-    /// On `session-closed` it's `#{session_name}` that's wrong, naming
-    /// whatever session the client moved to rather than the one that closed.
+    /// On `session-closed`, `#{session_name}` names the session the client moved to.
     #[test]
     fn session_closed_is_told_the_session_by_hook_session_name() {
         let action = action_for("session-closed");
@@ -437,9 +335,7 @@ mod tests {
         );
     }
 
-    /// `client-session-changed` records the session and closes the one being
-    /// left, so it needs both -- without the second a switch leaks an open
-    /// session.
+    /// `client-session-changed` records the new session and closes the one left, so needs both.
     #[test]
     fn client_session_changed_is_told_the_session_and_the_one_left() {
         assert_eq!(
@@ -448,9 +344,7 @@ mod tests {
         );
     }
 
-    /// A `tmux.conf` hook naming a stable path and quoting the variables
-    /// its own way is still current -- that's what keeps `session new` from
-    /// re-pointing it at whichever build happened to run.
+    /// A `tmux.conf` hook with a stable path and its own quoting still counts as current.
     #[test]
     fn a_conf_written_hook_counts_as_current() {
         let (_, args) = HOOKS
@@ -462,8 +356,7 @@ mod tests {
         assert_eq!(format_variables(from_conf), format_variables(args));
     }
 
-    /// ...whereas the hook an older `iter` left behind does not, so it gets
-    /// replaced rather than kept forever.
+    /// An old `iter` hook does not, and is replaced.
     #[test]
     fn a_stale_hook_from_an_older_iter_is_not_current() {
         let (_, args) = HOOKS
@@ -483,7 +376,6 @@ mod tests {
         assert_eq!(format_variables("run-shell 'echo hi'"), Vec::<&str>::new());
     }
 
-    /// A path with a space stays one word for the shell the hook runs in.
     #[test]
     fn a_binary_path_with_a_space_is_escaped() {
         let action = hook_action("/my dir/iter", "session-closed", "#{q:hook_session_name}");
@@ -507,8 +399,7 @@ mod tests {
         TmuxClient::new(runner, inside)
     }
 
-    /// A bare name would match by prefix and treat `*` as a glob; every
-    /// session-targeting command goes through `=name`.
+    /// Every session-targeting command goes through `=name`.
     #[test]
     fn sessions_are_targeted_exactly() {
         let runner = FakeRunner::default();
@@ -561,8 +452,6 @@ mod tests {
         assert_eq!(client(&runner, false).list_sessions(), ["a/b", "c/d"]);
     }
 
-    /// The hooks are installed with every variable `#{q:...}`-quoted, so a
-    /// session name with a quote stays one shell word.
     #[test]
     fn missing_hooks_are_installed_with_quoted_format_variables() {
         let runner = FakeRunner::default();
@@ -584,8 +473,6 @@ mod tests {
         );
     }
 
-    /// A hook already wired in `tmux.conf` with the right variables is left
-    /// alone; a stale one is replaced.
     #[test]
     fn a_current_hook_is_left_alone_and_a_stale_one_replaced() {
         let runner = FakeRunner::default();
@@ -643,15 +530,8 @@ mod tests {
         );
     }
 
-    /// Against a real tmux server, which is why it is `#[ignore]`d and refuses
-    /// to run on anything but a throwaway one. Run it with
-    ///
-    /// ```text
-    /// TMUX_TMPDIR=$(mktemp -d /tmp/itx.XXXX) cargo test real_tmux -- --ignored
-    /// ```
-    ///
-    /// (a short path: a socket's is limited to ~100 bytes). `TMUX_TMPDIR` is
-    /// where tmux keeps its socket, so this server is not the user's own.
+    /// Needs a real tmux, so `#[ignore]`d; refuses anything but a throwaway server. Run:
+    /// `TMUX_TMPDIR=$(mktemp -d /tmp/itx.XXXX) cargo test real_tmux -- --ignored`
     #[test]
     #[ignore = "needs tmux, and TMUX_TMPDIR on a throwaway directory"]
     fn real_tmux_targets_exactly_and_quotes_what_the_hooks_are_told() {

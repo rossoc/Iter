@@ -28,10 +28,8 @@ pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};
 pub use task::parse_start_time;
 pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus, end_text};
 
-/// The fallback settings a project uses when it inherits none -- i.e. when
-/// it belongs to no organization. Shared by `Project` and `Organization`,
-/// which default the same way, and used by serde to fill in a field the
-/// YAML editor left out.
+/// Fallback settings for a project that inherits none (no organization); also serde's default
+/// for fields the YAML editor left out.
 pub(crate) fn default_true() -> bool {
     true
 }
@@ -40,30 +38,22 @@ pub(crate) fn default_branch_template() -> String {
     "feat/{task}".to_string()
 }
 
-/// The value a project's `default_branch` -- the branch `iter task done
-/// --save` merges finished work into -- starts as. Git's own out-of-the-box
-/// name for it; a project whose trunk is `dev` (or anything else) says so
-/// in its own front matter.
+/// A project's default `default_branch`: git's own default.
 pub(crate) fn main_branch() -> String {
     "main".to_string()
 }
 
-/// A type edited via `md_edit::edit_in_editor` that carries a free-form
-/// markdown `description`. The field is `#[serde(skip)]`ed on the type
-/// itself and instead placed below the YAML front matter's closing `---`,
-/// as the markdown body
+/// An edited type with a free-form markdown `description`, `#[serde(skip)]`ed and placed below
+/// the YAML front matter.
 pub trait MarkdownBody {
     fn description(&self) -> &str;
     fn set_description(&mut self, description: String);
 
-    /// Copies from `original` -- the item the editor was opened on -- every
-    /// field the buffer doesn't carry, so an edit can't lose them. The
-    /// derive writes this for every other `#[serde(skip)]` field.
+    /// Copies from `original` every field the buffer doesn't carry, so an edit can't lose them.
     fn carry_over(&mut self, _original: &Self) {}
 
-    /// Reads the buffer's YAML front matter back into this type. Plainly,
-    /// by default; the edit types that wrap a row plus a list override it
-    /// (see [`read_wrapped`]).
+    /// Reads the buffer's front matter; edit types wrapping a row plus a list override it
+    /// ([`read_wrapped`]).
     fn from_front_matter(front: &str) -> serde_yaml::Result<Self>
     where
         Self: DeserializeOwned,
@@ -72,16 +62,9 @@ pub trait MarkdownBody {
     }
 }
 
-/// Reads front matter holding a row's fields plus one list beside them --
-/// [`GroupEdit`], [`TaskEdit`] -- as two plain reads of the same text rather
-/// than through `#[serde(flatten)]`.
-///
-/// Flattening buffers every value first and loses what was typed: a bare
-/// `name: 2025` or `default_branch: 1.10` then reaches a text field as a
-/// number and fails (or would come back as `1.1`). Read plainly, a text
-/// field takes the scalar exactly as written, the same as a project's or a
-/// tag's does. The row's read ignores the list's key, and the list's read
-/// ignores every other.
+/// Reads front matter of a row plus one list as two plain reads, not `#[serde(flatten)]`, which
+/// buffers values and breaks bare scalars (`name: 2025`, `default_branch: 1.10` become numbers).
+/// Each read ignores the other's key.
 pub(crate) fn read_wrapped<R: DeserializeOwned>(
     front: &str,
     list: &str,
@@ -95,68 +78,48 @@ pub(crate) fn read_wrapped<R: DeserializeOwned>(
     Ok((row, names))
 }
 
-/// Everything the editor round trip needs of a type: written out as YAML,
-/// read back from it, with the description as the markdown body. Blanket
-/// implemented, so it's only ever a shorthand for the three bounds.
+/// Everything the editor round trip needs: YAML out and in, description as markdown body.
+/// Blanket implemented.
 pub trait Editable: Serialize + DeserializeOwned + MarkdownBody {}
 
 impl<T: Serialize + DeserializeOwned + MarkdownBody> Editable for T {}
 
-/// A stored type whose `name` is unique across the whole database -- what
-/// the CLI addresses it by, what `Db::resolve` looks it up by, what shell
-/// completion offers and what `iter <entity> list` prints. Everything that
-/// is "the same for every named entity" hangs off this one trait instead of
-/// being written once per entity. Implemented by `#[derive(Table)]` given a
-/// `kind` -- see the derive for how a type adds rules to `validate`.
-///
-/// Deliberately not implemented for [`Task`]: a task's name is unique only
-/// within its project (`UNIQUE (project_id, name)`), so a bare task name
-/// addresses nothing on its own. Tasks are addressed by [`task_ref`]
-/// instead, and the two task listings that do exist -- `Db::task_refs` and
-/// `Db::task_names` -- are their own queries precisely because neither is
-/// "every row's name".
+/// A stored type with a database-wide unique `name`: how the CLI addresses it, what completion
+/// offers and `list` prints. Implemented by `#[derive(Table)]` given a `kind`. Not implemented for
+/// [`Task`]: its name is unique only within its project, so tasks are addressed by [`task_ref`]
+/// (`Db::task_refs`/`Db::task_names` are their own queries).
 pub(crate) trait Named: Table {
     /// What messages call one of these: "board", "tag", ...
     const KIND: &'static str;
 
     fn name(&self) -> &str;
 
-    /// Normalises and checks an edited item before it's written. By default
-    /// only that it has a name.
+    /// Normalises and checks an edited item before it's written; by default only that it has a name.
     fn validate(&mut self) -> Result<()> {
         require_name(Self::KIND, self.name())
     }
 }
 
-/// A named container of projects -- a board or an organization. A project
-/// belongs to at most one of each, through a nullable foreign key on
-/// `projects` that is `ON DELETE SET NULL`, so deleting the container only
-/// detaches its projects.
+/// A named container of projects (board or organization), through a nullable `ON DELETE SET NULL`
+/// foreign key: deleting it only detaches its projects.
 pub(crate) trait ProjectGroup: Named {
-    /// The `projects` column holding membership.
     const MEMBER_COLUMN: &'static str;
 
-    /// What a project in none of these is: "isn't bound to a board".
     const NOT_A_MEMBER: &'static str;
 
-    /// Where a project is once its container is gone: "on no board".
     const DETACHED: &'static str;
 
-    /// The id of the container `project` is in, if any.
     fn group_of(project: &Project) -> Option<i64>;
 }
 
-/// What `iter board edit`/`iter organization edit` open in the editor: the
-/// group plus the names of the projects in it. The roster isn't a column --
-/// it's each project's foreign key -- so it rides alongside the row rather
-/// than on it, and saving it moves projects in and out.
+/// What `board edit`/`organization edit` open: the group plus its project names. The roster is
+/// each project's foreign key, so saving it moves projects in and out.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GroupEdit<G> {
     #[serde(flatten)]
     pub group: G,
 
-    /// Project names. Listing one that's in another group moves it here;
-    /// leaving one off moves it out to none.
+    /// Project names: listed ones move here, omitted ones move out to none.
     #[serde(default)]
     pub projects: Vec<String>,
 }
@@ -180,7 +143,6 @@ impl<G: MarkdownBody + DeserializeOwned> MarkdownBody for GroupEdit<G> {
     }
 }
 
-/// The one "must have a name" check, for named entities and tasks alike.
 pub(crate) fn require_name(kind: &'static str, name: &str) -> Result<()> {
     match name.trim().is_empty() {
         true => Err(IterError::EmptyName(kind)),
@@ -188,8 +150,7 @@ pub(crate) fn require_name(kind: &'static str, name: &str) -> Result<()> {
     }
 }
 
-/// Refuses a `kind` name with a comma in it -- for the names (projects,
-/// tags) the web forms list comma-separated.
+/// Refuses a comma in names the web forms list comma-separated.
 pub(crate) fn require_no_comma(kind: &'static str, name: &str) -> Result<()> {
     if name.contains(',') {
         return Err(IterError::CommaInName {
@@ -200,14 +161,11 @@ pub(crate) fn require_no_comma(kind: &'static str, name: &str) -> Result<()> {
     Ok(())
 }
 
-/// How a task is named wherever the CLI speaks about one: `<project>/<task>`.
-/// The separator lives here, next to [`split_task_ref`] which reads it back,
-/// so the two halves of the convention can't drift apart.
+/// How the CLI names a task: `<project>/<task>`. The separator lives beside [`split_task_ref`].
 pub fn task_ref(project: &str, task: &str) -> String {
     format!("{project}/{task}")
 }
 
-/// Splits a [`task_ref`] on its first separator.
 pub fn split_task_ref(task_ref: &str) -> Option<(&str, &str)> {
     task_ref.split_once('/')
 }

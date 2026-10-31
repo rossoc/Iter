@@ -6,21 +6,15 @@ pub const URGENT_TAG: &str = "Urgent";
 /// The tag that colours a task's important flag, and the colour it starts as.
 pub const IMPORTANT_TAG: &str = "Important";
 
-/// A task's Eisenhower flags: whether it carries the [`URGENT_TAG`] and the
-/// [`IMPORTANT_TAG`]. The tags are the only record of them -- there are no
-/// flag columns to fall out of step with -- so the flags and the colours the
-/// board draws them in are one thing.
+/// A task's Eisenhower flags: whether it carries [`URGENT_TAG`] / [`IMPORTANT_TAG`]. The tags are
+/// the only record, so flags and colours are one thing.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Priority {
     pub urgent: bool,
     pub important: bool,
 }
 
-/// A coloured label. Tags belong to no project or organization: one set is
-/// shared by every task in the database.
-///
-/// The two seeded tags, [`URGENT_TAG`] and [`IMPORTANT_TAG`], are also what
-/// the board views colour the Eisenhower flags with.
+/// A coloured label shared by every task; [`URGENT_TAG`] and [`IMPORTANT_TAG`] are seeded.
 #[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
 #[table(name = "tags", order_by = "name", kind = "tag", check = "check")]
 pub struct Tag {
@@ -32,13 +26,11 @@ pub struct Tag {
     /// `#rrggbb`.
     pub color: String,
 
-    /// Free-form markdown notes, edited as the markdown body.
     #[serde(skip)]
     pub description: String,
 }
 
 impl Tag {
-    /// A blank template for `iter tag new` to open in the editor.
     pub fn template() -> Self {
         Tag {
             id: None,
@@ -48,7 +40,6 @@ impl Tag {
         }
     }
 
-    /// The tags every database is seeded with.
     pub fn defaults() -> [Tag; 2] {
         let seeded = |name: &str, color: &str, description: &str| Tag {
             id: None,
@@ -74,13 +65,11 @@ impl Tag {
         }
     }
 
-    /// Whether this is one of the seeded tags the board views rely on.
     pub fn is_builtin(&self) -> bool {
         self.name == URGENT_TAG || self.name == IMPORTANT_TAG
     }
 }
 
-/// `#` followed by exactly six hex digits.
 pub fn is_hex_color(s: &str) -> bool {
     s.len() == 7 && s.starts_with('#') && s[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
@@ -118,7 +107,6 @@ mod tests {
         ));
     }
 
-    /// A project is a place on disk, so it needs a path as well as a name.
     #[test]
     fn a_project_needs_a_name_and_a_base_path() {
         use crate::models::Project;
@@ -131,8 +119,7 @@ mod tests {
         assert!(p.validate().is_ok());
     }
 
-    /// Every write path validates, so every write path stores an absolute
-    /// `base_path` -- an edited or web-submitted one included.
+    /// Every write path stores an absolute `base_path`.
     #[test]
     fn a_relative_base_path_is_stored_absolute() {
         use crate::models::{Project, Settings};
@@ -148,8 +135,7 @@ mod tests {
         assert!(p.base_path.ends_with("work/p"), "{}", p.base_path);
     }
 
-    /// The web forms list projects and tags comma-separated, so a comma
-    /// inside a name couldn't survive the trip.
+    /// Web forms list these comma-separated.
     #[test]
     fn project_and_tag_names_cannot_hold_a_comma() {
         use crate::models::{Project, Settings};
@@ -169,7 +155,6 @@ mod tests {
         ));
     }
 
-    /// Everything else only has the default check: a name.
     #[test]
     fn the_default_validation_is_a_non_blank_name() {
         let mut board = Board::template();

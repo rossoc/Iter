@@ -8,30 +8,23 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The project a row belongs to, as a link.
 pub struct ProjectLink<'a> {
     pub name: &'a str,
     pub href: String,
 }
 
-/// One row, ready to show: plain display fields, the links already built
-/// (see `web/task_rows.rs` for the mapping from the models).
+/// One row, ready to show (mapping in `web/task_rows.rs`).
 pub struct TaskRow<'a> {
     pub name: &'a str,
     pub href: String,
-    /// Shown in the Project column, which the table has when any row
-    /// carries one.
+    /// Shown in the Project column, present when any row has one.
     pub project: Option<ProjectLink<'a>>,
     pub status: TaskStatus,
-    /// `#12`, or empty.
     pub issue: String,
 }
 
-/// `caption` is read by screen readers only. The Project column appears
-/// when the rows carry a project. `add` is where the first row leads, when
-/// the table has one: the whole row is a link ("New task…") that opens the
-/// New task pop-up (`modal.rs`). `empty` is the line shown when there are
-/// no rows. It is a `data_table` (see `table.rs`).
+/// `caption` is for screen readers only. `add` leads the first row ("New task…");
+/// `empty` is the line when no rows.
 #[component]
 pub async fn task_table(
     rows: &[TaskRow<'_>],
@@ -59,8 +52,7 @@ pub async fn task_table(
                         )
                     }
                     cell(status(state: r.status))
-                    // Empty issue: "No issue" for screen readers; the
-                    // cell stays, so the row keeps its columns.
+                    // empty issue: "No issue" for screen readers; the cell stays to keep columns
                     cell(class: "mono",
                         if r.issue.is_empty() {
                             <span class="sr">"No issue"</span>

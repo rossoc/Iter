@@ -1,6 +1,4 @@
-//! The info tab of a board (`/board/{id}/info`): its description and its
-//! projects. Nothing here has rules of its own: it is all shared components
-//! (`ui/`).
+//! The info tab of a board (`/board/{id}/info`): description and projects.
 
 use super::Id;
 use super::board_header::{BoardSection, board_header};
@@ -32,7 +30,6 @@ async fn info_page(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<InfoQuery>(cx)?;
     let (board, projects) = load(&open_db()?, id)?;
-    // `?new=project`: the New project pop-up over the page
     let create = match query.new.as_deref() {
         Some("project") => {
             Some(Home::Board(id).create(query.name.as_deref(), query.base_path.as_deref())?)
@@ -44,13 +41,10 @@ async fn info_page(cx: &Cx) -> Result<impl View> {
     )
 }
 
-/// Board `id` and its projects. A 404 for no such board.
 pub fn load(db: &Db, id: i64) -> Result<(Board, Vec<Project>)> {
     Ok((board_of(db, id)?, db.projects_in::<Board>(id)?))
 }
 
-/// `project_create` is the New project pop-up, when it is open (also when
-/// it comes back refused).
 #[component]
 pub async fn screen(
     board: &Board,

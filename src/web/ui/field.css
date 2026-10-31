@@ -1,39 +1,28 @@
-/* a label above its control, and a checkbox beside its label */
 .field{display:grid;gap:6px;margin:0}
 .field label{margin:0;padding:0;color:var(--fg);font-size:.875rem;font-weight:500}
 .field .req{margin-left:3px;color:var(--muted)}
 .field .control{width:100%}
-/* a control with a button on its line (`field(beside)`): the input takes the rest */
 .field-row{display:flex;gap:8px;align-items:stretch}
 .field-row .control{flex:1 1 auto;min-width:0}
 .field-row .button{flex:none}
 .field-row .path-pick[hidden]{display:none}
 .field-row .path-pick{padding-inline:10px}
-/* the input and its folder button are one bar: no gap and no line between
-   them (the input has no end border, the button no start border), rounded only
-   at the outer corners, and the button keeps the bar's border colour on hover
-   so only its icon and background answer */
+/* input and folder button are one bar: no gap or inner border, outer corners rounded,
+   the button keeps the bar's border colour on hover */
 .field-row:has(.path-pick){gap:0}
 .field-row:has(.path-pick) .control{border-inline-end-width:0;border-start-end-radius:0;border-end-end-radius:0}
 .field-row:has(.path-pick) .path-pick{border-inline-start-width:0;border-start-start-radius:0;border-end-start-radius:0}
 .field-row:has(.path-pick) .path-pick:hover{border-color:var(--control-line)}
-/* the ring goes round the whole bar, not the input alone: the input's own is
-   dropped and the row takes it while the input or the button has focus */
+/* the ring goes round the whole bar while the input or button has focus */
 .field-row:has(.path-pick) .control:focus{outline:0}
 .field-row:has(.path-pick):focus-within{outline:2px solid var(--accent);outline-offset:1px;border-radius:var(--r-md)}
 .field .hint{margin:0;color:var(--muted);font-size:.8125rem}
-/* a checkbox row: a tap-sized row (padding, not margins), the box on the first
-   line, a long unbroken name wrapping inside the row; the note is secondary
-   text and stays muted on hover */
 .check{display:flex;align-items:flex-start;gap:10px;min-height:2rem;margin:0;padding:6px 0;box-sizing:border-box;color:var(--fg);font-size:.875rem;font-weight:500;cursor:pointer;
   transition:color var(--fast) var(--ease-out)}
 .check:hover{color:var(--accent)}
-/* the box centred on the first line: `font:inherit` gives the input the
-   label's line height, so 1lh is that line (an input's own font is smaller,
-   with line-height:normal, which left the box sitting high) */
+/* `font:inherit` gives the input the label's line height so 1lh is the first line (the input's own font left the box high) */
 .check input{flex:none;width:1rem;height:1rem;font:inherit;margin:calc((1lh - 1rem) / 2) 0 0;accent-color:var(--accent);cursor:pointer}
 .check-text{min-width:0;overflow-wrap:anywhere}
 .check .note{color:var(--muted);font-size:.8125rem;font-weight:400}
-/* the cue that the form's error is about a control (field.rs invalid_cue): text, not only colour */
 .field-head{display:flex;align-items:baseline;gap:8px}
 .bad{color:var(--fg);font-size:.8125rem;font-weight:600}

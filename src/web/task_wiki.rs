@@ -1,10 +1,4 @@
-//! The Wiki tab of the task page: what agents have changed in the project's
-//! wiki and nobody has accepted (a diff, with Accept and Throw away), and the
-//! notes still waiting to be ingested (with Ingest now).
-//!
-//! The reading and the git work are `wiki::ingest_job`'s; this is the page
-//! and the three routes (`POST /task/{id}/wiki/{accept|revert|ingest}`), each
-//! of which goes back to the tab.
+//! The Wiki tab of the task page: agent changes to the project's wiki awaiting Accept or Throw away, and notes waiting to be ingested.
 
 use super::task_agent::{Doc, files_block};
 use super::ui::button::post_button;
@@ -30,8 +24,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(act)
 }
 
-/// One line of a diff and what it is, for the colour (the first character
-/// says the same in text).
 pub struct DiffLine {
     pub class: &'static str,
     pub text: String,
@@ -43,9 +35,7 @@ pub struct FileChange {
     pub lines: Vec<DiffLine>,
 }
 
-/// What the tab shows.
 pub enum WikiTab {
-    /// The project has nowhere to keep a wiki, or it could not be read.
     Unavailable(String),
     Ready {
         task_id: i64,
@@ -177,7 +167,6 @@ async fn waiting_block(task_id: i64, review: &Review) -> Result<impl View> {
     })
 }
 
-/// The tab's body.
 #[component]
 pub async fn wiki_tab(tab: &WikiTab, sketches: &[Doc]) -> Result<impl View> {
     Ok(view! {

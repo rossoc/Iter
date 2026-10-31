@@ -7,26 +7,19 @@ use crate::models::{Configured, Named, Organization};
 use crate::web::edit::EditForm;
 use crate::web::url::org_url;
 
-/// What the organization edit form submits. The projects come as repeated
-/// [`PROJECTS`] fields, one per ticked box, which a struct can't hold, so
-/// the raw pairs are read instead ([`Self::parse`]).
+/// The projects come as repeated [`PROJECTS`] fields, which a struct can't hold, so the raw pairs are read ([`Self::parse`]).
 pub struct OrgForm {
     pub name: String,
     pub description: String,
     pub settings: SettingsForm,
-    /// The folder of the organization's daily notes, or empty.
     pub notes_path: String,
-    /// The time platform's endpoint, the organization and the activity
-    /// hours are logged under.
     pub platform_url: String,
     pub platform_project: String,
     pub platform_activity: String,
-    /// The ids of the projects ticked.
     pub projects: Vec<i64>,
 }
 
 impl OrgForm {
-    /// The name of the notes folder control (also of the submitted field).
     pub const NOTES_PATH: &'static str = "notes_path";
 
     pub const PLATFORM_URL: &'static str = "platform_url";
@@ -67,7 +60,6 @@ impl EditForm for OrgForm {
         (org, valid)
     }
 
-    /// The projects in the organization too, in the same transaction.
     fn save(&self, db: &Db, id: i64, org: &Organization) -> Result<()> {
         let old = db.get::<Organization>(id)?;
         db.save_group(id, org, &self.projects)?;
@@ -84,9 +76,7 @@ mod tests {
     use super::*;
     use crate::models::Settings;
 
-    /// The organization form reads its settings and its repeated ticks from
-    /// the pairs, decoded the way topcoat decodes a real submission: an
-    /// unticked box is simply absent.
+    /// Decoded the way topcoat decodes a real submission: an unticked box is absent.
     #[test]
     fn an_org_submission_decodes_its_settings_and_ticks() {
         let body = "name=acme&description=&github=on&branch_template=fix%2F%7Btask%7D\

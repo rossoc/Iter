@@ -6,10 +6,7 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// `id` is the heading's id, unique on the page (`aria-labelledby`). The
-/// child nodes are the content. `count` adds a badge after the label (as on
-/// a tab); `noun` (the plural, "sessions") is what a screen reader hears
-/// after the number.
+/// `id` is the heading's unique id; `count` adds a badge, `noun` is what a screen reader hears after it.
 #[component]
 pub async fn labelled_section(
     id: &str,

@@ -1,5 +1,4 @@
-/* the footer: outside the frame's .page wrapper. The browser skips its layout
-   until it is near the viewport. */
+/* outside .page; the browser skips its layout until it is near the viewport */
 .site-foot{border-top:1px solid var(--line);background:var(--bg-2);
   content-visibility:auto;contain-intrinsic-size:auto 640px}
 .foot-inner{max-width:var(--main-w);margin:0 auto;padding:72px var(--main-pad) 56px;
@@ -8,7 +7,6 @@
 .foot-mark:hover{color:var(--accent)}
 .foot-brand p{margin:14px 0 0;max-width:18ch;color:var(--muted)}
 .foot-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(12.5rem,1fr));gap:40px 0}
-/* hairlines between the columns */
 .foot-col{min-width:0;padding:0 24px;border-left:1px solid var(--line)}
 .foot-col .label{margin-bottom:14px}
 .site-foot ul{list-style:none;margin:0;padding:0}

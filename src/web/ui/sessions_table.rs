@@ -1,6 +1,4 @@
-//! A table of work sessions: when each ran, how long, and its note. The
-//! Organization report and the task page show the same table, with
-//! different columns.
+//! A table of work sessions (when, how long, note), shared by the Organization report and the task page.
 
 use super::table::{AddRow, cell, data_table, row};
 use std::borrow::Cow;
@@ -9,27 +7,21 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// A point in time as shown, with its machine-readable form for `<time>`
-/// when the source has one.
+/// A point in time as shown, plus its machine form for `<time>` if known.
 pub struct Moment<'a> {
     pub text: Cow<'a, str>,
-    /// `2025-03-03T09:00`.
     pub at: Option<String>,
 }
 
-/// One row, ready to show (see `web/session_lines.rs` for the mapping from
-/// the models and the report).
+/// One row, ready to show (mapping in `web/session_lines.rs`).
 pub struct SessionLine<'a> {
-    /// Only for a table spanning several days.
     pub date: Option<Cow<'a, str>>,
     pub start: Moment<'a>,
-    /// `None`: the session is still open.
     pub end: Option<Moment<'a>>,
     pub duration: Cow<'a, str>,
     pub note: Option<Cow<'a, str>>,
 }
 
-/// One row: the cells the table's columns ask for.
 #[component]
 async fn session_row(l: &SessionLine<'_>, dated: bool, show_end: bool) -> Result<impl View> {
     Ok(view! {
@@ -49,7 +41,6 @@ async fn session_row(l: &SessionLine<'_>, dated: bool, show_end: bool) -> Result
             }
             cell(class: "mono",
                 (l.duration.as_ref())
-                // Still open: its duration counts up to now.
                 if l.end.is_none() && !show_end {
                     <span class="live"><span class="sr">" (still running)"</span></span>
                 }
@@ -59,7 +50,6 @@ async fn session_row(l: &SessionLine<'_>, dated: bool, show_end: bool) -> Result
     })
 }
 
-/// A moment: a `<time datetime>` when its machine form is known.
 #[component]
 async fn moment(m: &Moment<'_>) -> Result<impl View> {
     Ok(view! {
@@ -71,11 +61,9 @@ async fn moment(m: &Moment<'_>) -> Result<impl View> {
     })
 }
 
-/// `caption` is read by screen readers only. `show_end` adds the End column
-/// (an open session reads "ongoing" there); without it the open session is
-/// marked next to its duration. `add` is where the first row leads, when the
-/// table has one ("New session…": the pop-up). `empty` is the line shown
-/// when there are no sessions. It is a `data_table` (see `table.rs`).
+/// `caption` is for screen readers only. `show_end` adds the End column; without
+/// it an open session is marked beside its duration. `add` leads the first row
+/// ("New session…"); `empty` is the line when no sessions.
 #[component]
 pub async fn sessions_table(
     lines: &[SessionLine<'_>],

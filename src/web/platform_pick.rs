@@ -1,12 +1,4 @@
-//! Suggestions from the organization's time platform for the two fields that
-//! name where hours are logged (the settings form and the Share pop-up): its
-//! projects, and the activities of the project typed. A platform that cannot
-//! be asked -- no URL, no key, no answer in a few seconds -- gives empty
-//! lists, and the fields stay plain text.
-//!
-//! The activities depend on the project, so `/platform.js` asks
-//! `GET /org/{id}/platform-activities?project=` when the project field
-//! changes and fills the activities' `<datalist>`.
+//! Suggestions from the organization's time platform for the project and activity fields (settings form, Share pop-up); a platform that cannot answer gives none.
 
 use super::assets::Asset;
 use super::{Id, open_db};
@@ -26,7 +18,6 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// How long a page waits for the platform.
 const WAIT_SECONDS: u64 = 5;
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -40,7 +31,6 @@ async fn script(cx: &Cx) -> Result<Response> {
     PLATFORM_JS.respond(cx)
 }
 
-/// The organization's platform, when it has a URL and a key is at hand.
 pub fn open(org: &Organization) -> Option<JsonWebhook> {
     let url = org.platform_url.trim();
     if url.is_empty() {
@@ -50,8 +40,6 @@ pub fn open(org: &Organization) -> Option<JsonWebhook> {
     Some(JsonWebhook::new(url, key).with_timeout(WAIT_SECONDS))
 }
 
-/// The platform's projects, and the activities of `project` (an id or a
-/// name; the organization's own project when empty).
 pub fn lists(org: &Organization, project: &str) -> (Vec<PlatformItem>, Vec<PlatformItem>) {
     let Some(platform) = open(org) else {
         return Default::default();
@@ -63,8 +51,6 @@ pub fn lists(org: &Organization, project: &str) -> (Vec<PlatformItem>, Vec<Platf
     push::choices(&platform, project)
 }
 
-/// The two `<datalist>`s the fields point at (`list=` `LIST_PROJECTS` and
-/// `LIST_ACTIVITIES`). `url` is where the script asks for the activities.
 pub const LIST_PROJECTS: &str = "platform-projects";
 pub const LIST_ACTIVITIES: &str = "platform-activities";
 
@@ -99,8 +85,7 @@ struct Activities {
     activities: Vec<String>,
 }
 
-/// `GET /org/{id}/platform-activities?project=NAME`: the names of that
-/// project's activities, as JSON (empty when the platform cannot say).
+/// `GET /org/{id}/platform-activities?project=NAME`: the project's activity names as JSON (empty when the platform cannot say).
 #[route(GET "/org/{id}/platform-activities")]
 async fn activities_of(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;

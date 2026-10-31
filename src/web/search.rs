@@ -1,23 +1,6 @@
 //! The palette's search (`ui/search.rs`): a query parsed and ranked against
 //! the pages of the app. Pure, no markup, no database.
-//!
-//! A query is `[kind ]words`, optionally with scopes before it, separated by
-//! `/`:
-//!
-//! | query | meaning |
-//! |---|---|
-//! | `proj ` | every project (`task `, `org `, `board `, `note ` likewise) |
-//! | `task fix` | tasks whose name matches `fix` |
-//! | `org acme/proj web` | projects named like `web` that sit under an organization named like `acme` |
-//! | `fix login` | every page: all the words in the title first, then the ones that need the description |
-//! | `is:wip` | tasks in one status (`queue`, `wip`, `done`) |
-//!
-//! A kind word is any prefix of `board`, `organization`, `project`, `task`
-//! or `note`, followed by a blank. A title matches by substring (best at the
-//! start, then at a word start) or, failing that, as a subsequence (`wd`
-//! finds `write docs`).
 
-/// What a page is, in the order the results list them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Kind {
     Board,
@@ -36,7 +19,6 @@ impl Kind {
         Kind::Note,
     ];
 
-    /// The word that completes to this kind, and its label.
     pub fn word(self) -> &'static str {
         match self {
             Kind::Board => "board",
@@ -47,8 +29,6 @@ impl Kind {
         }
     }
 
-    /// What a kind word may be a prefix of; `org` is short for the
-    /// organization.
     fn names(self) -> &'static [&'static str] {
         match self {
             Kind::Board => &["board"],
@@ -67,33 +47,24 @@ impl Kind {
     }
 }
 
-/// A page the search can lead to.
 #[derive(Debug, Clone)]
 pub struct Entry {
     pub kind: Kind,
     pub title: String,
-    /// The pages above it, outermost first: an organization, a project.
     pub ancestors: Vec<(Kind, String)>,
     pub url: String,
-    /// Markdown, searched after the title.
     pub description: String,
-    /// A task's status (`queue`, `wip`, `done`), else empty.
     pub status: String,
 }
 
-/// A parsed query.
 #[derive(Debug, PartialEq, Default)]
 pub struct Query {
-    /// The pages the target must sit under: a kind (or any) and a name.
     scopes: Vec<(Option<Kind>, String)>,
     kind: Option<Kind>,
-    /// Lowercased words to find.
     words: Vec<String>,
     status: Option<String>,
 }
 
-/// `kind rest` -> `(Some(kind), rest)` when the first word names a kind and a
-/// blank follows it; otherwise `(None, segment)`.
 fn split_kind(segment: &str) -> (Option<Kind>, &str) {
     let segment = segment.trim_start();
     match segment.split_once(char::is_whitespace) {
@@ -171,7 +142,6 @@ pub struct Hit<'a> {
     pub entry: &'a Entry,
     tier: u8,
     score: i32,
-    /// Char indexes of the title the query matched, for highlighting.
     pub marks: Vec<usize>,
 }
 
@@ -212,7 +182,6 @@ fn hit<'a>(entry: &'a Entry, q: &Query) -> Option<Hit<'a>> {
     })
 }
 
-/// The pages `query` finds, best first, at most `limit`.
 pub fn search<'a>(entries: &'a [Entry], query: &str, limit: usize) -> Vec<Hit<'a>> {
     let q = Query::parse(query);
     let mut hits: Vec<Hit> = entries.iter().filter_map(|e| hit(e, &q)).collect();

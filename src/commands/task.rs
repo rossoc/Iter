@@ -27,9 +27,7 @@ use crate::utils::resolve::{
 };
 use crate::utils::workspace::teardown_and_kill;
 
-/// Note that bare `iter task` is handled in `main` rather than here: it
-/// means the unfinished work across every project, a filter no
-/// `TaskCommand` variant expresses.
+/// Bare `iter task` (unfinished work across projects) is handled in `main`: no `TaskCommand` variant expresses it.
 impl Run for TaskCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
@@ -147,10 +145,7 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
         template.name = issue.title;
         template.description = issue.body;
         template.github_issue = Some(issue.number);
-        // A task opened from an issue that's already closed starts `done`,
-        // the same as one `iter task pull` brings down -- so the very next
-        // `push` doesn't reopen the issue to match a status that was only
-        // ever the template's default.
+        // a task opened from an already closed issue starts `done`, like `iter task pull`, so the next `push` does not reopen it
         template.status = github::status_for_issue_state(template.status, issue.state);
     }
 
@@ -172,8 +167,7 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
     })
 }
 
-/// Validates an edited task and resolves its tags, before anything is
-/// written -- so an unknown tag name leaves the task untouched.
+/// Validates an edited task and resolves its tags before anything is written, so an unknown tag leaves the task untouched.
 fn checked_tags(db: &Db, edit: &TaskEdit) -> Result<Vec<i64>> {
     require_name("task", &edit.task.name)?;
     db.ids_by_name::<Tag>(&edit.tags)
@@ -224,10 +218,7 @@ fn task_delete(app: &App, task_ref: Option<&str>) -> Result<()> {
     let display = task_display(&project, &task);
     let session_config = db.find_session_config_by_task(task_id)?;
 
-    // Delete the task row (cascades to its session-config) before tearing
-    // down tmux/the worktree: if we're running inside the task's own tmux
-    // session, `kill-session` in the teardown takes down this pane too, so
-    // anything after that point may never run.
+    // delete the row before tearing down tmux/the worktree: from inside the task's own session `kill-session` takes this pane down too
     db.delete::<Task>(task_id)?;
 
     if let Some(session_config) = session_config {
@@ -258,9 +249,7 @@ fn task_info(app: &App, task_ref: Option<&str>, opts: &ReportOpts) -> Result<()>
     print_report(&info, opts.format)
 }
 
-/// Prints `<project>/<task>` for every task matching both filters, as a
-/// YAML list. An empty `statuses` means every status, the same way `None`
-/// for `project_filter` means every project.
+/// Prints `<project>/<task>` for every task matching both filters, as a YAML list; empty `statuses` and `None` project mean all.
 pub(crate) fn task_list(
     app: &App,
     project_filter: Option<&str>,
@@ -288,11 +277,7 @@ fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
         )));
     }
 
-    // `--save` goes first, before the clock, the status and the teardown:
-    // it is the one step here that can stop halfway, and a merge that
-    // stops has to leave the task exactly as it was -- still `wip`, with
-    // its worktree still on disk, since that worktree is where the
-    // half-done merge is waiting to be finished.
+    // `--save` goes first: it can stop halfway, and a stopped merge must leave the task `wip` with its worktree, where the half-done merge waits
     if save {
         let session_config = session_config
             .as_ref()
@@ -302,10 +287,7 @@ fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
 
     close_open_session(db, task_id, None)?;
 
-    // Persist the status change before tearing down the session-config: if
-    // we're running inside the task's own tmux session, `kill-session` below
-    // takes down every pane in it -- including this one -- so anything after
-    // that point may never run.
+    // persist the status before tearing down the session-config: `kill-session` from inside the task's own session takes this pane too
     task.status = TaskStatus::Done;
     db.update(task_id, &task)?;
 
@@ -330,21 +312,8 @@ fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
     Ok(())
 }
 
-/// What `--save` does: lands the task's branch on the project's
-/// `default_branch`, so the teardown that follows is throwing away a
-/// worktree and a branch whose work is already home.
-///
-/// Two merges, in this order. The default branch goes into the task's
-/// worktree first, so anything that conflicts conflicts *there* -- on the
-/// task's own branch, in the checkout the work was done in -- and only then
-/// does the task's branch go into the default branch, which by that point
-/// is a fast-forward.
-///
-/// Either merge stopping is left exactly as git left it: the conflicted
-/// files and the `MERGE_HEAD` beside them are the report, `git status` in
-/// the worktree named by the error spells out what's outstanding, and
-/// nothing here is torn down or marked done. Committing the merge and
-/// re-running `--save` picks up where it stopped.
+/// What `--save` does: merges the default branch into the task's worktree first (conflicts happen there), then the task's branch into the default branch (a fast-forward).
+/// A stopped merge is left as git left it (conflicted files and `MERGE_HEAD` are the report); nothing is torn down or marked done; commit and re-run `--save`.
 fn save_to_default_branch(
     project: &Project,
     session_config: &SessionConfig,
@@ -360,11 +329,7 @@ fn save_to_default_branch(
     };
     let default_branch = &project.default_branch;
 
-    // The second merge lands in whatever `base_path` has checked out, and
-    // git will merge into a bystander branch as happily as into the right
-    // one -- so this is checked before the first merge rather than
-    // discovered after it, when there would already be a merge commit in
-    // the worktree to explain.
+    // the second merge lands in whatever `base_path` has checked out, so verify that branch before the first merge, not after a merge commit exists
     if git::current_branch(&project.base_path).as_deref() != Some(default_branch.as_str()) {
         return Err(IterError::NotOnDefaultBranch {
             path: project.base_path.clone(),
@@ -407,8 +372,6 @@ mod tests {
     use super::*;
     use crate::models::{Project, TaskStatus};
 
-    /// A command driven against an in-memory database -- no config file, no
-    /// `$XDG_CONFIG_HOME`, no editor. This is what `App::with_db` is for.
     fn app() -> App {
         App::with_db(crate::fixtures::db())
     }
@@ -428,9 +391,6 @@ mod tests {
         (project_id, task_id)
     }
 
-    /// `task done` has to close the clock *and* flip the status, and it has
-    /// to persist both before any teardown -- a teardown run from inside
-    /// the task's own tmux session can end the process partway.
     #[test]
     fn marking_a_task_done_closes_its_open_session_and_persists_the_status() {
         let app = app();
@@ -451,10 +411,7 @@ mod tests {
         );
     }
 
-    /// `--save` on a task that never had a session-config has nothing to
-    /// merge, and the important half is what it *doesn't* do: the task is
-    /// left `wip`, not quietly marked done on the strength of a merge that
-    /// never happened.
+    /// `--save` with no session-config merges nothing and leaves the task `wip`.
     #[test]
     fn saving_a_task_with_no_worktree_is_an_error_that_changes_nothing() {
         let app = app();
@@ -467,8 +424,6 @@ mod tests {
         assert_eq!(task.status, TaskStatus::Wip);
     }
 
-    /// A `<project>/<task>` that names nothing is an error rather than a
-    /// silent no-op, and it names what was missing.
     #[test]
     fn an_unknown_task_ref_is_reported() {
         let app = app();
@@ -479,8 +434,6 @@ mod tests {
         assert!(error.to_string().contains("nosuch"), "{error}");
     }
 
-    /// The bare `iter task` filter -- unfinished work only -- and the
-    /// `--project` narrowing, both of which are now one SQL query.
     #[test]
     fn listing_narrows_by_project_and_status() {
         let app = app();
@@ -500,7 +453,6 @@ mod tests {
             app.db.task_refs(Some("nosuch"), &[]).expect("refs").len(),
             0
         );
-        // ...and the command itself runs against the same database.
         task_list(&app, Some("proj"), &[]).expect("task list succeeds");
     }
 }

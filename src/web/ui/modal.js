@@ -1,11 +1,8 @@
-// The pop-up's keyboard manners (modal.rs). An enhancement: without it the
-// pop-up still closes by its links (the ✕, Cancel, the backdrop) and the page
-// behind is still inert (frame.rs). With it, for the pop-up on the page:
-//   - the site footer is inert too, so Tab cannot leave the pop-up for it
-//     (the footer is outside the frame, which only marks the bar and main);
-//   - Escape closes the pop-up: it goes to the ✕'s link, the page without it;
-//   - Tab and Shift+Tab stay in the pop-up: from its last visible focusable
-//     element to the first, and from the first back to the last.
+// The pop-up's keyboard manners (modal.rs). Without it the pop-up still closes by its
+// links and the page behind is still inert (frame.rs). With it:
+//   - the site footer is inert too (it is outside the frame, which marks only bar and main);
+//   - Escape follows the close link (the ✕);
+//   - Tab and Shift+Tab wrap between the first and last focusable element.
 (function () {
   var box = document.querySelector(".modal-box[role=dialog]");
   if (!box) return;
@@ -13,11 +10,9 @@
   var foot = document.querySelector("footer.site-foot");
   if (foot) foot.setAttribute("inert", "");
 
-  // The instruction field: when another instruction is picked, its prompt (and
-  // preferred model) is fetched and put in the form -- unless the prompt was
-  // edited since it was loaded (it then differs from `data-loaded`), which is
-  // never overwritten. Without script, Enter in the field submits the small
-  // GET form that reloads the pop-up with that instruction.
+  // The instruction field: picking another instruction fetches its prompt (and model)
+  // into the form, unless the prompt was edited since load (differs from `data-loaded`).
+  // Without script, Enter in the field submits the small GET form that reloads the pop-up.
   var post = box.querySelector("form[method=post]");
   var promptArea = post && post.querySelector("textarea[name=prompt]");
   var model = post && post.querySelector("input[name=model]");

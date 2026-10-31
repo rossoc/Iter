@@ -1,17 +1,11 @@
-//! Turning notes into wiki pages: which notes are waiting, the prompts that
-//! tell an agent how, and the one setting (`ingest`) that says when to do it
-//! on its own. Running the agent is the caller's; this only reads and words.
-//!
-//! The setting lives in `wiki/settings.yaml` of the project (or of its
-//! organization, which the project inherits), so the wiki keeps its own
-//! configuration and nothing outside it needs to know.
+//! Turning notes into wiki pages: pending notes, the ingest prompts, and the `ingest` setting. The caller runs the agent.
+//! The setting lives in `wiki/settings.yaml` of the project or its organization (inherited).
 
 use super::check::{Dirty, dirty_notes};
 use super::graph::{Level, Wiki};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-/// When ingesting happens without being asked.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
@@ -36,9 +30,7 @@ struct Settings {
     ingest: Option<Mode>,
 }
 
-/// The mode the first of `levels` (innermost first) that sets one gives;
-/// `Manual` when none does. A settings file that cannot be read is skipped,
-/// and the reason is returned beside the mode.
+/// The mode of the first of `levels` (innermost first) that sets one, else `Manual`; an unreadable settings file is skipped and its reason returned.
 pub fn mode(levels: &[Level]) -> (Mode, Vec<String>) {
     let mut problems = Vec::new();
     for level in levels {
@@ -55,7 +47,6 @@ pub fn mode(levels: &[Level]) -> (Mode, Vec<String>) {
     (Mode::Manual, problems)
 }
 
-/// A note waiting to be ingested.
 #[derive(Debug, PartialEq)]
 pub struct Waiting {
     /// As the wiki writes it, from the project level (`2026-10-27`).
@@ -64,8 +55,7 @@ pub struct Waiting {
     pub why: Dirty,
 }
 
-/// The notes of the project level (index 0 of the wiki's levels) that no page
-/// has been made from since they changed, oldest name first.
+/// Project-level notes no page was made from since they changed, oldest name first.
 pub fn waiting(wiki: &Wiki) -> Vec<Waiting> {
     let mut out: Vec<Waiting> = dirty_notes(wiki)
         .into_iter()
@@ -80,16 +70,13 @@ pub fn waiting(wiki: &Wiki) -> Vec<Waiting> {
     out
 }
 
-/// What a prompt is filled in with.
 pub struct Job<'a> {
     pub project: &'a str,
     pub notes_dir: &'a Path,
-    /// The flags that point `iter wiki` at this project (`--project app`),
-    /// already quoted for a shell.
+    /// Flags pointing `iter wiki` at this project (`--project app`), shell-quoted.
     pub scope: &'a str,
     /// `YYYY-MM-DDTHH:MM:SS`, local time: what `updated` is set to.
     pub now: &'a str,
-    /// The rules, from `schema::render`.
     pub schema: &'a str,
 }
 
@@ -111,8 +98,7 @@ fn fill(template: &str, job: &Job, extra: &[(&str, String)]) -> String {
     text.replace("{{schema}}", job.schema)
 }
 
-/// The prompt that ingests `notes`. `sketches` is the folder of a finished
-/// task's sketches, read as notes too.
+/// The prompt that ingests `notes`; `sketches` is a finished task's sketches folder, read as notes too.
 pub fn ingest_prompt(job: &Job, notes: &[Waiting], sketches: Option<&Path>) -> String {
     let dirty = if notes.is_empty() {
         "(none: only the sketches below)".to_string()
@@ -144,7 +130,6 @@ pub fn ingest_prompt(job: &Job, notes: &[Waiting], sketches: Option<&Path>) -> S
     )
 }
 
-/// The prompt that builds the concept `name` from `ideas` (their ids).
 pub fn concept_prompt(job: &Job, name: &str, ideas: &[String]) -> String {
     let list = ideas
         .iter()

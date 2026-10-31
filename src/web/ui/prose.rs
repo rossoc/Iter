@@ -1,11 +1,6 @@
-//! An entity's description: markdown, rendered as HTML in the site's own
-//! look (`prose.css`).
-//!
-//! The text is the user's own, but it is still treated as untrusted: raw HTML
-//! in it is shown as text, and a link or an image keeps its URL only when it
-//! is `http(s)`, `mailto` or relative (a `javascript:` link would run on
-//! click). Headings move two levels down (`#` is an `<h3>`), so they sit
-//! under the page's `<h1>` and its section `<h2>`s.
+//! An entity's description: markdown rendered as HTML (`prose.css`). The text
+//! is untrusted: raw HTML is shown as text, and links/images keep their URL only
+//! if `http(s)`, `mailto` or relative. Headings move down two levels under the page's `<h1>`/`<h2>`.
 
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd, html};
 use topcoat::{
@@ -13,13 +8,11 @@ use topcoat::{
     view::{Unescaped, View, component, view},
 };
 
-/// What the markdown may use beyond CommonMark: the GitHub-style tables,
-/// ~~strikethrough~~ and `- [ ]` task lists the descriptions are written with.
+/// CommonMark plus tables, strikethrough and task lists.
 fn options() -> Options {
     Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS
 }
 
-/// `level` two levels down, an `<h6>` at most.
 fn shifted(level: HeadingLevel) -> HeadingLevel {
     match level {
         HeadingLevel::H1 => HeadingLevel::H3,
@@ -29,8 +22,7 @@ fn shifted(level: HeadingLevel) -> HeadingLevel {
     }
 }
 
-/// A URL a link or an image may keep: a scheme of the web or mail, or none
-/// (a path, a fragment).
+/// A URL a link or image may keep: web or mail scheme, or none.
 fn safe_url(url: &str) -> bool {
     let scheme = url
         .split_once(':')
@@ -44,10 +36,9 @@ fn safe_url(url: &str) -> bool {
     }
 }
 
-/// `text` as HTML: raw HTML escaped, unsafe links and images dropped to
-/// their text, headings shifted.
+/// `text` as HTML: raw HTML escaped, unsafe links dropped to their text, headings shifted.
 pub fn markdown(text: &str) -> String {
-    // the open links and images: whether each was kept, so its end matches
+    // whether each open link/image was kept, so its end matches
     let mut kept = Vec::new();
     let events = Parser::new_ext(text, options()).filter_map(|event| match event {
         Event::Html(raw) | Event::InlineHtml(raw) => Some(Event::Text(raw)),
@@ -79,8 +70,7 @@ pub fn markdown(text: &str) -> String {
     out
 }
 
-/// Nothing when `text` is empty. `class` is the look: `desc` (an entity's
-/// page) or the report's smaller `pdesc` / `tdesc`.
+/// Nothing when `text` is empty. `class`: `desc`, or the report's `pdesc` / `tdesc`.
 #[component]
 pub async fn description(text: &str, #[default("desc")] class: &str) -> Result<impl View> {
     let html = markdown(text);

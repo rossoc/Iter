@@ -1,7 +1,4 @@
-//! The projects of a group (a board, an organization) as the edit forms'
-//! checklists list them, one builder and one checklist for both: "the
-//! projects belonging to X", each ticked when it does, and a project that
-//! belongs to another group says so, since ticking it moves it here.
+//! The projects of a group (a board, an organization) as the edit forms' checklists list them.
 
 use super::forms::PROJECTS;
 use super::text::NO_PROJECTS;
@@ -15,8 +12,6 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The Projects checklist of a group's edit form. `noun` names the group
-/// kind in the hint ("organization", "board").
 #[component]
 pub async fn project_checklist(
     options: &[CheckOption],
@@ -36,7 +31,6 @@ pub async fn project_checklist(
     })
 }
 
-/// [`project_options`] over every group of kind `G`, read here.
 pub fn group_options<G: ProjectGroup + Table>(
     db: &Db,
     id: i64,
@@ -45,11 +39,7 @@ pub fn group_options<G: ProjectGroup + Table>(
     project_options(db, &db.list::<G>()?, id, ticked)
 }
 
-/// Every project as an option, in name order. `groups` are the groups of
-/// the kind (`id` may be among them: it is not "elsewhere"). `ticked` are
-/// the ids ticked in a submission; none means the projects in group `id`.
-/// The other groups' names come from one map and the ticks from one set:
-/// one pass, not a lookup per project per option.
+/// `ticked` are the ids ticked in a submission; none means the projects in group `id`.
 pub fn project_options<G: ProjectGroup + Table>(
     db: &Db,
     groups: &[G],
@@ -132,8 +122,7 @@ mod tests {
         assert_eq!(got[1].value, "11");
     }
 
-    /// After a refusal the ticks are the submission's, wherever the
-    /// projects are stored.
+    /// After a refusal the ticks are the submission's, wherever the projects are stored.
     #[test]
     fn a_submission_decides_the_ticks_after_a_refusal() {
         let boards = [board(1, "work"), board(2, "home")];

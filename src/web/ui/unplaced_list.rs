@@ -1,7 +1,5 @@
-//! A list of tasks not yet placed (not on the agenda, not in the matrix):
-//! a titled drop zone that holds the cards, or says there are none. A card
-//! dropped in it is taken off the day (agenda) or out of the quadrants
-//! (matrix); `target` is what `board.js` posts for such a drop.
+//! A titled drop zone of tasks not yet placed; a card dropped in is taken off the
+//! day or out of the quadrants (`target` is what `board.js` posts).
 
 use super::count::count_badge;
 use super::drop_zone::drop_zone;
@@ -11,13 +9,9 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// `id` is the heading's id (unique on the page); `title` the heading;
-/// `empty` the line shown when `count` is 0; the child nodes are the cards.
-/// `target` is the drop's target (empty on the agenda: unschedule). It is a
-/// labelled region, unless it is `alone` in an aside that is labelled itself
-/// (the matrix's Backlog): one landmark, not two of the same name.
-/// `collapsible` makes the heading a toggle (a `<details>`, open, no script):
-/// the list folds away to its heading and count.
+/// `target` is empty on the agenda (unschedule). It is a labelled region unless
+/// `alone` in an aside labelled itself (one landmark, not two). `collapsible`
+/// makes the heading a `<details>` toggle (open, no script).
 #[component]
 pub async fn unplaced_list(
     id: &str,

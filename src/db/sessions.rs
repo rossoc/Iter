@@ -7,8 +7,7 @@ impl Db {
         self.find_one("WHERE task_id = ?1", params![task_id])
     }
 
-    /// Every session-config belonging to a task of `project_id` -- one
-    /// query, rather than one per task.
+    /// Every session-config of a task of `project_id`.
     pub fn session_configs_for_project(&self, project_id: i64) -> Result<Vec<SessionConfig>> {
         self.find_all(
             "WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?1)",

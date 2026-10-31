@@ -1,9 +1,8 @@
 use chrono::NaiveDateTime;
 use iter_macros::Table;
 
-/// One worklog pushed to an organization's time platform: the ledger that
-/// lets an identical second push be refused. Not edited by hand, so it
-/// carries no serde derives.
+/// One worklog pushed to an organization's time platform; the ledger that refuses an identical
+/// second push. No serde derives.
 #[derive(Debug, Clone, PartialEq, Table)]
 #[table(name = "pushes")]
 pub struct Push {
@@ -16,7 +15,6 @@ pub struct Push {
     pub hash: String,
     #[table(with = "datetime")]
     pub at: NaiveDateTime,
-    /// What succeeded and what did not, one line per item.
     pub results: String,
 }
 
@@ -26,9 +24,8 @@ impl Push {
         self.results.lines().filter_map(|l| l.strip_prefix("ok: "))
     }
 
-    /// Whether every step of this push went through. A push that is not
-    /// complete (a day the platform refused, a GitHub issue that could not
-    /// be closed) is not "already pushed": running it again finishes it.
+    /// Whether every step went through. An incomplete push (a refused day, an unclosed issue) is
+    /// not "already pushed": rerunning finishes it.
     pub fn complete(&self) -> bool {
         !self.results.lines().any(|l| l.starts_with("FAILED: "))
     }

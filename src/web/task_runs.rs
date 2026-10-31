@@ -1,14 +1,4 @@
-//! The agents of a task, at the top of its Agent tab: a table with one entry
-//! per run, the form that writes a new one, and the page of one that has
-//! begun (what it was told, what it printed, a button to stop it).
-//!
-//! A run is a queued, running or finished record in the task's folder
-//! (`crate::agent::run`); the routes here write them through
-//! `agent::solve`, the one place that knows how a run begins.
-//!
-//! Everything is a link or a form: the kind of agent is chosen with links
-//! (`?new=agent&kind=fix`) that load the prompt of that kind, so no script
-//! is needed to fill the prompt in.
+//! The agents of a task at the top of its Agent tab: the table, the form that writes a new one, and the page of one that has begun.
 
 use super::errors::refused;
 use super::sections::TabQuery;
@@ -58,36 +48,25 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .route(prompt_of)
 }
 
-/// How many agents the table lists.
 const RUNS: usize = 50;
 
-/// The form for a run that has not begun: a new one, or a queued one being
-/// edited.
 pub struct Compose {
-    /// The instruction the prompt comes from.
     pub instruction: String,
-    /// Every instruction that applies, with what it is for: the form's links.
     pub offered: Vec<(String, String)>,
-    /// The queued run being edited; `None` for a new one.
     pub run: Option<u32>,
     pub model: String,
     pub effort: String,
     pub prompt: String,
-    /// Why the prompt could not be made.
     pub error: Option<String>,
 }
 
-/// What the top of the tab shows.
 #[derive(Default)]
 pub struct Roster {
-    /// Latest first.
     pub runs: Vec<RunRecord>,
     pub compose: Option<Compose>,
-    /// The run the table marks (the one being edited).
     pub current: Option<u32>,
 }
 
-/// The default model and effort of a form.
 fn defaults() -> (String, String) {
     let models = Harness::Claude.models(&config().agent.models);
     (
@@ -96,10 +75,6 @@ fn defaults() -> (String, String) {
     )
 }
 
-/// The instructions a form offers, as `(name, label)`.
-/// At the start only `plan`: the plan says what the next big steps are. Once
-/// there is a plan, every instruction that applies (the built-in ones, and
-/// those the task, its project or its organization keep).
 fn offered(layers: &Layers, has_plan: bool) -> Vec<(String, String)> {
     instruction::list(layers)
         .into_iter()
@@ -179,8 +154,6 @@ impl Roster {
     }
 }
 
-/// What an instruction is for, as the page says it: the built-in ones in
-/// words, the others by name.
 pub(super) fn label_of(name: &str) -> String {
     match name {
         "plan" => "Plan",
@@ -197,8 +170,7 @@ fn options(values: &[String]) -> Vec<(String, String)> {
     values.iter().map(|v| (v.clone(), v.clone())).collect()
 }
 
-/// A small icon-only button that posts to `action`: it is named for
-/// assistive technology and as a tooltip.
+/// Named for assistive technology and as a tooltip.
 #[component]
 pub(super) async fn act(
     #[into] action: String,
@@ -250,8 +222,6 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
     })
 }
 
-/// The agents, in the look of the tasks table: the first row writes a new
-/// one, the rest are the runs, the latest first.
 #[component]
 async fn agents_table(task_id: i64, roster: &Roster) -> Result<impl View> {
     let new = format!("{}&new=agent", agent_tab_url(&task_url(task_id)));
@@ -266,7 +236,6 @@ async fn agents_table(task_id: i64, roster: &Roster) -> Result<impl View> {
     })
 }
 
-/// The form of a new agent, or of a queued one.
 #[component]
 pub async fn compose_modal(task_id: i64, c: &Compose) -> Result<impl View> {
     let harness = Harness::Claude;
@@ -351,8 +320,6 @@ pub async fn compose_modal(task_id: i64, c: &Compose) -> Result<impl View> {
     })
 }
 
-/// The agents: the open step, if any, and the table, whose first row
-/// writes a new one (a pop-up form, `compose_modal`).
 #[component]
 pub async fn roster_block(
     task_id: i64,
@@ -380,13 +347,10 @@ struct RunForm {
     model: String,
     effort: String,
     prompt: String,
-    /// The button that was pressed.
     #[serde(rename = "do", default)]
     action: RunButton,
 }
 
-/// The buttons of the agent form (`name="do"`): `run` begins the agent now;
-/// `queue` and `save` leave it waiting (written down, not started).
 #[derive(Deserialize, Default, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 enum RunButton {
@@ -396,8 +360,7 @@ enum RunButton {
     Save,
 }
 
-/// The run a form asks for, or why not. The model and the effort must be
-/// ones the agent takes: the form offers only those.
+/// The model and the effort must be ones the agent takes: the form offers only those.
 fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Kind, Spec), String> {
     use clap::ValueEnum;
     let kind = instruction::find(&form.instruction, layers)
@@ -426,8 +389,6 @@ fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Kind, Spec
     ))
 }
 
-/// The task a route is about: its name for the commands, and the app to run
-/// them with.
 fn world(id: i64) -> Result<(App, String, Task, Project)> {
     let db = open_db()?;
     let (task, project) = super::load::task_with_project(&db, id)?;
@@ -441,8 +402,6 @@ fn world(id: i64) -> Result<(App, String, Task, Project)> {
     Ok((app, name, task, project))
 }
 
-/// `POST /task/{id}/runs`: writes an agent down and, if asked, starts it or
-/// puts it in line.
 #[route(POST "/task/{id}/runs")]
 async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
@@ -465,7 +424,6 @@ async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
 
 /// `GET /task/{id}/prompt?instruction=NAME`: the prompt that instruction makes
 /// for the task, and the model it prefers (if the harness offers it), as JSON.
-/// The New agent pop-up asks for it when another instruction is picked.
 #[route(GET "/task/{id}/prompt")]
 async fn prompt_of(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
@@ -499,8 +457,6 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
         .into_response(cx)
 }
 
-/// What the button pressed asks for, once the run is written: `run` begins
-/// it now; `queue` and `save` leave it waiting (written down, not started).
 fn follow_up(app: &App, name: &str, n: u32, action: RunButton) -> Result<()> {
     if action == RunButton::Run {
         solve::begin(app, name, n, &Launch::detached()).map_err(refused)?;
@@ -508,8 +464,6 @@ fn follow_up(app: &App, name: &str, n: u32, action: RunButton) -> Result<()> {
     Ok(())
 }
 
-/// `POST /task/{id}/runs/{n}`: saves the changes to a queued agent, then
-/// does what the button pressed asks.
 #[route(POST "/task/{id}/runs/{n}")]
 async fn edit_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
@@ -522,7 +476,6 @@ async fn edit_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     Err(see_other(agent_url(id, n)).into())
 }
 
-/// `POST /task/{id}/runs/{n}/run`: begins a queued agent now.
 #[route(POST "/task/{id}/runs/{n}/run")]
 async fn run_now(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
@@ -532,8 +485,6 @@ async fn run_now(cx: &Cx) -> Result<Response> {
     Err(see_other(agent_url(id, n)).into())
 }
 
-/// `POST /task/{id}/runs/{n}/cancel`: stops a working agent, or takes a
-/// queued one out of the line.
 #[route(POST "/task/{id}/runs/{n}/cancel")]
 async fn cancel_run(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;

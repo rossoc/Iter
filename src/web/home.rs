@@ -1,5 +1,4 @@
-//! The home page (`/`): a grid of the organizations with their projects. It
-//! has no rules of its own.
+//! The home page (`/`): a grid of the organizations with their projects.
 
 use super::load::{Grouped, grouped};
 use super::notes::first_line;
@@ -30,7 +29,6 @@ async fn home() -> Result<impl View> {
     Ok(view! { overview(orgs: &groups, loose: &loose) })
 }
 
-/// One card of the overview grid.
 #[component]
 async fn org_card(org: Option<&Organization>, projects: &[Project]) -> Result<impl View> {
     let items = project_items(projects);

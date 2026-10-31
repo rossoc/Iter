@@ -1,10 +1,8 @@
-//! The ink of a colored chip: text color computed from the chip's color so
-//! the text always reads (WCAG 4.5:1). Pure functions, no markup.
+//! Chip text color computed from the chip color (WCAG 4.5:1); no markup.
 
 use crate::models::is_hex_color;
 
-/// `#rrggbb` as its channels, or `None` for anything else (the database
-/// accepts any text as a tag color).
+/// `#rrggbb` as channels, else `None` (the database accepts any tag color text).
 fn channels(color: &str) -> Option<[u8; 3]> {
     if !is_hex_color(color) {
         return None;
@@ -27,13 +25,10 @@ fn luminance([r, g, b]: [u8; 3]) -> f64 {
     0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
 }
 
-/// The text color for a chip of `color`: `#000` or `#fff`, whichever
-/// contrasts more, and so at least 4.58:1 whatever the color. `None` when
-/// `color` is not `#rrggbb`.
+/// `#000` or `#fff`, whichever contrasts more (at least 4.58:1); `None` if not `#rrggbb`.
 pub fn readable_ink(color: &str) -> Option<&'static str> {
     let l = luminance(channels(color)?);
-    // Contrast with black is (l + .05) / .05, with white 1.05 / (l + .05);
-    // they cross where l is about .179.
+    // Contrast with black is (l + .05) / .05, with white 1.05 / (l + .05); equal at l about .179.
     Some(if (l + 0.05) / 0.05 >= 1.05 / (l + 0.05) {
         "#000"
     } else {

@@ -7,7 +7,6 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// The line above the title: a plain label, or where the page sits.
 #[derive(Default)]
 pub enum Kicker<'a> {
     #[default]
@@ -16,7 +15,6 @@ pub enum Kicker<'a> {
     Crumbs(&'a [Crumb]),
 }
 
-/// The child nodes are the actions (`edit_button`, ...), on the right.
 #[component]
 pub async fn page_header(
     title: &str,
@@ -38,7 +36,6 @@ pub async fn page_header(
     })
 }
 
-/// The line under a `page_header`.
 #[component]
 pub async fn lede(child: Child<'_>) -> Result<impl View> {
     Ok(view! { <p class="lede">(child)</p> })

@@ -5,8 +5,7 @@ use crate::process;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-/// Renders `item` as the editor buffer: a markdown document whose YAML
-/// front matter -- a `---` line
+/// Renders `item` as the editor buffer: YAML front matter between `---` lines, then the description.
 fn render_template<T: Serialize + MarkdownBody>(item: &T) -> Result<String> {
     let mut out = String::from("---\n");
     out.push_str(&serde_yaml::to_string(item)?);
@@ -31,22 +30,15 @@ pub(crate) fn split_at_divider(content: &str) -> Option<(&str, &str)> {
     None
 }
 
-/// Splits editor buffer content into its YAML front matter and the
-/// markdown body below it
+/// Splits an editor buffer into YAML front matter and markdown body.
 fn split_front_matter(content: &str) -> (&str, &str) {
     let content = content.strip_prefix("---\n").unwrap_or(content);
     split_at_divider(content).unwrap_or((content, ""))
 }
 
-/// Given the template that was opened in the editor and the file's content
-/// after the editor exited, decides whether the edit counts as "a save":
-/// unchanged content is `Ok(None)`, an abort. Anything else that parses
-/// back into `T` (front matter) plus a markdown body means go ahead.
-///
-/// Front matter that *doesn't* parse is an error rather than another
-/// `None`: the two are opposites. Nothing was typed in the first case, and
-/// in the second everything was -- reading a YAML slip as "no changes"
-/// would throw away the whole buffer, which is the only copy of it.
+/// Decides whether the edit counts as a save: unchanged content is `Ok(None)` (abort). Front
+/// matter that doesn't parse is an error, not `None`: reading a YAML slip as "no changes" would
+/// discard the only copy of the buffer.
 pub fn resolve_edit<T: DeserializeOwned + MarkdownBody>(
     original: &str,
     edited: &str,
@@ -56,23 +48,15 @@ pub fn resolve_edit<T: DeserializeOwned + MarkdownBody>(
     }
     let (front, body) = split_front_matter(edited);
     let mut item = T::from_front_matter(front)?;
-    // The blank line the template leaves under the front matter is
-    // separator, not description -- trimming it keeps a description from
-    // growing an extra leading newline on every round trip. The trailing
-    // end is trimmed of *all* whitespace, not just newlines, to match what
-    // `github::normalize_body` does to an issue body coming the other way:
-    // anything else and a description with a trailing space never compares
-    // equal to its own issue, so every `task push --body` rewrites it.
+    // The blank line under the front matter is separator, not description. The end is trimmed of
+    // all whitespace to match `github::normalize_body`, else a description never equals its issue
+    // and every `task push --body` rewrites it.
     item.set_description(body.trim_start_matches('\n').trim_end().to_string());
     Ok(Some(item))
 }
 
-/// Opens `template` as a markdown file -- YAML front matter with the
-/// fields, the `description` as the body -- in the configured editor
-/// (`nvim` unless `editor` says otherwise) for the user to fill in/edit.
-/// Returns `Ok(None)` if the editor exited without saving (file
-/// unchanged). Front matter that doesn't parse is an error carrying the
-/// path the buffer is left at, so the edit can be salvaged.
+/// Opens `template` in the configured editor (`nvim` by default). `Ok(None)` if it exited
+/// without saving. Unparseable front matter is an error carrying the path the buffer is left at.
 pub fn edit_in_editor<T: Serialize + DeserializeOwned + MarkdownBody>(
     template: &T,
 ) -> Result<Option<T>> {
@@ -85,13 +69,9 @@ pub fn edit_in_editor<T: Serialize + DeserializeOwned + MarkdownBody>(
     ));
     std::fs::write(&path, &original)?;
 
-    // `config()` hands out a `&'static Config`, so the configured name
-    // lives as long as the process and satisfies `run_status`'s
-    // `&'static str` -- no leaking a `String` to name the tool.
+    // `config()` is `&'static`, so the editor name satisfies `run_status`'s `&'static str`.
     let saved = process::run_status(&config().editor, None, &[&path])?;
 
-    // An unsaved buffer is the untouched template, so there is nothing to
-    // read back off it.
     let outcome = match saved {
         true => read_edited(&path, &original).map(|item: Option<T>| {
             item.map(|mut item| {
@@ -102,19 +82,16 @@ pub fn edit_in_editor<T: Serialize + DeserializeOwned + MarkdownBody>(
         false => Ok(None),
     };
 
-    // The one exception to cleaning up: front matter that didn't parse
-    // leaves the buffer on disk, named in the error. It's the only copy of
-    // what the user just wrote, and deleting it over a mistyped `:` would
-    // take a long description with it.
+    // Unparseable front matter leaves the buffer on disk, named in the error: it is the only copy
+    // of what was typed.
     if !matches!(outcome, Err(IterError::InvalidBuffer { .. })) {
         let _ = std::fs::remove_file(&path);
     }
     outcome
 }
 
-/// Reads the saved buffer back at `path` and resolves it against the
-/// `original` template. Split out so `edit_in_editor` has a single place
-/// that decides whether the file stays on disk.
+/// Reads the buffer back and resolves it against `original`; the one place deciding whether the
+/// file stays.
 fn read_edited<T: DeserializeOwned + MarkdownBody>(
     path: &std::path::Path,
     original: &str,
@@ -144,13 +121,8 @@ pub fn edit_text(initial: &str) -> Result<Option<String>> {
     })
 }
 
-/// Opens `template` in the editor and hands what came back to `save`,
-/// which does the writing and returns the line to print.
-///
-/// The other half -- an editor quit without saving -- is the same sentence
-/// every time, and saying it here is what keeps it in step with the verb
-/// the `save` half reports. `noun`/`verb` read as "no changes -- project
-/// not updated".
+/// Opens `template` and hands the result to `save`, which writes and returns the line to print.
+/// The no-change message is shared (`noun`/`verb`: "no changes -- project not updated").
 pub fn edited<T: Serialize + DeserializeOwned + MarkdownBody>(
     template: &T,
     noun: &str,
@@ -164,8 +136,6 @@ pub fn edited<T: Serialize + DeserializeOwned + MarkdownBody>(
     Ok(())
 }
 
-/// What an editor quit without saving reports: "no changes -- project not
-/// updated".
 pub fn no_changes(noun: &str, verb: &str) -> String {
     format!("no changes -- {noun} not {verb}")
 }
@@ -224,9 +194,6 @@ mod tests {
         );
     }
 
-    /// The buffer was written to, so "nothing changed" is the one thing
-    /// this isn't -- reporting it as a no-op is what used to make a bad
-    /// keystroke swallow the description that came with it.
     #[test]
     fn edited_but_unparseable_front_matter_is_an_error_not_a_no_save() {
         let original = render_template(&thing("", "")).unwrap();
@@ -239,9 +206,7 @@ mod tests {
         assert!(resolve_edit::<Thing>(&original, broken).is_err());
     }
 
-    /// Trailing whitespace comes off, so a description compares equal to
-    /// the issue body GitHub hands back (`github::normalize_body` trims the
-    /// same way) instead of re-pushing itself forever.
+    /// Trailing whitespace comes off, matching `github::normalize_body`.
     #[test]
     fn a_description_keeps_no_trailing_whitespace() {
         let original = render_template(&thing("", "")).unwrap();
@@ -252,9 +217,6 @@ mod tests {
         );
     }
 
-    /// `GroupEdit` flattens the organization into the front matter
-    /// next to its `projects` list; both have to survive the round trip,
-    /// and a buffer with no `projects` key at all means "none".
     #[test]
     fn an_organization_edit_round_trips_its_projects() {
         use crate::models::Settings;
@@ -287,8 +249,6 @@ mod tests {
         assert!(back.projects.is_empty());
     }
 
-    /// Foreign keys aren't in the buffer, so what comes back lacks them;
-    /// `carry_over` puts back exactly those, and nothing that was edited.
     #[test]
     fn carry_over_restores_only_the_fields_the_buffer_hides() {
         use crate::models::Project;
@@ -310,8 +270,6 @@ mod tests {
         assert_eq!(back.name, "after");
     }
 
-    /// The task buffer lists the task's tags next to its fields, and the
-    /// task's own foreign key survives the trip.
     #[test]
     fn a_task_edit_round_trips_its_tags() {
         use crate::models::{Task, TaskEdit, TaskStatus};
@@ -346,9 +304,6 @@ mod tests {
         );
     }
 
-    /// What the editor writes has to read back as what went in, or a
-    /// description would drift (gaining or losing blank lines) every time
-    /// the thing is edited and saved again.
     #[test]
     fn a_rendered_template_round_trips() {
         for item in [thing("hello", "notes\n\nmore notes"), thing("hello", "")] {
@@ -359,8 +314,6 @@ mod tests {
         }
     }
 
-    /// The task and group buffers read text fields exactly as typed, the
-    /// same as a project's: a bare number, `1.10`, `~` or `true` is text.
     #[test]
     fn wrapped_buffers_take_bare_scalars_as_typed_text() {
         use crate::models::{GroupEdit, Organization, Task, TaskEdit, TaskStatus};

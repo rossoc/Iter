@@ -1,6 +1,4 @@
-//! The project edit form (`/project/{id}/edit`), the sibling of the
-//! organization one: the routes and the view. The page is `edit_page`; this
-//! supplies the crumbs and the controls of its own.
+//! The project edit form (`/project/{id}/edit`); the page is `edit_page`.
 
 use super::crumbs::trail;
 use super::daily_notes::NotesTab;
@@ -41,7 +39,6 @@ async fn show(cx: &Cx) -> Result<impl View> {
 #[page(POST "/project/{id}/edit")]
 async fn save(cx: &Cx, Form(form): Form<ProjectForm>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    // `refused.row` holds what was typed, `refused.stored` the stored row.
     let refused = submit(id, &form, |db, _| Ok(db.list::<Organization>()?))?;
     let org = org_in(&refused.extra, &refused.stored).cloned();
     Ok(view! {
@@ -49,9 +46,6 @@ async fn save(cx: &Cx, Form(form): Form<ProjectForm>) -> Result<impl View> {
     })
 }
 
-/// `stored` is the project as stored (the breadcrumb and title of the page,
-/// not what was typed) and `org` its organization. `project` holds what the
-/// form shows, and `orgs` are the choices. `error` is the refusal, if any.
 #[component]
 pub async fn screen(
     project: &Project,
@@ -68,7 +62,6 @@ pub async fn screen(
     );
     let current = id_text(project.organization_id);
     let settings = project.settings();
-    // the badges the project page itself shows
     let tasks_n = open_db()?.count_tasks_for_project(stored.id())?;
     let notes = NotesTab::load(crate::notes::project_dir(stored, org), false);
     let sections = settings_row(

@@ -1,11 +1,4 @@
-//! The Agent tab of the task page: the task's plan (goal, how, the checklist
-//! with the state of every step), a step opened beside it, and the notes and
-//! sketches kept in the task's folder.
-//!
-//! The files are `crate::agent`'s; this is what loads them for the page, the
-//! view, and the one route (`POST /task/{id}/plan/{step}`) that moves a step
-//! between todo, doing and done. A step is a link (`?tab=agent&step=s3`), so
-//! opening one needs no script.
+//! The Agent tab of the task page: the plan, a step opened beside it, and the notes and sketches in the task's folder.
 
 use super::task_runs::{Roster, roster_block};
 use super::ui::button::post_button;
@@ -43,27 +36,20 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(mark_step)
 }
 
-/// The most of a file the page reads, and of how many files per list.
 const FILE_BYTES: usize = 64 * 1024;
 const FILES: usize = 50;
 
-/// A note or a sketch, as the page shows it.
 pub struct Doc {
     pub name: String,
     pub text: String,
-    /// The file is longer than what is shown.
     pub cut: bool,
 }
 
-/// What the Agent tab shows.
 pub struct AgentTab {
-    /// The folder is among the project's notes (else it is in iter's config
-    /// directory, because the project has no notes folder).
+    /// The folder is among the project's notes, else in iter's config directory (the project has no notes folder).
     pub in_notes: bool,
     pub plan: Plan,
-    /// The step open over the table.
     pub step: Option<String>,
-    /// The agents: the table, and what is open over it.
     pub roster: Roster,
 }
 
@@ -87,8 +73,6 @@ fn docs(dir: &std::path::Path) -> Vec<Doc> {
         .collect()
 }
 
-/// The notes and the sketches in a task's folder, for the Notes tab and the
-/// Wiki tab.
 pub struct Files {
     pub notes: Vec<Doc>,
     pub sketches: Vec<Doc>,
@@ -107,8 +91,6 @@ pub fn files(db: &Db, project: &Project, task: &Task) -> Files {
     }
 }
 
-/// What the request asks the tab to open (`?step=`, `?run=`, `?new=agent`
-/// and `?instruction=`).
 #[derive(Default)]
 pub struct Open<'a> {
     pub step: Option<&'a str>,
@@ -117,7 +99,6 @@ pub struct Open<'a> {
     pub instruction: Option<&'a str>,
 }
 
-/// Reads what the tab shows.
 pub fn load(app: &App, project: &Project, task: &Task, open: &Open) -> Loaded<AgentTab> {
     let db = &app.db;
     let dir = taskdir::of(db, project, task).ok();
@@ -155,7 +136,6 @@ fn glyph(state: State) -> &'static str {
     }
 }
 
-/// `status.css`'s pill classes, which a step shares with a task.
 fn pill_class(state: State) -> &'static str {
     match state {
         State::Todo => "status queue",
@@ -179,7 +159,6 @@ async fn step_pill(state: State) -> Result<impl View> {
     })
 }
 
-/// The plan of a task, read for its Info tab: empty when there is none.
 pub fn plan_of(db: &Db, project: &Project, task: &Task) -> Plan {
     taskdir::of(db, project, task)
         .ok()
@@ -188,8 +167,6 @@ pub fn plan_of(db: &Db, project: &Project, task: &Task) -> Plan {
         .unwrap_or_default()
 }
 
-/// One checkpoint: its state as a glyph and in text, its text a link to the
-/// step on the Agents tab.
 #[component]
 async fn checkpoint(task_id: i64, item: &Item) -> Result<impl View> {
     Ok(view! {
@@ -208,9 +185,6 @@ async fn checkpoint(task_id: i64, item: &Item) -> Result<impl View> {
     })
 }
 
-/// The plan under the description: its goal and how, then the checkpoints
-/// (checked when done), under the big steps when it has them. Nothing when
-/// there is no plan (a task has one plan, so it needs no count).
 #[component]
 pub async fn plan_block(task_id: i64, plan: Option<&Plan>) -> Result<impl View> {
     let plan = plan.cloned().unwrap_or_default();
@@ -255,9 +229,6 @@ pub async fn plan_block(task_id: i64, plan: Option<&Plan>) -> Result<impl View> 
     })
 }
 
-/// The task folder's notes (or sketches) as a table of the template: a row
-/// per file that opens to its text, the first row `add` (when a person can
-/// write one), and "No <noun> yet." as the last row when there are none.
 #[component]
 pub(super) async fn files_block(
     label: &str,
@@ -287,7 +258,6 @@ pub(super) async fn files_block(
     })
 }
 
-/// The open step: what it says, its state, and the buttons that change it.
 #[component]
 pub(super) async fn step_panel(task_id: i64, item: &Item) -> Result<impl View> {
     let others: Vec<State> = [State::Todo, State::Doing, State::Done]
@@ -317,8 +287,7 @@ pub(super) async fn step_panel(task_id: i64, item: &Item) -> Result<impl View> {
     })
 }
 
-/// How much of a step is done, as the width of its bar: a step being worked
-/// on is half way.
+/// A step being worked on is half way.
 fn share(state: State) -> &'static str {
     match state {
         State::Todo => "width:0",
@@ -327,8 +296,6 @@ fn share(state: State) -> &'static str {
     }
 }
 
-/// One step of the rail: a link (or plain text when it has no id yet), with
-/// its state and, for a step on its own, a bar.
 #[component]
 async fn rail_item(
     task_id: i64,
@@ -360,10 +327,6 @@ async fn rail_item(
     })
 }
 
-/// The plan as a contents list on the left: its big steps (the `###`
-/// headings of the checklist), each with how many of its small steps are done
-/// and a bar. A plan without big steps lists its steps, each with a bar of
-/// its own.
 #[component]
 async fn plan_rail(task_id: i64, plan: &Plan, current: Option<&str>) -> Result<impl View> {
     let phased = !plan.phases.is_empty();
@@ -392,9 +355,6 @@ async fn plan_rail(task_id: i64, plan: &Plan, current: Option<&str>) -> Result<i
     })
 }
 
-/// The tab's body: the plan's steps on the left; on the right the agents at
-/// the top (with what is open over them: a step, an agent, the form for a new
-/// one), then the plan's text.
 #[component]
 pub async fn agent_tab(task_id: i64, agent: &AgentTab) -> Result<impl View> {
     let open = agent.step.as_deref().and_then(|id| agent.plan.item(id));
@@ -421,17 +381,13 @@ struct MarkForm {
     state: String,
 }
 
-/// Why a step could not be moved.
 #[derive(Debug)]
 pub enum Refusal {
-    /// Not `todo`, `doing` or `done`.
     State(String),
-    /// No plan, or no such step in it.
     Missing,
     Io(std::io::Error),
 }
 
-/// Puts `step` of the plan in `dir` into the state `state` names.
 pub fn set_state(dir: &TaskDir, step: &str, state: &str) -> std::result::Result<(), Refusal> {
     let state = <State as clap::ValueEnum>::from_str(state, false)
         .map_err(|_| Refusal::State(format!("'{state}' is not a state")))?;
@@ -452,8 +408,6 @@ pub fn set_state(dir: &TaskDir, step: &str, state: &str) -> std::result::Result<
     })
 }
 
-/// `POST /task/{id}/plan/{step}`: moves a step, then shows the plan with that
-/// step open.
 #[route(POST "/task/{id}/plan/{step}")]
 async fn mark_step(cx: &Cx, Form(form): Form<MarkForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;

@@ -1,6 +1,4 @@
-//! A board page (the agenda, the matrix): the same lookups for both, each
-//! page only saying how its cards are split, and the same screen around
-//! what each draws.
+//! Lookups and screen shared by the agenda and the matrix.
 
 use super::board_cards::{BOARD_EMPTY, Colors};
 use super::board_header::{BoardSection, board_header};
@@ -19,9 +17,6 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// What a board page draws: the board, the colors, the task
-/// being moved (`?pick=`), the one just moved (`?moved=`; the note says so)
-/// and the page's own split of the cards.
 pub struct BoardPage<D> {
     pub board: Board,
     pub colors: Colors,
@@ -30,9 +25,7 @@ pub struct BoardPage<D> {
     pub data: D,
 }
 
-/// Board `id` with its unfinished cards (urgent first, then by label), split
-/// by `split` into what the page shows. The tasks `pick` and `moved` name
-/// are found among the cards (one that is not on the board is ignored).
+/// Unfinished cards of board `id` split by `split`; a `pick`/`moved` task not on the board is ignored.
 pub fn load_board<D>(
     id: i64,
     pick: Option<&str>,
@@ -52,11 +45,6 @@ pub fn load_board<D>(
     })
 }
 
-/// The screen of a board page: the frame, the board's heading and tabs, and
-/// the drag-and-drop area (`post`, `style` and `note` as `board_root` takes
-/// them) with the page's own part (the child nodes) beside its `side` lists;
-/// `folded` when those are folded into their rail. `empty`: the board has no
-/// unfinished task, and the page says so instead.
 #[component]
 pub async fn board_screen(
     board: &Board,

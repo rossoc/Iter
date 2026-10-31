@@ -1,10 +1,7 @@
 use thiserror::Error;
 
-/// The one error type for the whole app. External-tool failures (`git`,
-/// `tmux`, `gh`, `nvim`) are split into "couldn't even run it" (`Spawn`,
-/// carrying the actual `io::Error`) and "ran, but failed" (`CommandFailed`,
-/// a plain message built at the call site, since a nonzero exit status
-/// doesn't carry a structured error of its own).
+/// The one error type for the app. External-tool failures are `Spawn` (couldn't run it, carrying
+/// the `io::Error`) or `CommandFailed` (ran and failed; a message built at the call site).
 #[derive(Debug, Error)]
 pub enum IterError {
     #[error("database error: {0}")]
@@ -57,7 +54,7 @@ pub enum IterError {
     #[error("{0}")]
     CommandFailed(String),
 
-    /// The agent workflow's own errors, which print as they always have.
+    /// The agent workflow's own errors.
     #[error("{0}")]
     Agent(#[from] crate::agent::error::AgentError),
 
@@ -71,7 +68,6 @@ pub enum IterError {
     #[error("time platform: {0}")]
     Platform(String),
 
-    /// A board, organization, project or tag looked up by a name nothing has.
     #[error("no such {kind} '{name}'")]
     NotFound { kind: &'static str, name: String },
 
@@ -186,7 +182,6 @@ pub enum IterError {
     },
 }
 
-/// "a" or "an" for `kind`.
 fn article(kind: &str) -> &'static str {
     if kind.starts_with(['a', 'e', 'i', 'o', 'u']) {
         "an"
@@ -215,8 +210,6 @@ pub type Result<T> = std::result::Result<T, IterError>;
 mod tests {
     use super::*;
 
-    /// The parameterised variants replaced one variant per entity; what
-    /// the user reads has to be exactly what those used to say.
     #[test]
     fn parameterised_errors_read_as_the_per_entity_ones_did() {
         let cases = [

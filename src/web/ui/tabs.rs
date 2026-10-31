@@ -1,5 +1,4 @@
-//! Section tabs with one sliding underline (`tabs.css`). The caller gives each
-//! tab its finished `href`.
+//! Section tabs with one sliding underline (`tabs.css`); the caller gives each tab its `href`.
 
 use topcoat::{
     Result,
@@ -23,7 +22,6 @@ impl Tab {
         }
     }
 
-    /// A tab that is not (yet) the current one: `sections::tabs_for` marks it.
     pub fn link(label: &'static str, href: String) -> Tab {
         Tab::new(label, href, false)
     }
@@ -33,7 +31,6 @@ impl Tab {
         self.current
     }
 
-    /// The same tab, current or not.
     pub fn marked(mut self, current: bool) -> Tab {
         self.current = current;
         self
@@ -49,14 +46,12 @@ impl Tab {
         self.count
     }
 
-    /// A count badge after the label.
     pub fn count(mut self, count: usize) -> Tab {
         self.count = Some(count);
         self
     }
 }
 
-/// `label` names the navigation for screen readers ("Sections").
 #[component]
 pub async fn tabs(label: &str, items: &[Tab]) -> Result<impl View> {
     Ok(view! {

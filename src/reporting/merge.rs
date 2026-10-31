@@ -8,9 +8,7 @@ pub struct WeekdayAverage {
     pub average_hours: f64,
 }
 
-/// The seven weekdays' report labels in report order, which is the order
-/// `Weekday::num_days_from_monday` indexes -- so the label table and the
-/// slot a session lands in are the same list, and can't drift apart.
+/// The weekday labels in report order, which is `Weekday::num_days_from_monday` order.
 const WEEKDAYS: [&str; 7] = [
     "Monday",
     "Tuesday",
@@ -21,15 +19,9 @@ const WEEKDAYS: [&str; 7] = [
     "Sunday",
 ];
 
-/// For each weekday Monday..Sunday (always all seven, zero-filled when
-/// there's no data), the average hours logged on that weekday: total
-/// minutes across `sessions` that fall on that weekday, divided by the
-/// number of distinct calendar dates in `sessions` that fall on it. A
-/// session is attributed to its `start` date's weekday. Callers filter
-/// `sessions` to one task (or one project) beforehand.
+/// Average hours per weekday Monday..Sunday (all seven, zero-filled): minutes of `sessions` on it over the distinct dates falling on it, by `start` date. Callers filter to one task or project first.
 pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<WeekdayAverage> {
-    // Seven fixed slots rather than two maps keyed by weekday: the
-    // zero-fill an absent weekday needs is what an array gives for free.
+    // seven slots, so absent weekdays zero-fill for free
     let mut by_weekday: [(i64, HashSet<NaiveDate>); 7] = Default::default();
 
     for session in sessions {
@@ -52,16 +44,9 @@ pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<Weekday
         .collect()
 }
 
-// ---- the period a report covers ---------------------------------------
 
-/// The days an `info` report covers. Either a single day (`--date`,
-/// defaulting to today) or an interval (`--from`/`--to`) -- the CLI lets
-/// you write one formulation or the other, never both. `from: None` is an
-/// open start: every session up to and including `to`.
-/// Serialized as the header's own date fields: `date:` for a single day,
-/// `from:`/`to:` for an interval -- the same split [`Self::single_day`]
-/// makes everywhere else, so the range is stored once and rendered from,
-/// rather than stored again as three strings.
+/// The days an `info` report covers: a single day (`--date`, default today) or an interval (`--from`/`--to`), never both; `from: None` is an open start.
+/// Serialized as `date:` for a single day, `from:`/`to:` for an interval.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DateRange {
     pub from: Option<NaiveDate>,
@@ -76,14 +61,11 @@ impl DateRange {
         }
     }
 
-    /// The one date this range covers, when it covers exactly one -- what
-    /// decides between a `date:` and a `from:`/`to:` header, and whether
-    /// session tables need a `Date` column at all.
+    /// The one date this range covers, if exactly one: picks a `date:` header and whether session tables need a `Date` column.
     pub fn single_day(&self) -> Option<NaiveDate> {
         self.from.filter(|from| *from == self.to)
     }
 
-    /// How the period reads in a text report's summary line.
     pub fn label(&self) -> String {
         match (self.single_day(), self.from) {
             (Some(day), _) => fmt_date(day),
@@ -113,7 +95,7 @@ impl Serialize for DateRange {
     }
 }
 
-/// The date format every report prints and `main::parse_day` reads back.
+/// The date format every report prints and `utils::report::parse_day` reads back.
 pub fn fmt_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }
@@ -122,18 +104,12 @@ pub fn round_to_half_hour(hours: f64) -> f64 {
     (hours * 2.0).round() / 2.0
 }
 
-/// An amount of time spent, in the two shapes every report prints it in.
-/// They are one number twice over, so they are derived together, once,
-/// rather than re-paired at each of the places a total is built.
-///
-/// `#[serde(flatten)]`ed wherever it appears, so the two keys sit in the
-/// YAML exactly where the two fields used to.
+/// An amount of time in the two shapes every report prints, derived together; `#[serde(flatten)]`ed into the YAML.
 #[derive(Debug, Clone, Serialize)]
 pub struct Total {
     pub total_hours: f64,
     pub total_hhmm: String,
-    /// The exact figure the two above are rounded from -- for the web
-    /// report's bars; not part of the printed report.
+    /// The exact figure the others round from, for the web report's bars; not printed.
     #[serde(skip)]
     #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub minutes: i64,
@@ -148,18 +124,13 @@ impl Total {
         }
     }
 
-    /// How a total reads in a report body, e.g. `03:30 (3.5 h)`.
     pub(super) fn spent(&self) -> String {
         format!("{} ({:.1} h)", self.total_hhmm, self.total_hours)
     }
 }
 
-/// Total minutes covered by `sessions`, merging any two chronologically
-/// adjacent sessions (by start time) whose gap is under `gap_minutes` into
-/// one continuous span. This is what makes a project-level report correct
-/// even when two of its tasks were worked on in parallel: feed it the union
-/// of every task's sessions for the day and overlapping/near spans collapse
-/// into one, instead of being double-counted.
+/// Total minutes of `sessions`, merging chronologically adjacent ones whose gap is under `gap_minutes`;
+/// fed the union of a project's tasks' sessions it does not double-count parallel work.
 pub fn merged_total_minutes(sessions: &[Session], now: NaiveDateTime, gap_minutes: i64) -> i64 {
     let mut spans: Vec<(NaiveDateTime, NaiveDateTime)> = sessions
         .iter()

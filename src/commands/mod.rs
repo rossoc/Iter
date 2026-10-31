@@ -1,8 +1,4 @@
-//! One module per group of subcommands.
-//!
-//! Each exposes a single [`Run`] implementation over the clap enum it
-//! handles, so the crate root reaches a whole family of commands through
-//! one name and everything else in the file stays private to it.
+//! One module per group of subcommands, each exposing a single [`Run`] implementation over its clap enum.
 
 pub mod agent;
 pub mod board;
@@ -21,17 +17,8 @@ pub mod wiki;
 use crate::app::App;
 use crate::error::Result;
 
-/// A parsed subcommand that can be carried out.
-///
-/// Deliberately implemented per *enum* rather than per variant: clap has
-/// already produced the typed value, so the inner `match` is the dispatch
-/// and a trait per variant would only add a struct and an impl for each one
-/// without removing it. What this does buy is encapsulation -- the command
-/// bodies stop being crate-root functions and each module exports one name.
-///
-/// Always used with static dispatch. A `dyn Run` would force each variant's
-/// data to be owned, where today the bodies borrow straight out of the
-/// parsed `Args`.
+/// A parsed subcommand that can be carried out. Implemented per enum, not per variant, and used with static dispatch:
+/// the bodies borrow from the parsed `Args`, which a `dyn Run` would force to be owned.
 pub trait Run {
     fn run(&self, app: &App) -> Result<()>;
 }

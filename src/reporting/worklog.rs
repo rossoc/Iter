@@ -2,61 +2,45 @@
 
 use super::*;
 
-// ---- the worklog -------------------------------------------------------
 
-/// A task name on one line, as a worklog or a table cell needs it.
 pub(super) fn one_line(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// What was done on a task: `Completed <task>` once it is done, `Worked on
-/// <task>` while it is not.
+/// `Completed <task>` once the task is done, else `Worked on <task>`.
 pub fn worklog_line(name: &str, completed: bool) -> String {
     let verb = if completed { "Completed" } else { "Worked on" };
     format!("{verb} {}", one_line(name))
 }
 
-/// One line per task, in report order: the `worklog` format. A task is
-/// listed because it had a session in the period, so `done` here means
-/// finished at some point and worked on in this period -- tasks have no
-/// completion date to be more exact.
+/// One line per task, in report order (the `worklog` format); `done` means finished at some point and worked on in the period: tasks have no completion date.
 pub fn worklog_text<'a>(tasks: impl Iterator<Item = &'a TaskReport>) -> String {
     tasks
         .map(|t| worklog_line(&t.name, t.status == TaskStatus::Done) + "\n")
         .collect()
 }
 
-/// One day of a [`Worklog`]: the shape the time platform receives.
 #[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
 pub struct WorklogEntry {
     pub project: String,
     pub activity: String,
-    /// `yyyy-mm-dd`
     pub day: String,
-    /// Hours, as a decimal (`1.5` is an hour and a half).
     pub time: f64,
-    /// What was done, one `- ` line per task.
     pub note: String,
 }
 
-/// The hours of a period as one entry per day. Entries on one day are never
-/// split: everything done that day is accumulated into a single entry.
+/// The hours of a period as one entry per day; a day's work is never split.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Worklog {
     pub entries: Vec<WorklogEntry>,
-    /// Whether a session is still open, so its figure is measured against
-    /// now and a later push may differ. Not sent.
+    /// Whether a session is still open, so a later push may differ. Not sent.
     #[serde(skip)]
     pub open: bool,
 }
 
 impl Worklog {
-    /// Builds the worklog of `projects` (as `project_reports` returned
-    /// them) over `sessions` (the union it returned with them). Each day's
-    /// hours are the merged total of that day's sessions, so tasks worked
-    /// in parallel are not counted twice and the entries add up to what
-    /// `info` reports. A done task reads `Completed` on the last day it was
-    /// worked on in the period and `Worked on` before that.
+    /// Builds the worklog of `projects` over `sessions` (both from `project_reports`). A day's hours are the merged total of its sessions, so parallel tasks are not double-counted.
+    /// A done task reads `Completed` on the last day it was worked on, `Worked on` before.
     pub fn build(
         projects: &[ProjectReport],
         sessions: &[Session],
@@ -102,7 +86,6 @@ impl Worklog {
         self.entries.iter().map(|e| e.time).sum()
     }
 
-    /// The request body: `{"entries": [...]}`.
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(self).map_err(|e| {
             crate::error::IterError::CommandFailed(format!("could not encode the worklog: {e}"))

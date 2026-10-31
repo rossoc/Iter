@@ -1,6 +1,4 @@
-/* the modal: fixed over the page, the page blurred behind a backdrop that is
-   itself the way out (a link); the box centered, scrolling on its own when
-   taller than the screen. Under 600px it is a sheet over the whole screen. */
+/* fixed over the page; the backdrop is itself the way out (a link); a sheet under 600px */
 .modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:16px;overflow:auto}
 .modal-backdrop{position:fixed;inset:0;cursor:default;
   background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(6px) saturate(1.2);-webkit-backdrop-filter:blur(6px) saturate(1.2)}
@@ -24,5 +22,4 @@
   .modal-box{max-width:none;max-height:none;min-height:100dvh;border:0;border-radius:0;padding:16px 16px 32px}
 }
 @media (forced-colors:active){.modal-box{border:2px solid CanvasText}}
-/* the page behind a pop-up does not scroll (the box scrolls on its own) */
 body:has(.modal-box[role=dialog]){overflow:hidden}

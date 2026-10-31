@@ -1,5 +1,4 @@
-//! The overview card (Home: an organization and its projects; Boards: a
-//! board and its projects) and the grid that holds the cards.
+//! The overview card (Home, Boards) and the grid that holds the cards.
 
 use super::empty_line::empty_line;
 use super::project_list::{ProjectItem, project_list};
@@ -15,9 +14,7 @@ pub async fn card_grid(child: Child<'_>) -> Result<impl View> {
     Ok(view! { <section class="grid">(child)</section> })
 }
 
-/// `title` links to `href` when there is one (the arrow shows it leaves the
-/// overview); `note` is a one-line summary, left out when empty. With no
-/// `items` the card says `none`.
+/// `title` links to `href` if any; `note` is a one-line summary; no `items` says `none`.
 #[component]
 pub async fn group_card(
     title: &str,

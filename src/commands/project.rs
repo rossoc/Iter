@@ -1,10 +1,4 @@
-//! `iter project`, plus the three top-level commands that also create a
-//! project: `iter init`, `iter new` and `iter clone`.
-//!
-//! All four creation paths funnel through [`create_project_interactively`],
-//! which is what keeps the validation from being four slightly different
-//! validations -- and is why they live in one file rather than being split
-//! by which clap subcommand reaches them.
+//! `iter project`, plus `iter init`, `iter new` and `iter clone`, which also create a project, all through [`create_project_interactively`] (one validation).
 
 use crate::app::App;
 use crate::args::{ProjectCommand, ReportOpts};
@@ -23,17 +17,8 @@ use crate::utils::resolve::resolve_project_or_current;
 use crate::utils::workspace::teardown_session_config;
 use crate::{git, scaffold, tmux};
 
-/// The one way a project is created: opens `template` in the editor,
-/// validates what comes back, lets `populate` turn the `base_path` it names
-/// into an actual directory (creating it, copying another project's files
-/// into it, running `git clone`), and only then inserts the row -- so a
-/// project never names a directory that was never made, and a directory is
-/// never made for a `base_path` the user changed in the buffer.
-///
-/// `cloned_from` only names the origin in the message; quitting the editor
-/// without saving says so and creates nothing. Shared by `iter init`,
-/// `iter new`, `iter clone` and `iter project new`, which is what keeps the
-/// validation below from being four slightly different validations.
+/// The one way a project is created: opens `template` in the editor, validates, lets `populate` make the directory the edited `base_path` names, and only then inserts the row;
+/// so no project names a directory that was never made, and none is made for a `base_path` the user changed. `cloned_from` only names the origin in the message.
 fn create_project_interactively(
     db: &Db,
     template: &Project,
@@ -55,9 +40,7 @@ fn create_project_interactively(
     })
 }
 
-/// A blank project template, seeded with `organization`'s defaults when one
-/// was named. With none, the project keeps `Project::template`'s own
-/// defaults -- belonging to an organization is optional throughout.
+/// A blank project template seeded with `organization`'s defaults when one was named.
 fn new_project_template(db: &Db, organization: Option<&str>) -> Result<Project> {
     let mut template = Project::template(&config().project);
     if let Some(name) = organization {
@@ -86,21 +69,14 @@ pub(crate) fn new_cmd(app: &App, path: &str, organization: Option<&str>) -> Resu
     template.github = git::is_git_repo(&base_path);
     template.base_path = base_path;
 
-    // The directory is made from what comes *back* from the editor, not
-    // from the argument: edit `base_path` in the buffer and it's the edited
-    // one that gets created. Nothing exists before the edit, so quitting
-    // without saving leaves nothing behind to clean up either.
+    // the directory is made from what comes back from the editor, not from the argument; quitting without saving leaves nothing to clean up
     create_project_interactively(db, &template, None, |dest| {
         Ok(std::fs::create_dir_all(dest)?)
     })
 }
 
-/// `iter clone <source>`: clones an existing local project as a template
-/// when `source` names one, and otherwise treats `source` as a git remote
-/// URL / local repo path and clones that.
-///
-/// The clone of a project stays on that project's board unless `--board`
-/// or `--no-board` says otherwise.
+/// `iter clone <source>`: clones a local project as a template when `source` names one, else clones `source` as a git remote or local repo.
+/// The clone stays on that project's board unless `--board` or `--no-board` says otherwise.
 pub(crate) fn clone_cmd(
     app: &App,
     source: &str,
@@ -110,18 +86,12 @@ pub(crate) fn clone_cmd(
 ) -> Result<()> {
     let db = &app.db;
     match db.find_by_name::<Project>(source)? {
-        // Pre-fill from the source project -- including its name,
-        // deliberately, so the user has to change it before saving --
-        // leaving `base_path` blank for them to fill in. The source's
-        // tasks and sessions are never touched: they live in the DB,
-        // keyed to the source's own id.
+        // pre-fill from the source, name included so the user must change it; `base_path` is left blank. Its tasks and sessions are never touched
         Some(source_project) => {
             let mut template = source_project.clone();
             template.id = None;
             template.base_path = String::new();
-            // Cloning a project means keeping *its* settings, so an
-            // `--organization` here only changes which organization the
-            // copy belongs to -- it doesn't re-seed the defaults.
+            // cloning keeps the source's settings: `--organization` only moves the copy, it does not re-seed defaults
             if let Some(name) = organization {
                 template.organization_id = db.resolve::<Organization>(name)?.id;
             }
@@ -147,8 +117,6 @@ pub(crate) fn clone_cmd(
     }
 }
 
-/// The board `--board <name>` / `--no-board` pick, or `current` when
-/// neither was given.
 fn chosen_board(
     db: &Db,
     board: Option<&str>,
@@ -207,15 +175,13 @@ fn project_edit(
     let db = &app.db;
     let stored = resolve_project_or_current(db, name)?;
     let mut existing = stored.clone();
-    // `--organization` moves the project; without it, membership (or the
-    // lack of it) is carried through untouched.
+    // `--organization` moves the project; without it membership is carried through
     if let Some(name) = organization {
         existing.organization_id = db.resolve::<Organization>(name)?.id;
     }
-    // Same for the board; `--no-board` is the one way to leave it.
+    // likewise the board; `--no-board` is the one way to leave it
     existing.board_id = chosen_board(db, board, no_board, existing.board_id)?;
-    // Neither is in the buffer, so a move is saved even if the buffer isn't
-    // touched.
+    // neither is in the buffer, so a move is saved even if the buffer is untouched
     let moved =
         (existing.organization_id, existing.board_id) != (stored.organization_id, stored.board_id);
     update(db, &existing, moved, |_| Ok(()))
@@ -228,10 +194,7 @@ fn project_delete(app: &App, name: Option<&str>) -> Result<()> {
 
     let session_configs = db.session_configs_for_project(project_id)?;
 
-    // Delete the project (cascades to its tasks and their session-configs)
-    // before tearing down tmux/worktrees: if we're running inside one of
-    // those tmux sessions, `kill-session` in the teardown takes down this
-    // pane too, so anything after that point may never run.
+    // delete the row before tearing down tmux/worktrees: from inside one of those sessions `kill-session` takes this pane down too
     db.delete::<Project>(project_id)?;
 
     let tmux_sessions: Vec<&str> = session_configs
@@ -240,10 +203,7 @@ fn project_delete(app: &App, name: Option<&str>) -> Result<()> {
         .collect();
     println!("deleted project '{}'", project.name);
 
-    // Killing is left to the very end for the same reason the row deletion
-    // moved to the front: run this from inside one of these sessions and
-    // the first `kill-session` takes this process with it. Inside the loop
-    // above, that would strand every worktree after the first.
+    // killing goes last for the same reason: the first `kill-session` would take this process with it and strand later worktrees
     for name in tmux_sessions {
         tmux::kill_session(name);
     }
@@ -257,9 +217,7 @@ fn project_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> 
     let now = app.now;
     let range = resolve_range(opts, now)?;
 
-    // The union of every task's sessions in the period -- this is what
-    // makes working two of the project's tasks in parallel not
-    // double-count.
+    // the union of every task's sessions, so two tasks worked in parallel are not double-counted
     let (tasks, sessions) = task_reports(db, project_id, range, now)?;
     let total_minutes = total_minutes(&sessions, now);
 

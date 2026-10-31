@@ -1,7 +1,5 @@
-//! The folded Unscheduled column: a thin strip on the column's own edge
-//! that says what is hidden (the name, how many tasks wait, a dot when some
-//! are overdue). A link back to the open column, and a drop zone: a card
-//! dropped on it is unscheduled, as on the open lists.
+//! The folded Unscheduled column: a thin strip showing the name, task count and an
+//! overdue dot. A link back to the open column and a drop zone (unschedules).
 
 use super::{PANEL_RIGHT, icon};
 use topcoat::{
@@ -9,8 +7,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The screen-reader name: "Show Backlog, 3 tasks, 1 overdue" (`total`
-/// counts the overdue ones too).
+/// The screen-reader name: "Show Backlog, 3 tasks, 1 overdue" (`total` includes overdue).
 fn name(label: &str, total: usize, overdue: usize) -> String {
     let mut name = format!("Show {label}, {total} tasks");
     if overdue > 0 {
@@ -19,8 +16,7 @@ fn name(label: &str, total: usize, overdue: usize) -> String {
     name
 }
 
-/// The button that folds the open column, at the top right of it (on the
-/// first heading's row): `href` is the page with the column folded.
+/// The button that folds the open column; `href` is the page with it folded.
 #[component]
 pub async fn side_fold(#[into] href: String, label: &str) -> Result<impl View> {
     let name = format!("Hide {label}");
@@ -31,8 +27,7 @@ pub async fn side_fold(#[into] href: String, label: &str) -> Result<impl View> {
     })
 }
 
-/// `href` opens the column; `label` names it ("Backlog"); `target` is what a
-/// card dropped on the rail is posted as (empty on the agenda: unschedule).
+/// `href` opens the column; `target` is what a dropped card posts (empty on the agenda: unschedule).
 #[component]
 pub async fn side_rail(
     #[into] href: String,

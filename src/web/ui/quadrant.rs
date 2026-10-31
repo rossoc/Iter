@@ -1,7 +1,5 @@
-//! One quadrant of the Eisenhower matrix: a section named by its number and
-//! name (with how many tasks), described by its rule, holding a drop zone
-//! for its cards. Its top edge has the colors of the cards' edge; the number,
-//! name and rule are text, so color is never the only cue.
+//! One Eisenhower quadrant: a section with number, name, count and rule, holding
+//! a drop zone. Text carries the meaning, so color is never the only cue.
 
 use super::count::count_badge;
 use super::drop_zone::drop_zone;
@@ -12,10 +10,8 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// `id` is the heading's id (unique on the page); `target` what `board.js`
-/// posts for a drop here; `number` its place in the reading order (1-4);
-/// `rule` what puts a task here; `empty` the line shown when `count` is 0;
-/// the child nodes are the cards (and the pick mode's button).
+/// `target` is what `board.js` posts for a drop; `number` is 1-4; `rule` what
+/// puts a task here; `empty` the line shown when `count` is 0; children are the cards.
 #[component]
 pub async fn quadrant(
     id: &str,

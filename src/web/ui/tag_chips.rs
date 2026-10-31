@@ -1,5 +1,4 @@
-//! Colored chips: a list of names in their own colors. The text color is
-//! computed from the color (see `ink.rs`) so the text always reads.
+//! Colored chips; the text color comes from `ink.rs`.
 
 use super::ink::chip_style;
 use topcoat::{
@@ -7,8 +6,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// One chip, ready to show (see `web/task_rows.rs` for the mapping from
-/// tags). `color` is whatever the source stores: only a `#rrggbb` is used.
+/// One chip, ready to show (mapping in `web/task_rows.rs`); only a `#rrggbb` `color` is used.
 pub struct Chip<'a> {
     pub name: &'a str,
     pub color: &'a str,

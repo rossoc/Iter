@@ -7,11 +7,9 @@ use crate::models::{Board, Named};
 use crate::web::edit::EditForm;
 use crate::web::url::board_info_url;
 
-/// What the board edit form submits: the same way as [`OrgForm`].
 pub struct BoardForm {
     pub name: String,
     pub description: String,
-    /// The ids of the projects ticked.
     pub projects: Vec<i64>,
 }
 
@@ -40,7 +38,6 @@ impl EditForm for BoardForm {
         (board, valid)
     }
 
-    /// The projects on the board too, in the same transaction.
     fn save(&self, db: &Db, id: i64, board: &Board) -> Result<()> {
         db.save_group(id, board, &self.projects)
     }
@@ -89,8 +86,6 @@ mod tests {
         assert!(matches!(blank, Err(IterError::EmptyName("board"))));
     }
 
-    /// The board errors that belong to a field say which, and a taken name
-    /// reads as a sentence.
     #[test]
     fn board_errors_name_their_field() {
         let taken = IterError::NameTaken { kind: "board" };

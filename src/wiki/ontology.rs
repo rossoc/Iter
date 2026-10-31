@@ -1,7 +1,5 @@
-//! The ontology: `ontology.ttl`, plus an optional extension a project or an
-//! organization keeps (`wiki/ontology.ttl`), read into an OWL graph, and what
-//! the rest of the wiki needs from it: where each class lives on disk, which
-//! front matter keys are relations, and the entailment rules.
+//! The ontology (`ontology.ttl` plus a project's or organization's `wiki/ontology.ttl` extension) as an OWL graph,
+//! and what the wiki needs from it: folder of each class, relation keys, entailment rules.
 
 use crate::error::{IterError, Result};
 use oxigraph::io::{RdfFormat, RdfParser};
@@ -13,11 +11,9 @@ use std::collections::{HashMap, HashSet};
 const BASE: &str = include_str!("ontology.ttl");
 
 pub const NS: &str = "urn:iter:ns:";
-/// The prefix of a node's IRI: `urn:iter:<level>/<path>`.
 pub const NODE: &str = "urn:iter:";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 
-/// `iter:<local>`.
 pub fn ns(local: &str) -> NamedNode {
     NamedNode::new_unchecked(format!("{NS}{local}"))
 }
@@ -26,8 +22,6 @@ fn owl(local: &str) -> NamedNode {
     NamedNode::new_unchecked(format!("{OWL}{local}"))
 }
 
-/// What a level of the wiki is: its directory holds the wiki of an
-/// organization, of a project, or the folder of one task.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum LevelKind {
     Organization,
@@ -50,7 +44,6 @@ impl LevelKind {
             .find(|k| k.key() == key)
     }
 
-    /// The class of the level's own node.
     pub fn class(self) -> NamedNode {
         ns(match self {
             LevelKind::Organization => "Organization",
@@ -60,17 +53,14 @@ impl LevelKind {
     }
 }
 
-/// Where a class lives: the folder (or file) inside a level of `kind`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Place {
     pub kind: LevelKind,
-    /// Relative to the level's directory: `.` is its root, a name ending in
-    /// `.md` is that file, anything else is a folder.
+    /// Relative to the level's directory: `.` is the root, a name ending in `.md` a file, else a folder.
     pub folder: String,
     pub class: NamedNode,
 }
 
-/// The OWL 2 RL subset the engine applies (see `graph::entail`).
 #[derive(Default, Debug)]
 pub struct Rules {
     pub sub_class: Vec<(NamedNode, NamedNode)>,
@@ -84,14 +74,11 @@ pub struct Ontology {
     pub graph: Graph,
     pub places: Vec<Place>,
     pub rules: Rules,
-    /// `(front matter key, property)` for every `iter:authorable` property.
     pub authorable: Vec<(String, NamedNode)>,
-    /// Every class that is `iter:Page` or below: the ones whose files are read.
     pub pages: HashSet<NamedNode>,
 }
 
 impl Ontology {
-    /// The built-in ontology, extended by `extension` (Turtle) if any.
     pub fn load(extension: Option<&str>) -> Result<Ontology> {
         let mut graph = Graph::default();
         read_into(&mut graph, BASE, "the built-in ontology")?;
@@ -173,7 +160,6 @@ impl Ontology {
         Ok(())
     }
 
-    /// `class` and everything below it.
     pub fn subclasses_of(&self, class: &NamedNode) -> HashSet<NamedNode> {
         let mut below: HashMap<&NamedNode, Vec<&NamedNode>> = HashMap::new();
         for (sub, sup) in &self.rules.sub_class {
@@ -191,7 +177,6 @@ impl Ontology {
         seen
     }
 
-    /// Everything `class` is a subclass of, itself included.
     pub fn superclasses_of(&self, class: &NamedNode) -> HashSet<NamedNode> {
         let mut seen = HashSet::from([class.clone()]);
         let mut todo = vec![class.clone()];
@@ -205,8 +190,6 @@ impl Ontology {
         seen
     }
 
-    /// The classes a property's `rdfs:domain` or `rdfs:range` names (empty if
-    /// it names none).
     pub fn constraint(&self, property: &NamedNode, which: NamedNodeRef<'_>) -> Vec<NamedNode> {
         self.graph
             .objects_for_subject_predicate(property, which)
@@ -217,9 +200,7 @@ impl Ontology {
             .collect()
     }
 
-    /// The values `property` may take, when its range is an enumeration (an
-    /// `owl:oneOf` list, like `iter:ConfidenceLevel`); `None` when it may take
-    /// any.
+    /// The values `property` may take when its range is an `owl:oneOf` enumeration; `None` for any.
     pub fn allowed_values(&self, property: &NamedNode) -> Option<Vec<String>> {
         let range = self
             .graph
@@ -253,12 +234,10 @@ impl Ontology {
         Some(values)
     }
 
-    /// The front matter keys that are relations.
     pub fn relation_keys(&self) -> Vec<&str> {
         self.authorable.iter().map(|(k, _)| k.as_str()).collect()
     }
 
-    /// The property a front matter key names.
     pub fn relation(&self, key: &str) -> Option<&NamedNode> {
         self.authorable
             .iter()

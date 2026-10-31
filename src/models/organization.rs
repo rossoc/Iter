@@ -2,16 +2,8 @@ use crate::models::{Configured, Settings, default_branch_template, default_true,
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
-/// A grouping of projects, and the defaults new projects in it start from.
-///
-/// Deliberately has no `base_path`: an organization isn't a place on disk,
-/// it's the settings and the roster its projects share. Everything a
-/// project needs that *is* about disk -- where it lives, whether that
-/// directory is a repo -- stays on the project, which is why `iter
-/// init`/`new`/`clone` still create projects rather than organizations.
-///
-/// `id` is `None` for a not-yet-created organization (the blank template
-/// opened in the YAML editor); it's filled in once inserted.
+/// A grouping of projects and the defaults new projects in it start from. No `base_path`: it is
+/// settings and a roster, not a place on disk.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Table, MarkdownBody)]
 #[table(
     name = "organizations",
@@ -25,62 +17,49 @@ pub struct Organization {
 
     pub name: String,
 
-    /// Free-form markdown notes. Edited as the markdown body below the
-    /// YAML front matter rather than as a field among the others -- see
-    /// `MarkdownBody`.
     #[serde(skip)]
     pub description: String,
 
-    /// Default `github` for projects created in this organization.
     #[serde(default)]
     pub github: bool,
 
-    /// Default `tmux` for projects created in this organization.
     #[serde(default = "default_true")]
     pub tmux: bool,
 
-    /// Default `auto_branch` for projects created in this organization.
     #[serde(default = "default_true")]
     pub auto_branch: bool,
 
-    /// Default `branch_template` for projects created in this organization.
     #[serde(default = "default_branch_template")]
     pub branch_template: String,
 
-    /// Default `default_branch` for projects created in this organization.
     #[serde(default = "main_branch")]
     pub default_branch: String,
 
-    /// Default `github_project` for projects created in this organization.
     #[serde(default)]
     pub github_project: String,
 
-    /// The folder of this organization's daily notes (`~` expanded when
-    /// read), and the folder its projects without one of their own keep
-    /// theirs in. Empty means no notes.
+    /// Daily-notes folder (`~` expanded when read), also the parent for its projects' notes.
+    /// Empty means no notes.
     #[serde(default)]
     pub notes_path: String,
 
-    /// The endpoint of the time platform hours are pushed to. Empty means
-    /// none. The API key is not here: see `crate::secret`.
+    /// Time-platform endpoint; empty means none. The API key lives in `crate::secret`.
     #[serde(default)]
     pub platform_url: String,
 
-    /// The platform's organization that entries are logged under. Falls back
-    /// to this organization's name when empty. Editable on each share.
+    /// Platform organization entries are logged under; defaults to this organization's name.
+    /// Editable per share.
     #[serde(default)]
     pub platform_project: String,
 
-    /// The platform's activity that entries are logged under. Editable on
-    /// each share.
+    /// Platform activity entries are logged under. Editable per share.
     #[serde(default)]
     pub platform_activity: String,
 }
 
 impl Organization {
-    /// Beyond a name: the platform URL, when there is one, must be `https`
-    /// (every call carries the API key as a bearer token), or `http` to this
-    /// machine, which is how a local platform or a test server is reached.
+    /// Beyond a name: a platform URL must be `https` (calls carry the API key as a bearer token) or
+    /// `http` to this machine (local platform, test server).
     fn check(&mut self) -> crate::error::Result<()> {
         self.platform_url = self.platform_url.trim().to_string();
         let url = self.platform_url.as_str();
@@ -101,9 +80,7 @@ impl Organization {
         }
     }
 
-    /// A blank template for `iter organization new` to open in the
-    /// editor. Its fields *are* project defaults, so it starts from the
-    /// same config block a project without an organization starts from.
+    /// A blank template for `iter organization new`, starting from the project-defaults block.
     pub fn template(defaults: &Settings) -> Self {
         let mut organization = Organization::default();
         organization.set_settings(defaults.clone());

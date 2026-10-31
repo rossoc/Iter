@@ -1,6 +1,4 @@
-//! `GET /search?q=`: the palette's results as JSON. The pages are read from
-//! the database (and the notes' folders) on each request and ranked by
-//! `search.rs`; the palette script only draws what comes back.
+//! `GET /search?q=`: the palette's results as JSON, read from the database and notes folders on each request and ranked by `search.rs`.
 
 use super::open_db;
 use super::search::{Entry, Hit, Kind, search};
@@ -21,7 +19,6 @@ use topcoat::{
     },
 };
 
-/// How many results one query returns.
 const LIMIT: usize = 50;
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -33,7 +30,6 @@ struct SearchQuery {
     q: Option<String>,
 }
 
-/// Every page of the app the search can reach.
 fn entries(db: &Db) -> crate::error::Result<Vec<Entry>> {
     let orgs = db.list::<Organization>()?;
     let projects = db.list::<Project>()?;
@@ -117,7 +113,6 @@ fn entries(db: &Db) -> crate::error::Result<Vec<Entry>> {
     Ok(out)
 }
 
-/// The notes of the page at `base` (its folder `dir`, if it keeps one).
 fn push_notes(
     out: &mut Vec<Entry>,
     dir: Option<&std::path::Path>,

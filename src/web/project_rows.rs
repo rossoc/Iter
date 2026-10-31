@@ -12,7 +12,6 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// `path` with the home directory shortened to `~`.
 pub fn tilde(path: &str) -> String {
     match std::env::var("HOME") {
         Ok(dir) if !dir.is_empty() && path.starts_with(&dir) => {
@@ -22,7 +21,6 @@ pub fn tilde(path: &str) -> String {
     }
 }
 
-/// One row per project: the link and the base path shortened with `~`.
 pub fn project_items(projects: &[Project]) -> Vec<ProjectItem<'_>> {
     items_of(projects.iter())
 }
@@ -37,8 +35,6 @@ fn items_of<'a>(projects: impl Iterator<Item = &'a Project>) -> Vec<ProjectItem<
         .collect()
 }
 
-/// The projects whose name or base path contains every word of `q`, in any
-/// case (blank: all).
 pub fn matching<'a>(projects: &'a [Project], q: &str) -> Vec<&'a Project> {
     let words: Vec<String> = q.split_whitespace().map(str::to_lowercase).collect();
     projects
@@ -50,19 +46,16 @@ pub fn matching<'a>(projects: &'a [Project], q: &str) -> Vec<&'a Project> {
         .collect()
 }
 
-/// The syntax of the project search box, for its "?" (see [`matching`]).
 const SYNTAX: &[(&str, &str)] = &[
     ("app", "in the project's name or base path, in any case"),
     ("web app", "every word must be there, in any order"),
     ("src/", "part of a path works too"),
 ];
 
-/// The search box over a project list at `base` (the Info tab), showing `q`.
 pub fn project_search(base: String, q: Option<&str>) -> Search {
     project_search_in(base, "", q)
 }
 
-/// [`project_search`] for a list in the tab `tab` of its page.
 pub fn project_search_in(base: String, tab: &'static str, q: Option<&str>) -> Search {
     let q = q.unwrap_or("").trim();
     Search {
@@ -78,11 +71,6 @@ pub fn project_search_in(base: String, tab: &'static str, q: Option<&str>) -> Se
     }
 }
 
-/// The "Projects" section of an Info body: the count as a badge, the search
-/// box (when there are projects), then the rows -- the first one opens New
-/// project when there is `add` (where it leads) -- or `empty` ("No
-/// projects.") when there are none. Shared by the organization and board
-/// Info tabs.
 #[component]
 pub async fn projects_section(
     projects: &[Project],

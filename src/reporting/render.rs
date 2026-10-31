@@ -2,10 +2,7 @@
 
 use super::*;
 
-/// A text report: the header's scalars as fenced YAML front matter, then
-/// the markdown body -- the same shape `md_edit` opens a
-/// project/task/organization in, so a report reads like the thing it
-/// reports on
+/// A text report: header scalars as fenced YAML front matter, then the markdown body (the shape `md_edit` opens things in).
 pub(super) fn document(header: &Header, md: Md) -> Result<String> {
     let mut front = header.clone();
     front.description = None; // it's the body below the front matter instead
@@ -16,24 +13,19 @@ pub(super) fn document(header: &Header, md: Md) -> Result<String> {
     Ok(out)
 }
 
-/// The line under a report's title: the period it covers and the time in
-/// it. The period goes here rather than in the heading so the title stays
-/// just the name of the thing.
+/// The line under the title: the period and the time in it.
 pub(super) fn summary_line(header: &Header) -> String {
     format!("{} -- {}", header.period.label(), header.total.spent())
 }
 
-/// Trimmed text, or `None` when there's nothing left -- the one rule for
-/// "empty means absent" that every optional description and message in a
-/// report goes through.
+/// Trimmed text, or `None` when empty: the one "empty means absent" rule.
 pub fn non_empty(text: &str) -> Option<String> {
     Some(text.trim())
         .filter(|t| !t.is_empty())
         .map(str::to_string)
 }
 
-/// A markdown cell: pipes escaped and newlines flattened, so a typed note
-/// can't break the table it's printed in.
+/// A markdown cell: pipes escaped, newlines flattened.
 pub(super) fn cell(text: &str) -> String {
     text.replace('|', "\\|")
         .replace(['\n', '\r'], " ")
@@ -41,8 +33,6 @@ pub(super) fn cell(text: &str) -> String {
         .to_string()
 }
 
-/// The messages recorded on `rows`' closing events, as a bulleted,
-/// copy-paste-ready list.
 pub(super) fn message_bullets(rows: &[SessionRow]) -> Option<String> {
     let messages: Vec<String> = rows
         .iter()
@@ -56,10 +46,7 @@ pub(super) fn message_bullets(rows: &[SessionRow]) -> Option<String> {
     }
 }
 
-/// One `| a | b |` row, every cell padded to its column's width. Generic
-/// over the cell type so a `&[&str]` header row and a `&[String]` body row
-/// go through the same code without either being copied into the other's
-/// shape first.
+/// One `| a | b |` row padded to the column widths; generic so header and body rows share the code.
 pub(super) fn row_line<S: AsRef<str>>(widths: &[usize], cells: &[S]) -> String {
     let mut out = String::from("|");
     for (i, width) in widths.iter().enumerate() {
@@ -69,8 +56,7 @@ pub(super) fn row_line<S: AsRef<str>>(widths: &[usize], cells: &[S]) -> String {
     out
 }
 
-/// A markdown buffer that keeps exactly one blank line between blocks, so
-/// the callers above can just append sections without tracking spacing.
+/// A markdown buffer keeping exactly one blank line between blocks.
 pub struct Md {
     pub(super) out: String,
 }
@@ -95,9 +81,7 @@ impl Md {
         self.block(&format!("{} {}", "#".repeat(level), text));
     }
 
-    /// A pipe table with every column padded to its widest cell -- the
-    /// point of the text format is being read as-is in a terminal, where
-    /// ragged columns are the hard part.
+    /// A pipe table with columns padded to the widest cell, so it reads as-is in a terminal.
     pub(super) fn table(&mut self, headers: &[&str], rows: &[Vec<String>]) {
         if rows.is_empty() {
             return;
@@ -127,9 +111,7 @@ impl Md {
         self.block(&table);
     }
 
-    /// A project's tasks: the summary table, then a section per task. The
-    /// tail shared by a project report (which puts it at the top level) and
-    /// a project's section of an organization report (one level deeper).
+    /// A project's tasks: summary table, then a section per task; shared by project and organization reports.
     pub(super) fn task_breakdown(&mut self, tasks: &[TaskReport], level: usize) {
         self.task_summary(tasks);
         for task in tasks {
@@ -137,8 +119,6 @@ impl Md {
         }
     }
 
-    /// One project's section of an organization report -- the mirror of
-    /// [`Self::task_section`] one level up.
     pub(super) fn project_section(&mut self, project: &ProjectReport, level: usize) {
         self.heading(level, &project.name);
         self.block(&project.total.spent());
@@ -148,7 +128,6 @@ impl Md {
         self.task_breakdown(&project.tasks, level + 1);
     }
 
-    /// The "how much time went into each task" table under a project.
     pub(super) fn task_summary(&mut self, tasks: &[TaskReport]) {
         if tasks.is_empty() {
             self.block(NO_SESSIONS);
@@ -186,8 +165,7 @@ impl Md {
             self.block(NO_SESSIONS);
             return;
         }
-        // A report over one day would repeat that date on every row, so
-        // `session_rows` leaves it off and the column goes with it.
+        // a one-day report would repeat the date on every row: `session_rows` leaves it off and the column goes
         let dated = rows.iter().any(|r| r.date.is_some());
         let headers: &[&str] = match dated {
             true => &["Date", "Start", "End", "Duration", "Message"],

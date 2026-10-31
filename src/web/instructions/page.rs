@@ -2,16 +2,13 @@
 
 use super::*;
 
-/// The tabs of an instruction's page.
 #[derive(Clone, Copy, PartialEq)]
 enum Part {
     Info,
     Agents,
-    /// The edit form, as a tab of its own, always the last.
     Settings,
 }
 
-/// The Settings tab: the instruction field by field, over the file.
 #[component]
 async fn edit_form(scope: &Scope, i: &Instruction) -> Result<impl View> {
     let project = scope
@@ -144,8 +141,7 @@ async fn info_part(i: &Instruction) -> Result<impl View> {
     })
 }
 
-/// The agents that were given the instruction: the run, the task, how it
-/// ended (the start time is stored with the run, not shown).
+/// The start time is stored with the run, not shown.
 #[component]
 async fn agents_part(uses: &[Use]) -> Result<impl View> {
     Ok(view! {
@@ -172,7 +168,7 @@ pub(super) async fn detail_page(cx: &Cx) -> Result<impl View> {
     let db = open_db()?;
     let scope = Scope::asked(&db, query.project.as_deref())?;
     let i = instruction::find(&name, &scope.layers).ok_or_not_found()?;
-    // `?edit=1` is the old link to the form: it is the Settings tab now
+    // `?edit=1` opens the Settings tab.
     let part = match query.tab.as_deref() {
         Some("agents") => Part::Agents,
         Some("settings") => Part::Settings,

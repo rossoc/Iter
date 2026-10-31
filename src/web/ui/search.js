@@ -1,12 +1,8 @@
-// The search palette (search.rs). `/` or the bar's Search button opens it; the
-// query is sent to GET /search?q= and the answer drawn as a list, the selected
-// page shown in the frame beside it.
-//   - Up/Down (or Ctrl-N/Ctrl-P) move, Enter opens (Shift/Ctrl/Cmd+Enter in a
-//     new tab), Esc closes;
-//   - Tab completes a kind word (`pr` -> `project `), else moves into the
-//     preview, which is the page itself and so is interactive.
-// Loaded first in the page, because a page that is itself the palette's preview
-// must hide its chrome before it paints (`.in-preview`, search.css).
+// The search palette (search.rs): `/` or the bar's button opens it; the query goes to
+// GET /search?q= and the selected page shows in the frame beside the list.
+//   - Up/Down (or Ctrl-N/Ctrl-P) move, Enter opens (Shift/Ctrl/Cmd+Enter in a new tab), Esc closes;
+//   - Tab completes a kind word (`pr` -> `project `), else moves into the interactive preview.
+// Loaded first: a page that is itself the preview must hide its chrome before it paints (`.in-preview`).
 (function () {
   if (window.top !== window.self) {
     document.documentElement.classList.add("in-preview");
@@ -73,7 +69,6 @@
       status.textContent = text;
     }
 
-    // the title with the matched characters wrapped in <mark>
     function marked(title, marks) {
       var span = document.createElement("span");
       span.className = "palette-title";
@@ -153,12 +148,10 @@
     function preview() {
       var h = hits[current];
       if (!h) return;
-      // the same page: keep it, and select the new query's match in it
       if (frame.getAttribute("src") === h.url) mark();
       else frame.src = h.url;
     }
 
-    // the words to look for: the last segment, without its kind word and is: terms
     function words() {
       var seg = input.value.split("/").pop().trim().split(/\s+/);
       var first = seg[0] ? seg[0].toLowerCase() : "";
@@ -166,7 +159,6 @@
       return seg.filter(function (w) { return w && w.indexOf("is:") !== 0; }).map(function (w) { return w.toLowerCase(); });
     }
 
-    // the first occurrence of `word` in the text under `root`, as a Range
     function find(doc, root, word) {
       var walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode: function (n) {
@@ -184,7 +176,6 @@
       return null;
     }
 
-    // select the match in the preview, as a drag of the mouse would, and show it
     function mark() {
       var doc;
       try { doc = frame.contentDocument; } catch (err) { return; }
@@ -206,7 +197,6 @@
       win.scrollTo({ top: Math.max(0, top - win.innerHeight / 2) });
     }
 
-    // `pr` -> `project `: the last segment, when it is a unique kind prefix
     function complete() {
       var v = input.value, at = v.lastIndexOf("/") + 1;
       var word = v.slice(at).trim().toLowerCase();
@@ -225,7 +215,6 @@
 
     frame.addEventListener("load", function () {
       if (frame.getAttribute("src") !== "about:blank") mark();
-      // keys pressed inside the preview do not reach this document
       try {
         frame.contentWindow.document.addEventListener("keydown", function (e) {
           if (e.key === "Escape") { close(); }

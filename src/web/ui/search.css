@@ -1,6 +1,4 @@
-/* the search palette: fixed over the page, a query on top, results left, the
-   selected page (a frame, so interactive) right. Inside a frame (the preview)
-   the chrome is hidden: only the page's content shows. */
+/* fixed over the page; the preview is a frame, so interactive */
 .search-btn{display:inline-flex;align-items:center;gap:7px;margin-left:auto;padding:5px 10px 5px 12px;border:1px solid var(--line-2);border-radius:var(--r-pill);
   background:transparent;color:var(--muted);font:inherit;font-size:.875rem;font-weight:500;cursor:pointer;
   transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
@@ -51,8 +49,8 @@ html.palette-open{overflow:hidden}
 }
 @media (forced-colors:active){.palette-list li[aria-selected=true] a{outline:2px solid Highlight;outline-offset:-2px}}
 
-/* the preview: a page framed by the palette keeps its content only */
+/* inside the preview frame only the page's content shows */
 .in-preview .bar,.in-preview .skip,.in-preview .site-foot,.in-preview .palette{display:none}
 .in-preview main{padding-top:24px;padding-bottom:48px}
-/* the match the palette selected: drawn even though the frame has no focus */
+/* drawn even though the frame has no focus */
 .in-preview ::selection{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit}

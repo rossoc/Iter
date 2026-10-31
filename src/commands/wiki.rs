@@ -1,6 +1,4 @@
-//! `iter wiki`: reading the wiki the notes are the source of. Each command
-//! builds the graph from the files (see `crate::wiki`) and answers; none keeps
-//! anything between runs.
+//! `iter wiki`: reads the wiki the notes are the source of; each command builds the graph from the files (`crate::wiki`).
 
 use crate::app::App;
 use crate::args::{WikiCommand, WikiScope};
@@ -27,7 +25,6 @@ fn load(app: &App, s: &WikiScope) -> Result<Wiki> {
     scope::wiki(&app.db, &spec(s))
 }
 
-/// The page `id` names, written from the innermost level.
 fn page(wiki: &Wiki, id: &str) -> Result<usize> {
     wiki.node(0, id).ok_or_else(|| IterError::NotFound {
         kind: "wiki page",

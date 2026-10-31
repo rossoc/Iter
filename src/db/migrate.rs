@@ -3,19 +3,11 @@
 use super::*;
 
 impl Db {
-    /// Brings the schema up to date. `PRAGMA user_version` records how many
-    /// of [`Self::MIGRATIONS`] have run, so an up-to-date database costs one
-    /// pragma read to open -- which matters to `iter serve`, opening one per
-    /// request, and to shell completion, opening one per TAB. Each step runs
-    /// in its own transaction together with bumping the version, so a step
-    /// either lands whole or runs again next time.
-    ///
-    /// Two processes can open an old database at once (a tmux hook and an
-    /// `iter serve` request, say). Each step's transaction is therefore
-    /// `IMMEDIATE` -- it takes the write lock up front, where `busy_timeout`
-    /// waits for it, rather than upgrading a read lock mid-step, which fails
-    /// outright -- and re-reads the version under that lock, so the process
-    /// that waited skips a step the other one already ran.
+    /// Brings the schema up to date. `PRAGMA user_version` counts the [`Self::MIGRATIONS`] run, so an
+    /// up-to-date open costs one pragma read (serve and completion open per request/TAB). Each step
+    /// and its version bump share one `IMMEDIATE` transaction: the write lock is taken up front
+    /// (where `busy_timeout` waits; a mid-step upgrade fails outright) and the version re-read
+    /// under it, so a concurrent process skips a step already run.
     pub(super) fn migrate(&self) -> Result<()> {
         if self.user_version()? >= Self::MIGRATIONS.len() {
             return Ok(());
@@ -32,7 +24,6 @@ impl Db {
         }
     }
 
-    /// How many of [`Self::MIGRATIONS`] this database has run.
     pub(super) fn user_version(&self) -> Result<usize> {
         let done: i64 = self
             .conn
@@ -40,8 +31,7 @@ impl Db {
         Ok(usize::try_from(done).unwrap_or(0))
     }
 
-    /// The schema's history, oldest first. Append a step; never edit one
-    /// that has shipped.
+    /// Oldest first. Append a step; never edit a shipped one.
     pub(super) const MIGRATIONS: &[fn(&Db) -> Result<()>] = &[
         Self::baseline,
         Self::flags_to_tags,
@@ -51,19 +41,15 @@ impl Db {
         Self::add_pushes,
     ];
 
-    /// `notes_path` on projects and organizations: a database already past
-    /// the baseline never runs [`Self::add_missing_columns`] again, so the
-    /// columns added since need a step of their own.
+    /// `notes_path` on projects and organizations.
     pub(super) fn add_notes_path(&self) -> Result<()> {
         self.add_missing_columns()
     }
 
-    /// The time platform's connection settings on organizations.
     pub(super) fn add_platform(&self) -> Result<()> {
         self.add_missing_columns()
     }
 
-    /// The ledger of worklogs pushed to a time platform.
     pub(super) fn add_pushes(&self) -> Result<()> {
         self.conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS pushes (
@@ -80,12 +66,8 @@ impl Db {
         Ok(())
     }
 
-    /// Everything from before versioning: idempotent, since a database
-    /// that predates it could be at any point in that history.
-    ///
-    /// The `CREATE TABLE`s hold each table's original columns; every column
-    /// added later is declared once, in [`Self::add_missing_columns`], which
-    /// a fresh database runs too.
+    /// Everything before versioning; idempotent. The `CREATE TABLE`s hold the original columns;
+    /// later ones are declared once in [`Self::add_missing_columns`].
     pub(super) fn baseline(&self) -> Result<()> {
         self.rename_legacy_tables()?;
         self.conn.execute_batch(
@@ -154,10 +136,8 @@ impl Db {
         Ok(())
     }
 
-    /// Urgent/important moved from two `tasks` columns onto the two
-    /// built-in tags (see [`Priority`]): each set flag becomes a tag row, and
-    /// the column goes. A database that never had the columns has nothing
-    /// to move.
+    /// Urgent/important move from two `tasks` columns onto the two built-in tags (see
+    /// [`Priority`]); nothing to move if the columns never existed.
     pub(super) fn flags_to_tags(&self) -> Result<()> {
         for (column, tag) in [("urgency", URGENT_TAG), ("importance", IMPORTANT_TAG)] {
             if !self.column_exists("tasks", column)? {
@@ -177,11 +157,8 @@ impl Db {
         Ok(())
     }
 
-    /// Closed sessions under [`Session::MIN_SECONDS`] were stored before
-    /// closing learned to drop them; they go now. Measured in whole seconds
-    /// (`strftime('%s')`): `julianday` differences carry float error that
-    /// puts an exact minute at 59.99... Open sessions are left alone. A
-    /// table without the two columns has no durations to measure.
+    /// Drops closed sessions under [`Session::MIN_SECONDS`]. Whole seconds (`strftime('%s')`):
+    /// `julianday` float error puts an exact minute at 59.99... Open sessions stay.
     pub(super) fn drop_short_sessions(&self) -> Result<()> {
         if !self.column_exists("sessions", "start")? || !self.column_exists("sessions", "end")? {
             return Ok(());
@@ -196,9 +173,7 @@ impl Db {
         Ok(())
     }
 
-    /// The two tags every database has: the ones the board views colour the
-    /// Eisenhower flags with. `INSERT OR IGNORE` on the unique name, so a
-    /// user's recolouring survives and re-running this is a no-op.
+    /// The two seeded tags; `INSERT OR IGNORE` keeps a user's recolouring.
     pub(super) fn seed_tags(&self) -> Result<()> {
         for tag in Tag::defaults() {
             self.conn.execute(
@@ -209,21 +184,10 @@ impl Db {
         Ok(())
     }
 
-    /// The indexes the lookups above would otherwise scan whole tables for.
-    ///
-    /// Without `idx_sessions_task_start`, every `WHERE task_id = ?` on
-    /// `sessions` is a full table scan, and a report walks one per task --
-    /// an organization with 300 tasks scans the whole table 300 times.
-    /// `start` rides along so the date-range predicate is answered from the
-    /// index too, and so each task's sessions come back already ordered.
-    ///
-    /// Failures are deliberately swallowed. An index is an optimisation,
-    /// never a correctness requirement, and it names columns that a
-    /// database old enough may not have yet (the pre-rename `records`
-    /// table became `sessions` without necessarily bringing `start` with
-    /// it). Refusing to open the database over a missing index would turn
-    /// a slow read into no read at all; instead the index appears on the
-    /// first run where the schema can take it.
+    /// Indexes for lookups that would scan whole tables (`sessions` by `task_id` is walked once
+    /// per task in a report; `start` rides along for range and order). Failures are swallowed: an
+    /// index is only an optimisation and may name columns an old database lacks yet; it appears on
+    /// the first run the schema can take it.
     pub(super) fn create_indexes(&self) {
         const INDEXES: [&str; 5] = [
             "CREATE INDEX IF NOT EXISTS idx_sessions_task_start
@@ -245,18 +209,10 @@ impl Db {
         }
     }
 
-    /// Columns added to a table after it was first created. `CREATE TABLE
-    /// IF NOT EXISTS` above is a no-op on a database that already has the
-    /// table, so a field added later needs its own `ALTER TABLE` for the
-    /// databases already in the wild; each one is guarded on the column not
-    /// being there yet, making this a no-op on a fresh database too.
-    ///
-    /// `organization_id` is `ON DELETE SET NULL`, not `CASCADE`: an
-    /// organization is a grouping, so deleting one must not take its
-    /// projects -- and every task and session under them -- down with it.
-    /// They simply stop belonging to one, which is a state every project is
-    /// already allowed to be in. `board_id` follows the same rule: a board
-    /// is a container, so deleting one just unbinds its projects.
+    /// Columns added after a table's creation, each guarded on being absent (`CREATE TABLE IF NOT
+    /// EXISTS` won't add them). `organization_id` and `board_id` are `ON DELETE SET NULL`, not
+    /// `CASCADE`: groups are containers, so deleting one must not take its projects, tasks and
+    /// sessions with it.
     pub(super) fn add_missing_columns(&self) -> Result<()> {
         const ADDED: [(&str, &str, &str); 15] = [
             ("tasks", "matrix_placed", "INTEGER NOT NULL DEFAULT 0"),
@@ -308,9 +264,6 @@ impl Db {
         Ok(())
     }
 
-    /// Asked the same way as [`Self::table_exists`] -- a single row that
-    /// either comes back or doesn't, rather than every column name
-    /// collected into a `Vec` to be scanned afterwards.
     pub(super) fn column_exists(&self, table: &str, column: &str) -> Result<bool> {
         Ok(self
             .conn
@@ -323,14 +276,8 @@ impl Db {
             .is_some())
     }
 
-    /// One-time rename from the pre-rename schema (`Session`/`Record`
-    /// structs, backed by tables `sessions`/`records`) to the current one
-    /// (`SessionConfig`/`Session`, backed by tables `session_configs`/
-    /// `sessions`). Each rename is guarded on its target name not already
-    /// existing, so this is a no-op once applied, and a no-op on a fresh
-    /// database that never had the old tables to begin with. Order matters:
-    /// the old `sessions` table is renamed out of the way first, freeing
-    /// that name for the old `records` table to take.
+    /// One-time rename `sessions` -> `session_configs`, `records` -> `sessions`, each guarded on its
+    /// target not existing. Order matters: the old `sessions` moves aside first, freeing the name.
     pub(super) fn rename_legacy_tables(&self) -> Result<()> {
         if self.table_exists("sessions")? && !self.table_exists("session_configs")? {
             self.conn

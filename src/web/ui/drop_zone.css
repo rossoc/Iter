@@ -1,14 +1,10 @@
-/* a drop target. Only a page with script can drop, so the affordance (the
-   dashed line on an empty place, a list's box) waits for board.js to mark the
-   board (.can-drag). `over` is set by board.js while a card is dragged above. */
+/* the drop affordance waits for board.js to mark the board (.can-drag): only a page with script can drop */
 .drop{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:var(--touch);border:1px dashed transparent;border-radius:var(--r-md)}
 .drop-list{padding:8px;border-radius:var(--r-lg)}
 .can-drag .drop-list,.can-drag .drop:not(:has(.tcard)){border-color:var(--line-2)}
-/* a list inside the aside's box has no outline of its own: the zone shows
-   itself only while a card is over it */
+/* a list inside the aside's box shows itself only while a card is over it */
 .side .drop-list{padding:0}
 .can-drag .side .drop-list:not(.over){border-color:transparent}
 .drop.over,.can-drag .drop.over{border-color:var(--accent);background:var(--accent-tint)}
-/* an hour is a row, not a box: its empty place is drawn by the pick mode's slot */
 .can-drag .hour>.drop:not(.over){border-color:transparent}
 @media (forced-colors:active){.drop.over{border-style:solid;outline:2px solid Highlight}}

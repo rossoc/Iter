@@ -5,8 +5,6 @@ use super::task_query::DEFAULT;
 use crate::reporting::fmt_date;
 use chrono::NaiveDate;
 
-/// `base?k=v&k=v`, leaving out the `None`s (and the `?` when nothing is
-/// left). Values are percent-encoded.
 pub fn page_url(base: &str, params: &[(&str, Option<&str>)]) -> String {
     let mut url = base.to_string();
     let mut sep = if base.contains('?') { '&' } else { '?' };
@@ -22,8 +20,6 @@ pub fn page_url(base: &str, params: &[(&str, Option<&str>)]) -> String {
     url
 }
 
-/// `value` percent-encoded: letters, digits and `-._~` stay, every other
-/// byte becomes `%XX`. Fit for a query value or a path segment.
 fn encode(value: &str) -> String {
     let mut out = String::new();
     for b in value.bytes() {
@@ -36,14 +32,12 @@ fn encode(value: &str) -> String {
     out
 }
 
-/// The global settings page, and where a save lands.
 pub const SETTINGS: &str = "/settings";
 
 pub fn settings_saved_url() -> String {
     page_url(SETTINGS, &[("saved", Some("1"))])
 }
 
-/// The list of boards, and the section the top bar's Board link opens.
 pub const BOARDS: &str = "/boards";
 
 pub fn org_url(id: i64) -> String {
@@ -58,39 +52,31 @@ pub fn task_url(id: i64) -> String {
     format!("/task/{id}")
 }
 
-/// The edit form of the page at `url`.
 pub fn edit_url(url: &str) -> String {
     format!("{url}/edit")
 }
 
-/// The organization's edit form.
 pub fn org_edit_url(id: i64) -> String {
     edit_url(&org_url(id))
 }
 
-/// The task's edit form.
 pub fn task_edit_url(id: i64) -> String {
     edit_url(&task_url(id))
 }
 
-/// The project's edit form.
 pub fn project_edit_url(id: i64) -> String {
     edit_url(&project_url(id))
 }
 
-/// A board's page: its day agenda (`?date=` picks the day).
 pub fn board_url(id: i64) -> String {
     format!("/board/{id}")
 }
 
-/// The agenda of `day` on board `id`.
 pub fn board_day_url(id: i64, day: NaiveDate) -> String {
     page_url(&board_url(id), &[("date", Some(&fmt_date(day)))])
 }
 
-/// `url` with `side=off` (a board's side column (Unscheduled, Backlog) folded into its rail) when
-/// `folded`, before the fragment: what every link of a board keeps, so the
-/// column stays as it was left.
+/// `side=off` when `folded`: every link of a board keeps it, so the column stays as it was left.
 pub fn with_side(url: String, folded: bool) -> String {
     if !folded {
         return url;
@@ -106,67 +92,52 @@ pub fn with_side(url: String, folded: bool) -> String {
     }
 }
 
-/// The board's Eisenhower matrix.
 pub fn board_matrix_url(id: i64) -> String {
     format!("{}/matrix", board_url(id))
 }
 
-/// The board's description and projects.
 pub fn board_info_url(id: i64) -> String {
     format!("{}/info", board_url(id))
 }
 
-/// Where a task dropped on the agenda (or scheduled with the pick forms) is
-/// posted.
 pub fn board_schedule_url(id: i64) -> String {
     format!("{}/schedule", board_url(id))
 }
 
-/// The board's edit form.
 pub fn board_edit_url(id: i64) -> String {
     edit_url(&board_url(id))
 }
 
-/// The Tasks tab of the organization or project page at `base`, as every
-/// link into it opens it: with the default search, spelled out
-/// (`task_query::DEFAULT`), since a list with no `q` is unfiltered.
+/// Every link into the Tasks tab spells out the default search (`task_query::DEFAULT`), since a list with no `q` is unfiltered.
 pub fn tasks_tab_url(base: &str) -> String {
     tasks_list_url(base, Some(DEFAULT))
 }
 
-/// The Tasks tab of the page at `base`, with the search `q`; none (what an
-/// emptied search box sends) is no filter at all.
+/// `None` (what an emptied search box sends) is no filter at all.
 pub fn tasks_list_url(base: &str, q: Option<&str>) -> String {
     page_url(base, &[("tab", Some("tasks")), ("q", q)])
 }
 
-/// `base` opened on the tab `name`.
 fn tab(base: &str, name: &str) -> String {
     page_url(base, &[("tab", Some(name))])
 }
 
-/// The Notes tab of the organization or project page at `base`.
 pub fn notes_tab_url(base: &str) -> String {
     tab(base, "notes")
 }
 
-/// The Sessions tab of the task page at `base`.
 pub fn sessions_tab_url(base: &str) -> String {
     tab(base, "sessions")
 }
 
-/// The Projects tab of the organization page at `base`.
 pub fn projects_tab_url(base: &str) -> String {
     tab(base, "projects")
 }
 
-/// The list of the global instructions.
 pub fn instructions_url() -> String {
     "/instructions".to_string()
 }
 
-/// The page of instruction `name`: the global one, or as it applies to
-/// project `project`.
 pub fn instruction_url(name: &str, project: Option<i64>) -> String {
     let project = project.map(|p| p.to_string());
     page_url(
@@ -175,25 +146,19 @@ pub fn instruction_url(name: &str, project: Option<i64>) -> String {
     )
 }
 
-/// The Agent tab of the task page at `base`.
 pub fn agent_tab_url(base: &str) -> String {
     tab(base, "agent")
 }
 
-/// The Wiki tab of the task page at `base`.
 pub fn wiki_tab_url(base: &str) -> String {
     tab(base, "wiki")
 }
 
-/// What a Wiki tab button does. The URL builder and the route read the same
-/// words from here, so they cannot drift apart.
+/// The URL builder and the route read the same words from here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WikiAction {
-    /// Keep the agent's changes.
     Accept,
-    /// Throw them away.
     Revert,
-    /// Start an ingest now.
     Ingest,
 }
 
@@ -218,12 +183,10 @@ impl std::str::FromStr for WikiAction {
     }
 }
 
-/// Where the Wiki tab's buttons post.
 pub fn wiki_action_url(id: i64, action: WikiAction) -> String {
     format!("{}/wiki/{}", task_url(id), action.as_str())
 }
 
-/// The Agent tab of task `id` with `step` open beside the plan.
 pub fn task_step_url(id: i64, step: &str) -> String {
     page_url(
         &task_url(id),
@@ -231,43 +194,34 @@ pub fn task_step_url(id: i64, step: &str) -> String {
     )
 }
 
-/// Where a step's new state is posted.
 pub fn plan_step_url(id: i64, step: &str) -> String {
     format!("{}/plan/{}", task_url(id), encode(step))
 }
 
-/// Where the form of a new agent for task `id` is posted.
 pub fn runs_url(id: i64) -> String {
     format!("{}/runs", task_url(id))
 }
 
-/// The list of every agent of every task.
 pub fn agents_url() -> String {
     "/agents".to_string()
 }
 
-/// The page of agent `n` of task `id`.
 pub fn agent_url(id: i64, n: u32) -> String {
     format!("/agent/{id}/{n}")
 }
 
-/// Where a link to agent `n` of task `id` leads: its page.
 pub fn run_url(id: i64, n: u32) -> String {
     agent_url(id, n)
 }
 
-/// Where the form of a queued agent is posted.
 pub fn run_post_url(id: i64, n: u32) -> String {
     format!("{}/{n}", runs_url(id))
 }
 
-/// What a button on an agent posts to. The URL and the routes
-/// (`task_runs.rs`: `/runs/{n}/run`, `/runs/{n}/cancel`) read the same words.
+/// The URL and the routes (`task_runs.rs`) read the same words.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunAction {
-    /// Begin a queued agent now.
     Run,
-    /// Stop a working agent, or take a queued one out of the line.
     Cancel,
 }
 
@@ -280,44 +234,34 @@ impl RunAction {
     }
 }
 
-/// Where a button on agent `n` posts.
 pub fn run_action_url(id: i64, n: u32, action: RunAction) -> String {
     format!("{}/{}", run_post_url(id, n), action.as_str())
 }
 
-/// The note of `day` on the page at `base`.
 pub fn note_url(base: &str, day: NaiveDate) -> String {
     format!("{base}/notes/{}", fmt_date(day))
 }
 
-/// The note of `day` on the page at `base`, with its `tab` open (Info is the
-/// page itself, with no `?tab=`).
 pub fn note_tab_url(base: &str, day: NaiveDate, tab: super::sections::NoteTab) -> String {
     use super::sections::NoteTab;
     let name = (tab != NoteTab::Info).then(|| tab.as_str());
     page_url(&note_url(base, day), &[("tab", name)])
 }
 
-/// Where "today's note" of the page at `base` is posted: it makes the note
-/// and goes to it.
 pub fn notes_today_url(base: &str) -> String {
     format!("{base}/notes/today")
 }
 
-/// Where the New task pop-up of a task list posts (`task_new.rs`).
 pub const NEW_TASK: &str = "/task/new";
 
-/// Where the create row of board `id`'s project list posts.
 pub fn quick_board_project_url(id: i64) -> String {
     format!("{}/project/quick", board_url(id))
 }
 
-/// Where the create row of organization `id`'s project list posts.
 pub fn quick_project_url(id: i64) -> String {
     format!("{}/project/quick", org_url(id))
 }
 
-/// The Tasks tab of project `id`: where a task's pages lead back to.
 pub fn project_tasks_url(id: i64) -> String {
     tasks_tab_url(&project_url(id))
 }

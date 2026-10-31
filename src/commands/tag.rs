@@ -25,8 +25,7 @@ impl Run for TagCommand {
 fn tag_edit(app: &App, name: &str) -> Result<()> {
     let existing: Tag = app.db.resolve(name)?;
     update(&app.db, &existing, false, |tag| {
-        // The board views find these two by name, so they may be recoloured
-        // and re-described but not renamed.
+        // the board views find these two by name: they may be recoloured and re-described, not renamed
         match existing.is_builtin() && tag.name.trim() != existing.name {
             true => Err(IterError::BuiltinTag(existing.name.clone())),
             false => Ok(()),

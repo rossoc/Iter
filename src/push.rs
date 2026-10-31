@@ -1,15 +1,5 @@
-//! Pushing an organization's worklog to its time platform, and on to GitHub.
-//!
-//! Three steps, so the command line and the web page can share them and put
-//! a question between the second and the third:
-//!
-//! 1. [`plan`] -- what would be sent, read from the same `project_reports`
-//!    that `iter org info` prints. Nothing leaves the machine.
-//! 2. [`check`] -- whether this exact worklog was pushed before (the
-//!    ledger), and what the platform already holds for these days.
-//! 3. [`execute`] -- platform first; only if it accepts, the GitHub step
-//!    for completed tasks; then the ledger. Each item's outcome is reported
-//!    on its own, never swallowed.
+//! Pushing an organization's worklog to its time platform, and on to GitHub, in three steps shared by the CLI and the web page: [`plan`] (what would be sent; nothing leaves the machine),
+//! [`check`] (ledger and platform conflicts) and [`execute`] (platform first; only if it accepts, GitHub for completed tasks, then the ledger). See `doc/architecture_agent_wiki.md`.
 
 use crate::config::config;
 use crate::db::{Db, Table};
@@ -23,7 +13,6 @@ use chrono::{NaiveDate, NaiveDateTime};
 use sha1::{Digest, Sha1};
 use std::fmt::Write;
 
-/// The two free fields of an entry, as chosen for this push.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Target {
     pub organization: String,
@@ -31,8 +20,6 @@ pub struct Target {
 }
 
 impl Target {
-    /// The organization's defaults: the platform organization falls back to
-    /// the organization's own name.
     pub fn of(org: &Organization) -> Self {
         Target {
             organization: match org.platform_project.trim() {
@@ -44,32 +31,26 @@ impl Target {
     }
 }
 
-/// A GitHub issue to close and comment on, for a task completed in the period.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IssueJob {
     pub task: String,
     pub repo_path: String,
     pub issue: i64,
     pub line: String,
-    /// The day the task was last worked on: the entry its completion is
-    /// part of. The issue is touched only if that day was accepted.
+    /// The day the task was last worked on; the issue is touched only if that day was accepted.
     pub day: String,
 }
 
-/// Everything a push would do.
 #[derive(Debug, Clone)]
 pub struct Plan {
     pub range: DateRange,
-    /// The project and activity as chosen (names or ids): resolved to the
-    /// platform's ids when sent.
     pub target: Target,
     pub worklog: Worklog,
     pub issues: Vec<IssueJob>,
     pub hash: String,
 }
 
-/// A fingerprint of what is sent: the same worklog gives the same one, and a
-/// corrected one (another figure, a session closed since) a different one.
+/// A fingerprint of what is sent: the same worklog gives the same one, a corrected one another.
 pub fn fingerprint(worklog: &Worklog) -> Result<String> {
     let mut text = worklog.to_json()?;
     if worklog.open {
@@ -82,7 +63,6 @@ pub fn fingerprint(worklog: &Worklog) -> Result<String> {
     }))
 }
 
-/// The worklog of `org` over `range`, and the GitHub work that goes with it.
 pub fn plan(
     db: &Db,
     org: &Organization,
@@ -142,7 +122,6 @@ pub fn plan(
 }
 
 impl Plan {
-    /// The first and last day with an entry.
     pub fn days(&self) -> (NaiveDate, NaiveDate) {
         let parse = |e: &WorklogEntry| NaiveDate::parse_from_str(&e.day, "%Y-%m-%d").ok();
         let first = self.worklog.entries.iter().find_map(parse);
@@ -153,7 +132,6 @@ impl Plan {
         )
     }
 
-    /// What would be sent and done, for a preview that names the period.
     pub fn preview(&self) -> String {
         let mut out = format!(
             "Period: {}\nEntries: {} -- {:.2} h in total\n",
@@ -182,14 +160,10 @@ impl Plan {
     }
 }
 
-/// What the ledger and the platform already know about a push.
 #[derive(Debug, Clone, Default)]
 pub struct Check {
-    /// This exact worklog was pushed before.
     pub already_pushed: bool,
-    /// The platform's entries on days this push covers. A day has one
-    /// entry, so these days are not pushed: they are conflicts, to be
-    /// resolved on the platform first.
+    /// The platform's entries on days this push covers: a day has one entry, so these are conflicts to resolve there first.
     pub conflicts: Vec<WorklogEntry>,
 }
 
@@ -198,7 +172,6 @@ impl Check {
         self.conflicts.iter().any(|e| e.day == day)
     }
 
-    /// One line per conflicting day, for the caller to show in red.
     pub fn conflict_lines(&self) -> Vec<String> {
         self.conflicts.iter().map(conflict_line).collect()
     }
@@ -218,7 +191,6 @@ fn conflict_line(e: &WorklogEntry) -> String {
     )
 }
 
-/// Reads the ledger and the platform's entries for the days of `plan`.
 pub fn check(
     db: &Db,
     org: &Organization,
@@ -240,20 +212,14 @@ pub fn check(
     })
 }
 
-/// A project and an activity as the platform knows them: what is sent is
-/// the ids, what is shown the names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Resolved {
     pub project: String,
     pub activity: String,
 }
 
-/// The platform's project and activity that `target` names, by id or by
-/// name. A platform that has no such lists, or an empty one, resolves
-/// nothing: the text is then sent as it is. A list that fails to load is an
-/// error, since sending a name where an id is expected files the hours
-/// under the wrong project or loses them. Whatever is named but not listed
-/// is an error that says so.
+/// The platform's project and activity that `target` names, by id or name. A platform without such lists resolves nothing (the text is sent as is);
+/// a list that fails to load is an error, since a name sent where an id is expected files hours under the wrong project; named but unlisted is an error.
 pub fn resolve(platform: &dyn TimePlatform, target: &Target) -> Result<Resolved> {
     let mut out = Resolved {
         project: target.organization.clone(),
@@ -283,8 +249,6 @@ pub fn resolve(platform: &dyn TimePlatform, target: &Target) -> Result<Resolved>
     Ok(out)
 }
 
-/// Warnings for a project or activity the platform does not list. A list
-/// that could not be read or is empty flags nothing.
 pub fn unknown_targets(platform: &dyn TimePlatform, target: &Target) -> Vec<String> {
     match resolve(platform, target) {
         Ok(_) => Vec::new(),
@@ -296,10 +260,7 @@ pub fn unknown_targets(platform: &dyn TimePlatform, target: &Target) -> Vec<Stri
     }
 }
 
-/// What the platform offers for the settings form and the share pop-up: its
-/// projects, and the activities of the project `project` names (by id or
-/// name). Whatever cannot be fetched is an empty list -- the fields stay
-/// free text.
+/// What the platform offers for the settings form: projects, and the activities of `project`; whatever cannot be fetched is an empty list (free text).
 pub fn choices(
     platform: &dyn TimePlatform,
     project: &str,
@@ -312,7 +273,6 @@ pub fn choices(
     (projects, activities)
 }
 
-/// What happened to one thing a push does.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Item {
     pub what: String,
@@ -340,14 +300,8 @@ impl Item {
     }
 }
 
-/// Pushes the days of `plan` that `check` found free. Days the platform
-/// already holds are not sent: they are reported as failed items, and the
-/// rest go through, so pushing the same day twice does not fail everything.
-///
-/// A request the platform refuses as a whole is the error returned, with
-/// GitHub untouched and no ledger row. Otherwise each entry's verdict, then
-/// each GitHub issue of a task completed on an accepted day, is an item; the
-/// ledger row records them all, unless the platform took nothing.
+/// Pushes the days of `plan` that `check` found free; days the platform holds are reported as failed items and the rest go through.
+/// A request refused as a whole is the returned error, GitHub untouched, no ledger row. Otherwise each entry's verdict and each GitHub issue of a task completed on an accepted day is an item; the ledger row records them all unless the platform took nothing.
 pub fn execute(
     db: &Db,
     org: &Organization,
@@ -357,9 +311,7 @@ pub fn execute(
     gh: &dyn IssueTracker,
     now: NaiveDateTime,
 ) -> Result<Vec<Item>> {
-    // What an earlier, incomplete run of this same worklog already got
-    // through: those days are on the platform because of us (not someone
-    // else's entry), and those GitHub issues need no second comment.
+    // what an earlier incomplete run of this worklog already got through: those days are ours on the platform, and those issues need no second comment
     let before = db
         .find_push(org.id(), &plan.hash)?
         .filter(|row| !row.complete());
@@ -519,8 +471,6 @@ mod tests {
         }
     }
 
-    /// An organization with one github project, a done task linked to
-    /// issue 7 and a wip task, both worked on 2026-09-04.
     fn setup() -> (Db, Organization) {
         let db = fixtures::db();
         let mut org = Organization::template(&crate::models::Settings::default());
@@ -563,7 +513,6 @@ mod tests {
         plan(db, org, range(), now(), &Target::of(org)).unwrap()
     }
 
-    /// `check` then `execute`, as the callers do.
     fn run(
         db: &Db,
         org: &Organization,
@@ -575,7 +524,6 @@ mod tests {
         execute(db, org, plan, &c, platform, gh, now())
     }
 
-    /// The task id of the first task of the organization's project.
     fn a_task(db: &Db, org: &Organization) -> i64 {
         let project = db.projects_in::<Organization>(org.id()).unwrap()[0].id();
         db.tasks_for_project(project).unwrap()[0].id()
@@ -592,7 +540,6 @@ mod tests {
             vec![PlatformItem::new("p1", "Acme")],
             vec![PlatformItem::new("a1", "Dev")],
         );
-        // by name or by id
         assert_eq!(choices(&platform, "acme"), both);
         assert_eq!(choices(&platform, "p1"), both);
         assert_eq!(choices(&platform, "").1, Vec::<PlatformItem>::new());
@@ -783,9 +730,7 @@ mod tests {
         assert!(row.results.contains("FAILED") && row.results.contains("ok: platform"));
     }
 
-    /// The day is on the platform but its issue was not commented: running
-    /// the same worklog again must finish that, not report a conflict with
-    /// our own entry, and must not push the day a second time.
+    /// A day on the platform whose issue was not commented: rerunning finishes it, without a conflict or a second push.
     #[test]
     fn a_partial_push_is_not_already_pushed_and_a_rerun_finishes_the_github_step() {
         let (db, org) = setup();
@@ -797,7 +742,6 @@ mod tests {
         };
         run(&db, &org, &plan, &first, &down).unwrap();
 
-        // the platform now holds the pushed day
         let second = FakePlatform {
             existing: first.pushed.borrow()[0].entries.clone(),
             ..Default::default()

@@ -1,52 +1,44 @@
-/* The design shared by every page: tokens, themes, the links, focus, motion.
-   The frame wrapper is .page. Component rules live next to
-   their component in ui/*.css and are concatenated into /style.css (ui/mod.rs);
-   page-only rules in that page's own file (org.css, ...). */
+/* Tokens, themes, links, focus, motion. Component rules live in ui/*.css (concatenated, ui/mod.rs). */
 
-/* the tokens that carry no color.
-   Breakpoints stay literal (a media query cannot read a token), all of
-   them one of: max-width 900px (two columns become one, sticky parts turn
-   static; min-width 901px is its other side), max-width 600px (tables turn
-   into stacked rows, the hour label narrows), max-height 600px (a landscape
-   phone, as the 900px), pointer:coarse (a finger needs --touch). */
+/* Breakpoints stay literal (a media query cannot read a token): max-width 900px (columns
+   stack, sticky parts turn static), max-width 600px (tables stack), max-height 600px
+   (landscape phone), pointer:coarse (a finger needs --touch). */
 :root{
   --r-sm:4px;--r-md:8px;--r-lg:12px;--r-pill:999px;
   --ease-out:cubic-bezier(.22,1,.36,1);--fast:150ms;--med:250ms;--slow:350ms;
-  --touch:44px;                 /* the least a finger target is high */
-  --card-w:15rem;               /* a card of the agenda, several to an hour */
-  --main-w:1180px;--main-pad-max:72px;--main-pad:clamp(20px,5vw,var(--main-pad-max));  /* main: its width and side padding */
-  --measure:68ch                /* a line of prose */
+  --touch:44px;
+  --card-w:15rem;
+  --main-w:1180px;--main-pad-max:72px;--main-pad:clamp(20px,5vw,var(--main-pad-max));
+  --measure:68ch
 }
-/* the page color, on the root because the body paints it too */
 :root{
   color-scheme:light dark;
   --bg:#fbfaf8;--bg-2:#f4f2ee;--bg-3:#ebe8e2;--line:#e4e0d8;--line-2:#d3cec4;
-  --control-line:#857f76;  /* the border of a form control: 3.5:1 on --bg-2 (1.4.11) */
-  --fg:#1d1c1a;--muted:#6f6b64;--faint:#76716a;  /* decoration only (separators, icons): text is --muted, 4.7:1 on --bg-2 */
+  --control-line:#857f76;  /* 3.5:1 on --bg-2 (WCAG 1.4.11) */
+  --fg:#1d1c1a;--muted:#6f6b64;--faint:#76716a;  /* text is --muted (4.7:1 on --bg-2); --faint is decoration only */
   --accent:#3b5bd3;--ok:#14783a;--danger:#b42318;--accent-tint:color-mix(in oklab,var(--accent) 12%,var(--bg));--on-accent:#fff;
   --font:"Inter","InterVariable",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,monospace;
   --shadow:0 1px 0 rgb(0 0 0/.03),0 1px 3px rgb(0 0 0/.06);
   --shadow-lift:0 10px 28px -12px rgb(0 0 0/.22)
 }
-/* dark: Tokyo Night, matching the terminal (~/.config/alacritty/alacritty.toml) */
+/* dark: Tokyo Night */
 @media (prefers-color-scheme:dark){:root{
-  --bg:#24283b;          /* primary.background */
+  --bg:#24283b;
   --bg-2:#1f2335;--bg-3:#292e42;
-  --line:#32344a;        /* normal.black */
-  --line-2:#444b6a;      /* bright.black */
+  --line:#32344a;
+  --line-2:#444b6a;
   --control-line:#737aa2;  /* 3.5:1 on --bg-2 */
-  --fg:#a9b1d6;          /* primary.foreground */
-  --muted:#9699a8;       /* normal.white */
-  --faint:#8c90a3;       /* decoration only, as above */
-  --accent:#ff9e64;      /* bright.yellow, the orange */
+  --fg:#a9b1d6;
+  --muted:#9699a8;
+  --faint:#8c90a3;
+  --accent:#ff9e64;
   --on-accent:#24283b;
-  --ok:#9ece6a;          /* normal.green */
-  --danger:#f7768e;      /* Tokyo Night red */
+  --ok:#9ece6a;
+  --danger:#f7768e;
   --shadow:none;--shadow-lift:0 10px 28px -12px rgb(0 0 0/.55)
 }}
 *{box-sizing:border-box}
-/* the body paints the page behind .page (overscroll, short pages) */
 body{margin:0;background:var(--bg);color:var(--fg);
   font:15px/1.55 var(--font);font-feature-settings:"cv11","ss01";
   -webkit-font-smoothing:antialiased}
@@ -57,31 +49,23 @@ a{color:inherit;text-decoration:none}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
 .i{width:1em;height:1em;flex:none;vertical-align:-.125em;fill:none;stroke:currentColor;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-/* the small-caps recipe: eyebrows, breadcrumbs, section labels, table headers */
 .label,th{margin:0;font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 th{text-align:left;border-bottom:1px solid var(--line)}
 .mono{font-family:var(--mono);font-size:.8125rem}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-/* the colour is set here, not left to inherit: a code chip in muted text would
-   be --muted on --bg-3 (4.33:1 in light) */
+/* colour set here, not inherited: --muted on --bg-3 would be 4.33:1 in light */
 code{font:.85em var(--mono);color:var(--fg);background:var(--bg-3);padding:1px 6px;border-radius:var(--r-sm)}
 
-/* layout tokens, on html because scroll-padding-top can only be set there:
-   --bar-h the sticky top bar; --sticky-h what a page keeps sticky under it (a
-   .sticky-head: --sticky-head-h, its heading; --pickbar-h while a banner is
-   in it; none when the screen is narrow or short, where it is plain);
-   --stick-top where a sticky aside sits. A link to a fragment lands clear of
-   all of it. */
+/* On html because scroll-padding-top is set there. --bar-h: top bar; --sticky-h: what a
+   page keeps sticky under it (0 when narrow or short); --stick-top: a sticky aside's top. */
 html{--bar-h:52px;--sticky-head-h:76px;--pickbar-h:164px;--sticky-h:0px;--stick-top:calc(var(--bar-h) + 24px);
   scroll-padding-top:calc(var(--bar-h) + var(--sticky-h) + 16px)}
 html:has(.sticky-head){--sticky-h:var(--sticky-head-h)}
 html:has(.pickbar){--sticky-h:var(--pickbar-h)}
 @media (max-width:900px),(max-height:600px){html:has(.sticky-head),html:has(.pickbar){--sticky-h:0px}}
 
-/* links in the content: a 1px line at rest (--control-line, 3:1), so they
-   read as links without hover. On hover or focus an accent line slides in
-   from the left over it, 2px, and on leave out to the right (the size
-   animates; the anchor side flips). The nav bar and breadcrumb have no .u. */
+/* Content links: a 1px line at rest (--control-line, 3:1), an accent line slides in on
+   hover/focus. The nav bar and breadcrumb have no .u. */
 :root{--line-w:2px}  /* whole pixels: a fractional width rounds differently per link */
 .u{background:linear-gradient(var(--control-line),var(--control-line)) no-repeat left bottom/100% 1px,
     linear-gradient(var(--accent),var(--accent)) no-repeat right bottom/0 var(--line-w);padding-bottom:2px;

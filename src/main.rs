@@ -44,13 +44,10 @@ fn cli() -> clap::Command {
 }
 
 fn main() -> ExitCode {
-    // Shell-driven dynamic completion: when invoked as `COMPLETE=<shell> iter
-    // ...` (which the shell does behind the scenes on every Tab press, once
-    // `source <(COMPLETE=zsh iter)` has registered it)
+    // Shell-driven completion (`COMPLETE=<shell> iter ...`, on every Tab once registered).
     CompleteEnv::with_factory(cli).complete();
 
     let args = Args::parse();
-    // Opened once, and one `now` for the whole run -- see `app::App`.
     let app = &App::new();
 
     let result = match &args.command {

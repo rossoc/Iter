@@ -1,11 +1,8 @@
 use iter_macros::Table;
 
-/// The tmux + git worktree/branch environment set up for a `wip` task: a
-/// tmux session (when the project has tmux enabled) tied to a git
-/// worktree/branch (when the project is a github-backed repo). Not edited
-/// via YAML -- it's entirely derived from the task and project config at
-/// `iter session new` time -- so it carries no serde derives. Distinct from
-/// `Session`, which is the started/stopped record of time actually spent.
+/// The tmux session and git worktree/branch set up for a `wip` task, derived from task and project
+/// config at `iter session new` time. No serde derives. Distinct from `Session`, the record of
+/// time spent.
 #[derive(Debug, Clone, Table)]
 #[table(name = "session_configs")]
 pub struct SessionConfig {

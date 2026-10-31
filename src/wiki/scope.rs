@@ -1,12 +1,5 @@
-//! Which wikis a question sees. The database knows what exists (a task, its
-//! project, the project's organization); this turns that into the [`Level`]s
-//! the graph is built from.
-//!
-//! The scope of a task is the task's own folder, its project's wiki and its
-//! organization's, innermost first: what the task may read. An organization's
-//! scope can go `down` into the wikis of its projects (never into a task's
-//! folder: that is private working memory), the way the organization report
-//! sums its projects.
+//! Which wikis a question sees: turns what the database knows (task, project, organization) into the [`Level`]s the graph is built from.
+//! A task sees its own folder, its project's wiki and its organization's, innermost first; an organization may go `down` into its projects' wikis, never a task's folder (private).
 
 use super::graph::{Level, Wiki};
 use super::ontology::{LevelKind, Ontology};
@@ -18,14 +11,11 @@ use crate::notes;
 use crate::utils::resolve::{current_session_task, resolve_task};
 use std::path::PathBuf;
 
-/// What the user asked about: a task, a project or an organization (none:
-/// the task of the tmux session they are in).
 #[derive(Default, Debug)]
 pub struct Spec {
     pub task: Option<String>,
     pub project: Option<String>,
     pub org: Option<String>,
-    /// Include the wikis of the organization's projects.
     pub down: bool,
 }
 
@@ -78,8 +68,6 @@ struct Chain {
 }
 
 impl Chain {
-    /// Adds a level (outermost first) if it has a folder; its parent is the
-    /// last one added.
     fn push(&mut self, kind: LevelKind, label: &str, title: &str, dir: Option<PathBuf>) {
         let Some(dir) = dir else { return };
         let parent = self.levels.len().checked_sub(1);
@@ -92,7 +80,6 @@ impl Chain {
         });
     }
 
-    /// Innermost first, the parents following.
     fn innermost_first(mut self) -> Vec<Level> {
         let n = self.levels.len();
         self.levels.reverse();
@@ -103,8 +90,7 @@ impl Chain {
     }
 }
 
-/// The levels `spec` sees, innermost first (index 0 is where ids are written
-/// from). An error if none has a folder to keep notes in.
+/// The levels `spec` sees, innermost first (index 0 is where ids are written from); an error if none has a folder.
 pub fn levels(db: &Db, spec: &Spec) -> Result<Vec<Level>> {
     let asked = ask(db, spec)?;
     let mut chain = Chain { levels: Vec::new() };
@@ -169,8 +155,7 @@ pub fn levels(db: &Db, spec: &Spec) -> Result<Vec<Level>> {
     Ok(levels)
 }
 
-/// The ontology, extended by the `wiki/ontology.ttl` of the levels that have
-/// one (outermost first, so the nearest has the last word).
+/// The ontology extended by the levels' `wiki/ontology.ttl` (outermost first, so the nearest has the last word).
 pub fn ontology(levels: &[Level]) -> Result<Ontology> {
     let extension: String = levels
         .iter()
@@ -182,7 +167,6 @@ pub fn ontology(levels: &[Level]) -> Result<Ontology> {
     Ontology::load((!extension.is_empty()).then_some(extension.as_str()))
 }
 
-/// The wiki `spec` sees.
 pub fn wiki(db: &Db, spec: &Spec) -> Result<Wiki> {
     let levels = levels(db, spec)?;
     let ontology = ontology(&levels)?;
@@ -282,9 +266,7 @@ mod tests {
             project: Some("App".into()),
             ..Spec::default()
         };
-        // App's organization has a folder, so it works...
         assert!(levels(&db, &spec).is_ok());
-        // ...but a project with neither is refused
         db.insert(&fixtures::project("Bare")).expect("bare");
         let spec = Spec {
             project: Some("Bare".into()),

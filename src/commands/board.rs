@@ -23,16 +23,14 @@ impl Run for BoardCommand {
     }
 }
 
-/// An explicit board name, or -- when none is given -- the board of the
-/// tmux session's project.
+/// An explicit board name, else the board of the tmux session's project.
 fn board(app: &App, name: &Option<String>) -> Result<Board> {
     resolve_group_or_current(&app.db, name.as_deref())
 }
 
 fn board_info(app: &App, board: &Board) -> Result<()> {
     let projects = app.db.projects_in::<Board>(board.id())?;
-    // Tasks are flattened across projects and named `<project>/<task>`: the
-    // agenda is about *when*, so it isn't grouped by project.
+    // flattened across projects and named `<project>/<task>`: an agenda is about when, not projects
     let cards = app.db.cards(board.id())?;
     print!("{}", render_info(board, &projects, &cards));
     Ok(())
@@ -54,8 +52,7 @@ fn render_info(board: &Board, projects: &[Project], cards: &[Card]) -> String {
     out
 }
 
-/// Open tasks that have a `start_time`, soonest first, then the ones that
-/// have none. Finished work is left off: an agenda is what's still ahead.
+/// Open tasks with a `start_time`, soonest first, then those without; finished work is left off.
 fn render_agenda(cards: &[Card]) -> String {
     let open = cards.iter().filter(|c| c.task.status != TaskStatus::Done);
     let (mut scheduled, mut unscheduled): (Vec<_>, Vec<_>) =

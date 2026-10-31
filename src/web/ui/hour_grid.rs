@@ -1,6 +1,4 @@
-//! The hours of a day: an ordered list of rows, each an hour label and a
-//! drop zone for the cards at that hour. On today, the row of the current
-//! hour carries the now line, drawn from the fraction the caller works out.
+//! The hours of a day: rows of hour label and drop zone; today's current hour carries the now line.
 
 use super::drop_zone::drop_zone;
 use topcoat::{
@@ -8,8 +6,7 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// The now line of an hour: how far into the hour it is (0 to 1) and its
-/// hidden text ("Now, 09:25").
+/// The now line: how far into the hour (0 to 1) and its hidden text.
 pub struct Now {
     pub at: f32,
     pub text: String,
@@ -21,8 +18,7 @@ pub async fn hour_grid(label_id: &str, child: Child<'_>) -> Result<impl View> {
     Ok(view! { <ol class="hours" aria-labelledby=(label_id)>(child)</ol> })
 }
 
-/// One hour. `label` is "09:00"; `target` is what a drop here posts; the
-/// child nodes are the cards (and anything else that belongs in the slot).
+/// One hour: `label` "09:00", `target` is what a drop posts; children are the cards.
 #[component]
 pub async fn hour_slot(
     label: &str,

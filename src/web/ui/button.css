@@ -1,14 +1,12 @@
-/* one button look for links and <button>s. Every property is set, since
-   style.css styles every <button> (margin, padding, border, colors). */
+/* every property is set: base styles every <button> (margin, padding, border, colors) */
 .button{box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;margin:0;padding:7px 14px;
   border:1px solid var(--control-line);border-radius:var(--r-md);background:var(--bg-2);color:var(--fg);
   font:500 .875rem/1.4 var(--font);white-space:nowrap;cursor:pointer;
   transition:background var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),color var(--fast) var(--ease-out),opacity var(--fast) var(--ease-out)}
 .button:hover{background:var(--bg-3);border-color:var(--accent);color:var(--accent)}
-/* the main action of a form */
 .button.primary{padding-inline:18px;border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
 .button.primary:hover{background:var(--accent);color:var(--on-accent);opacity:.9}
 .button.small{padding:3px 10px;font-size:.8125rem}
-/* a finger needs 44px: every compact button (the pick buttons, Cancel) */
+/* a finger needs 44px */
 @media (pointer:coarse){.button.small{min-height:var(--touch)}}
 .post-form{display:inline;margin:0}

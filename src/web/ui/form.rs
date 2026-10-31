@@ -1,6 +1,4 @@
-//! A POST form and what every form of the app has around its controls: the
-//! error box (`notice::error_box`), the "* Required" note, then the controls
-//! (`field.rs`, the child nodes), and the submit button with the way out.
+//! A POST form: error box, "* Required" note, the controls, then submit and the way out.
 
 use super::form_error::FormError;
 use super::notice::error_box;
@@ -9,8 +7,6 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// "* Required", above the controls of a form that has required ones (the
-/// `*` beside their labels, `field.rs`).
 #[component]
 async fn required_note() -> Result<impl View> {
     Ok(view! {
@@ -18,7 +14,6 @@ async fn required_note() -> Result<impl View> {
     })
 }
 
-/// The submit button and the way out of a form.
 #[component]
 async fn form_actions(cancel: &str, submit_label: &str) -> Result<impl View> {
     Ok(view! {
@@ -29,10 +24,8 @@ async fn form_actions(cancel: &str, submit_label: &str) -> Result<impl View> {
     })
 }
 
-/// `action` is where the form posts and `cancel` where Cancel goes; `error`
-/// is the refusal of the last try, if any. `lead` comes first in the form,
-/// before the error box (a hidden default submit button, see
-/// `project_new::project_modal`). The child nodes are the controls.
+/// `cancel` is where Cancel goes; `error` the last refusal; `lead` comes before the
+/// error box (a hidden default submit button, see `project_new::project_modal`).
 #[component]
 pub async fn form_shell(
     #[into] action: String,

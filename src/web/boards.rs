@@ -1,6 +1,4 @@
-//! The list of boards (`/boards`), the entry to the board section: a grid of
-//! cards like Home's. Nothing here has rules of its own: it is all shared
-//! components (`ui/`).
+//! The list of boards (`/boards`).
 
 use super::load::grouped;
 use super::notes::first_line;
@@ -31,7 +29,6 @@ async fn boards_page() -> Result<impl View> {
     Ok(view! { boards_view(boards: &boards) })
 }
 
-/// One card of the grid: the board, its notes' first line, its projects.
 #[component]
 async fn board_card(board: &Board, projects: &[Project]) -> Result<impl View> {
     let items = project_items(projects);

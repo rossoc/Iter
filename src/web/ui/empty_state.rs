@@ -1,5 +1,4 @@
-//! "Nothing here", as a dashed box with an icon and a hint that may hold
-//! `<code>`. The quiet one-liner is `empty_line`.
+//! "Nothing here" as a dashed box with an icon; the one-liner is `empty_line`.
 
 use super::icon;
 use topcoat::{

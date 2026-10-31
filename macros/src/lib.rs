@@ -5,26 +5,12 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input};
 
-/// Implements `crate::db::Table` for a struct, mapping it to a SQLite table.
-///
-/// The columns are the struct's own fields, in declaration order, so there
-/// is no column list to keep in step with anything. A field named `id` is
-/// the primary key: it's left out of the columns (SQLite assigns it on
-/// insert, and it's the key rather than a payload on update) and read from
-/// column 0 of every row. Every other field's type must implement
-/// `rusqlite`'s `FromSql` and `ToSql` (`src/db/sqltypes.rs` has the model
-/// types'), or carry `#[table(with = "path")]`, naming a module under
-/// `crate::db` with `read(row, index)` and `write(&value)` functions, for
-/// a type that can't implement them (`datetime` for a `NaiveDateTime`).
-///
-/// `order_by` is optional, and supplies the trailing clause for a bare
-/// `Db::list`; without it the listing order is SQLite's.
-///
-/// `kind` is optional too: naming what messages call one of these (`kind =
-/// "project"`) also implements `crate::models::Named` over the struct's
-/// `name` field. Its `validate` requires a name, and -- with `check =
-/// "method"` -- then runs that inherent `fn(&mut self) -> Result<()>` for
-/// the type's own rules.
+/// Implements `crate::db::Table` for a struct. Columns are the fields in declaration order, minus
+/// the `id` primary key (assigned on insert; read from column 0). Other field types need
+/// `FromSql`/`ToSql`, or `#[table(with = "path")]` naming a `crate::db` module with
+/// `read(row, index)`/`write(&value)` (e.g. `datetime`). `order_by` sets `Db::list`'s trailing
+/// clause. `kind = "project"` also implements `crate::models::Named` over `name`; its `validate`
+/// requires a name and, with `check = "method"`, runs that `fn(&mut self) -> Result<()>`.
 ///
 /// ```ignore
 /// #[derive(Table)]
@@ -44,7 +30,6 @@ pub fn derive_table(input: TokenStream) -> TokenStream {
 fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let ty = &input.ident;
 
-    // #[table(name = "...", order_by = "...")]
     let attr = input
         .attrs
         .iter()
@@ -73,7 +58,6 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     })?;
     let list_tail = order_by.map_or(String::new(), |by| format!("ORDER BY {}", by.value()));
 
-    // The columns are the struct's fields, minus the `id` primary key.
     let Data::Struct(data) = &input.data else {
         return Err(syn::Error::new(ty.span(), "`Table` needs a struct"));
     };
@@ -163,9 +147,7 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             const LIST_TAIL: &'static str = #list_tail;
 
             fn from_row(row: &::rusqlite::Row) -> ::rusqlite::Result<Self> {
-                // Column 0 is `id`; the struct's other fields follow, in
-                // declaration order -- the same order `COLUMNS` lists and
-                // `values` binds, all three being this one list.
+                // Column 0 is `id`; fields follow in declaration order (`COLUMNS` and `values`).
                 Ok(#ty { id: Some(row.get(0)?), #(#columns: #reads,)* })
             }
 
@@ -180,24 +162,9 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     })
 }
 
-/// Implements `crate::models::MarkdownBody` for a struct with a
-/// `description: String` field.
-///
-/// The field is `#[serde(skip)]`ed on the struct itself and lives below the
-/// YAML front matter as the markdown body instead, so every editable model
-/// needs the same two accessors. They are the same two accessors every
-/// time, which is what this derive is for.
-///
-/// Every *other* `#[serde(skip)]` field is one the buffer doesn't carry at
-/// all (a foreign key such as `project_id`), so the derive also writes
-/// `carry_over`, copying those back from the item that was opened.
-///
-/// ```ignore
-/// #[derive(MarkdownBody)]
-/// pub struct Task {
-///     pub description: String,
-/// }
-/// ```
+/// Implements `crate::models::MarkdownBody` for a struct with a `description: String`, which is
+/// `#[serde(skip)]`ed and lives below the YAML front matter. Also writes `carry_over`, copying the
+/// buffer-less `#[serde(skip)]` fields (e.g. `project_id`) from the opened item.
 #[proc_macro_derive(MarkdownBody)]
 pub fn derive_markdown_body(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -243,7 +210,6 @@ pub fn derive_markdown_body(input: TokenStream) -> TokenStream {
     .into()
 }
 
-/// Whether `field` carries `#[serde(skip)]`.
 fn serde_skipped(field: &syn::Field) -> bool {
     field.attrs.iter().any(|attr| {
         let mut skip = false;

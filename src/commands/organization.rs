@@ -66,17 +66,13 @@ impl Run for OrganizationCommand {
     }
 }
 
-/// An explicit organization name, or -- when none is given -- the one the
-/// tmux session's project is in.
+/// An explicit organization name, else the one the tmux session's project is in.
 fn organization(app: &App, name: &Option<String>) -> Result<Organization> {
     resolve_group_or_current(&app.db, name.as_deref())
 }
 
-/// The organization's report for a period: every project that was worked
-/// on in it, each project's tasks, and every session behind those -- hours,
-/// statuses and messages all the way down. A project (or task) with no
-/// session in the period is left out; `organization list` / `task list` are
-/// the place for the full roster.
+/// The organization's report for a period: every project worked on, its tasks and the sessions behind them;
+/// projects and tasks without a session in the period are left out.
 fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = &app.db;
     let organization: Organization = resolve_group_or_current(db, name)?;
@@ -91,8 +87,7 @@ fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result
         now,
     )?;
 
-    // The union across every project, so an hour spent switching between
-    // two of them isn't counted twice at the organization level either.
+    // the union across projects, so an hour spent switching between two is not counted twice
     let total_minutes = total_minutes(&all_sessions, now);
     let info = OrganizationInfo {
         header: Header::of(
@@ -126,7 +121,6 @@ fn org_key(app: &App, name: Option<&str>, clear: bool) -> Result<()> {
     Ok(())
 }
 
-/// One line from stdin; on a terminal, with a prompt and echo off.
 fn read_secret(prompt: &str) -> Result<String> {
     let tty = std::io::stdin().is_terminal();
     if tty {
@@ -143,7 +137,6 @@ fn read_secret(prompt: &str) -> Result<String> {
     Ok(line)
 }
 
-/// Asks a yes/no question on a terminal; without one the answer is no.
 fn confirm(question: &str) -> bool {
     if !std::io::stdin().is_terminal() {
         return false;
@@ -153,7 +146,6 @@ fn confirm(question: &str) -> bool {
     std::io::stdin().read_line(&mut answer).is_ok() && answer.trim().eq_ignore_ascii_case("y")
 }
 
-/// `text` in red, on a terminal.
 fn red(text: &str) -> String {
     match std::io::stdout().is_terminal() {
         true => format!("\x1b[31m{text}\x1b[0m"),
@@ -187,13 +179,11 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
     }
     let plan = push::plan(db, &organization, range, app.now, &target)?;
 
-    // The platform is asked what it already holds (read-only), so a dry run
-    // shows the conflicts too -- when there is a key to ask with.
+    // the platform is asked what it already holds (read-only), so a dry run shows conflicts too
     let platform = secret::resolve_env(&Keychain, &organization.name)
         .map(|key| JsonWebhook::new(&organization.platform_url, key));
     let check = match (&platform, flags.dry_run) {
         (Ok(platform), false) => Some(push::check(db, &organization, &plan, platform)?),
-        // A preview is still worth showing when the platform cannot be asked.
         (Ok(platform), true) => match push::check(db, &organization, &plan, platform) {
             Ok(check) => Some(check),
             Err(e) => {
@@ -226,7 +216,6 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
         return Ok(());
     }
 
-    // Past the dry run, a missing key or a failed check has already returned.
     let (Ok(platform), Some(check)) = (&platform, &check) else {
         return Err(IterError::Platform("the platform was not asked".into()));
     };

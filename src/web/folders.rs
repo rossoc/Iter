@@ -1,6 +1,4 @@
-//! The system folder chooser behind a path field's folder button: `POST
-//! /folders/pick` opens it (`folder_picker.rs`) and answers with the chosen
-//! path. `path_pick.js` posts to it; the path field itself is `ui/field.rs`.
+//! `POST /folders/pick`: opens the system folder chooser (`folder_picker.rs`) for a path field (`ui/field.rs`).
 
 use super::folder_picker::{Picked, pick};
 use crate::config::expand_home;
@@ -20,18 +18,13 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(pick_folder)
 }
 
-/// What the folder button of a `path_field` posts: the path typed so far.
 #[derive(serde::Deserialize)]
 struct PickStart {
     #[serde(default)]
     start: String,
 }
 
-/// `POST /folders/pick`: opens the system's folder chooser at the nearest
-/// existing folder of `start` (else the home folder) and answers JSON:
-/// `{"path": ...}` for a chosen folder, `{}` when cancelled, and
-/// `{"unavailable": true}` when the system has no chooser. `path_pick.js`
-/// calls it; the guard (`guard.rs`) lets only same-origin posts through.
+/// Opens the chooser at the nearest existing folder of `start`: `{"path"}` chosen, `{}` cancelled, `{"unavailable": true}` no chooser. Same-origin only (`guard.rs`).
 #[route(POST "/folders/pick")]
 async fn pick_folder(cx: &Cx, Form(posted): Form<PickStart>) -> Result<Response> {
     let start = start_folder(&posted.start, &expand_home("~"));
@@ -50,8 +43,7 @@ async fn pick_folder(cx: &Cx, Form(posted): Form<PickStart>) -> Result<Response>
         .into_response(cx)
 }
 
-/// `path` without `.` and `..` segments (`..` takes the segment before it
-/// off), so a typed path cannot climb by name.
+/// A typed path cannot climb by `..` segments.
 fn normalize(path: &Path) -> PathBuf {
     let mut out = PathBuf::new();
     for part in path.components() {
@@ -66,9 +58,6 @@ fn normalize(path: &Path) -> PathBuf {
     out
 }
 
-/// The folder to show for what was typed: the path with `~` expanded, made
-/// clean, and, when it is not a folder (or is empty, or relative), the nearest
-/// folder above it, else the home folder.
 pub(super) fn start_folder(typed: &str, home: &Path) -> PathBuf {
     let typed = typed.trim();
     if typed.is_empty() {
@@ -87,7 +76,6 @@ pub(super) fn start_folder(typed: &str, home: &Path) -> PathBuf {
 mod tests {
     use super::*;
 
-    /// A throwaway folder tree under the system temp folder.
     fn tree(name: &str) -> PathBuf {
         let root = crate::fixtures::scratch(&format!("folders-{name}"));
         for dir in ["b", "A", ".git", "c/inner"] {

@@ -1,8 +1,4 @@
-//! The organization's Report tab (`/org/{id}?tab=report`): the period asked
-//! for, the report loaded through the same function `iter org info` uses, and
-//! the view (period picker, summary, contents, one section per project). The
-//! page around it is `org.rs`; its rules are in `org.css` (bundled into
-//! `/style.css`) and its script is `/org.js`.
+//! The organization's Report tab (`/org/{id}?tab=report`): the period, the report from the function `iter org info` uses, and the view.
 
 use super::org_share::{Outcome, share_outcome};
 use super::session_lines::report_lines;
@@ -24,18 +20,14 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The organization's report for a period: what `iter org info` prints,
-/// built by the same function, so the numbers are the same.
 pub struct Report {
     pub range: DateRange,
     pub total: Total,
     pub projects: Vec<ProjectReport>,
     pub sessions: usize,
-    /// Why the requested period was ignored, if it was.
     pub error: Option<String>,
 }
 
-/// The default period: the last seven days, today included.
 fn last_days(today: NaiveDate, days: u64) -> DateRange {
     DateRange {
         from: today.checked_sub_days(Days::new(days - 1)),
@@ -43,10 +35,7 @@ fn last_days(today: NaiveDate, days: u64) -> DateRange {
     }
 }
 
-/// The period `from`/`to` ask for. Both absent is the default (7 days);
-/// an empty `from` is no lower bound ("All time"); an empty or absent `to`
-/// is today. A date that doesn't parse, or `from` after `to`, falls back
-/// to the default with an error to show.
+/// An empty `from` is no lower bound ("All time"); an empty or absent `to` is today; a bad date or `from` after `to` falls back to the default.
 fn period(from: Option<&str>, to: Option<&str>, today: NaiveDate) -> (DateRange, Option<String>) {
     if from.is_none() && to.is_none() {
         return (last_days(today, 7), None);
@@ -88,7 +77,6 @@ pub fn load(
     let (projects, sessions) = project_reports(db, projects, range, now)?;
     Ok(Report {
         range,
-        // The union across projects, as `iter org info` totals it.
         total: Total::new(total_minutes(&sessions, now)),
         projects,
         sessions: sessions.len(),
@@ -96,9 +84,7 @@ pub fn load(
     })
 }
 
-/// The report tab of `base` for a period: the one place a report URL is
-/// built. `from` and `to` are given both or neither (an empty `from` is
-/// "all time").
+/// The one place a report URL is built; `from` and `to` are given both or neither.
 pub(super) fn report_link(base: &str, from: Option<&str>, to: Option<&str>) -> String {
     page_url(base, &[("tab", Some("report")), ("from", from), ("to", to)])
 }
@@ -108,7 +94,6 @@ fn report_url(base: &str, range: &DateRange) -> String {
     report_link(base, Some(&from), Some(&fmt_date(range.to)))
 }
 
-/// The Report tab of the period with the Share pop-up open over it.
 fn share_url(base: &str, range: &DateRange) -> String {
     let from = range.from.map(fmt_date).unwrap_or_default();
     page_url(
@@ -122,7 +107,6 @@ fn share_url(base: &str, range: &DateRange) -> String {
     )
 }
 
-/// The Report tab's own link: the default period (the last 7 days).
 pub fn tab_url(base: &str, today: NaiveDate) -> String {
     report_url(base, &last_days(today, 7))
 }
@@ -135,13 +119,6 @@ fn plural(n: usize, one: &str) -> String {
     }
 }
 
-/// The report's projects and their tasks' statuses, as plain text to paste
-/// somewhere else:
-///
-/// ```text
-/// proj:
-/// - task: work in progress
-/// ```
 pub fn status_list(report: &Report) -> String {
     let mut out = String::new();
     for p in &report.projects {
@@ -153,9 +130,7 @@ pub fn status_list(report: &Report) -> String {
     out.trim_end().to_string()
 }
 
-/// The periods either side of `range`, as long as it is: the one before it
-/// and the one after. "All time" has no neighbours, and nothing comes after
-/// a period that reaches today.
+/// "All time" has no neighbours; nothing comes after a period that reaches today.
 fn neighbours(range: &DateRange, today: NaiveDate) -> (Option<DateRange>, Option<DateRange>) {
     let Some(from) = range.from else {
         return (None, None);
@@ -175,7 +150,6 @@ fn neighbours(range: &DateRange, today: NaiveDate) -> (Option<DateRange>, Option
     (prev, next)
 }
 
-/// The preset periods and the From/To form.
 #[component]
 async fn period_picker(base: &str, report: &Report, today: NaiveDate) -> Result<impl View> {
     let presets = [
@@ -216,10 +190,7 @@ async fn period_picker(base: &str, report: &Report, today: NaiveDate) -> Result<
                 <input type="hidden" name="tab" value="report">
                 <label>"From" <input type="date" class="control" name="from" value=(from.clone())></label>
                 <label>"To" <input type="date" class="control" name="to" value=(to.clone())></label>
-                // Dates apply as they change (`org.js`). This button is what
-                // makes Enter in a date field submit (also without JavaScript)
-                // and gives keyboard users an explicit Apply: it is off screen
-                // until it has focus.
+                // Dates apply as they change (`org.js`); this button makes Enter submit, also without JavaScript.
                 <button type="submit" class="button small apply">"Apply"</button>
             </form>
             <script src="/org.js" defer=""></script>
@@ -339,8 +310,6 @@ mod tests {
         }
     }
 
-    /// The neighbours are as long as the period; the next one stops at today,
-    /// and "All time" has none.
     #[test]
     fn a_period_has_neighbours_of_its_own_length() {
         let today = d("2026-10-29");

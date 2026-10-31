@@ -1,6 +1,4 @@
-//! A titled group of controls: a `fieldset` whose `legend` names them. With
-//! an `id` it can also be described (a hint, an error) and marked as the
-//! thing the form's error is about: that is how `field::checklist` uses it.
+//! A `fieldset` whose `legend` names its controls; used by `field::checklist`.
 
 use super::field::{hint_id, invalid_cue};
 use topcoat::{
@@ -8,11 +6,8 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// `id` (with `hint`) names the group and its hint for `described`, the
-/// `aria-describedby` of the fieldset (the hint's id and the error's, see
-/// `field::described_by`); a plain group needs none of them. `invalid`
-/// shows the [`invalid_cue`] under the legend, outside it, so the legend
-/// stays the group's name. The hint sits between the legend and the controls.
+/// `id` (with `hint`) feeds the fieldset's `aria-describedby`; `invalid` shows
+/// the [`invalid_cue`] outside the legend so the legend stays the name.
 #[component]
 pub async fn group(
     title: &str,

@@ -1,20 +1,13 @@
-/* the search box above a list */
-/* at most 40rem (the field takes what the buttons leave), never wider than
-   the row: the "?"'s tip is anchored to its right edge and kept inside it */
+/* at most 40rem and the row's width: the "?" tip is anchored to the right edge and kept inside */
 .filter{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;width:min(100%,40rem);margin:0 0 16px}
-/* the field and the "?" inside it: the field takes what the buttons leave and
-   leaves room at its end for the "?", which is placed over that room */
 .filter-field{position:relative;display:flex;flex:1 1 12rem;min-width:0}
 .filter-field .control{flex:1 1 auto;min-width:0;min-height:38px;padding-block:6px;padding-inline-end:42px}
 .filter .button{min-height:38px}
 .filter-clear{font-size:.875rem;color:var(--muted)}
 @media (pointer:coarse){.filter .control,.filter .button{min-height:var(--touch)}}
-/* the "?" inside the field: the syntax shows on hover, and stays while the "?"
-   (or the tip itself) has focus -- a click pins it, a click elsewhere drops it.
-   The tip hangs from the field's right edge, under the "?", and grows to the
-   left over whatever is there; at most the field's width, so it never leaves
-   the screen on either side. `.filter-help` has no box of its own, so the tip
-   is placed against the field. */
+/* the "?" shows the syntax on hover and while it (or the tip) has focus: a click pins it.
+   `.filter-help` has no box, so the tip is placed against the field and grows leftwards,
+   at most the field's width. */
 .filter-help{display:contents}
 .filter-help-btn{position:absolute;inset-block:0;inset-inline-end:7px;margin-block:auto;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;
   border:1px solid var(--control-line);border-radius:var(--r-pill);background:transparent;color:var(--muted);
@@ -26,10 +19,10 @@
   padding:12px 14px;background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-md);box-shadow:var(--shadow-lift);
   font-size:.8125rem;color:var(--muted);cursor:auto}
 .filter-tip:focus{outline:none}
-/* a bridge over the gap, so the pointer can move from the "?" into the tip */
+/* a bridge over the gap so the pointer can move from the "?" into the tip */
 .filter-tip::before{content:"";position:absolute;left:0;right:0;top:-9px;height:9px}
 .filter-help:hover .filter-tip,.filter-help:focus-within .filter-tip{display:block}
-/* Escape closes the tip (filter_bar.js); it comes after the show rules, so it wins */
+/* after the show rules so it wins */
 .filter-help.dismissed .filter-tip{display:none}
 .filter-tip dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 16px;margin:0}
 .filter-tip dd{margin:0}

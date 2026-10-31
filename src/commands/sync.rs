@@ -1,11 +1,4 @@
-//! `iter task pull` / `iter task push` -- reconciling a project's tasks
-//! with its GitHub issues.
-//!
-//! Split out of [`super::task`] because it is a subject of its own: every
-//! `gh` call the CLI makes in bulk is here. What it does *not* contain is
-//! the deciding -- [`crate::sync`] plans each issue and task as plain data,
-//! and this module carries those plans out. That split is what lets the
-//! decisions be tested without a `gh` in sight.
+//! `iter task pull` / `iter task push`: carries out the plans of [`crate::sync`] against GitHub issues; every bulk `gh` call is here.
 
 use std::collections::HashMap;
 
@@ -18,11 +11,7 @@ use crate::models::{Project, Task, TaskStatus};
 use crate::utils::resolve::{find_task_or_err, github_project, linked_issue, task_display};
 use crate::{git, sync};
 
-/// Sets a task's issue link, status and description -- in the database, and
-/// in the copy in hand. Both, because a pull plans each issue against the
-/// tasks it's holding, so a row it has already written has to read back as
-/// written. `status`/`description` are `None` when this issue says nothing
-/// about them, which is what makes one write serve all three changes.
+/// Sets a task's issue link, status and description in the database and in the copy in hand (a pull plans each issue against the tasks it holds); `None` means the issue says nothing about it.
 fn relink_task(
     db: &Db,
     task: &mut Task,
@@ -40,13 +29,7 @@ fn relink_task(
     db.update(task.id(), task)
 }
 
-/// The issues a pull works from: every issue in the repo, or -- when
-/// `--task` narrows it to one task -- just the issue that task tracks.
-/// Scoped that way a pull can only ever update that one task, since every
-/// other plan `plan_pull` makes needs an issue no task has claimed.
-///
-/// A `--task` that tracks no issue is an error rather than a no-op: there
-/// is no other issue such a pull could have meant.
+/// The issues a pull works from: all in the repo, or with `--task` just the one issue that task tracks (an error if it tracks none).
 fn issues_to_pull(
     gh: &dyn IssueTracker,
     db: &Db,
@@ -61,16 +44,8 @@ fn issues_to_pull(
     Ok(vec![gh.fetch(&project.base_path, number)?])
 }
 
-/// `iter task pull <project>` -- every issue in the project's repo brought
-/// down: one nothing tracks becomes a task, and one already tracked hands
-/// its open/closed state to the task's status (including reopened ->
-/// `queue`, which is what lets `iter session new` pick the work up again).
-/// `--task` narrows it to the one issue that task tracks, and `--body`
-/// additionally overwrites descriptions with issue bodies.
-///
-/// Issues are the only input; no task is created, renamed or deleted for
-/// want of one, so a task with no issue at all is simply not this command's
-/// business -- `iter task push` is.
+/// `iter task pull <project>`: every issue comes down; an untracked one becomes a task, a tracked one hands its open/closed state to the task's status (reopened -> `queue`).
+/// `--task` narrows it to one issue, `--body` also overwrites descriptions. No task is created, renamed or deleted for want of an issue.
 pub(crate) fn task_pull(
     app: &App,
     gh: &dyn IssueTracker,
@@ -84,9 +59,7 @@ pub(crate) fn task_pull(
     let branch_prefix = git::branch_prefix(&project.branch_template);
 
     let issues = issues_to_pull(gh, db, &project, task_name)?;
-    // Read once, then kept current as the pull goes: each issue is planned
-    // against what the ones before it did, so two issues sharing a title
-    // read as the clash they are rather than colliding on the name index.
+    // read once, then kept current: each issue is planned against what the ones before did, so two issues sharing a title read as a clash
     let mut tasks = sync::Tasks::new(db.tasks_for_project(project_id)?);
 
     let (mut created, mut updated) = (0, 0);
@@ -153,9 +126,7 @@ pub(crate) fn task_pull(
     Ok(())
 }
 
-/// The tail of a pull's per-task line, naming what actually changed. One
-/// pull can link a task, restatus it and rewrite its description all at
-/// once, so the line says which of the three it did.
+/// The tail of a pull's per-task line: which of link, status and description changed.
 fn pull_changes(link: bool, status: Option<TaskStatus>, description: bool) -> String {
     let mut changes = Vec::new();
     if link {
@@ -170,19 +141,13 @@ fn pull_changes(link: bool, status: Option<TaskStatus>, description: bool) -> St
     changes.join(", ")
 }
 
-/// What one task's push did to its issue -- what `task_push` counts.
 enum Pushed {
     Opened,
     Edited,
     Nothing,
 }
 
-/// Pushes a single task to its GitHub issue: opens one, edits one, or
-/// leaves it alone, per `sync::plan_push`.
-///
-/// A free function rather than a block inside `task_push`'s loop so that
-/// one task's failure is a `Result` the caller can absorb, the way
-/// `issues_to_pull` already splits the pull side up.
+/// Pushes one task to its GitHub issue (opens, edits or leaves alone, per `sync::plan_push`); a free function so one task's failure is a `Result` the caller can absorb.
 fn push_task(
     gh: &dyn IssueTracker,
     db: &Db,
@@ -200,10 +165,7 @@ fn push_task(
                 &task.description,
                 &project.github_project,
             )?;
-            // Written back before the issue is closed below: if that
-            // second call fails, the task still knows its issue, and
-            // running `push` again finishes the job rather than opening
-            // a second issue for the same task.
+            // written back before the issue is closed: if the close fails the task still knows its issue, and running `push` again finishes instead of opening a second
             relink_task(db, task, number, None, None)?;
             match project.github_project.is_empty() {
                 true => println!("opened issue #{number} for '{display}'"),
@@ -247,17 +209,8 @@ fn push_task(
     }
 }
 
-/// `iter task push <project>` -- every task sent up: one tracking no issue
-/// gets one opened for it (and the number written back, so it's tracked
-/// from then on), and one already tracking an issue has that issue closed
-/// or reopened to match its status. `--task` narrows it to one task, and
-/// `--body` additionally overwrites issue bodies with task descriptions.
-///
-/// Whenever a push closes an issue -- a `done` task's brand-new one, or one
-/// going open -> closed -- the pusher is added to its assignees first,
-/// signing it as done at least by them. `--add-assignee` adds, so whoever
-/// is already assigned stays, and nothing is ever unassigned -- including
-/// when an issue is reopened.
+/// `iter task push <project>`: a task tracking no issue gets one opened (number written back), a tracked one has its issue closed or reopened to match.
+/// `--task` narrows to one task, `--body` also overwrites issue bodies. When a push closes an issue the pusher is first added to its assignees; `--add-assignee` adds, nothing is ever unassigned.
 pub(crate) fn task_push(
     app: &App,
     gh: &dyn IssueTracker,
@@ -279,11 +232,7 @@ pub(crate) fn task_push(
     let (mut opened, mut edited, mut failed) = (0, 0, 0);
     for task in &mut tasks {
         let display = task_display(&project, task);
-        // One task's `gh` calls are its own: an issue somebody locked, or a
-        // single call that times out, skips that task and lets the rest of
-        // the backlog through -- the warn-and-continue a `Missing` issue
-        // already got. Ending the run there instead would also swallow the
-        // summary below, leaving no way to tell how far the push got.
+        // one task's `gh` calls are its own: a locked issue or a timeout skips that task (warn and continue) rather than ending the run and swallowing the summary
         match push_task(gh, db, &project, task, &issues, &display, body) {
             Ok(Pushed::Opened) => opened += 1,
             Ok(Pushed::Edited) => edited += 1,
@@ -307,10 +256,7 @@ pub(crate) fn task_push(
     Ok(())
 }
 
-/// The issues a push plans against, by number. A whole-project push lists
-/// every issue in one call rather than asking `gh` about each task's issue
-/// one at a time; a `--task` push fetches just the one issue that task
-/// tracks (none, if it tracks none), instead of the whole backlog.
+/// The issues a push plans against, by number: one call for a whole project, just the one issue with `--task`.
 fn issues_to_push(
     gh: &dyn IssueTracker,
     project: &Project,
@@ -319,9 +265,7 @@ fn issues_to_push(
 ) -> Result<HashMap<i64, github::Issue>> {
     let issues = match single {
         false => gh.list(&project.base_path)?,
-        // A fetch that fails -- the issue deleted or transferred, most
-        // often -- is warned about and left out, so the task reaches the
-        // same warn-and-skip `Missing` plan a whole-project push gives it.
+        // a failed fetch (issue deleted or transferred) is warned about and left out, giving the same warn-and-skip `Missing` plan
         true => tasks
             .iter()
             .filter_map(|t| t.github_issue)
@@ -337,14 +281,8 @@ fn issues_to_push(
     Ok(issues.into_iter().map(|i| (i.number, i)).collect())
 }
 
-/// Signs an issue as done by the pusher and closes it -- in that order, so
-/// a run cut short leaves a signed open issue rather than a closed one
-/// nobody is named on.
-///
-/// A failure to assign is reported but doesn't stop the close: assigning
-/// needs write access to the repo, and losing the state sync -- the part
-/// that keeps a task and its issue agreeing -- over a signature would be
-/// the worse trade.
+/// Signs an issue as done by the pusher, then closes it, so a run cut short leaves a signed open issue.
+/// A failure to assign is reported but does not stop the close: assigning needs write access, and the state sync matters more.
 fn sign_and_close(
     gh: &dyn IssueTracker,
     project: &Project,

@@ -1,5 +1,4 @@
-/* the agenda's pick slot: the whole hour is the target, a big dashed box
-   (a shape, not only a color) that tints on hover */
+/* the whole hour is the target: a dashed box (a shape, not only a color) */
 .post-form.slot{display:block;flex:1 0 100%}
 .post-form.slot .button{width:100%;justify-content:center;min-height:56px;border:2px dashed var(--accent);
   background:transparent;color:var(--accent);font-weight:550}

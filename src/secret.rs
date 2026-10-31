@@ -9,7 +9,6 @@ use crate::error::{IterError, Result};
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-/// The environment variable that overrides the keychain.
 pub const ENV_KEY: &str = "ITER_PLATFORM_KEY";
 
 /// An API key. Never `Display`ed or `Debug`ged in the clear.
@@ -27,7 +26,6 @@ impl Secret {
         &self.0
     }
 
-    /// `text` with every occurrence of the key replaced.
     pub fn redact(&self, text: &str) -> String {
         text.replace(&self.0, "***")
     }
@@ -45,7 +43,6 @@ impl std::fmt::Display for Secret {
     }
 }
 
-/// Where keys are kept, one per organization name.
 pub trait KeyStore {
     fn get(&self, organization: &str) -> Result<Option<Secret>>;
     fn set(&self, organization: &str, key: &Secret) -> Result<()>;
@@ -77,12 +74,10 @@ pub fn resolve(store: &dyn KeyStore, organization: &str, env: Option<&str>) -> R
         .ok_or_else(|| IterError::MissingKey(organization.to_string()))
 }
 
-/// [`resolve`] against the real environment.
 pub fn resolve_env(store: &dyn KeyStore, organization: &str) -> Result<Secret> {
     resolve(store, organization, std::env::var(ENV_KEY).ok().as_deref())
 }
 
-/// Whether a key is available, without reading its value out.
 #[cfg_attr(not(feature = "web"), allow(dead_code))]
 pub fn is_set(store: &dyn KeyStore, organization: &str) -> bool {
     resolve_env(store, organization).is_ok()
@@ -178,7 +173,6 @@ pub mod fake {
     use std::cell::RefCell;
     use std::collections::HashMap;
 
-    /// An in-memory store for tests.
     #[derive(Default)]
     pub struct MemoryKeys(pub RefCell<HashMap<String, Secret>>);
 

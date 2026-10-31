@@ -7,9 +7,7 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// The links of the main nav: `(label, href, icon)`. The hrefs are
-/// `web::url::BOARDS` and `SETTINGS` (a test in `web/url.rs` keeps them equal): `ui` does
-/// not know the routes.
+/// The main nav `(label, href, icon)`; hrefs equal `web::url::BOARDS`/`SETTINGS` (tested in `web/url.rs`).
 pub const NAV: [(&str, &str, &str); 4] = [
     ("Board", "/boards", KANBAN),
     ("Agents", "/agents", BOT),
@@ -17,9 +15,7 @@ pub const NAV: [(&str, &str, &str); 4] = [
     ("Settings", "/settings", SLIDERS),
 ];
 
-/// The document title: the page's own parts, most specific first, then the
-/// app ("Edit organization - Acme - iter"). `error` puts "Error: " in front:
-/// a form that was refused, so a screen reader announces the failure first.
+/// The document title, most specific part first; `error` prefixes "Error: " so a screen reader announces the failure.
 pub fn document_title(parts: &[&str], error: bool) -> String {
     let mut title = String::new();
     if error {
@@ -33,15 +29,10 @@ pub fn document_title(parts: &[&str], error: bool) -> String {
     title
 }
 
-/// `title` is the parts of the document title (see [`document_title`]; none
-/// is just "iter"); `error` is for a form that was refused. The `<title>` is written here, first in the body, and
-/// not in the layout's `<head>`, because the layout renders before the page
-/// knows its own title; browsers take the first `<title>` of the document.
-/// `current` is the `href` of the nav item the page belongs to, if any
-/// (it gets `aria-current`). The stylesheet is not linked here but in the
-/// layout's `<head>`, so the page is styled from its first paint. `dialog` is a pop-up over the page (`modal.rs`):
-/// the skip link, the bar and the main pane are then `inert`, so only the
-/// dialog can be reached, and `modal.js` is loaded for its Esc and focus trap.
+/// `title` parts feed [`document_title`]. The `<title>` is written first in the
+/// body because the layout renders before the page knows its title. `current` is the
+/// nav `href` that gets `aria-current`. `dialog` is a pop-up (`modal.rs`): the rest
+/// becomes `inert` and `modal.js` is loaded for Esc and the focus trap.
 #[component]
 pub async fn frame(
     title: &[&str],

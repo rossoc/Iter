@@ -1,6 +1,4 @@
-//! The mapping from tasks to what the task table shows (`ui::task_table`)
-//! and their tags to chips (`ui::tag_chips`): the one place a task's links,
-//! issue label and chips are built.
+//! Maps tasks to the task table (`ui::task_table`) and their tags to chips: the one place a task's links, issue label and chips are built.
 
 use super::task_query::TaskQuery;
 use super::ui::filter_bar::Search;
@@ -10,7 +8,6 @@ use super::url::{project_url, task_url, tasks_list_url};
 use crate::db::Table;
 use crate::models::{Tag, Task};
 
-/// The syntax of the search box, for its fold-out (see `task_query.rs`).
 const SYNTAX: &[(&str, &str)] = &[
     ("is:open", "queued or in progress (the default)"),
     ("(empty)", "every task: no filter"),
@@ -21,8 +18,6 @@ const SYNTAX: &[(&str, &str)] = &[
     ("words, #12", "in the task's name, or the GitHub issue"),
 ];
 
-/// The search box of the Tasks tab of the page at `base`, showing `q` (none:
-/// empty, every task). Clear empties it: no filter.
 pub fn search(base: &str, q: Option<&str>) -> Search {
     let text = TaskQuery::text(q).trim();
     Search {
@@ -35,12 +30,10 @@ pub fn search(base: &str, q: Option<&str>) -> Search {
     }
 }
 
-/// `#12`, or empty.
 pub fn issue_label(issue: Option<i64>) -> String {
     issue.map(|n| format!("#{n}")).unwrap_or_default()
 }
 
-/// A chip per tag, in the tags' own colors.
 pub fn chips(tags: &[Tag]) -> Vec<Chip<'_>> {
     tags.iter()
         .map(|t| Chip {
@@ -60,13 +53,10 @@ fn row<'a>(task: &'a Task, project: Option<ProjectLink<'a>>) -> TaskRow<'a> {
     }
 }
 
-/// The rows of one project's tasks: no Project column.
 pub fn project_rows(tasks: &[Task]) -> Vec<TaskRow<'_>> {
     tasks.iter().map(|t| row(t, None)).collect()
 }
 
-/// The rows of a group's tasks, each with its project (the pairs
-/// `Db::tasks_in` returns): with a Project column.
 pub fn group_rows(tasks: &[(String, Task)]) -> Vec<TaskRow<'_>> {
     tasks
         .iter()

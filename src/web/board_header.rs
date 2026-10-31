@@ -1,6 +1,4 @@
-//! The top of the agenda, matrix and info pages: the heading (crumbs, the
-//! board's name) and the section tabs (`board_header`), the last of which
-//! is Settings: the board's edit form.
+//! The heading and section tabs of the board pages; the last tab is Settings.
 
 use super::crumbs::boards_crumb;
 use super::sections::tabs_for;
@@ -15,18 +13,15 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The sections of a board.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BoardSection {
     Agenda,
     Matrix,
     Info,
-    /// The edit form (`/board/{id}/edit`).
     Settings,
 }
 
 impl BoardSection {
-    /// The tab's label, and the page title's first part.
     pub fn label(self) -> &'static str {
         match self {
             BoardSection::Agenda => "Agenda",
@@ -37,9 +32,7 @@ impl BoardSection {
     }
 }
 
-/// The document title of a board page: the pick mode's `lead` ("Moving p/t";
-/// empty when nothing is picked, and then left out), then the page's own
-/// parts, most specific first.
+/// `lead` is the pick mode's "Moving p/t", left out when empty.
 pub fn title_parts<'a>(lead: &'a str, rest: &[&'a str]) -> Vec<&'a str> {
     Some(lead)
         .filter(|lead| !lead.is_empty())
@@ -48,7 +41,6 @@ pub fn title_parts<'a>(lead: &'a str, rest: &[&'a str]) -> Vec<&'a str> {
         .collect()
 }
 
-/// The tabs of board `id`, `current` marked; Settings is the last.
 pub fn board_tabs(id: i64, current: BoardSection) -> Vec<Tab> {
     let tab = |section: BoardSection, href: String| (section, Tab::link(section.label(), href));
     tabs_for(
@@ -62,8 +54,6 @@ pub fn board_tabs(id: i64, current: BoardSection) -> Vec<Tab> {
     )
 }
 
-/// The board's name as the heading, with its crumbs (`Boards / {here}`).
-/// `here` is the page's name, shown as the last crumb.
 #[component]
 pub async fn board_heading(board: &Board, here: &'static str) -> Result<impl View> {
     let crumbs = [boards_crumb(), Crumb::label(here)];
@@ -72,8 +62,6 @@ pub async fn board_heading(board: &Board, here: &'static str) -> Result<impl Vie
     })
 }
 
-/// [`board_heading`] and the section tabs: the top of the agenda, matrix
-/// and info pages.
 #[component]
 pub async fn board_header(board: &Board, section: BoardSection) -> Result<impl View> {
     let items = board_tabs(board.id(), section);

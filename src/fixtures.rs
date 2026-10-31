@@ -8,13 +8,11 @@ use chrono::{NaiveDate, NaiveDateTime};
 use crate::db::Db;
 use crate::models::{Board, Project, Session, Settings, Task, TaskStatus};
 
-/// A fresh, empty, migrated database held entirely in memory.
 pub fn db() -> Db {
     Db::open(":memory:").expect("in-memory database opens")
 }
 
-/// A project named `name` with the default settings, in `/tmp/{name}`, in
-/// no organization and on no board; not inserted.
+/// A project with default settings in `/tmp/{name}`; not inserted.
 pub fn project(name: &str) -> Project {
     let mut p = Project::template(&Settings::default());
     p.name = name.into();
@@ -28,7 +26,6 @@ pub fn add_project(db: &Db, name: &str) -> i64 {
     db.insert(&project(name)).expect("project inserts")
 }
 
-/// A board named `name` with no description; not inserted.
 pub fn board(name: &str) -> Board {
     Board {
         name: name.into(),
@@ -36,9 +33,7 @@ pub fn board(name: &str) -> Board {
     }
 }
 
-/// A queued task named `name` under project `project_id`, with nothing else
-/// set; not inserted. Override with struct update:
-/// `Task { status: TaskStatus::Done, ..fixtures::task(p, "x") }`.
+/// A queued task with nothing else set; not inserted. Override with struct update.
 pub fn task(project_id: i64, name: &str) -> Task {
     Task {
         name: name.into(),
@@ -46,13 +41,10 @@ pub fn task(project_id: i64, name: &str) -> Task {
     }
 }
 
-/// [`task`] inserted into `db`: its id.
 pub fn add_task(db: &Db, project_id: i64, name: &str) -> i64 {
     db.insert(&task(project_id, name)).expect("task inserts")
 }
 
-/// A session of `task_id` from `start` to `end` (open when `None`), with no
-/// message; not inserted.
 pub fn session(task_id: i64, start: NaiveDateTime, end: Option<NaiveDateTime>) -> Session {
     Session {
         id: None,
@@ -63,19 +55,16 @@ pub fn session(task_id: i64, start: NaiveDateTime, end: Option<NaiveDateTime>) -
     }
 }
 
-/// [`session`] inserted into `db`: its id.
 pub fn add_session(db: &Db, task_id: i64, start: NaiveDateTime, end: Option<NaiveDateTime>) -> i64 {
     db.insert(&session(task_id, start, end))
         .expect("session inserts")
 }
 
-/// `"2026-09-04 09:00"` as a timestamp; panics naming the bad fixture.
 pub fn dt(s: &str) -> NaiveDateTime {
     NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
         .unwrap_or_else(|e| panic!("bad fixture datetime {s:?}: {e}"))
 }
 
-/// `"2026-09-04"` as a date; panics naming the bad fixture.
 pub fn day(s: &str) -> NaiveDate {
     NaiveDate::parse_from_str(s, "%Y-%m-%d")
         .unwrap_or_else(|e| panic!("bad fixture date {s:?}: {e}"))
@@ -98,7 +87,6 @@ pub struct World {
     pub db: Db,
     pub project_id: i64,
     pub task_id: i64,
-    /// The project's notes folder: [`scratch`]`(tag)`, not created.
     pub notes: PathBuf,
 }
 

@@ -1,16 +1,8 @@
-//! The one table every list of the app is built from, modelled on the tasks
-//! table: a header row of small-caps labels (optional), a tinted full-width
-//! "add" row under it, then rows separated by thin lines, optionally in
-//! sections (the Notes tab's months). A list is `data_table` with its
-//! columns, its rows (`row` and `cell`) as the child nodes, and, when it
-//! has none, its own `empty` line as the last row. The variants (tasks,
-//! sessions, projects, notes, agents, instructions) differ only in their
-//! cells and in a class that tunes them (`class`).
-//!
-//! Each element repeats its native table semantics as a `role`: on narrow
-//! screens the rows are laid out as boxes, and browsers then drop a table's
-//! semantics. A table without a header (`headed: false`) is still named by
-//! its caption.
+//! The table every list is built from: optional small-caps header, a tinted
+//! "add" row, then rows (optionally in sections), with its own `empty` line when
+//! there are none. Variants differ in cells and a `class`. Each element repeats
+//! its native semantics as a `role`, because browsers drop them when narrow
+//! screens lay rows out as boxes; a headerless table is named by its caption.
 
 use super::button::{add_link, add_post};
 use topcoat::{
@@ -18,8 +10,7 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// The first row, which adds an entity: a link to the New pop-up
-/// (`modal.rs`), or a button that posts (Today's note).
+/// The first row, which adds an entity: a link to the New pop-up or a posting button.
 pub struct AddRow<'a> {
     pub label: &'a str,
     pub target: String,
@@ -27,7 +18,6 @@ pub struct AddRow<'a> {
 }
 
 impl<'a> AddRow<'a> {
-    /// A row that opens `href` (a `?new=` pop-up).
     pub fn link(href: impl Into<String>, label: &'a str) -> Self {
         AddRow {
             label,
@@ -36,7 +26,6 @@ impl<'a> AddRow<'a> {
         }
     }
 
-    /// A row that posts to `action`.
     pub fn post(action: impl Into<String>, label: &'a str) -> Self {
         AddRow {
             label,
@@ -46,13 +35,10 @@ impl<'a> AddRow<'a> {
     }
 }
 
-/// `caption` is read by screen readers only. `columns` are the headers (and
-/// the count of columns the add, section and empty rows span); `actions`
-/// adds a last column of buttons, whose header only screen readers get; `headed`
-/// false leaves the header row out. `class` tunes the variant (`tasks`,
-/// `sessions`, ...; `inline` keeps the first cell beside the others on
-/// narrow screens). `empty` is the line that takes the place of the rows
-/// when there are none. The child nodes are the rows.
+/// `caption` is for screen readers only. `columns` are the headers (and the span of
+/// the add, section and empty rows); `actions` adds a last button column; `headed`
+/// false drops the header row. `class` tunes the variant (`inline` keeps the first
+/// cell beside the others when narrow). `empty` replaces the rows when none.
 #[component]
 pub async fn data_table(
     caption: &str,
@@ -104,7 +90,6 @@ pub async fn data_table(
     })
 }
 
-/// A row; `class` marks it (`current`).
 #[component]
 pub async fn row(#[default] class: &str, child: Child<'_>) -> Result<impl View> {
     Ok(view! {
@@ -112,8 +97,7 @@ pub async fn row(#[default] class: &str, child: Child<'_>) -> Result<impl View> 
     })
 }
 
-/// A heading between groups of rows (a month); `span` is the table's
-/// column count.
+/// A heading between groups of rows; `span` is the column count.
 #[component]
 pub async fn section_row(label: &str, span: usize) -> Result<impl View> {
     let span = span.to_string();
@@ -124,14 +108,12 @@ pub async fn section_row(label: &str, span: usize) -> Result<impl View> {
     })
 }
 
-/// A column's header; the child nodes are its name.
 #[component]
 pub async fn col_head(child: Child<'_>) -> Result<impl View> {
     Ok(view! { <th scope="col" role="columnheader">(child)</th> })
 }
 
-/// A cell; `class` is its look (`mono`), `colspan` the columns it spans
-/// when more than one.
+/// A cell; `class` is its look (`mono`), `colspan` the columns it spans.
 #[component]
 pub async fn cell(
     #[default] class: &str,

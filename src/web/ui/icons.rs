@@ -1,7 +1,5 @@
-//! The inline SVG icons. Lucide (ISC), https://lucide.dev/license -- paths
-//! pasted inline, except `HALF` (a half-filled circle for work in progress),
-//! drawn here. Stroke, size and color come from `.i` in `base.css`. A page
-//! that needs another icon adds one constant here.
+//! Inline SVG icons: Lucide (ISC, https://lucide.dev/license), except `HALF`.
+//! Stroke, size and color come from `.i` in `base.css`.
 
 use topcoat::view::Unescaped;
 

@@ -1,9 +1,6 @@
-//! Where a page sits: a trail of crumbs (built in `web/crumbs.rs`), the last
-//! item being the page.
-//!
-//! One rule for `aria-current="page"`: a page with tabs marks its current
-//! tab (`Crumb::label` for its own crumb); a page without marks its last
-//! crumb (`Crumb::here`). So a page never has two.
+//! A trail of crumbs (built in `web/crumbs.rs`), the last being the page.
+//! `aria-current="page"` goes on the current tab if the page has tabs
+//! (`Crumb::label`), else on the last crumb (`Crumb::here`).
 
 use topcoat::{
     Result,
@@ -26,8 +23,7 @@ impl Crumb {
         }
     }
 
-    /// The page itself, as plain text: for a page whose tab is the current
-    /// item (see the module doc).
+    /// The page itself, as plain text (its tab is the current item).
     pub fn label(label: impl Into<String>) -> Crumb {
         Crumb {
             label: label.into(),

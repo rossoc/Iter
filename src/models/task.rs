@@ -12,12 +12,10 @@ pub enum TaskStatus {
 }
 
 impl TaskStatus {
-    /// Every status, in workflow order.
     #[cfg(any(test, feature = "web"))]
     pub const ALL: [TaskStatus; 3] = [TaskStatus::Queue, TaskStatus::Wip, TaskStatus::Done];
 
-    /// `(value, label)` of every status, in workflow order: the options of
-    /// a status `<select>`.
+    /// `(value, label)` per status, in workflow order (a `<select>`'s options).
     #[cfg(feature = "web")]
     pub fn options() -> Vec<(String, String)> {
         Self::ALL
@@ -34,8 +32,7 @@ impl TaskStatus {
         }
     }
 
-    /// The status spelled out, for a report heading where the bare
-    /// `wip`/`queue` shorthand next to a task name reads as jargon.
+    /// Spelled out for report headings, where `wip`/`queue` reads as jargon.
     pub fn label(self) -> &'static str {
         match self {
             TaskStatus::Queue => "queued",
@@ -54,10 +51,8 @@ impl TaskStatus {
     }
 }
 
-/// A unit of work under a project. `project_id` is not part of the YAML
-/// editor's view -- it's set by the caller from the `--project` flag (on
-/// creation) or looked up from the existing row (on edit), never typed by
-/// hand -- so it's skipped on both serialize and deserialize.
+/// A unit of work under a project. `project_id` is set by the caller (`--project` or the
+/// existing row), so it is skipped in serde.
 #[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
 #[table(name = "tasks", order_by = "name")]
 pub struct Task {
@@ -69,9 +64,6 @@ pub struct Task {
 
     pub name: String,
 
-    /// Free-form markdown notes. Edited as the markdown body below the
-    /// YAML front matter rather than as a field among the others -- see
-    /// `MarkdownBody`.
     #[serde(skip)]
     pub description: String,
 
@@ -82,19 +74,13 @@ pub struct Task {
     #[serde(default)]
     pub status: TaskStatus,
 
-    /// What `iter session new` puts in front of this task's slugified name
-    /// to get its branch, e.g. `"feat/"`. Pre-filled from the project's
-    /// `branch_template` when the task is created, and editable from then
-    /// on -- which is the point of it living on the task rather than being
-    /// read off the project at session time. Empty means "whatever the
-    /// project's template says now", so a task created before this field
-    /// existed still branches the project's way.
+    /// Prepended to the slugified name for the branch, e.g. `"feat/"`. Pre-filled from the project's
+    /// `branch_template` on creation, then editable. Empty means the project's current template.
     #[serde(default)]
     pub branch_prefix: String,
 
-    /// Whether the task has been dropped onto the board's Eisenhower
-    /// matrix. Flags alone can't say: a task with neither flag is either
-    /// waiting in the matrix's side list or sitting in the gray quadrant.
+    /// Whether the task was dropped onto the Eisenhower matrix; flags alone can't say, since a
+    /// flagless task is either in the side list or the gray quadrant.
     #[serde(default)]
     pub matrix_placed: bool,
 
@@ -104,20 +90,16 @@ pub struct Task {
     #[table(with = "datetime::opt")]
     pub start_time: Option<NaiveDateTime>,
 
-    /// How long the task is expected to take, as `hh:mm`. The end of the
-    /// slot is `start_time + duration` rather than a stored field, so the
-    /// two can never disagree.
+    /// Expected length as `hh:mm`; the slot end is `start_time + duration`, not stored.
     #[serde(default)]
     pub duration: Option<Duration>,
 }
 
-/// The format `start_time` is typed and shown in. chrono's own serde form is
-/// ISO 8601 with a `T`, which is not what anyone edits by hand.
+/// The format `start_time` is typed and shown in (chrono's ISO 8601 `T` form isn't hand-editable).
 pub const START_TIME_FMT: &str = "%Y-%m-%d %H:%M";
 
-/// When a span that started at `start` ended, as shown: just the time on the
-/// start's day, the full [`START_TIME_FMT`] otherwise. The one rule for the
-/// board agenda and the task page's sessions.
+/// When a span from `start` ended, as shown: just the time on the start's day, else the full
+/// [`START_TIME_FMT`].
 pub fn end_text(start: NaiveDateTime, end: NaiveDateTime) -> String {
     let fmt = if end.date() == start.date() {
         "%H:%M"
@@ -127,8 +109,7 @@ pub fn end_text(start: NaiveDateTime, end: NaiveDateTime) -> String {
     end.format(fmt).to_string()
 }
 
-/// Reads a [`START_TIME_FMT`] timestamp -- the one parser for every place a
-/// start time is typed (the editor, the web form, a board drop).
+/// The one parser for [`START_TIME_FMT`] timestamps.
 pub fn parse_start_time(text: &str) -> Option<NaiveDateTime> {
     NaiveDateTime::parse_from_str(text.trim(), START_TIME_FMT).ok()
 }
@@ -185,9 +166,7 @@ impl Duration {
         if minutes >= 60 {
             return None;
         }
-        // A task slot is never longer than a year. Without a cap a huge
-        // `hours` parses, and then overflows the date arithmetic that
-        // schedules it (`Task::end_time`).
+        // A slot is never longer than a year: a huge `hours` would overflow `Task::end_time`.
         if hours > MAX_HOURS {
             return None;
         }
@@ -216,16 +195,13 @@ impl<'de> Deserialize<'de> for Duration {
     }
 }
 
-/// What `iter task new`/`edit` open in the editor: the task plus the names
-/// of its tags -- which is also how a task is marked urgent or important
-/// (see [`crate::models::Priority`]). Tags are rows of their own, so they
-/// ride alongside the task rather than on it.
+/// What `iter task new`/`edit` open: the task plus its tag names (which also mark it urgent or
+/// important, see [`crate::models::Priority`]).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TaskEdit {
     #[serde(flatten)]
     pub task: Task,
 
-    /// Tag names; each must already exist (`iter tag new`).
     #[serde(default)]
     pub tags: Vec<String>,
 
@@ -267,13 +243,11 @@ impl crate::models::MarkdownBody for TaskEdit {
 }
 
 impl Task {
-    /// When the scheduled slot ends: `start_time + duration`, if both are set.
     pub fn end_time(&self) -> Option<NaiveDateTime> {
         let span = chrono::Duration::try_minutes(self.duration?.minutes())?;
         self.start_time?.checked_add_signed(span)
     }
 
-    /// `start_time` as typed and shown, or empty when unscheduled.
     #[cfg(feature = "web")]
     pub fn start_text(&self) -> String {
         self.start_time
@@ -281,17 +255,13 @@ impl Task {
             .unwrap_or_default()
     }
 
-    /// `duration` as `hh:mm`, or empty when there is none.
     #[cfg(feature = "web")]
     pub fn duration_text(&self) -> String {
         self.duration.map(|d| d.to_string()).unwrap_or_default()
     }
 
-    /// A blank (or issue-prefilled) template for `iter task new` to open in
-    /// the YAML editor. `branch_prefix` comes from the owning project's
-    /// `branch_template`, so the default is the project's rule and the
-    /// editor is where it gets overridden; `status` comes from the config
-    /// file, for anyone who tracks work that starts already in progress.
+    /// A blank (or issue-prefilled) template for `iter task new`. `branch_prefix` comes from the
+    /// project's `branch_template`; `status` from the config file.
     pub fn template(project_id: i64, branch_prefix: String, status: TaskStatus) -> Self {
         Task {
             id: None,
@@ -336,9 +306,7 @@ mod tests {
 
     use super::*;
 
-    /// `branch_prefix` has to reach the YAML editor as an ordinary field --
-    /// that's the whole point of it living on the task -- unlike
-    /// `project_id`/`description`, which are deliberately kept out of it.
+    /// `branch_prefix` reaches the YAML editor as an ordinary field, unlike `project_id`/`description`.
     #[test]
     fn a_new_task_carries_its_branch_prefix_into_the_editor() {
         let template = Task::template(3, "hotfix/".to_string(), TaskStatus::Queue);
@@ -357,8 +325,7 @@ mod tests {
         assert_eq!(task.branch_prefix, "chore/");
     }
 
-    /// Front matter written before the field existed still loads, blank --
-    /// which `iter session new` reads as "use the project's template".
+    /// Front matter without the field still loads, blank (meaning: use the project's template).
     #[test]
     fn a_missing_prefix_defaults_to_blank() {
         let task: Task = serde_yaml::from_str("name: t\n").expect("front matter parses");
@@ -395,8 +362,7 @@ mod tests {
         assert_eq!((back.start_time, back.duration), (None, None));
     }
 
-    /// Hours are whatever was typed: one too big for the minutes to fit
-    /// is a parse failure, not an overflow.
+    /// Hours too big for the minutes to fit are a parse failure, not an overflow.
     #[test]
     fn a_duration_too_long_to_count_is_rejected() {
         assert_eq!(Duration::parse("999999999999999999:00"), None);

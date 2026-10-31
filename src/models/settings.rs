@@ -1,17 +1,11 @@
-//! The branch and tool settings an organization and a project share. An
-//! organization's are the defaults its projects start from; the config
-//! file's `project:` block is the default when there's no organization.
+//! Branch and tool settings shared by organizations and projects; the config file's `project:`
+//! block is the default when there is no organization.
 
 use crate::models::{default_branch_template, default_true, main_branch};
 use serde::{Deserialize, Serialize};
 
-/// The settings a new project or organization starts from, before the
-/// editor opens -- an organization's fields *are* the defaults its projects
-/// inherit, so `iter organization new` starts from this same block.
-///
-/// These are only the starting point of a `new`: they're written into the
-/// buffer as ordinary front matter and can be changed there, and they never
-/// touch a project that already exists.
+/// The settings a new project or organization starts from. Only the starting point of a `new`:
+/// existing projects are untouched.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
@@ -20,24 +14,16 @@ pub struct Settings {
     pub auto_branch: bool,
     pub branch_template: String,
 
-    /// The branch `iter task done --save` merges finished work into.
-    /// Worth setting here for anyone whose repos all call their trunk the
-    /// same thing; anyone with a mix sets it per project (or on the
-    /// organization) instead.
+    /// The branch `iter task done --save` merges into.
     pub default_branch: String,
 
-    /// The GitHub Project board new issues get filed under, by title.
-    /// Empty -- the default -- files them nowhere. Worth setting here for
-    /// anyone whose boards are named the same across repos; anyone whose
-    /// aren't sets it per project (or on the organization) instead.
+    /// The GitHub Project board new issues are filed under, by title; empty files them nowhere.
     pub github_project: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        // Deliberately the same fallbacks serde fills a missing front
-        // matter field with, so "left out of the config" and "left out of
-        // the editor buffer" can't come to mean two different things.
+        // Same fallbacks as serde's missing-field defaults, so config and editor buffer agree.
         Settings {
             github: false,
             tmux: default_true(),

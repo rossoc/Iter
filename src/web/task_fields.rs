@@ -1,9 +1,5 @@
 //! The inputs of a task, read back by `TaskForm`: shared by the new-task
 //! form and the task edit form (the write-side twin of the task page).
-//!
-//! Name and Description are `edit_page`'s. Status and Tags are loose; Start
-//! and Duration are grouped as "Schedule", the issue number and branch
-//! prefix as "GitHub". Hints: what it is, then "Leave empty for X".
 
 use super::forms::TaskForm;
 use super::ui::field::{field, select};
@@ -15,9 +11,6 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// `form` holds what each input shows, as text: the task's own values, or
-/// what was typed after a refused submit (`TaskForm::of`). `error` is the
-/// form's refusal, if any.
 #[component]
 pub async fn task_fields(
     form: &TaskForm,

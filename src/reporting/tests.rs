@@ -52,7 +52,6 @@ fn round_to_half_hour_above_three_quarters_rounds_up_to_next_int() {
     assert_eq!(round_to_half_hour(3.9), 4.0);
 }
 
-// ---- the period ----------------------------------------------------
 
 #[test]
 fn a_single_day_range_reports_that_day() {
@@ -81,12 +80,9 @@ fn an_open_start_reaches_back_indefinitely() {
     assert_eq!(range.label(), "up to 2026-09-04");
 }
 
-// ---- totals --------------------------------------------------------
 
 #[test]
 fn merged_total_bridges_gaps_under_threshold() {
-    // 09:00-10:00, gap of 10 min, 10:10-11:00 -> merged span 09:00-11:00 = 120 min,
-    // not the 60+50=110 min the two durations alone would sum to.
     let sessions = vec![
         sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
         sess(1, "2026-09-01 10:10", Some("2026-09-01 11:00"), None),
@@ -96,8 +92,6 @@ fn merged_total_bridges_gaps_under_threshold() {
 
 #[test]
 fn merged_total_keeps_gaps_at_or_above_threshold_separate() {
-    // Gap is exactly 17 min -> "closer than 17" is false, so the two
-    // sessions are NOT merged; the gap itself isn't counted.
     let sessions = vec![
         sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
         sess(1, "2026-09-01 10:17", Some("2026-09-01 11:00"), None),
@@ -112,7 +106,6 @@ fn merged_total_chains_across_more_than_two_sessions() {
         sess(1, "2026-09-01 09:35", Some("2026-09-01 10:00"), None),
         sess(1, "2026-09-01 10:10", Some("2026-09-01 10:40"), None),
     ];
-    // All gaps (5 min, 10 min) are under 17 -> one 09:00-10:40 span = 100 min.
     assert_eq!(merged_total_minutes(&sessions, now(), 17), 100);
 }
 
@@ -122,17 +115,11 @@ fn merged_total_extends_into_an_ongoing_session() {
         sess(1, "2026-09-04 09:00", Some("2026-09-04 10:00"), None),
         sess(1, "2026-09-04 10:05", None, None),
     ];
-    // now() is 2026-09-04 12:00 -> ongoing session runs 10:05-12:00, merged
-    // with the prior 09:00-10:00 (5 min gap) into 09:00-12:00 = 180 min.
     assert_eq!(merged_total_minutes(&sessions, now(), 17), 180);
 }
 
 #[test]
 fn merged_total_unions_across_different_tasks_without_double_counting() {
-    // The scenario that motivated keying sessions by task: two different
-    // tasks (of the same project) worked in parallel, overlapping
-    // 09:00-10:00 and 09:30-10:30 -> union is 09:00-10:30 = 90 min, not
-    // the 120 min the two durations would sum to if counted separately.
     let sessions = vec![
         sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
         sess(2, "2026-09-01 09:30", Some("2026-09-01 10:30"), None),
@@ -142,7 +129,6 @@ fn merged_total_unions_across_different_tasks_without_double_counting() {
 
 #[test]
 fn weekday_averages_basic() {
-    // Monday 2026-08-31 and Monday 2026-09-07, Wednesday 2026-09-02.
     let sessions = vec![
         sess(1, "2026-08-31 09:00", Some("2026-08-31 11:00"), None),
         sess(1, "2026-09-07 09:00", Some("2026-09-07 13:00"), None),
@@ -166,7 +152,6 @@ fn weekday_averages_no_data_is_zero_filled() {
     assert_eq!(averages[6].weekday, "Sunday");
 }
 
-// ---- rows ----------------------------------------------------------
 
 #[test]
 fn session_rows_omit_the_date_on_a_single_day_report() {
@@ -189,7 +174,6 @@ fn session_rows_carry_the_date_when_the_period_spans_days() {
     let sessions = vec![sess(1, "2026-09-04 09:00", None, None)];
     let rows = session_rows(&sessions, now(), true);
     assert_eq!(rows[0].date.as_deref(), Some("2026-09-04"));
-    // Still open, so it's measured against now() -- 09:00 to 12:00.
     assert_eq!(rows[0].end, None);
     assert_eq!(rows[0].duration, "03:00");
 }
@@ -246,7 +230,6 @@ fn message_bullets_does_not_double_an_existing_leading_dash() {
     );
 }
 
-// ---- rendering -----------------------------------------------------
 
 fn settings(pairs: &[(&str, &str)]) -> Mapping {
     let mut map = Mapping::new();
@@ -280,7 +263,6 @@ fn one_row() -> Vec<SessionRow> {
     )
 }
 
-/// The one-task report the text and YAML renderings are checked against.
 fn sample_info() -> TaskInfo {
     TaskInfo {
         header: Header::new(
@@ -332,12 +314,9 @@ fn the_description_is_the_body_not_a_front_matter_field() {
     let (front, body) = front.split_once("\n---\n").expect("a closing divider");
     assert!(!front.contains("Task notes."), "{front}");
     assert!(body.contains("Task notes."), "{body}");
-    // Nothing logged that day, so there's no table to print.
     assert!(body.contains(NO_SESSIONS), "{body}");
 }
 
-/// An open start -- `--to` with no `--from` -- leaves `from:` out
-/// altogether rather than emitting a null.
 #[test]
 fn an_open_ended_range_omits_from() {
     let info = TaskInfo {
@@ -362,14 +341,11 @@ fn an_open_ended_range_omits_from() {
 fn a_yaml_report_carries_the_same_fields_flat() {
     let info = sample_info();
     let out = info.render(Format::Yaml).unwrap();
-    // The header is flattened, not nested under a `header:` key.
     assert!(out.starts_with("name: proj/task\n"), "{out}");
     assert!(out.contains("date: 2026-09-04\n"), "{out}");
     assert!(out.contains("description: Task notes.\n"), "{out}");
     assert!(out.contains("message: wrote the docs\n"), "{out}");
     assert!(!out.contains("header:"), "{out}");
-    // ...and it parses back as YAML, which the hand-rolled renderer it
-    // replaced could not promise for a message starting with `-`.
     serde_yaml::from_str::<serde_yaml::Value>(&out).expect("valid yaml");
 }
 
@@ -429,7 +405,6 @@ fn a_project_report_breaks_the_period_down_per_task() {
     let out = info.render(Format::Text).unwrap();
     assert!(out.contains("base_path: /tmp/proj"), "{out}");
     assert!(out.contains("\n# proj\n"), "{out}");
-    // The per-task summary table, then the task's own section.
     assert!(
         out.contains("| Task  | Status           | Time  |"),
         "{out}"
@@ -530,7 +505,6 @@ fn settings_of_drops_the_fields_the_report_prints_itself() {
     assert_eq!(keys, vec!["github", "branch_template"]);
 }
 
-// ---- the worklog ---------------------------------------------------
 
 fn project_of(tasks: Vec<(&str, TaskStatus, Vec<Session>)>) -> (Vec<ProjectReport>, Vec<Session>) {
     let mut all = Vec::new();
@@ -600,7 +574,6 @@ fn entries_are_one_per_day_with_merged_hours() {
                 sess(1, "2026-09-04 09:00", Some("2026-09-04 10:30"), None),
             ],
         ),
-        // parallel to A on the 4th: must not be double counted
         (
             "B",
             TaskStatus::Wip,

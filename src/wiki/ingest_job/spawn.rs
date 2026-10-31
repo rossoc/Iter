@@ -2,8 +2,7 @@
 
 use super::*;
 
-/// Runs the harness on `prompt` in the notes folder, its output in a log
-/// there (`.iter/`, which git is told to ignore). The log's path.
+/// Runs the harness on `prompt` in the notes folder; the log goes to `.iter/` (git-ignored). Returns the log path.
 pub fn run_agent(
     target: &Target,
     opts: &HarnessChoice,
@@ -28,8 +27,7 @@ pub fn run_agent(
     Ok((log_path, ok))
 }
 
-/// Starts `iter wiki ingest` for `project` (and `task`) as a process of its
-/// own that outlives this one.
+/// Starts `iter wiki ingest` for `project` (and `task`) as a process that outlives this one.
 pub fn spawn_ingest(
     project: &Project,
     task: Option<&Task>,
@@ -37,7 +35,6 @@ pub fn spawn_ingest(
 ) -> Result<()> {
     let mut command = std::process::Command::new(std::env::current_exe()?);
     command.args(["wiki", "ingest"]);
-    // a task names its project already
     match task {
         // `--flag=value`, so a name starting with `-` is a value, not a flag
         Some(task) => command.arg(format!("--task={}", task_display(project, task))),
@@ -56,8 +53,7 @@ pub fn spawn_ingest(
     Ok(())
 }
 
-/// Starts an ingest of the project (and the sketches of `task`) in the
-/// background, as the page's button does.
+/// Starts an ingest of the project (and `task`'s sketches) in the background.
 pub fn ingest_in_background(db: &Db, project: &Project, task: &Task) -> Result<()> {
     let target = Target::new(db, project.clone())?;
     target.require_git()?;

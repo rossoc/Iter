@@ -1,24 +1,19 @@
-//! The banner of the pick mode, the way to move a task without dragging:
-//! which task, what can be done with it, and a way out. `#pick` is where the
-//! card's link lands, so the keyboard starts here. The mode's words are the
-//! caller's (Scheduling, Moving, Placing), the matrix says its own (Placing).
+//! The pick-mode banner (moving a task without dragging); `#pick` is where the
+//! card's link lands so the keyboard starts here.
 
 use topcoat::{
     Result,
     view::{Child, View, component, view},
 };
 
-/// The id of the banner: where a card's pick link lands (`#pick`), so the
-/// keyboard starts here.
+/// Where a card's pick link lands (`#pick`).
 pub const PICK_ANCHOR: &str = "pick";
 
-/// The id of the banner's message, which names the banner (`aria-labelledby`).
 const MESSAGE: &str = "pick-message";
 
-/// `verb` is what is being done ("Moving"; it also picks the banner's accent);
-/// `title` the task; `state` where the task is now ("Wed 30 Sep, 09:00"),
-/// empty when it is nowhere; `prompt` what to do next ("Choose an hour.");
-/// `cancel` leaves the mode; the child nodes are the extra actions (Unschedule).
+/// `verb` is the action ("Moving"; also picks the accent), `state` where the
+/// task is now (empty if nowhere), `prompt` what to do next, `cancel` leaves the
+/// mode; children are extra actions.
 #[component]
 pub async fn pick_bar(
     verb: &str,

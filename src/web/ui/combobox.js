@@ -1,26 +1,21 @@
-// One list of choices for every form (see combobox.css). An enhancement: the
-// native controls keep working without this script.
-//   - `input[list]` (a text field with a <datalist>): a click or ArrowDown
-//     shows every choice; typing filters them by name; the first match is
-//     highlighted and Enter picks it. Anything may be typed: the server
-//     decides whether it is a choice.
-//   - `select.control`: replaced by a button that opens the same list; the
-//     <select> stays in the page, hidden, and is kept in sync, so the form
-//     posts it, its label points at it, and `change` still fires on it.
-// Both: ArrowUp/Down move, Enter picks, Esc closes (and only that: the
-// pop-up under it stays), Tab closes, a click picks. Picking sets the value
-// and sends bubbling `input` and `change` events from the control.
+// One list of choices for every form (combobox.css). An enhancement: native controls
+// work without this script.
+//   - `input[list]`: a click or ArrowDown shows every choice, typing filters, the first
+//     match is highlighted and Enter picks it. Anything may be typed: the server decides.
+//   - `select.control`: replaced by a button opening the same list; the hidden <select>
+//     stays in sync, so the form posts it, its label points at it and `change` fires on it.
+// Both: ArrowUp/Down move, Enter picks, Esc closes (only that: the pop-up under it
+// stays), Tab closes, a click picks. Picking sends bubbling `input` and `change`.
 (function () {
   var uid = 0;
-  var open = null; // the list that is showing: { close, reposition }
+  var open = null;
 
   function fire(el, name) {
     el.dispatchEvent(new Event(name, { bubbles: true }));
   }
 
-  // The list: <ul role=listbox> on the body (so no `overflow` clips it, and
-  // the inert page behind a pop-up does not make it inert), placed under the
-  // anchor, or above it when there is no room below.
+  // <ul role=listbox> on the body (no `overflow` clips it, and the inert page behind a
+  // pop-up does not make it inert), under the anchor or above it when there is no room.
   function Popup(anchor, owner) {
     this.anchor = anchor;
     this.owner = owner;
@@ -47,7 +42,6 @@
     });
   }
 
-  // items: [{ value, label, text }]; `active`: the index to highlight
   Popup.prototype.show = function (items, active) {
     var self = this;
     this.items = items;
@@ -140,11 +134,9 @@
     if (open && !open.el.contains(e.target) && !open.anchor.contains(e.target)) open.close();
   });
 
-  // ---- input[list] -------------------------------------------------------
   function enhanceInput(input) {
     var list = document.getElementById(input.getAttribute("list"));
     if (!list) return;
-    // read at each use, so a list a script refreshes (platform.js) is current
     var choices = function () {
       return Array.prototype.map.call(list.querySelectorAll("option"), function (o) {
         var label = o.label && o.label !== o.value ? o.label : o.textContent.trim();
@@ -174,7 +166,6 @@
       },
     });
 
-    // `all`: show every choice (a click), else the ones that match the text
     function render(all) {
       var q = input.value.trim().toLowerCase();
       var shown = choices().filter(function (o) {
@@ -185,11 +176,9 @@
         o.selected = o.value === input.value;
         if (o.selected && current < 0) current = i;
       });
-      // everything showing: the current value is highlighted; else the first match
       pop.show(shown, all && current >= 0 ? current : 0);
     }
 
-    // the text is selected when the field is entered, so typing replaces it
     input.addEventListener("focus", function () {
       setTimeout(function () {
         if (document.activeElement === input) input.select();
@@ -199,7 +188,6 @@
       if (!pop.isOpen()) render(true);
     });
     input.addEventListener("mouseup", function (e) {
-      // a click into a field that was just entered keeps the selection
       if (input.selectionStart === 0 && input.selectionEnd === input.value.length) e.preventDefault();
     });
     input.addEventListener("input", function () {
@@ -215,7 +203,7 @@
         pop.owner.pick(pop.items[pop.active]);
       } else if (e.key === "Escape" && pop.isOpen()) {
         e.preventDefault();
-        e.stopPropagation(); // the pop-up under it stays
+        e.stopPropagation();
         pop.close();
       } else if (e.key === "Tab") {
         pop.close();
@@ -226,7 +214,6 @@
     });
   }
 
-  // ---- select.control ----------------------------------------------------
   function enhanceSelect(select) {
     var native = select;
     var button = document.createElement("button");
@@ -253,7 +240,6 @@
     native.tabIndex = -1;
     native.setAttribute("aria-hidden", "true");
     native.parentNode.insertBefore(button, native);
-    // a label click, or a validation focus, goes to the visible control
     native.addEventListener("focus", function () {
       button.focus();
     });
@@ -318,7 +304,6 @@
         e.preventDefault();
         pop.owner.pick(pop.items[pop.active]);
       } else if (e.key === "Enter" && !isOpen) {
-        // leave Enter to the form (a click would be a button's default)
         e.preventDefault();
         if (button.form) button.form.requestSubmit();
       } else if (e.key === "Escape" && isOpen) {
@@ -328,7 +313,7 @@
       } else if (e.key === "Tab") {
         pop.close();
       } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && e.key !== " ") {
-        // type-ahead: the first choice that starts with what was typed
+        // type-ahead: the first choice starting with what was typed
         typed += e.key.toLowerCase();
         clearTimeout(timer);
         timer = setTimeout(function () {

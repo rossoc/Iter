@@ -1,9 +1,6 @@
-//! Gathering the numbers an `info` report is made of: which days it covers,
-//! and the per-task / per-project breakdowns under them.
-//!
-//! Separate from [`crate::reporting`], which turns these into text or YAML
-//! and knows nothing about the database or the command line. Keeping that
-//! module free of both is what lets its rendering be tested without either.
+//! Gathering the numbers an `info` report is made of: the days covered and the per-task and
+//! per-project breakdowns. Kept apart from [`crate::reporting`], which renders and knows nothing of
+//! the database or the CLI.
 
 use crate::args::ReportOpts;
 use crate::config::config;
@@ -16,10 +13,8 @@ use crate::reporting::{
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
 
-/// Total minutes across `sessions`, with the pause threshold read from the
-/// config file. The one place that lookup happens: `reporting`'s own
-/// [`merged_total_minutes`] keeps an explicit gap so it stays testable
-/// without a config.
+/// Total minutes across `sessions`, with the pause threshold from the config; `reporting`'s own
+/// [`merged_total_minutes`] takes an explicit gap so it is testable.
 pub(crate) fn total_minutes(sessions: &[Session], now: NaiveDateTime) -> i64 {
     merged_total_minutes(sessions, now, config().pause_gap_minutes)
 }
@@ -29,10 +24,8 @@ pub(crate) fn parse_day(value: &str) -> Result<NaiveDate> {
         .map_err(|_| IterError::InvalidDate(value.to_string()))
 }
 
-/// The days an `info` report covers. `--date` (or nothing at all) is a
-/// single day; `--from`/`--to` is an interval, with `--to` defaulting to
-/// today and `--from` to no lower bound at all. clap already rejects mixing
-/// the two formulations, so only one branch can apply.
+/// The days an `info` report covers: `--date` (or nothing) is one day; `--from`/`--to` an interval
+/// (`--to` defaults to today, `--from` to unbounded). clap rejects mixing them.
 pub(crate) fn resolve_range(opts: &ReportOpts, now: chrono::NaiveDateTime) -> Result<DateRange> {
     let day = |value: &Option<String>| value.as_deref().map(parse_day).transpose();
     if opts.from.is_none() && opts.to.is_none() {
@@ -51,12 +44,8 @@ pub(crate) fn resolve_range(opts: &ReportOpts, now: chrono::NaiveDateTime) -> Re
     Ok(DateRange { from, to })
 }
 
-/// The pure part of a report: one `TaskReport` per task of `tasks` (one
-/// project's, by name) that has sessions in `by_task`, which is consumed.
-/// Tasks untouched in the period are left out. Also hands back the union of
-/// the sessions it used, so the caller can total the project without asking
-/// the database twice. `dated` says the report spans more than one day, so
-/// each session row shows its date.
+/// One `TaskReport` per task of `tasks` with sessions in `by_task` (consumed), plus the union of
+/// the sessions used. `dated` shows each session's date.
 fn build_task_reports(
     tasks: Vec<Task>,
     by_task: &mut HashMap<i64, Vec<Session>>,
@@ -83,8 +72,6 @@ fn build_task_reports(
     (reports, all)
 }
 
-/// The sessions grouped by the task they belong to, each group in the order
-/// the query returned them (oldest first).
 fn group_by_task(sessions: Vec<Session>) -> HashMap<i64, Vec<Session>> {
     let mut by_task: HashMap<i64, Vec<Session>> = HashMap::new();
     for session in sessions {
@@ -93,10 +80,7 @@ fn group_by_task(sessions: Vec<Session>) -> HashMap<i64, Vec<Session>> {
     by_task
 }
 
-/// One `TaskReport` per task of `project_id` that had a session in `range`
-/// -- the per-task breakdown a project report is built from. A task's
-/// sessions cover only the period, same as the report's own filter. Two
-/// queries for the whole project, not one per task.
+/// One `TaskReport` per task of `project_id` with a session in `range`; two queries in all.
 pub(crate) fn task_reports(
     db: &Db,
     project_id: i64,
@@ -114,11 +98,8 @@ pub(crate) fn task_reports(
     ))
 }
 
-/// One [`ProjectReport`] per project of `projects` (an organization's, as
-/// the caller already loaded them, in the order to report them) that had a
-/// session in `range`, plus the union of every session behind them: what
-/// [`task_reports`] does, one level up. One sessions query and one tasks
-/// query for the whole set, grouped here, however many projects there are.
+/// [`task_reports`] one level up: one `ProjectReport` per project with a session in `range`, plus
+/// the union of all sessions; one sessions query and one tasks query in all.
 pub(crate) fn project_reports(
     db: &Db,
     projects: &[Project],
@@ -160,7 +141,7 @@ mod tests {
     use crate::fixtures::dt;
     use crate::models::TaskStatus;
 
-    /// The per-project loop the batch replaced, kept as the reference.
+    /// The per-project loop, as the reference for the batch.
     fn per_project(
         db: &Db,
         projects: &[Project],

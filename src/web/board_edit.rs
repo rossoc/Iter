@@ -1,6 +1,4 @@
-//! The board edit form (`/board/{id}/edit`), the sibling of the organization,
-//! project and task ones. The page is `edit_page`; this supplies the crumbs,
-//! the Projects checklist and the loading.
+//! The board edit form (`/board/{id}/edit`); the page is `edit_page`.
 
 use super::Id;
 use super::board_header::{BoardSection, board_tabs};
@@ -26,9 +24,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(board_edit).page(board_save)
 }
 
-/// `stored` is the board as stored (the breadcrumb and title of the page, not
-/// what was typed); `board` holds what the form shows and `projects` the
-/// checklist's options. `error` is the refusal, if any.
 #[component]
 pub async fn screen(
     board: &Board,
@@ -59,7 +54,6 @@ pub async fn screen(
 #[page("/board/{id}/edit")]
 async fn board_edit(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
-    // The board is found among the boards: no read by key of its own.
     let page: Loaded<Board, _> = load_among(id, |db, others: &[Board]| {
         Ok(project_options(db, others, id, None)?)
     })?;

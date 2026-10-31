@@ -1,9 +1,4 @@
-//! A board's Eisenhower matrix (`/board/{id}/matrix`): four numbered
-//! quadrants and the list of tasks not placed yet. A card is dragged into a
-//! quadrant with `board.js`, or placed with the pick mode (`?pick=`,
-//! `pick.rs`), plain links and forms. Nothing here has rules of its
-//! own: it is all shared components (`ui/`). The loading and the POST
-//! route are here too.
+//! A board's Eisenhower matrix (`/board/{id}/matrix`): four quadrants and the list of unplaced tasks.
 
 use super::Id;
 use super::board_cards::CardCtx;
@@ -33,19 +28,14 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// The id of the aside of the "Backlog" list (the jump link's target).
 const NOT_PLACED: &str = "not-placed";
 
-/// The field a pick form adds to say it is a form post (see [`Drop`]).
 const FORM_POST: (&str, &str) = ("form", "1");
 
 #[query_params(error = bad_request)]
 struct MatrixQuery {
-    /// The task being placed (the pick mode).
     pick: Option<String>,
-    /// The task that was just moved (the note says so).
     moved: Option<String>,
-    /// `off`: the Backlog column is folded into its rail.
     side: Option<String>,
 }
 
@@ -53,9 +43,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(matrix_page).route(place_task)
 }
 
-/// `POST /board/{id}/matrix`: a [`Drop`] with the task and the quadrant (or
-/// `left`). A pick form also sends the `form` marker: the answer is then a
-/// redirect back to the matrix, on the moved card.
+/// A pick form also sends the `form` marker: the answer is then a redirect to the moved card.
 #[route(POST "/board/{id}/matrix")]
 async fn place_task(cx: &Cx, Form(drop): Form<Drop>) -> Result<Json<bool>> {
     let id = *path_param::<Id>(cx)?;
@@ -73,7 +61,6 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<MatrixQuery>(cx)?;
     let page = load_board(id, query.pick.as_deref(), query.moved.as_deref(), split)?;
-    // the document title says what is being done
     let lead = page
         .picked
         .as_ref()
@@ -85,18 +72,14 @@ async fn matrix_page(cx: &Cx) -> Result<impl View> {
     })
 }
 
-/// The quadrant a task is in now (an index into `QUADRANTS`), if it is placed.
 fn quadrant_of(task: &Picked) -> Option<usize> {
     task.placed.then(|| quadrant_index(task.priority))
 }
 
-/// Where a task is, in words: its quadrant, or the list.
 fn place_name(task: &Picked) -> &'static str {
     quadrant_of(task).map_or("Backlog", |q| QUADRANTS[q].name)
 }
 
-/// The pick mode's words, as on the agenda: a task that is placed is moved,
-/// any other placed.
 fn pick_words(task: &Picked) -> PickWords {
     PickWords::of(
         quadrant_of(task).is_some(),
@@ -121,8 +104,6 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
         picked: picked.as_ref().map(|p| p.id),
     };
     let base = board_matrix_url(id);
-    // the links keep the column as it is; the fold and unfold links are the page
-    // itself (and its pick mode) with it folded or not
     let kept = with_side(base.clone(), folded);
     let links = PickLinks::new(&kept);
     let here = match picked {
@@ -131,7 +112,6 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
     };
     let fold = with_side(here.clone(), true);
     let style = colors.style();
-    // where the picked task is now: its quadrant, if it is placed
     let now = picked.as_ref().and_then(quadrant_of);
     let state = now.map(|q| QUADRANTS[q].name).unwrap_or_default();
     let words = picked.as_ref().map(pick_words);

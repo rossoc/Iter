@@ -18,7 +18,6 @@ pub fn write(dir: &Path, rel: &str, text: &str) {
     fs::write(path, text).expect("write");
 }
 
-/// An organization `acme` holding the project `acme.app`, which has task 7.
 pub fn levels(root: &Path) -> Vec<Level> {
     let level = |kind, label: &str, dir: PathBuf, parent| Level {
         kind,
@@ -84,9 +83,7 @@ pub fn fixture(name: &str) -> PathBuf {
     root
 }
 
-/// A wiki of `pages` pages and a tenth as many notes in the project `acme.app`
-/// (every page has a description, three tags, a source and two links), for
-/// timing. Pseudo-random but the same every time.
+/// `pages` pages and a tenth as many notes in `acme.app`, for timing; deterministic.
 pub fn big(name: &str, pages: usize) -> PathBuf {
     let root = scratch(name);
     let app = root.join("acme/app");

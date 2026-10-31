@@ -1,5 +1,4 @@
-/* the list of choices (combobox.js): one look for every select and every text
-   field with suggestions. The list is on the body, over a pop-up (z 30). */
+/* the list of choices (combobox.js), over a pop-up (z 30) */
 .cb-pop{position:fixed;z-index:35;margin:0;padding:4px;list-style:none;overflow:auto;box-sizing:border-box;
   background:var(--bg-2);border:1px solid var(--control-line);border-radius:var(--r-md);box-shadow:var(--shadow-lift);font-size:.9375rem}
 .cb-pop[hidden]{display:none}
@@ -15,8 +14,7 @@
   .cb-pop li.cb-active{outline:2px solid Highlight;outline-offset:-2px}
 }
 
-/* a select that was replaced: its button looks like the control it stands for */
-/* more specific than `.field .control{width:100%}`: that kept the hidden select as wide as the field, and being absolute it stuck out of the pop-up (a horizontal scroll) */
+/* more specific than `.field .control{width:100%}`, which kept the hidden select field-wide and made the pop-up scroll sideways */
 select.cb-native.control{position:absolute;width:1px;height:1px;min-height:0;margin:0;padding:0;border:0;opacity:0;pointer-events:none;overflow:hidden;clip-path:inset(50%)}
 .cb-button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:calc(1.5em + 18px);text-align:left;cursor:pointer;font:inherit}
 .cb-button .cb-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

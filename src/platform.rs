@@ -1,26 +1,5 @@
-//! The time-counting platform hours are pushed to.
-//!
-//! One generic JSON interface behind [`TimePlatform`], so a vendor adapter
-//! is a later, additive implementation of the trait. Paths are relative to
-//! the organization's `platform_url`; every call carries
-//! `Authorization: Bearer <key>`:
-//!
-//! * `GET /projects` -- `{"projects": [{"id", "name"}]}`.
-//! * `GET /projects/{project-id}/activities` -- `{"activities": [{"id", "name"}]}`.
-//! * `GET /time-entries?from=yyyy-mm-dd&to=yyyy-mm-dd[&page=n]` --
-//!   `{"entries": [{"date", "time", "note", "project", "activity", ...}],
-//!   "has_more"}`, both days included; `time` is in minutes, `project` and
-//!   `activity` are ids.
-//! * `POST /time-entries` with
-//!   `{"entries": [{"project", "activity", "date", "time", "note"}]}` (ids,
-//!   minutes) -- one entry per day. A day that already has an entry is
-//!   refused, but only that entry: the response is 2xx with
-//!   `{"results": [{"day", "status": "ok" | "conflict", "message"}]}`, so
-//!   pushing the same day twice does not fail everything. A response
-//!   without results means every entry was accepted.
-//!
-//! The key never appears in an error: everything that comes back is
-//! redacted first.
+//! One generic JSON interface behind [`TimePlatform`]; endpoints and payloads in `doc/architecture_agent_wiki.md`.
+//! Every call carries `Authorization: Bearer <key>`, and the key never appears in an error: everything that comes back is redacted first.
 
 use crate::error::{IterError, Result};
 use crate::reporting::{Worklog, WorklogEntry, fmt_date};
@@ -29,10 +8,8 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-/// How many characters of an error response are shown.
 const BODY_LIMIT: usize = 500;
 
-/// What the platform said about one pushed entry.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct EntryResult {
     pub day: String,
@@ -48,8 +25,6 @@ impl EntryResult {
     }
 }
 
-/// A project or an activity of the platform: what is sent is its `id`, what
-/// is shown (and typed) its `name`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct PlatformItem {
     pub id: String,
@@ -66,14 +41,12 @@ impl PlatformItem {
         }
     }
 
-    /// Whether `text` is this one's id, or its name (ignoring case).
     pub fn is(&self, text: &str) -> bool {
         let text = text.trim();
         self.id == text || self.name.eq_ignore_ascii_case(text)
     }
 }
 
-/// One page of `GET /time-entries`.
 #[derive(Deserialize)]
 struct Entries {
     #[serde(default)]
@@ -82,7 +55,6 @@ struct Entries {
     has_more: bool,
 }
 
-/// An entry as the platform writes it: a date, minutes, and ids.
 #[derive(Deserialize)]
 struct WireEntry {
     date: String,
@@ -108,7 +80,6 @@ impl From<WireEntry> for WorklogEntry {
     }
 }
 
-/// The body of a `POST /time-entries`.
 #[derive(Serialize)]
 struct Outgoing<'a> {
     entries: Vec<OutgoingEntry<'a>>,
@@ -119,12 +90,10 @@ struct OutgoingEntry<'a> {
     project: &'a str,
     activity: &'a str,
     date: &'a str,
-    /// Minutes.
     time: i64,
     note: &'a str,
 }
 
-/// The most pages of entries read for one period.
 const MAX_PAGES: u32 = 50;
 
 #[derive(Deserialize)]
@@ -146,18 +115,13 @@ struct Activities {
 }
 
 pub trait TimePlatform {
-    /// Sends `worklog`: the platform's verdict on each entry. An `Err` is
-    /// the request as a whole failing; a refused entry is a result.
+    /// Sends `worklog`: the platform's verdict on each entry. An `Err` is the request as a whole failing; a refused entry is a result.
     fn push(&self, worklog: &Worklog) -> Result<Vec<EntryResult>>;
-    /// The entries already logged on the days `from..=to`.
     fn fetch(&self, from: NaiveDate, to: NaiveDate) -> Result<Vec<WorklogEntry>>;
-    /// The user's projects.
     fn projects(&self) -> Result<Vec<PlatformItem>>;
-    /// The activities of the project with this id.
     fn activities(&self, project_id: &str) -> Result<Vec<PlatformItem>>;
 }
 
-/// `text` as one URL path segment.
 fn path_segment(text: &str) -> String {
     use std::fmt::Write;
     text.bytes().fold(String::new(), |mut out, b| {
@@ -173,7 +137,6 @@ fn path_segment(text: &str) -> String {
     })
 }
 
-/// The generic JSON interface described above.
 pub struct JsonWebhook {
     url: String,
     key: Secret,
@@ -194,8 +157,6 @@ impl JsonWebhook {
         }
     }
 
-    /// The same platform with a shorter wait, for a page that asks while
-    /// someone is looking at it.
     pub fn with_timeout(mut self, seconds: u64) -> Self {
         self.agent = ureq::Agent::config_builder()
             .http_status_as_error(false)
@@ -213,7 +174,6 @@ impl JsonWebhook {
         IterError::Platform(self.key.redact(what))
     }
 
-    /// The body of a 2xx response, or the error a refusal makes.
     fn finish(
         &self,
         response: std::result::Result<ureq::http::Response<ureq::Body>, ureq::Error>,
@@ -221,8 +181,7 @@ impl JsonWebhook {
         Ok(self.read(response, false)?.unwrap_or_default())
     }
 
-    /// The body of a 2xx response, `None` for a platform without the
-    /// endpoint at all (404, 405, 501), or the error a refusal makes.
+    /// The body of a 2xx response, `None` when the endpoint is absent (404, 405, 501), or the error a refusal makes.
     fn read(
         &self,
         response: std::result::Result<ureq::http::Response<ureq::Body>, ureq::Error>,
@@ -289,15 +248,11 @@ impl TimePlatform for JsonWebhook {
             .content_type("application/json")
             .send(body);
         let reply = self.finish(response)?;
-        // An empty reply says nothing, which is "all accepted" below. A reply
-        // that says something but not this (a proxy's or captive portal's
-        // HTML page, say) is not an acceptance: nothing may be recorded as
-        // pushed on the strength of it.
+        // an empty reply is "all accepted"; any other unrecognised reply (a proxy's or captive portal's HTML) is not, so nothing is recorded as pushed on its strength
         let mut results = match reply.trim() {
             "" => Vec::new(),
             text => self.parse::<Results>(text)?.results,
         };
-        // An entry the response does not mention was accepted.
         for entry in &worklog.entries {
             if !results.iter().any(|r| r.day == entry.day) {
                 results.push(EntryResult {
@@ -357,13 +312,11 @@ pub mod fake {
     use super::*;
     use std::cell::RefCell;
 
-    /// A platform that records what it is sent, and can be made to refuse.
     #[derive(Default)]
     pub struct FakePlatform {
         pub pushed: RefCell<Vec<Worklog>>,
         pub existing: Vec<WorklogEntry>,
         pub refuse: Option<String>,
-        /// Days the platform refuses with a conflict.
         pub conflicts: Vec<String>,
         pub projects: Vec<PlatformItem>,
         pub activities: Vec<PlatformItem>,
@@ -410,14 +363,10 @@ mod tests {
 
     const KEY: &str = "s3cr3t-key-123";
 
-    /// Serves one request per body in `bodies` on a local port (status 200),
-    /// handing back the raw requests it received.
     fn stub_all(bodies: Vec<String>) -> (String, std::thread::JoinHandle<Vec<String>>) {
         serve("200 OK", bodies)
     }
 
-    /// Serves one request on a local port with `status` and `body`, handing
-    /// back the raw request it received.
     fn stub(status: &str, body: &str) -> (String, std::thread::JoinHandle<String>) {
         let (url, handle) = serve(status, vec![body.to_string()]);
         let one = std::thread::spawn(move || handle.join().unwrap().remove(0));
@@ -484,8 +433,6 @@ mod tests {
         JsonWebhook::new(url, Secret::new(KEY).unwrap())
     }
 
-    /// A proxy or captive portal answering 200 with a page is not the
-    /// platform saying "accepted".
     #[test]
     fn a_push_answered_with_a_page_is_an_error_not_an_acceptance() {
         let (url, request) = stub("200 OK", "<html>please log in</html>");
@@ -503,8 +450,7 @@ mod tests {
         assert_eq!(results[0].status, "ok");
     }
 
-    /// More pages than the cap must not read as "no more entries": the days
-    /// beyond it would escape the conflict check.
+    /// More pages than the cap must not read as "no more entries".
     #[test]
     fn a_fetch_that_hits_the_page_cap_is_an_error() {
         let page = r#"{"page":1,"total":9,"entries":[],"has_more":true,"page_size":1}"#;
@@ -529,7 +475,6 @@ mod tests {
             raw.to_ascii_lowercase()
                 .contains("content-type: application/json")
         );
-        // the platform's own shape: `date`, and the time in minutes
         assert!(raw.contains(r#""date":"2026-09-04""#) && raw.contains(r#""time":90"#));
     }
 

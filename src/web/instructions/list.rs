@@ -1,9 +1,7 @@
-//! The list page of instructions, and the Instructions tab of a project.
+//! The list page of instructions.
 
 use super::*;
 
-/// The table of instructions, in the look of the tasks table: the first row
-/// (`add`) writes a new one.
 #[component]
 pub async fn instruction_table(
     rows: &[ListRow],

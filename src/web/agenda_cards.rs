@@ -1,5 +1,4 @@
-//! The agenda's cards: what a card's link depends on (`Cards`) and the lists
-//! of tasks that are not on the day (`side`).
+//! The agenda's cards and the side lists of tasks that are not on the day.
 
 use super::agenda_day::Day;
 use super::agenda_pick::links;
@@ -20,25 +19,19 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// The id of the aside of the lists (the jump link's target).
 pub const NOT_SCHEDULED: &str = "not-scheduled";
 
-/// The name of the column.
 const LABEL: &str = "Unscheduled";
 
-/// What a card's link depends on: the board and the day (a pick link keeps
-/// the day), besides what every board card shares.
 #[derive(Clone, Copy)]
 pub struct Cards {
     pub board: i64,
     pub day: NaiveDate,
-    /// The Unscheduled column is folded: a link keeps it so.
     pub folded: bool,
     pub ctx: CardCtx,
 }
 
 impl Cards {
-    /// The card, with the link to move it (or schedule it).
     pub fn view<'a>(&self, card: &'a Card) -> CardView<'a> {
         let label = if card.task.start_time.is_some() {
             "Move"
@@ -63,18 +56,12 @@ impl Cards {
     }
 }
 
-/// Where the column folds and unfolds: the page itself, with and without
-/// `side=off`.
 pub struct Fold {
     pub fold: String,
     pub unfold: String,
 }
 
-/// The lists of tasks that are not on the day: those overdue first (scheduled
-/// on a day gone by: the most pressing), then those waiting (the drop zones
-/// that unschedule), or, when the board has no unfinished task at all, one
-/// hint. Folded, only the rail is drawn (`side_rail`): a link to open them,
-/// and a drop zone that unschedules.
+/// The lists of tasks not on the day: overdue first, then waiting (drop zones that unschedule), or one hint when the board has no unfinished task.
 #[component]
 pub async fn side(split: &Day, ctx: &Cards, to: &Fold) -> Result<impl View> {
     Ok(view! {

@@ -1,12 +1,5 @@
 //! Sharing the Report tab's period (`POST /org/{id}/share`): copy it as text,
 //! or push it to the organization's time platform.
-//!
-//! Pushing takes two requests. The first answers with a preview that names
-//! the period, marks an open session, and says what the platform already
-//! holds; its Push button is the second, which carries the preview's
-//! fingerprint, so a worklog that changed in between is previewed again
-//! rather than pushed unseen. The page that comes back is the Report tab of
-//! the same period, with the answer above the report.
 
 use super::forms::text;
 use super::org::{Loaded, load as load_org, screen};
@@ -38,13 +31,9 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(share)
 }
 
-/// The two ways to share. The form's buttons, its script (`org.js`) and the
-/// handler read the same words from here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Modality {
-    /// Put the text on the clipboard.
     Copy,
-    /// Send the worklog to the time platform.
     Push,
 }
 
@@ -68,7 +57,6 @@ impl std::str::FromStr for Modality {
     }
 }
 
-/// The text a copy puts on the clipboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShareFormat {
     Worklog,
@@ -85,7 +73,6 @@ impl ShareFormat {
         }
     }
 
-    /// What the format's choice reads in the pop-up.
     pub fn label(self) -> &'static str {
         match self {
             ShareFormat::Worklog => "Worklog",
@@ -105,20 +92,14 @@ impl std::str::FromStr for ShareFormat {
     }
 }
 
-/// What the Share form submits. `from`/`to` are the period the Report tab
-/// shows (an empty `from` is all time).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ShareForm {
     pub from: String,
     pub to: String,
-    /// `copy` or `push`
     pub modality: String,
-    /// `worklog` or `status` (only a copy has a choice)
     pub format: String,
     pub organization: String,
     pub activity: String,
-    /// The fingerprint of the previewed worklog, and whether this is the
-    /// confirming request.
     pub hash: String,
     pub confirm: bool,
 }
@@ -167,8 +148,6 @@ impl ShareForm {
     }
 }
 
-/// The Share pop-up over the Report tab (`?share=1`): where the form posts,
-/// what a copy puts on the clipboard, and what the platform suggests.
 #[derive(Debug)]
 pub struct ShareDialog {
     pub close: String,
@@ -181,7 +160,6 @@ pub struct ShareDialog {
     pub target: Target,
     pub projects: Vec<PlatformItem>,
     pub activities: Vec<PlatformItem>,
-    /// Why a push is not possible yet, if it is not.
     pub hint: String,
 }
 
@@ -220,11 +198,9 @@ impl ShareDialog {
     }
 }
 
-/// What the page says in answer to a share.
 #[derive(Debug)]
 pub enum Outcome {
     Error(String),
-    /// The text, for a browser without a clipboard script.
     Copied(String),
     Preview(Box<Preview>),
     Done(Vec<Item>),
@@ -234,17 +210,12 @@ pub enum Outcome {
 pub struct Preview {
     pub text: String,
     pub warnings: Vec<String>,
-    /// The days the platform already has an entry for: shown in red and not
-    /// pushed.
     pub conflicts: Vec<String>,
-    /// This exact worklog was pushed before.
     pub already: bool,
     pub changed: bool,
     pub form: ShareForm,
 }
 
-/// Opens the organization's platform: its URL and the key from the keychain
-/// or the environment.
 type Connect<'a> = &'a dyn Fn(&Organization) -> IterResult<Box<dyn TimePlatform>>;
 
 fn connect_real(org: &Organization) -> IterResult<Box<dyn TimePlatform>> {
@@ -252,7 +223,6 @@ fn connect_real(org: &Organization) -> IterResult<Box<dyn TimePlatform>> {
     Ok(Box::new(JsonWebhook::new(&org.platform_url, key)))
 }
 
-/// The text a copy puts on the clipboard, for `format`.
 pub fn share_text(report: &super::org_report::Report, format: ShareFormat) -> String {
     match format {
         ShareFormat::Worklog => worklog_text(report.projects.iter().flat_map(|p| &p.tasks)),
@@ -260,7 +230,6 @@ pub fn share_text(report: &super::org_report::Report, format: ShareFormat) -> St
     }
 }
 
-/// Answers a share. Every refusal is an [`Outcome::Error`] to show.
 pub fn handle(
     db: &Db,
     id: i64,
@@ -366,9 +335,7 @@ async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl
     })
 }
 
-/// The pop-up: the way to share (copy or push), its settings, and at the
-/// bottom the one button that does it. Without script both ways show with
-/// their button; `org.js` shows the chosen one only and copies in the page.
+/// Without script both ways show with their button; `org.js` shows the chosen one only and copies in the page.
 #[component]
 pub async fn share_modal(dialog: &ShareDialog) -> Result<impl View> {
     let formats = ShareFormat::ALL.map(|f| (f.as_str().to_string(), f.label().to_string()));
@@ -410,9 +377,6 @@ pub async fn share_modal(dialog: &ShareDialog) -> Result<impl View> {
     })
 }
 
-/// The push preview as a pop-up over the report: the period and entries, what
-/// is wrong with them (in red), and at the bottom the Push that confirms --
-/// or Cancel, back to the report.
 #[component]
 pub async fn preview_modal(
     #[into] base: String,
@@ -458,7 +422,6 @@ pub async fn preview_modal(
     })
 }
 
-/// The answer to a share, above the report.
 #[component]
 pub async fn share_outcome(outcome: &Outcome) -> Result<impl View> {
     Ok(view! {

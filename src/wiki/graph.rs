@@ -1,10 +1,5 @@
-//! Building the graph from the markdown, and asking it questions.
-//!
-//! A [`Level`] is a directory with a meaning: an organization's, a project's
-//! or one task's folder. The caller (which has the database) decides which
-//! levels are in scope and passes them; everything else follows from the
-//! ontology: which files are what (by folder), which are read, and how they
-//! relate.
+//! Builds the graph from the markdown and answers questions about it.
+//! A [`Level`] is an organization's, project's or task's directory; the caller picks the levels in scope, the ontology does the rest.
 
 use super::frontmatter::{self, Front};
 use super::ontology::{LevelKind, NODE, NS, Ontology, Place, Rules, ns};
@@ -19,41 +14,32 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// A directory of the wiki and what it is.
 #[derive(Clone, Debug)]
 pub struct Level {
     pub kind: LevelKind,
-    /// Unique among the levels; the prefix of a node's id when it is not in
-    /// the level the question is asked from (`acme.app:wiki/concepts/x`).
+    /// Unique among levels; prefix of node ids from other levels (`acme.app:wiki/concepts/x`).
     pub label: String,
-    /// What the level is called (a project's name).
     pub title: String,
     pub dir: PathBuf,
-    /// The index of the level this one is in (a task in its project).
     pub parent: Option<usize>,
 }
 
-/// One markdown file.
 #[derive(Debug)]
 pub struct Node {
     pub iri: NamedNode,
     pub level: usize,
-    /// The path inside the level's directory, without `.md`, `/`-separated.
+    /// Path in the level's directory, no `.md`, `/`-separated.
     pub rel: String,
     pub class: NamedNode,
     pub path: PathBuf,
     pub title: String,
-    /// `Some` only for a page, and only if it opens with a front matter that
-    /// parses.
+    /// Only for a page whose front matter parses.
     pub front: Option<Front>,
-    /// Why the front matter could not be read.
     pub front_error: Option<String>,
-    /// The `[[links]]` in the body (pages only).
     pub links: Vec<String>,
     pub modified: Option<SystemTime>,
 }
 
-/// A relation whose target is not in the graph.
 #[derive(Debug, PartialEq)]
 pub struct Dangling {
     pub from: usize,
@@ -72,19 +58,16 @@ pub struct Wiki {
     by_iri: HashMap<String, usize>,
 }
 
-/// The rows of a `SELECT`.
 #[derive(Debug, PartialEq, serde::Serialize)]
 pub struct Table {
     pub vars: Vec<String>,
     pub rows: Vec<Vec<Option<String>>>,
 }
 
-/// What a SPARQL query answers.
 #[derive(Debug, PartialEq)]
 pub enum Answer {
     Table(Table),
     Boolean(bool),
-    /// A `CONSTRUCT` or `DESCRIBE`, as N-Triples.
     Triples(String),
 }
 
@@ -98,8 +81,7 @@ fn failed(e: impl std::fmt::Display) -> IterError {
     IterError::CommandFailed(e.to_string())
 }
 
-/// `s` as the path part of an IRI: everything but letters, digits and
-/// `-._~/` is percent-encoded.
+/// `s` as an IRI path part: all but letters, digits and `-._~/` percent-encoded.
 fn encode(s: &str) -> String {
     let mut out = String::new();
     for b in s.bytes() {
@@ -120,7 +102,6 @@ fn node_iri(label: &str, rel: &str) -> NamedNode {
     NamedNode::new_unchecked(format!("{NODE}{}/{}", encode(label), encode(rel)))
 }
 
-/// The `.md` files a place holds, as `(path, rel)`, in a fixed order.
 fn files_of(dir: &Path, folder: &str) -> Vec<(PathBuf, String)> {
     let mut out = Vec::new();
     if folder == "." {
@@ -162,8 +143,6 @@ fn files_of(dir: &Path, folder: &str) -> Vec<(PathBuf, String)> {
     out
 }
 
-/// Whether `folder` (from an ontology file) is a relative path that stays
-/// inside the level: no `..`, no root, no drive.
 fn stays_inside(folder: &str) -> bool {
     Path::new(folder).components().all(|c| {
         matches!(
@@ -173,8 +152,7 @@ fn stays_inside(folder: &str) -> bool {
     })
 }
 
-/// Every `.md` file under `at`, however deep: dotfiles are skipped, and a
-/// link is not followed (it could lead out of the folder, or round to it).
+/// Every `.md` under `at`, dotfiles skipped, links not followed (they could lead out).
 pub(super) fn md_files(at: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let Ok(entries) = std::fs::read_dir(at) else {
@@ -197,11 +175,9 @@ pub(super) fn md_files(at: &Path) -> Vec<PathBuf> {
 }
 
 impl Wiki {
-    /// Reads every level's files and builds the graph. `levels` come with
-    /// their `parent` indexes; each directory may be missing (it is then
-    /// empty).
+    /// Reads every level's files and builds the graph; a missing directory is empty.
     pub fn build(levels: Vec<Level>, ontology: Ontology) -> Result<Wiki> {
-        // which files, then read them side by side: it is most of the time
+        // list the files first, then read them side by side (most of the time is I/O)
         let mut jobs: Vec<(usize, &Place, PathBuf, String)> = Vec::new();
         let mut seen: HashSet<PathBuf> = HashSet::new();
         for (li, level) in levels.iter().enumerate() {
@@ -265,9 +241,7 @@ impl Wiki {
         Ok(wiki)
     }
 
-    /// The node `target` names, written in a page of `from`: `label:path` for
-    /// any level, otherwise a path looked up in `from` and then in the levels
-    /// around it, nearest first. `wiki/` may be left out.
+    /// The node `target` names in a page of `from`: `label:path` for any level, else a path looked up in `from`, then the levels around it, nearest first; `wiki/` may be left out.
     pub fn resolve(&self, from: usize, target: &str) -> Option<usize> {
         let target = target.trim().trim_start_matches('/');
         let target = target.strip_suffix(".md").unwrap_or(target);
@@ -292,10 +266,7 @@ impl Wiki {
             .find_map(|r| self.index.get(&(level, r)).copied())
     }
 
-    /// How a node is written to someone asking from `from` (the innermost
-    /// level): its path, if that path names the node from there (the nearest
-    /// level wins), otherwise `label:path`. So an id always resolves back to
-    /// its node, asked from the same level.
+    /// How a node is written when asked from `from`: its path if that names it from there (nearest level wins), else `label:path`; so an id resolves back to its node.
     pub fn id(&self, node: usize, from: usize) -> String {
         let n = &self.nodes[node];
         if self.resolve(from, &n.rel) == Some(node) {
@@ -305,16 +276,12 @@ impl Wiki {
         }
     }
 
-    /// The node an id (as [`Wiki::id`] writes it) names, asked from `from`.
     pub fn node(&self, from: usize, id: &str) -> Option<usize> {
         self.resolve(from, id)
     }
 
-    /// The relations from `node` to other files, as `(property, node)`: the
-    /// ones written and the ones the rules derived (the inverses: a page's
-    /// backlinks are its `referencedBy`, `includedIn`, `sourceOf`). A property
-    /// implied by a more specific one for the same target (`ref` by `nb`) is
-    /// left out. Sorted.
+    /// Relations from `node`, written and derived (inverses: backlinks are `referencedBy`, `includedIn`, `sourceOf`), as `(property, node)`;
+    /// a property implied by a more specific one for the same target is left out. Sorted.
     pub fn edges_out(&self, node: usize) -> Vec<(String, usize)> {
         let subject = self.nodes[node].iri.as_ref();
         let mut edges: Vec<(String, usize)> = Vec::new();
@@ -360,9 +327,7 @@ impl Wiki {
         edges
     }
 
-    /// Collects every fact (the ontology, the levels, the files), lets the
-    /// rules derive the rest, and loads the store once: a store insert is a
-    /// transaction, so thousands of them one by one cost seconds.
+    /// Collects every fact, lets the rules derive the rest, and loads the store once: inserts are transactions, so thousands one by one cost seconds.
     fn fill(&mut self) -> Result<()> {
         let mut facts: HashSet<Fact> = HashSet::new();
         for t in self.ontology.graph.iter() {
@@ -439,9 +404,7 @@ impl Wiki {
         self.store.extend(quads).map_err(failed)
     }
 
-    /// Runs a SPARQL query over the graph (the default prefixes `iter:`,
-    /// `owl:`, `rdf:`, `rdfs:` and `xsd:` are declared). `UPDATE` is not
-    /// possible: the markdown is where things change.
+    /// Runs a SPARQL query (prefixes `iter:`, `owl:`, `rdf:`, `rdfs:`, `xsd:` declared); `UPDATE` is not possible: the markdown is where things change.
     pub fn query(&self, sparql: &str) -> Result<Answer> {
         let text = format!("{PREFIXES}{sparql}");
         let prepared = SparqlEvaluator::new().parse_query(&text).map_err(failed)?;
@@ -474,7 +437,6 @@ impl Wiki {
         }
     }
 
-    /// The whole graph, with what the rules derived, as N-Triples.
     pub fn ntriples(&self) -> Result<String> {
         let mut out = Vec::new();
         self.store
@@ -484,7 +446,6 @@ impl Wiki {
     }
 }
 
-/// An IRI as itself, a literal as its text.
 pub fn term_text(t: &Term) -> String {
     match t {
         Term::NamedNode(n) => n.as_str().to_string(),
@@ -541,7 +502,6 @@ fn read_node(
 
 type Fact = (Term, NamedNode, Term);
 
-/// Rules by the predicate they fire on.
 struct Index<'a> {
     sub_class: HashMap<&'a NamedNode, Vec<&'a NamedNode>>,
     sub_property: HashMap<&'a NamedNode, Vec<&'a NamedNode>>,
@@ -564,11 +524,8 @@ fn by_first(
     map
 }
 
-/// Adds to `facts` what the ontology's rules entail: the OWL 2 RL subset of
-/// subclass, subproperty, inverse, symmetric and transitive. (Domains and
-/// ranges are constraints for `check`, not rules.) Each fact is looked at once,
-/// when it appears: what it derives is queued, and a transitive property joins
-/// it with the facts seen so far on either side.
+/// Adds what the ontology's rules entail: the OWL 2 RL subset of subclass, subproperty, inverse, symmetric and transitive (domains and ranges are constraints for `check`).
+/// Each fact is looked at once, when it appears: what it derives is queued, and a transitive property joins it with the facts seen so far.
 fn entail(facts: &mut HashSet<Fact>, rules: &Rules) {
     let index = Index {
         sub_class: by_first(&rules.sub_class, false),
@@ -578,7 +535,6 @@ fn entail(facts: &mut HashSet<Fact>, rules: &Rules) {
         transitive: rules.transitive.iter().collect(),
     };
     let rdf_type = rdf::TYPE.into_owned();
-    // per transitive property: who it leads to, and who leads to it
     type Edges = HashMap<Term, Vec<Term>>;
     let mut edges: HashMap<NamedNode, (Edges, Edges)> = HashMap::new();
     let mut queue: Vec<Fact> = facts.iter().cloned().collect();
@@ -651,7 +607,6 @@ mod tests {
             &w,
             "ASK { <urn:iter:acme.app.task-7/plan> a iter:Plan }"
         ));
-        // a plan is a sketch is a page: the subclass rule ran
         assert!(ask(
             &w,
             "ASK { <urn:iter:acme.app.task-7/plan> a iter:Page }"
@@ -700,9 +655,7 @@ mod tests {
             "<urn:iter:acme.app/wiki/ideas/retry>",
             "<urn:iter:acme.app/wiki/concepts/backoff>",
         );
-        // nb is a sub-property of ref
         assert!(ask(&w, &format!("ASK {{ {concept} iter:ref {idea} }}")));
-        // inverseOf
         assert!(ask(
             &w,
             &format!("ASK {{ {idea} iter:includedIn {concept} }}")
@@ -711,7 +664,6 @@ mod tests {
             &w,
             &format!("ASK {{ {idea} iter:referencedBy {concept} }}")
         ));
-        // iter:in is transitive: the idea is in the organization too
         assert!(ask(
             &w,
             &format!("ASK {{ {idea} iter:in <urn:iter:acme> }}")
@@ -735,7 +687,6 @@ mod tests {
             target.map(|i| w.nodes[i].rel.as_str()),
             Some("wiki/concepts/backoff")
         );
-        // from the task, outward to the project
         let from_task = w.resolve(0, "concepts/backoff").expect("found");
         assert_eq!(w.id(from_task, 0), "wiki/concepts/backoff");
         assert_eq!(w.resolve(0, "ideas/nothing"), None);
@@ -814,7 +765,6 @@ mod tests {
     #[test]
     fn an_id_resolves_back_to_its_node_and_is_prefixed_only_when_shadowed() {
         let root = fixture("ids");
-        // the same path in the task and in the project: the nearest one is bare
         write(
             &root.join("acme/app"),
             "wiki/concepts/same.md",

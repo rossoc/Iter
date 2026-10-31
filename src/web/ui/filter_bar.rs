@@ -1,39 +1,24 @@
-//! The search box above a list: a GET form (works without script) with one
-//! text field named `q` with a "?" inside its right end that shows the syntax
-//! the field understands, a Filter button, and a Clear link when the list is
-//! filtered.
-//!
-//! The "?" needs no script either: hovering it shows the syntax, and
-//! clicking it focuses it, which keeps the syntax shown (`:focus-within`)
-//! until a click anywhere else takes the focus away. Escape closes the tip
-//! (`filter_bar.js`, which the bar emits after itself).
+//! A GET form (works without script): text field `q` with a "?" inside its
+//! right end showing the syntax, a Filter button, and Clear when filtered. The "?"
+//! needs no script: hover shows the syntax, click focuses it and keeps it shown
+//! (`:focus-within`); Escape closes it (`filter_bar.js`).
 
 use topcoat::{
     Result,
     view::{View, component, view},
 };
 
-/// The id of the field (the label and the tests point at it).
 pub const FILTER_ID: &str = "filter-q";
 
-/// The id of the syntax the "?" shows (its description).
 const SYNTAX_ID: &str = "filter-syntax";
 
-/// What a filter bar shows and where it sends (see `web/task_query.rs` and
-/// `web/project_rows.rs` for the syntaxes).
+/// What a filter bar shows and where it sends (syntaxes in `web/task_query.rs`, `web/project_rows.rs`).
 pub struct Search {
-    /// Where the form goes (the page itself).
     pub action: String,
-    /// A `tab` the page needs kept (`tasks`), or empty for none.
     pub tab: &'static str,
-    /// The text in the field.
     pub q: String,
-    /// What the field is called for a screen reader ("Filter tasks").
     pub label: &'static str,
-    /// Where Clear leads, when the list is filtered.
     pub clear: Option<String>,
-    /// `(term, meaning)` of the syntax, which the "?" shows. Every search
-    /// box has one.
     pub syntax: &'static [(&'static str, &'static str)],
 }
 
@@ -49,8 +34,6 @@ pub async fn filter_bar(search: &Search) -> Result<impl View> {
                 <input type="hidden" name="tab" value=(search.tab)>
             }
             <label class="sr" for=(FILTER_ID)>(search.label)</label>
-            // the "?" sits inside the field, at its right end, like the folder
-            // button of a path field
             <span class="filter-field">
                 <input class="control" type="search" id=(FILTER_ID) name="q" value=(search.q.as_str()) spellcheck="false" autocomplete="off" autocapitalize="off">
                 <span class="filter-help">
@@ -74,7 +57,6 @@ pub async fn filter_bar(search: &Search) -> Result<impl View> {
                 <a class="u filter-clear" href=(href.as_str())>"Clear"</a>
             }
         </form>
-        // Escape closes the tip (filter_bar.js); the bar works without it.
         <script src="/filter_bar.js" defer=""></script>
     })
 }

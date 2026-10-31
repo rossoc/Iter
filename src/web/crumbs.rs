@@ -6,21 +6,11 @@ use super::url::{BOARDS, org_url, project_tasks_url};
 use crate::db::Table;
 use crate::models::{Organization, Project};
 
-/// The organization, linked to its page: the first crumb of every page under
-/// one ([`trail`]).
 fn org_crumb(org: &Organization) -> Crumb {
     Crumb::link(org.name.as_str(), org_url(org.id()))
 }
 
-/// Where a crumb for a project or organization leads, one rule: the page
-/// the ancestor is the parent of. A page of a task (the task pages, New task)
-/// sits under the project's Tasks tab, so [`trail`] links the project there;
-/// an edit page sits under the page it edits, so the edit trail links the
-/// entity to that page (its Info; Cancel goes there too).
-///
-/// The crumbs of a page under an organization and/or project: the
-/// organization (if any), the project (linked to its Tasks tab), then
-/// `here`, the page itself. Task pages pass the project and their own crumb.
+/// A page of a task sits under the project's Tasks tab; an edit page sits under the page it edits.
 pub fn trail(org: &Option<Organization>, project: Option<&Project>, here: Crumb) -> Vec<Crumb> {
     let mut crumbs: Vec<Crumb> = org.iter().map(org_crumb).collect();
     if let Some(p) = project {
@@ -30,7 +20,6 @@ pub fn trail(org: &Option<Organization>, project: Option<&Project>, here: Crumb)
     crumbs
 }
 
-/// The first crumb of every board page: the list of boards.
 pub fn boards_crumb() -> Crumb {
     Crumb::link("Boards", BOARDS)
 }

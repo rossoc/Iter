@@ -1,8 +1,4 @@
-//! Pages for the two refusals a person can reach by typing a URL: an id
-//! that isn't a number (400) or names nothing (404). Topcoat's own answer is
-//! a bare text body; this one has a title, a skip link, landmarks and a way
-//! home, in the same shell as every page. Only GET requests are rewritten:
-//! the drop script's `fetch` wants the status, not a document.
+//! Pages for the 400 (id not a number) and 404 (names nothing) refusals; topcoat's own answer is a bare text body. Only GET is rewritten: the drop script's `fetch` wants the status.
 
 use topcoat::{
     context::Cx,
@@ -15,7 +11,6 @@ use topcoat::{
     },
 };
 
-/// The document for a refusal: static text only, so nothing needs escaping.
 fn document(title: &str, message: &str) -> String {
     format!(
         r##"<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} - iter</title><link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="stylesheet" href="/style.css"></head><body><div class="page"><a class="skip" href="#main">Skip to content</a><header class="bar"><a class="brand" href="/">iter</a></header><main id="main" tabindex="-1"><h1>{title}</h1><p>{message}</p><p><a class="u" href="/">Back to the home page</a></p></main></div></body></html>"##
@@ -49,11 +44,7 @@ pub fn error_pages<'a>(cx: &'a Cx, body: Body, next: Next<'a>) -> LayerFuture<'a
     })
 }
 
-/// What a failed action tells the browser. A refusal the user can act on (a
-/// project that is not a git repository, a name already taken, a harness
-/// that is not there) is a 400 carrying the message. A fault of the machine
-/// (the database, the disk, a program that would not start) is the server's:
-/// a 500 with the detail on the terminal, not echoed into a page.
+/// A refusal the user can act on is a 400 with the message; a fault of the machine is a 500 with the detail on the terminal, not echoed into a page.
 pub fn refused(error: crate::error::IterError) -> topcoat::Error {
     use crate::error::IterError::{Db, Io, Spawn};
     use topcoat::router::error::{bad_request, internal_server_error};

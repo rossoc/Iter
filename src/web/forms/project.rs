@@ -12,18 +12,14 @@ pub struct ProjectForm {
     pub name: String,
     pub description: String,
     pub base_path: String,
-    /// The folder of the project's daily notes, or empty.
     #[serde(default)]
     pub notes_path: String,
-    /// The organization's id, or empty for none.
     pub organization: String,
     #[serde(flatten)]
     pub settings: SettingsForm,
 }
 
 impl ProjectForm {
-    /// The names of the controls an error can be about (also the names of
-    /// the submitted fields), shared by [`EditForm::field`] and the page.
     pub const BASE_PATH: &'static str = "base_path";
     pub const ORGANIZATION: &'static str = "organization";
     pub const NOTES_PATH: &'static str = "notes_path";
@@ -61,8 +57,7 @@ mod tests {
     use crate::models::Settings;
     use crate::web::forms::NAME;
 
-    /// The project errors that belong to a field say which, and a taken
-    /// name reads as a sentence, not as a database error.
+    /// A taken name reads as a sentence, not as a database error.
     #[test]
     fn project_errors_name_their_field() {
         assert_eq!(
@@ -113,8 +108,7 @@ mod tests {
         assert!(matches!(apply("", " ").1, Err(IterError::EmptyBasePath)));
     }
 
-    /// Through serde (flattened), as a real submission arrives: a box is
-    /// there as `on` when ticked and absent when not.
+    /// As a real submission arrives: a box is `on` when ticked, absent when not.
     #[test]
     fn a_project_submission_decodes_its_ticks_as_bools() {
         let decode = |body: &str| {

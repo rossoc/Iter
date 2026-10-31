@@ -1,7 +1,4 @@
-//! The document every page shares (`<html>`, the viewport, the language, the
-//! one stylesheet, the footer after the page) and the script the board pages
-//! load. The stylesheet is linked in `<head>`, so the browser has it before
-//! it paints the body: the page is never shown unstyled first.
+//! The document every page shares (`<html>`, stylesheet, footer) and the script the board pages load.
 
 use super::assets::Asset;
 use super::footer::site_footer_for;

@@ -1,16 +1,9 @@
-/* The Organization report tab only (org_report.rs); bundled last into /style.css
-   (ui/mod.rs), so these classes are global: keep them off other pages.
-   Everything else is a component in ui/, with its own sheet. */
+/* The Organization report tab only (org_report.rs); bundled last, so these classes are global. */
 
-/* period: preset pills, then a From/To form */
 .period{--control-h:36px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;margin-bottom:28px}
-/* the arrows to the periods either side; one with nowhere to go is dimmed */
 .period .day-nav .button[aria-disabled]{opacity:.4;pointer-events:none}
-/* the presets and the date fields share one height, so the row lines up */
 .presets{box-sizing:border-box;height:var(--control-h);display:flex;align-items:stretch;gap:4px;padding:3px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--bg-2)}
-/* one highlighted pill, like the tabs' one underline: it sits on the
-   current period, moves to whichever pill is hovered or focused -- the
-   previous one shrinks away while the new one grows in -- and comes back after */
+/* one highlight pill like the tabs' underline: on the current period, moving to the hovered/focused one */
 .presets a{position:relative;isolation:isolate;display:flex;align-items:center;padding:0 12px;border-radius:var(--r-pill);white-space:nowrap;
   font-size:.8125rem;font-weight:500;color:var(--muted);transition:color var(--fast) var(--ease-out)}
 .presets a::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--bg);box-shadow:var(--shadow);
@@ -24,12 +17,10 @@
 /* Apply: off screen until it has focus (auto-apply is the enhancement) */
 .range .apply{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .range .apply:focus{position:static;width:auto;height:var(--control-h);overflow:visible;clip-path:none}
-.range .control{height:var(--control-h);font:.8125rem/1.2 var(--mono);padding:0 10px}  /* the rest: .control (ui/control.css) */
+.range .control{height:var(--control-h);font:.8125rem/1.2 var(--mono);padding:0 10px}
 
-/* summary: the big total, then the counts and the period */
 .summary{display:flex;align-items:center;gap:20px;margin:0 0 36px;color:var(--muted);font-size:.9375rem;line-height:1.5}
 .summary .big{font:600 2.5rem/1 var(--mono);letter-spacing:-.03em;color:var(--fg);font-variant-numeric:tabular-nums}
-/* Share: the button on the report, and the pop-up it opens */
 .share-open{margin-left:auto;gap:8px}
 .summary{flex-wrap:wrap}
 .sharing{display:grid;gap:16px}
@@ -54,7 +45,6 @@
 .share-items .bad{color:var(--danger);font-weight:600}
 .share-items{margin:8px 0 0;padding-left:20px;font:.8125rem/1.6 var(--mono)}
 
-/* contents on the left (sticky), sections on the right */
 .report{display:grid;grid-template-columns:260px minmax(0,1fr);gap:48px;align-items:start}
 .toc{position:sticky;top:var(--stick-top)}
 .toc ol{list-style:none;margin:10px 0 0;padding:0;counter-reset:toc}
@@ -69,7 +59,7 @@
 .proj>header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:6px}
 .proj h2{margin:0;font-size:1.375rem;font-weight:650;letter-spacing:-.02em}
 .proj>header .time{font-size:1rem;color:var(--fg)}
-.pdesc,.tdesc{margin:0 0 14px;max-width:var(--measure);color:var(--muted);font-size:.9375rem}  /* markdown: ui/prose.css */
+.pdesc,.tdesc{margin:0 0 14px;max-width:var(--measure);color:var(--muted);font-size:.9375rem}
 @media (prefers-reduced-motion:no-preference){.proj:target>header h2{animation:flash 1.6s var(--ease-out)}}
 @keyframes flash{0%,30%{color:var(--accent)}}
 
@@ -89,7 +79,6 @@
   .toc{position:static}
 }
 
-/* narrow screens */
 @media (max-width:600px){
   .presets a{padding:0 9px;font-size:.75rem}
   .summary{flex-direction:column;align-items:flex-start;gap:8px}

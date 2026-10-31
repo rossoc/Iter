@@ -1,10 +1,5 @@
-//! Reading the wiki as cheaply as possible: what an agent runs to find the
-//! few pages worth loading before it works on a task.
-//!
-//! Four steps, each costing more than the last: [`find`] ranks pages by their
-//! path, title, tags and description, [`grep`] searches their text, [`neighbors`]
-//! follows the graph from a page, and [`show`] loads one page at the depth
-//! asked for. `find` and `grep` take a token budget and stop at it.
+//! Reading the wiki cheaply, in four steps of rising cost: [`find`] (rank by path, title, tags, description), [`grep`] (text),
+//! [`neighbors`] (follow the graph) and [`show`] (load a page at a depth). `find` and `grep` stop at a token budget.
 
 use super::frontmatter;
 use super::graph::{Node, Wiki};
@@ -14,7 +9,6 @@ use regex::RegexBuilder;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
 
-/// A rough count of the tokens in `text`: four bytes to one.
 pub fn tokens(text: &str) -> usize {
     text.len().div_ceil(4)
 }
@@ -40,7 +34,6 @@ pub struct Hit {
     pub description: Option<String>,
     pub tags: Vec<String>,
     pub score: u32,
-    /// What matched.
     pub why: Vec<String>,
 }
 
@@ -57,7 +50,6 @@ impl Hit {
 #[derive(Debug, Serialize, PartialEq)]
 pub struct Found {
     pub hits: Vec<Hit>,
-    /// How many more matched but did not fit the budget.
     pub left_out: usize,
 }
 
@@ -69,9 +61,7 @@ fn words(text: &str) -> Vec<String> {
         .collect()
 }
 
-/// Ranks the files by how well `query`'s words match their path, title, tags
-/// and description, best first, until `budget` tokens are spent (the best hit is
-/// always returned). A note has no description or tags: only its name matches.
+/// Ranks files by how well `query`'s words match path, title, tags and description, best first, until `budget` tokens are spent (the best hit is always returned). A note matches by name only.
 pub fn find(wiki: &Wiki, from: usize, query: &str, budget: usize) -> Found {
     let words = words(query);
     let mut scored: Vec<(u32, usize, Vec<String>)> = Vec::new();
@@ -167,9 +157,7 @@ pub struct Grepped {
     pub left_out: usize,
 }
 
-/// The lines of the pages (and of the notes too, with `notes`) that match the
-/// regular expression `pattern`, in file order, until `budget` tokens are
-/// spent. Case is ignored unless `case`.
+/// Lines of pages (and notes with `notes`) matching regex `pattern`, in file order, until `budget` is spent; case ignored unless `case`.
 pub fn grep(
     wiki: &Wiki,
     from: usize,
@@ -249,8 +237,7 @@ pub struct Shown {
     pub content: Option<String>,
 }
 
-/// One file at `depth`. The text is read from disk now: the graph does not
-/// keep it.
+/// One file at `depth`; the text is read from disk, the graph does not keep it.
 pub fn show(wiki: &Wiki, from: usize, node: usize, depth: Depth) -> Result<Shown> {
     let n = &wiki.nodes[node];
     let front = n.front.clone().unwrap_or_default();
@@ -307,10 +294,8 @@ pub struct Neighbor {
     pub from: String,
 }
 
-/// The files within `hops` relations of `start`, nearest first, along any
-/// relation or only the `props` named (their local names: `nb`, `include`...).
-/// Backlinks are relations too (`referencedBy`, `includedIn`, `sourceOf`).
-/// Within a hop the pages marked `nb` come first: they are the ones to read.
+/// Files within `hops` relations of `start`, nearest first, along any relation (backlinks included) or only the `props` named (local names: `nb`, `include`);
+/// within a hop the `nb` pages come first.
 pub fn neighbors(
     wiki: &Wiki,
     from: usize,
@@ -370,8 +355,6 @@ mod tests {
         let w = build(&fixture("find"));
         let found = find(&w, 1, "retr", 10_000);
         let ids: Vec<_> = found.hits.iter().map(|h| h.id.as_str()).collect();
-        // the idea matches by path, title and description; the concept by path
-        // and description; the other levels' pages are named with their level
         assert_eq!(ids[0], "wiki/ideas/retry");
         assert!(ids.contains(&"wiki/concepts/backoff"));
         assert_eq!(found.hits[0].why, ["path", "title", "description"]);
@@ -395,9 +378,7 @@ mod tests {
     fn ids_are_bare_unless_the_page_is_in_a_level_the_question_cannot_see_into() {
         let w = build(&fixture("ids"));
         let id = |from, query: &str| find(&w, from, query, 10_000).hits.remove(0).id;
-        // from the task, the project's pages are reached outward: bare
         assert_eq!(id(0, "backoff"), "wiki/concepts/backoff");
-        // from the project, the task's sketch is not an ancestor: named
         assert_eq!(id(1, "scratch"), "acme.app.task-7:sketches/s");
     }
 
@@ -448,7 +429,6 @@ mod tests {
             prop: "source".into(),
             id: "2026-10-27".into()
         }));
-        // the concept names it twice (include and nb): both are backlinks
         assert!(rels.contains(&Related {
             prop: "includedIn".into(),
             id: "wiki/concepts/backoff".into()
@@ -470,17 +450,14 @@ mod tests {
         let ids: Vec<_> = one.iter().map(|n| n.id.as_str()).collect();
         assert!(ids.contains(&"wiki/ideas/retry"));
         assert!(one.iter().all(|n| n.hop == 1));
-        // the org's entity and the task's sketch link to it: two hops from the idea
         let idea = w.node(1, "ideas/retry").expect("idea");
         let two = neighbors(&w, 1, idea, 2, &[]);
         assert!(two.iter().any(|n| n.hop == 2 && n.id == "wiki/entities/ci"));
-        // the concept both includes the idea and marks it nb: one neighbor, every way
         let idea_via = &one
             .iter()
             .find(|n| n.id == "wiki/ideas/retry")
             .expect("idea")
             .via;
-        // (and the idea links back to the concept in its body)
         assert_eq!(idea_via, &["include", "nb", "referencedBy"]);
         let only_nb = neighbors(&w, 1, backoff, 2, &["nb".to_string()]);
         assert_eq!(only_nb.len(), 1);

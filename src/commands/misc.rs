@@ -36,11 +36,8 @@ pub(crate) fn t_cmd(app: &App) -> Result<()> {
 fn hook_cmd(app: &App, tmux: &dyn Multiplexer, event: &HookEvent) -> Result<()> {
     let db = &app.db;
     match event {
-        // Fires on a plain attach and on `switch-client` alike. The session
-        // being left is closed before the one being entered opens, so
-        // hopping between two tasks doesn't leave both of them running --
-        // `previous` is empty on a first attach, and equal to `session` on a
-        // switch that stays put.
+        // fires on attach and `switch-client` alike. The session left is closed before the one entered opens;
+        // `previous` is empty on a first attach, equal to `session` when a switch stays put
         HookEvent::ClientSessionChanged {
             client,
             session,
@@ -63,13 +60,9 @@ fn hook_cmd(app: &App, tmux: &dyn Multiplexer, event: &HookEvent) -> Result<()> 
     }
 }
 
-/// Stops every tmux session's clock, then kills the server. Clients are
-/// still attached at this point, so this stops them outright rather than
-/// waiting for the last one out -- the server going away is everyone
-/// leaving at once, and tmux fires no hook that would say so.
+/// Stops every tmux session's clock, then kills the server: tmux fires no hook when the server goes away with clients attached.
 fn kill_server_cmd(app: &App, tmux: &dyn Multiplexer) -> Result<()> {
-    // One session failing to stop must not leave the server (and the other
-    // sessions' clocks) behind: kill it regardless, then report the first error.
+    // one session failing to stop must not leave the server behind: kill it regardless, report the first error
     let mut stopped: Result<()> = Ok(());
     for session in tmux.list_sessions() {
         let result = stop_for_tmux_session(&app.db, &session);
@@ -81,12 +74,8 @@ fn kill_server_cmd(app: &App, tmux: &dyn Multiplexer) -> Result<()> {
     stopped
 }
 
-/// Puts iter back on a tmux server that has just come up -- after a reboot,
-/// typically, with tmux-resurrect restoring the sessions by name. The names
-/// are what tie a task to its tmux session, so they reconnect by
-/// themselves; what doesn't survive is everything else, and that's what
-/// this redoes. Safe to run again: each step leaves alone what's already
-/// right.
+/// Puts iter back on a tmux server that just came up (e.g. tmux-resurrect restored the sessions by name, which reconnects tasks);
+/// redoes everything else. Safe to repeat.
 fn restore_cmd(app: &App, tmux: &dyn Multiplexer) -> Result<()> {
     let db = &app.db;
     let tracked: Vec<(SessionConfig, String)> = db
@@ -98,8 +87,7 @@ fn restore_cmd(app: &App, tmux: &dyn Multiplexer) -> Result<()> {
         })
         .collect();
 
-    // A session newer than resurrect's last save isn't in it: start it
-    // again where `session new` did.
+    // a session newer than resurrect's last save is started again
     for (config, name) in &tracked {
         if tmux.session_exists(name) {
             continue;
@@ -118,8 +106,7 @@ fn restore_cmd(app: &App, tmux: &dyn Multiplexer) -> Result<()> {
         }
     }
 
-    // `set-hook -g` lives in the server, so the old server's hooks went
-    // with it.
+    // hooks live in the server, so the old server's went with it
     tmux.install_hooks_for_current_exe()?;
 
     if let Some(server_start) = tmux.server_start_time() {
@@ -129,8 +116,7 @@ fn restore_cmd(app: &App, tmux: &dyn Multiplexer) -> Result<()> {
         }
     }
 
-    // resurrect puts the client back on its session before the hooks above
-    // existed, so that attach was never seen.
+    // resurrect re-attaches the client before the hooks existed, so that attach was never seen
     for (_, name) in &tracked {
         if tmux.any_client_attached(name) {
             start_for_tmux_session(db, name)?;

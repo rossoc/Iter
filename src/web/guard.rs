@@ -1,15 +1,6 @@
-//! Keeps the editor from being driven by anything but the user's own
-//! browser tab.
-//!
-//! The server listens on loopback, but a page on *any* website can still
-//! make the user's browser POST to `127.0.0.1` (CSRF), or point a hostile
-//! DNS name at it (rebinding). Both are closed by checking two headers the
-//! browser sets and a web page can't forge: `Host` must be a loopback name,
-//! and a state-changing request's `Origin`, when sent, must be this server.
-//! `Sec-Fetch-Site` backs the `Origin` up: a browser that sends it names a
-//! cross-site request even if `Origin` was stripped, and it cannot be forged
-//! by a page. A request with neither header is not from a browser tab (a
-//! page's request always carries one), so it is let through for `curl`.
+//! Keeps the editor from being driven by anything but the user's own browser tab:
+//! `Host` must be loopback and a state-changing `Origin` must be this server
+//! (CSRF, DNS rebinding). The threat model is in `doc/web_server.md`.
 
 use topcoat::{
     Result,
@@ -35,12 +26,14 @@ fn allowed(
     origin: Option<&str>,
     fetch_site: Option<&str>,
 ) -> bool {
+    // DNS rebinding: a hostile name pointed here still sends its own `Host`.
     if !host.is_some_and(is_loopback) {
         return false;
     }
     if is_get {
         return true;
     }
+    // Names a cross-site request even if `Origin` was stripped; a page cannot forge it.
     if fetch_site.is_some_and(|site| !matches!(site, "same-origin" | "none")) {
         return false;
     }
@@ -48,6 +41,7 @@ fn allowed(
         Some(origin) => origin.split_once("://").is_some_and(|(_, rest)| {
             is_loopback(rest) && host.is_some_and(|h| h.eq_ignore_ascii_case(rest))
         }),
+        // Neither header: not a browser tab (a page's request carries one), so `curl` works.
         None => true,
     }
 }

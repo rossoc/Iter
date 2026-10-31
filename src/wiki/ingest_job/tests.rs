@@ -22,7 +22,6 @@ fn world(name: &str) -> (App, Project, Task, PathBuf) {
 #[test]
 fn a_finished_tasks_notes_go_into_todays_note_once() {
     let (app, project, task, notes) = world("bridge");
-    // no notes folder of the task, nothing to add
     assert_eq!(bridge_task_notes(&app, &project, &task).unwrap(), 0);
     let dir = crate::agent::taskdir::of(&app.db, &project, &task).unwrap();
     dir.ensure().unwrap();
@@ -34,7 +33,6 @@ fn a_finished_tasks_notes_go_into_todays_note_once() {
         std::fs::read_to_string(notes.join(format!("{}.md", today.format("%Y-%m-%d")))).unwrap();
     assert!(text.contains("## Task: Fix it\n\n### thought\n\nMaybe per route."));
     assert!(!text.contains("empty"));
-    // done again: the section is there already
     assert_eq!(bridge_task_notes(&app, &project, &task).unwrap(), 0);
 }
 
@@ -47,8 +45,7 @@ fn git_in(dir: &std::path::Path, args: &[&str]) {
     assert!(status.status.success(), "git {args:?}: {status:?}");
 }
 
-/// An organization repository `root` whose project `app` keeps its notes in
-/// `root/app` -- the usual layout -- with one committed page.
+/// An organization repository `root` whose project `app` keeps notes in `root/app`, with one committed page.
 fn repo(name: &str) -> (Db, Project, PathBuf) {
     let root = fixtures::scratch(&format!("pending-{name}"));
     let notes = root.join("app");
@@ -84,7 +81,6 @@ fn pending_pages_are_found_with_their_diffs_in_a_repository_above_the_notes() {
         "---\ndescription: b\ntags: [x]\n---\nnewer\n",
     )
     .unwrap();
-    // the user's own files in the same folder are not the agent's
     std::fs::write(notes.join("wiki/settings.yaml"), "ingest: manual\n").unwrap();
     let review = review(&db, &project).unwrap();
     let seen: Vec<(&str, &str)> = review

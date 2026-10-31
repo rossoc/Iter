@@ -3,17 +3,12 @@ use crate::fixtures::{self, board, day, db, dt};
 use crate::models::Organization;
 use crate::models::Settings;
 
-/// Runs every migration again, as on a database from before versioning
-/// -- what the tests that hand-build an old schema need.
+/// Re-runs every migration, as on a pre-versioning database.
 fn remigrate(db: &Db) -> Result<()> {
     db.conn.execute_batch("PRAGMA user_version = 0")?;
     db.migrate()
 }
 
-/// Several processes opening one fresh file at once -- a tmux hook and
-/// a web request, say -- all get a migrated database: the step
-/// transactions queue on the write lock rather than failing, and each
-/// re-reads the version under it.
 #[test]
 fn concurrent_opens_migrate_once_without_failing() {
     let path = std::env::temp_dir().join(format!(
@@ -68,9 +63,6 @@ fn insert_task(db: &Db, project_id: i64, name: &str) -> i64 {
     db.insert(&task).expect("task inserts")
 }
 
-/// A database from before urgent/important were tags carries them as
-/// two columns; migrating turns each set flag into the tag and drops
-/// the columns, leaving tasks with neither flag untagged.
 #[test]
 fn migrating_moves_the_flag_columns_onto_the_builtin_tags() {
     let db = db();
@@ -118,8 +110,6 @@ fn migrating_moves_the_flag_columns_onto_the_builtin_tags() {
     assert_eq!(of(neither), Priority::default());
 }
 
-/// Setting a priority adds and removes only the two built-in tags; a
-/// task's other tags are left alone, and they show up on its cards.
 #[test]
 fn set_priority_toggles_only_the_builtin_tags() {
     let db = db();
@@ -153,8 +143,6 @@ fn set_priority_toggles_only_the_builtin_tags() {
     assert_eq!(names, ["home"]);
 }
 
-/// A drop stores the task and its new flags together; with no flags
-/// (an unplace) only the task.
 #[test]
 fn a_placement_stores_the_task_and_its_flags() {
     let db = db();
@@ -179,8 +167,6 @@ fn a_placement_stores_the_task_and_its_flags() {
     assert!(!card.task.matrix_placed);
 }
 
-/// The unfinished cards leave finished tasks (and their flags) out in the
-/// SQL, and the colors of both priority tags come from one query.
 #[cfg(feature = "web")]
 #[test]
 fn unfinished_cards_leave_out_done_tasks() {
@@ -206,7 +192,6 @@ fn unfinished_cards_leave_out_done_tasks() {
         ["p/open"]
     );
     assert_eq!(cards[0].priority, urgent);
-    // the CLI's list still has both, in project then task order
     let all = db.cards(work).expect("cards");
     assert_eq!(all.len(), 2);
     assert!(
@@ -221,9 +206,7 @@ fn unfinished_cards_leave_out_done_tasks() {
     );
 }
 
-/// A migrated database records its version, and opening it again runs
-/// nothing: a step that would fail if re-run (here, a table the baseline
-/// would recreate is gone) shows it was skipped.
+/// A step that would fail if re-run shows it was skipped.
 #[test]
 fn an_up_to_date_database_skips_every_migration() {
     let db = db();
@@ -240,11 +223,7 @@ fn an_up_to_date_database_skips_every_migration() {
     assert!(db.table_exists("boards").expect("check"));
 }
 
-/// The date window is half-open on the upper end, so the boundaries
-/// are worth pinning: a session starting at 00:00:00 on `from` is in,
-/// one at 23:59:59 on `to` is in, and the first instant of the day
-/// after `to` is out. This is the filter every report applies, and it
-/// is now SQL's job rather than a Rust-side pass.
+/// Half-open upper bound: 00:00:00 on `from` and 23:59:59 on `to` are in; the next day's first instant is out.
 #[test]
 fn a_range_query_includes_both_boundary_days_whole() {
     let db = db();
@@ -277,9 +256,6 @@ fn a_range_query_includes_both_boundary_days_whole() {
     );
 }
 
-/// A stored timestamp that won't parse fails the read with an error
-/// naming the value and column, instead of panicking. Reads that don't
-/// touch the bad row still work.
 #[test]
 fn a_malformed_stored_timestamp_is_an_error_not_a_panic() {
     let db = db();
@@ -307,8 +283,6 @@ fn a_malformed_stored_timestamp_is_an_error_not_a_panic() {
     assert_eq!(projects.len(), 1);
 }
 
-/// An absent `from` reaches back to the beginning of time rather than
-/// to some arbitrary epoch.
 #[test]
 fn an_open_start_reaches_back_past_any_stored_session() {
     let db = db();
@@ -325,8 +299,6 @@ fn an_open_start_reaches_back_past_any_stored_session() {
     );
 }
 
-/// The project-wide query is the same window, across every task, and
-/// it is what a project or organization report is built from.
 #[test]
 fn a_project_range_query_spans_its_tasks_in_time_order() {
     let db = db();
@@ -360,8 +332,6 @@ fn a_project_range_query_spans_its_tasks_in_time_order() {
     );
 }
 
-/// `task list` narrows by project and by a set of statuses at once;
-/// both filters reach SQL, and an empty set means "every status".
 #[test]
 fn task_refs_narrows_by_project_and_status_set() {
     let db = db();
@@ -396,9 +366,6 @@ fn task_refs_narrows_by_project_and_status_set() {
     );
 }
 
-/// The completion lookups are one join rather than a query per
-/// project, so what they return is worth pinning: every task, paired
-/// with its own project, ordered the way completion offers it.
 #[test]
 fn task_refs_pairs_every_task_with_its_project() {
     let db = db();
@@ -414,9 +381,7 @@ fn task_refs_pairs_every_task_with_its_project() {
     );
 }
 
-/// `session new` only completes tasks that haven't been started, so the
-/// status filter has to reach SQL rather than being applied after every
-/// task in the database was loaded.
+/// The status filter must reach SQL, not run after loading every task.
 #[test]
 fn task_refs_can_narrow_to_one_status() {
     let db = db();
@@ -435,8 +400,6 @@ fn task_refs_can_narrow_to_one_status() {
     );
 }
 
-/// `--task` takes a bare name, so the same name under two projects is
-/// one candidate, not two -- deduped and ordered by SQL.
 #[test]
 fn task_names_are_distinct_and_sorted() {
     let db = db();
@@ -489,11 +452,8 @@ fn organization_statements_carry_the_downstream_defaults() {
     );
 }
 
-/// Every column a struct declares must actually exist in the migrated
-/// schema. This is the guard that `#[derive(Table)]` needs: because the
-/// derive takes the columns straight off the struct's fields, adding a
-/// field silently adds a column, and forgetting the matching change to
-/// `migrate` would otherwise surface as a runtime "no such column".
+/// Every declared column must exist in the migrated schema: the derive adds a column per field,
+/// so a missing `migrate` change would otherwise surface as a runtime "no such column".
 #[test]
 fn every_declared_column_exists_in_the_migrated_schema() {
     let db = db();
@@ -536,10 +496,7 @@ fn every_declared_column_exists_in_the_migrated_schema() {
     check::<Push>(&db);
 }
 
-/// Every table binds exactly as many values as it declares columns.
-/// `#[derive(Table)]` makes this true by construction; the test stays
-/// as the guard for any `Table` impl written by hand, where `COLUMNS`
-/// and `values` would again be two lists that could disagree.
+/// Guards hand-written `Table` impls: values bound must equal columns declared.
 #[test]
 fn every_table_binds_one_value_per_column() {
     fn check<T: Table>(item: &T) {
@@ -585,11 +542,8 @@ fn project_round_trips_every_field() {
     assert_eq!(loaded.github_project, "Roadmap");
 }
 
-/// Databases in the wild carry columns this build no longer knows
-/// about -- `projects.auto_issue`, left behind by a removed feature,
-/// is one. The generated statements name their columns explicitly, so
-/// an extra column with a default is simply not written; this pins
-/// that, since a `SELECT *`/positional binding would break on it.
+/// Databases carry columns this build dropped (`projects.auto_issue`); explicit column names
+/// mean an extra defaulted column is simply not written.
 #[test]
 fn an_unknown_extra_column_does_not_break_writes() {
     let db = db();
@@ -625,10 +579,7 @@ fn an_unknown_extra_column_does_not_break_writes() {
     assert_eq!(loaded.name, "renamed");
 }
 
-/// The mirror of `an_unknown_extra_column_does_not_break_writes`: a
-/// database created before `branch_prefix` existed is *missing* a
-/// column the struct declares, which no amount of explicit naming
-/// survives -- `migrate` has to add it.
+/// The mirror: a database missing a declared column (`branch_prefix`) needs `migrate` to add it.
 #[test]
 fn a_pre_existing_tasks_table_gains_the_branch_prefix_column() {
     let db = db();
@@ -657,10 +608,7 @@ fn a_pre_existing_tasks_table_gains_the_branch_prefix_column() {
     assert_eq!(loaded.branch_prefix, "fix/");
 }
 
-/// The same guarantee for the settings that land on two tables at once
-/// -- `github_project` and `default_branch`. A database that predates
-/// one has to gain the column on `projects` *and* on `organizations`,
-/// or the setting a project inherits has nowhere to be read from.
+/// `github_project` and `default_branch` must gain their column on both `projects` and `organizations`.
 #[test]
 fn pre_existing_tables_gain_the_columns_added_since() {
     let db = db();
@@ -871,8 +819,6 @@ fn open_session_is_the_one_without_an_end() {
     assert_eq!(found.start, dt("2026-09-01 11:00"));
 }
 
-/// The migration drops closed sessions under a minute -- 59 seconds
-/// goes, exactly 60 stays -- and never an open one, however recent.
 #[test]
 fn short_closed_sessions_are_dropped_by_the_migration() {
     let db = db();
@@ -927,9 +873,6 @@ fn closing_a_session_persists_its_end_and_message() {
     );
 }
 
-/// The union a project-level report sums is built by walking
-/// `tasks_for_project` and asking `sessions_for_task` for each -- so
-/// what has to hold is that neither leaks across a project boundary.
 #[test]
 fn a_projects_sessions_are_its_own_tasks_and_no_others() {
     let db = db();
@@ -989,9 +932,6 @@ fn organization_round_trips_its_downstream_defaults() {
     assert_eq!(loaded.github_project, "Acme Roadmap");
 }
 
-/// Setting the roster moves listed projects in -- even out of another
-/// organization -- and drops unlisted ones to no organization, without
-/// touching anyone else's members.
 #[test]
 fn setting_an_organizations_projects_moves_them_in_and_out() {
     let db = db();
@@ -1059,9 +999,7 @@ fn a_project_may_belong_to_an_organization_or_to_none() {
     assert_eq!(roster, ["member"], "only members are in the roster");
 }
 
-/// The guarantee that makes organizations safe to delete: the projects
-/// (and so every task and session under them) survive, merely stopping
-/// being members.
+/// Deleting an organization leaves its projects (and their tasks and sessions) intact.
 #[test]
 fn deleting_an_organization_keeps_its_projects() {
     let db = db();
@@ -1089,9 +1027,7 @@ fn deleting_an_organization_keeps_its_projects() {
     );
 }
 
-/// A database written before organizations existed has a `projects`
-/// table with no `organization_id`, and `CREATE TABLE IF NOT EXISTS`
-/// won't add it -- so `migrate` has to.
+/// A pre-organizations `projects` table gains `organization_id` (`CREATE TABLE IF NOT EXISTS` won't).
 #[test]
 fn an_older_database_gains_the_organization_column() {
     let db = db();
@@ -1138,8 +1074,7 @@ fn a_fresh_database_migrates_without_legacy_tables() {
 
 #[test]
 fn legacy_tables_are_renamed_in_the_right_order() {
-    // The pre-rename schema: `sessions` held what is now
-    // `session_configs`, and `records` held what are now `sessions`.
+    // Pre-rename schema: `sessions` held session_configs, `records` held sessions.
     let db = db();
     db.conn
         .execute_batch(
@@ -1166,8 +1101,6 @@ fn resolve_names_the_kind_it_could_not_find() {
     assert_eq!(missing.to_string(), "no such board 'nope'");
 }
 
-/// One unknown name fails the whole lookup, so a roster is never
-/// half-applied.
 #[test]
 fn ids_by_name_is_all_or_nothing() {
     let db = db();
@@ -1194,8 +1127,6 @@ fn ids_by_name_is_all_or_nothing() {
     );
 }
 
-/// Board and organization membership are independent columns driven by
-/// the same generic code: moving a project on one leaves the other be.
 #[test]
 fn set_projects_touches_only_its_own_group_column() {
     let db = db();
@@ -1215,8 +1146,6 @@ fn set_projects_touches_only_its_own_group_column() {
     );
 }
 
-/// The group row and its projects are written together, for a board and
-/// for an organization: a taken name leaves the roster as it was.
 #[test]
 fn save_group_writes_the_row_and_its_projects_together() {
     let db = db();
@@ -1258,9 +1187,6 @@ fn save_group_writes_the_row_and_its_projects_together() {
     );
 }
 
-/// The roster write moves projects between boards, ignores unknown and
-/// repeated ids, leaves the rest alone, and takes a list longer than one
-/// statement could bind.
 #[test]
 fn assign_projects_moves_only_what_changes() {
     let db = db();
@@ -1296,7 +1222,6 @@ fn assign_projects_moves_only_what_changes() {
     assert_eq!(names(home).len(), 1200);
 }
 
-/// The narrow project listing pairs each project with its board's id.
 #[cfg(feature = "web")]
 #[test]
 fn project_owners_lists_id_name_and_group() {
@@ -1310,7 +1235,6 @@ fn project_owners_lists_id_name_and_group() {
     );
 }
 
-/// An error inside `atomically` rolls its writes back.
 #[test]
 fn atomically_rolls_back_on_error() {
     let db = db();
@@ -1322,8 +1246,6 @@ fn atomically_rolls_back_on_error() {
     assert!(db.list::<Board>().expect("list").is_empty());
 }
 
-/// The tasks of a group come back with their project's name, ordered by
-/// project then task, and only from that group's projects.
 #[test]
 fn tasks_in_a_group_pair_each_task_with_its_project() {
     let db = db();
@@ -1348,8 +1270,6 @@ fn tasks_in_a_group_pair_each_task_with_its_project() {
     assert!(db.tasks_in::<Organization>(1).expect("query").is_empty());
 }
 
-/// A long list of names stays under SQLite's limit on bound variables,
-/// and an unknown name at the far end is still found out.
 #[test]
 fn ids_by_name_handles_more_names_than_one_query_binds() {
     let db = db();
@@ -1361,8 +1281,6 @@ fn ids_by_name_handles_more_names_than_one_query_binds() {
     assert!(db.ids_by_name::<Project>(&typo).is_err());
 }
 
-/// One call creates or rewrites a task with its tags; a task without
-/// tags gets none.
 #[cfg(feature = "web")]
 #[test]
 fn save_task_writes_the_row_and_its_tags_together() {
@@ -1384,7 +1302,6 @@ fn save_task_writes_the_row_and_its_tags_together() {
     assert!(db.save_task(None, &task, &urgent).is_err());
 }
 
-/// The badge count matches the rows `tasks_for_project` reads.
 #[cfg(feature = "web")]
 #[test]
 fn a_project_counts_its_tasks_without_reading_them() {
@@ -1398,9 +1315,6 @@ fn a_project_counts_its_tasks_without_reading_them() {
     assert_eq!(db.tasks_for_project(a).expect("rows").len(), 2);
 }
 
-/// A taken name is a typed error, from the constraint's result code:
-/// on insert and on update, per entity; a task's name only clashes
-/// within its project.
 #[test]
 fn a_taken_name_is_a_typed_error() {
     let db = db();
@@ -1423,9 +1337,6 @@ fn a_taken_name_is_a_typed_error() {
     ));
 }
 
-/// Binding is the whole point of a board: a project put on one shows
-/// up in `projects_in::<Board>`, and a project on another board or none
-/// does not.
 #[test]
 fn projects_in_a_board_are_only_the_projects_bound_to_it() {
     let db = db();
@@ -1451,9 +1362,6 @@ fn projects_in_a_board_are_only_the_projects_bound_to_it() {
     assert_eq!(names, ["a"]);
 }
 
-/// Every database starts with the two tags the board views colour the
-/// Eisenhower flags with, and re-running the migration neither
-/// duplicates them nor undoes a recolouring.
 #[test]
 fn urgent_and_important_tags_are_seeded_once() {
     let db = db();
@@ -1481,8 +1389,6 @@ fn urgent_and_important_tags_are_seeded_once() {
     assert_eq!(urgent.color, "#ff0000");
 }
 
-/// Tags are shared: setting replaces, and deleting a task or a tag
-/// drops only the link.
 #[cfg(feature = "web")]
 #[test]
 fn task_tags_replace_and_cascade() {
@@ -1512,8 +1418,6 @@ fn task_tags_replace_and_cascade() {
     assert!(db.find_by_name::<Tag>("Urgent").expect("find").is_some());
 }
 
-/// A board is a container, not an owner: deleting one must unbind its
-/// projects rather than delete them.
 #[test]
 fn deleting_a_board_keeps_its_projects_and_unbinds_them() {
     let db = db();
@@ -1529,8 +1433,6 @@ fn deleting_a_board_keeps_its_projects_and_unbinds_them() {
     assert_eq!(p.board_id, None);
 }
 
-/// Databases created before boards existed have a `projects` table
-/// without `board_id`; opening one must add it.
 #[test]
 fn migration_adds_board_id_to_a_projects_table_that_lacks_it() {
     let dir = fixtures::scratch("board-mig");
@@ -1595,9 +1497,7 @@ fn task_schedule_round_trips_and_migrates_onto_an_old_tasks_table() {
     std::fs::remove_dir_all(&dir).ok();
 }
 
-/// `Duration` and `TaskStatus` cross SQLite through their own `ToSql` and
-/// `FromSql`: minutes as an integer, the status as its word -- and a status
-/// word this build doesn't know reads back as `Queue` instead of failing.
+/// An unknown status word reads back as `Queue` instead of failing.
 #[test]
 fn duration_and_status_round_trip_and_an_unknown_status_is_queue() {
     let db = db();
@@ -1629,8 +1529,6 @@ fn duration_and_status_round_trip_and_an_unknown_status_is_queue() {
     assert_eq!(unknown, TaskStatus::Queue);
 }
 
-/// Timestamps are stored as exactly `YYYY-MM-DD HH:MM:SS`, sub-second
-/// precision dropped.
 #[test]
 fn timestamps_are_stored_as_plain_seconds_text() {
     let db = db();

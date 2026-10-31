@@ -49,8 +49,7 @@ fn session_new(
     let task_id = task.id();
 
     if let Some(existing) = db.find_session_config_by_task(task_id)? {
-        // The workspace an agent was handed (`iter task solve`) has a
-        // worktree and no tmux session: give it one rather than refuse.
+        // an agent's workspace (`iter task solve`) has a worktree and no tmux session: give it one
         if project.tmux
             && existing.tmux_session_name.is_none()
             && existing
@@ -60,9 +59,7 @@ fn session_new(
         {
             return adopt_workspace(app, tmux, &project, &mut task, existing);
         }
-        // A tmux restart or kill leaves the row behind with nothing left to
-        // tear down; only a row whose tmux session and worktree are both gone
-        // is dropped, so a live workspace still blocks a second `session new`.
+        // a restart or kill leaves a row with nothing to tear down; only a row whose tmux session and worktree are both gone is dropped
         let tmux_gone = existing
             .tmux_session_name
             .as_deref()
@@ -101,15 +98,9 @@ fn session_new(
         worktree_path = Some(path);
     }
 
-    // Borrowed, not cloned: `cwd` only needs to outlive this function, and
-    // both `worktree_path` and `project.base_path` already do.
     let cwd: &str = worktree_path.as_deref().unwrap_or(&project.base_path);
 
-    // Everything from here to the insert can fail, and until that row
-    // exists nothing else knows the worktree and branch are there --
-    // `teardown_session_config` works off the row, so a failure that left
-    // them behind would leave them behind for good, and the retry would hit
-    // "branch already exists" on a branch the user has to clean up by hand.
+    // until the row exists nothing else knows the worktree and branch, so a failure before the insert would leave them behind for good (retry: "branch already exists")
     let final_tmux_name = if project.tmux {
         tmux.start_tracked_session(&tmux_session_name, cwd)
             .inspect_err(|_| {
@@ -149,10 +140,7 @@ fn session_new(
     db.update(task_id, &task)?;
     ingest::auto(app, &project, &task, Trigger::TaskStart);
 
-    // Attaching last, and only once every row is written: it hands the
-    // terminal over to tmux until the user detaches, and the
-    // `client-attached` hook that fires on the way in looks the
-    // session-config up by tmux name -- so the row has to be there first.
+    // attach last, once every row is written: the `client-attached` hook looks the session-config up by tmux name
     if let Some(name) = &session_config.tmux_session_name
         && let Err(e) = tmux.attach_session(name)
     {
@@ -163,7 +151,6 @@ fn session_new(
     Ok(())
 }
 
-/// A tmux session for a workspace that has a worktree and none yet.
 fn adopt_workspace(
     app: &App,
     tmux: &dyn Multiplexer,
@@ -196,11 +183,8 @@ fn adopt_workspace(
     Ok(())
 }
 
-/// The tmux session name for a task. Deliberately *not* `task_display`:
-/// tmux treats `/` as a hierarchy separator, so each half has its own
-/// slashes flattened and the one that remains is the separator. The result
-/// is a tmux identifier, not a `<project>/<task>` ref, and
-/// `parse_task_ref` is not its inverse.
+/// The tmux session name for a task, not `task_display`: tmux treats `/` as a hierarchy separator, so each half is flattened.
+/// A tmux identifier, not a `<project>/<task>` ref; `parse_task_ref` is not its inverse.
 fn tmux_session_name(project: &Project, task: &Task) -> String {
     format!(
         "{}/{}",
@@ -209,10 +193,7 @@ fn tmux_session_name(project: &Project, task: &Task) -> String {
     )
 }
 
-/// One half of a [`tmux_session_name`]. Besides `/`, it flattens `:` and
-/// `.`: `new-session -s` takes any name, but every `-t` after it is parsed as
-/// `session:window.pane`, so a task called `web: x` makes a session nothing
-/// can attach to, check or kill ("can't find window:  x").
+/// One half of a [`tmux_session_name`]; also flattens `:` and `.`, since every `-t` parses `session:window.pane` and `web: x` would be unreachable.
 fn tmux_name_part(name: &str) -> String {
     name.replace('/', "-").replace([':', '.', '*', '?'], "_")
 }
@@ -236,9 +217,7 @@ fn session_stop(app: &App, task_ref: Option<&str>, message: Option<&str>) -> Res
     Ok(())
 }
 
-/// Time elapsed on the open session of the task of the tmux session this
-/// process is running in -- the session `start_session` created when the
-/// client attached (see `hook_cmd`).
+/// Time elapsed on the open session of the task of the tmux session this process runs in.
 fn session_elapse(app: &App) -> Result<()> {
     let db = &app.db;
     let (project, task) = current_session_task(db)?;

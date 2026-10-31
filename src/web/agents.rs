@@ -1,7 +1,4 @@
-//! Agents as pages: the list of every agent of every task (`/agents`) and the
-//! page of one (`/agent/{id}/{n}`, `id` the task's): the facts in a box on the
-//! right, and the tabs Prompt, Output and (while it waits) Settings. The task's Agents tab links here; the runs are
-//! `agent::run`'s files and the buttons post to `task_runs`' routes.
+//! Agent pages: the list (`/agents`) and one agent (`/agent/{id}/{n}`, `id` the task's).
 
 use super::instructions::{Use, usage};
 use super::sections::TabQuery;
@@ -38,11 +35,8 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(list_page).page(detail_page)
 }
 
-/// The most of a log the page shows, from its end.
 const LOG_BYTES: usize = 16 * 1024;
 
-/// The end of `log` (at most [`LOG_BYTES`], on a character boundary) and
-/// whether the start was cut off.
 fn tail(log: &str) -> (String, bool) {
     let cut = log.len() > LOG_BYTES;
     let start = (log.len().saturating_sub(LOG_BYTES)..=log.len())
@@ -51,7 +45,6 @@ fn tail(log: &str) -> (String, bool) {
     (log[start..].to_string(), cut)
 }
 
-/// The title of an agent's page: `#3 Develop`.
 fn heading(run: &RunRecord) -> String {
     format!("#{} {}", run.n, label_of(run.instruction_name()))
 }
@@ -97,7 +90,6 @@ async fn list_screen(uses: &[Use]) -> Result<impl View> {
     })
 }
 
-/// An agent as its page shows it.
 struct Loaded {
     task_id: i64,
     task: String,
@@ -123,7 +115,6 @@ fn load(id: i64, n: u32) -> Result<Loaded> {
     })
 }
 
-/// The tabs of an agent's page.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Part {
     Prompt,
@@ -131,9 +122,7 @@ enum Part {
     Settings,
 }
 
-/// The tab a request asks for. Settings exists only while the agent waits
-/// (once it has begun nothing can change); without a usable `tab` a waiting
-/// agent opens on its prompt and one that has begun on its output.
+/// Settings exists only while the agent waits; the default tab is Prompt when waiting, else Output.
 fn part(tab: Option<&str>, waiting: bool) -> Part {
     match tab {
         Some("prompt") => Part::Prompt,
@@ -157,8 +146,6 @@ async fn detail_page(cx: &Cx) -> Result<impl View> {
     })
 }
 
-/// The buttons that fit the agent's state: a waiting one is run or removed,
-/// a working one is stopped.
 #[component]
 async fn actions(task_id: i64, run: &RunRecord) -> Result<impl View> {
     let shown = run.shown_status();
@@ -174,7 +161,6 @@ async fn actions(task_id: i64, run: &RunRecord) -> Result<impl View> {
     })
 }
 
-/// The small box on the right: the facts, and the buttons.
 #[component]
 async fn facts(a: &Loaded) -> Result<impl View> {
     let run = &a.run;
@@ -206,7 +192,6 @@ async fn facts(a: &Loaded) -> Result<impl View> {
     })
 }
 
-/// What the agent was told, as the markdown it is.
 #[component]
 async fn prompt_part(a: &Loaded) -> Result<impl View> {
     Ok(view! {
@@ -218,8 +203,6 @@ async fn prompt_part(a: &Loaded) -> Result<impl View> {
     })
 }
 
-/// What the agent printed: its answer is markdown, so it is shown as such;
-/// `raw` shows the text as it is.
 #[component]
 async fn output_part(a: &Loaded, raw: bool) -> Result<impl View> {
     let base = agent_url(a.task_id, a.run.n);
@@ -253,8 +236,7 @@ async fn output_part(a: &Loaded, raw: bool) -> Result<impl View> {
     })
 }
 
-/// Settings of a waiting agent: model, effort and prompt, saved, run or put
-/// in line. (The instruction is fixed: a different one is a new agent.)
+/// The instruction is fixed: a different one is a new agent.
 #[component]
 async fn settings_part(a: &Loaded) -> Result<impl View> {
     let run = &a.run;
@@ -349,11 +331,9 @@ mod tests {
 
     #[test]
     fn the_tab_depends_on_whether_the_agent_has_begun() {
-        // waiting: its prompt first, and Settings exists
         assert_eq!(part(None, true), Part::Prompt);
         assert_eq!(part(Some("settings"), true), Part::Settings);
         assert_eq!(part(Some("output"), true), Part::Output);
-        // begun: its output first, and Settings is not there
         assert_eq!(part(None, false), Part::Output);
         assert_eq!(part(Some("settings"), false), Part::Output);
         assert_eq!(part(Some("prompt"), false), Part::Prompt);

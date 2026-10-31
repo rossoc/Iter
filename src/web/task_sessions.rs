@@ -1,6 +1,4 @@
-//! Adding a session by hand to a task (a stretch of work that was not timed):
-//! the pop-up over the Sessions tab (`?tab=sessions&new=session`) and the route
-//! that stores it. Sessions the timer records are `iter session`'s.
+//! Adding a session by hand to a task: the pop-up over the Sessions tab (`?tab=sessions&new=session`) and its route.
 
 use super::ui::field::{field, textarea};
 use super::ui::form::form_shell;
@@ -28,8 +26,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(add_session)
 }
 
-/// The New session pop-up (`?tab=sessions&new=session`): when it began, when
-/// it ended, and what was done. The first row of the sessions table opens it.
 #[component]
 pub async fn session_modal(task_id: i64) -> Result<impl View> {
     let close = sessions_tab_url(&task_url(task_id));
@@ -55,7 +51,6 @@ struct SessionForm {
     message: String,
 }
 
-/// A browser's `datetime-local` value, with or without seconds.
 fn moment(text: &str) -> std::result::Result<NaiveDateTime, String> {
     ["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"]
         .iter()
@@ -63,7 +58,6 @@ fn moment(text: &str) -> std::result::Result<NaiveDateTime, String> {
         .ok_or_else(|| format!("'{text}' is not a date and time"))
 }
 
-/// The session a form asks for, or why not.
 fn parse(task_id: i64, form: &SessionForm) -> std::result::Result<Session, String> {
     let (start, end) = (moment(&form.start)?, moment(&form.end)?);
     if end <= start {
@@ -79,7 +73,6 @@ fn parse(task_id: i64, form: &SessionForm) -> std::result::Result<Session, Strin
     })
 }
 
-/// `POST /task/{id}/sessions`: stores a finished session and shows the tab.
 #[route(POST "/task/{id}/sessions")]
 async fn add_session(cx: &Cx, Form(form): Form<SessionForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;

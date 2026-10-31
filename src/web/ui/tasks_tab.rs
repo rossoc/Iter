@@ -1,6 +1,4 @@
-//! The Tasks tab of an organization or project page: the search box, the task
-//! table (its first row opens the New task pop-up, when the page can add a
-//! task); with no rows the table says "No tasks yet." / "No tasks match.".
+//! The Tasks tab of an organization or project page: search box and task table.
 
 use super::filter_bar::{Search, filter_bar};
 use super::task_table::{TaskRow, task_table};
@@ -9,9 +7,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// `rows` are the tasks that pass the search, out of `total`. `add` is where
-/// the table's first row leads (the New task pop-up), if the page can add a
-/// task.
+/// `rows` are the tasks passing the search, out of `total`; `add` leads the first row.
 #[component]
 pub async fn tasks_tab(
     rows: &[TaskRow<'_>],

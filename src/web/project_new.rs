@@ -1,12 +1,4 @@
-//! New project: the pop-up over a project list (`?new=project`, see
-//! `ui/modal.rs`) with the whole project form, and its write (`POST
-//! /{org|board}/{id}/project/quick`). The list's first row opens it. An
-//! organization's list makes a member of it, a board's a project outside any
-//! organization that sits on the board. Only the row is written (as editing
-//! does: no directory is made), from the template `iter init` starts from --
-//! the config's project defaults, the organization's settings over them --
-//! and with the edit form's validation. The base path is typed or chosen
-//! with the folder icon of `path_field` (the system's folder picker).
+//! New project: the pop-up over a project list (`?new=project`, `ui/modal.rs`) and its write (`POST /{org|board}/{id}/project/quick`).
 
 use super::board_info::{load as load_board, screen as board_screen};
 use super::edit::create_to;
@@ -36,7 +28,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(quick_org).page(quick_board)
 }
 
-/// The list a project is added to.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Home {
     Org(i64),
@@ -44,7 +35,6 @@ pub enum Home {
 }
 
 impl Home {
-    /// Where the pop-up posts.
     pub fn quick_url(self) -> String {
         match self {
             Home::Org(id) => quick_project_url(id),
@@ -52,7 +42,6 @@ impl Home {
         }
     }
 
-    /// The page with the list, where a created project lands.
     pub fn page_url(self) -> String {
         match self {
             Home::Org(id) => projects_tab_url(&org_url(id)),
@@ -60,13 +49,10 @@ impl Home {
         }
     }
 
-    /// The page with the pop-up open: where the list's first row leads.
     pub fn open_url(self) -> String {
         self.open_url_with("", "")
     }
 
-    /// [`Self::open_url`] with the name and base path to start with (what
-    /// the URL carries); empty ones are left out.
     pub fn open_url_with(self, name: &str, base_path: &str) -> String {
         let some = |v: &str| (!v.is_empty()).then(|| v.to_string());
         let (name, base_path) = (some(name), some(base_path));
@@ -80,9 +66,6 @@ impl Home {
         )
     }
 
-    /// The pop-up as it starts out: `name` and `base_path` (from the folder
-    /// URL, else empty), the template's settings, no error. A 404 when
-    /// the list is not there.
     pub fn create(self, name: Option<&str>, base_path: Option<&str>) -> Result<ProjectCreate> {
         let template = self.template()?;
         Ok(ProjectCreate {
@@ -95,7 +78,6 @@ impl Home {
         })
     }
 
-    /// The project to start from, and a 404 when the list is not there.
     fn template(self) -> Result<Project> {
         let db = open_db()?;
         let mut template = Project::template(&config().project);
@@ -113,8 +95,6 @@ impl Home {
     }
 }
 
-/// What the New project pop-up shows: the list it adds to, what is typed
-/// (or starts out), and the refusal of the last try, if any.
 pub struct ProjectCreate {
     pub home: Home,
     pub name: String,
@@ -124,9 +104,6 @@ pub struct ProjectCreate {
     pub error: Option<FormError>,
 }
 
-/// The pop-up: Name, Description, Base path (typed, or chosen with the
-/// folder icon of [`path_field`]), the Settings group, the way out back to
-/// the list.
 #[component]
 pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
     let error = create.error.as_ref();
@@ -144,8 +121,6 @@ pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
     })
 }
 
-/// What the pop-up posts (it also posts `home`, which the route's path
-/// already says).
 #[derive(Deserialize)]
 pub struct NewProject {
     pub name: String,
@@ -155,9 +130,7 @@ pub struct NewProject {
     pub settings: SettingsForm,
 }
 
-/// Makes the project. Done, the browser goes to the list's page (this does
-/// not return); refused, the pop-up to show again: the error and what was
-/// typed.
+/// Done, the browser goes to the list's page (this does not return); refused, the pop-up shows again.
 fn add(home: Home, typed: NewProject) -> Result<ProjectCreate> {
     let template = home.template()?;
     let project = ProjectForm {
@@ -187,7 +160,6 @@ fn add(home: Home, typed: NewProject) -> Result<ProjectCreate> {
     })
 }
 
-/// The page of the list `home`, with the pop-up showing `create`.
 #[component]
 async fn list_page(home: Home, create: &ProjectCreate) -> Result<impl View> {
     let db = open_db()?;
@@ -239,7 +211,6 @@ mod tests {
         );
     }
 
-    /// The settings of a form that keep `settings` as they are.
     fn settings_form(settings: &Settings) -> SettingsForm {
         SettingsForm {
             github: settings.github,
@@ -251,8 +222,7 @@ mod tests {
         }
     }
 
-    /// The settings a quick project is made with survive the form: the
-    /// organization's, over the config's.
+    /// The settings a quick project is made with survive the form: the organization's, over the config's.
     #[test]
     fn a_quick_project_keeps_the_organization_settings() {
         let org = Organization {

@@ -1,26 +1,16 @@
-//! Instructions: what an agent is told for a kind of work, as markdown files
-//! in the format of an opencode agent: front matter (`description`, `model`,
-//! `mode`, `temperature`, `permission`; iter adds `kind`) over the prompt.
-//!
-//! An instruction is `instructions/<name>.md` in one of three places, the
-//! nearest winning: the project's notes, its organization's notes, iter's own
-//! config folder. The four built-in ones (`plan`, `develop`, `test`,
-//! `check`, `fix`) are the last resort. Which place an instruction comes from
-//! is its [`Source`].
+//! Instructions: markdown files (opencode agent format, front matter over the prompt) saying what an agent is told for a kind of work.
+//! Looked up nearest first: project notes, organization notes, config folder, then the built-in ones; see [`Source`].
 
 use crate::agent::error::{AgentError, AgentResult};
 use crate::agent::prompt::{self, Context, Kind};
 use serde_yaml::Value;
 use std::path::{Path, PathBuf};
 
-/// Where an instruction comes from.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Source {
-    /// The task's own folder.
     Task,
     Project,
     Organization,
-    /// iter's config folder: what every project of the user shares.
     Global,
     BuiltIn,
 }
@@ -37,11 +27,9 @@ impl Source {
     }
 }
 
-/// The folders that may hold an `instructions/` folder, nearest first.
 pub type Layers = Vec<(Source, PathBuf)>;
 
-/// The layers that apply to `project`: its notes, its organization's notes,
-/// iter's config folder (those that exist as folders to look in).
+/// The layers that apply to `project`, nearest first (those that exist).
 pub fn layers_of(db: &crate::db::Db, project: &crate::models::Project) -> Layers {
     let org = project
         .organization_id
@@ -57,19 +45,15 @@ pub fn layers_of(db: &crate::db::Db, project: &crate::models::Project) -> Layers
     layers
 }
 
-/// iter's config folder, where the instructions of every project live.
 pub fn global() -> Option<PathBuf> {
     crate::config::config_dir().ok()
 }
 
-/// The file of instruction `name` in `dir`.
 pub fn file(dir: &Path, name: &str) -> PathBuf {
     dir.join("instructions").join(format!("{name}.md"))
 }
 
-/// The front matter and the prompt of `raw`: the lines between a first line
-/// `---` and the next one, then the rest. A text that does not open with
-/// `---` is all prompt.
+/// The front matter (between a first line `---` and the next) and the prompt; no `---` means all prompt.
 pub fn split(raw: &str) -> (Option<&str>, &str) {
     let Some(rest) = raw.strip_prefix("---\n") else {
         return (None, raw);
@@ -86,18 +70,15 @@ pub fn split(raw: &str) -> (Option<&str>, &str) {
     }
 }
 
-/// The front matter's keys that iter reads. Others are kept in the file and
-/// ignored.
+/// The front matter keys iter reads; others stay in the file.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Front {
     pub description: String,
     pub model: Option<String>,
-    /// One of the four built-in kinds: how the work is set up (a kind that
-    /// changes code gets a worktree). Develop when it says nothing.
+    /// Built-in kind: sets up the work (code-changing kinds get a worktree); Develop if absent.
     pub kind: Option<String>,
     pub mode: Option<String>,
     pub temperature: Option<String>,
-    /// The permissions, as the YAML they were written in.
     pub permission: Option<String>,
 }
 
@@ -110,7 +91,6 @@ fn scalar(v: &Value) -> Option<String> {
     }
 }
 
-/// Reads front matter; an error says what is wrong with it.
 pub fn parse_front(yaml: &str) -> AgentResult<Front> {
     let value: Value = serde_yaml::from_str(yaml).map_err(AgentError::FrontMatterUnreadable)?;
     let map = match value {
@@ -157,14 +137,10 @@ fn kind_of_key(key: &str) -> Option<Kind> {
 pub struct Instruction {
     pub name: String,
     pub front: Front,
-    /// The prompt, without the front matter.
     pub body: String,
-    /// The whole file, as it is edited.
     pub raw: String,
     pub source: Source,
-    /// The file it was read from; none for a built-in one.
     pub path: Option<PathBuf>,
-    /// The front matter could not be read: why.
     pub problem: Option<String>,
 }
 
@@ -187,8 +163,7 @@ impl Instruction {
         }
     }
 
-    /// How the work is set up: the name when it is a built-in kind, else
-    /// `kind:` of the front matter, else Develop.
+    /// The kind: the name if built-in, else `kind:` of the front matter, else Develop.
     pub fn kind(&self) -> Kind {
         kind_of_key(&self.name)
             .or_else(|| self.front.kind.as_deref().and_then(kind_of_key))
@@ -196,8 +171,7 @@ impl Instruction {
     }
 }
 
-/// Whether `name` can be a file name here: lowercase letters, digits and
-/// dashes, starting with a letter or digit.
+/// Whether `name` can be a file name: lowercase letters, digits and dashes, starting with a letter or digit.
 pub fn valid_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() <= 48
@@ -207,15 +181,12 @@ pub fn valid_name(name: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
-/// Whether `name` is one of the built-in instructions, which keep their names:
-/// the kinds of work iter itself starts agents for.
+/// Whether `name` is a built-in instruction; those keep their names.
 pub fn is_builtin(name: &str) -> bool {
     kind_of_key(name).is_some()
 }
 
-/// The name an instruction is saved under, when the form asks for `wanted`:
-/// none when it stays as it is, an error when it cannot be what is asked.
-/// A built-in instruction cannot be renamed, nor another one named like it.
+/// The name to save under when the form asks for `wanted`: none if unchanged; an error if built-in or named like one.
 pub fn rename_target(old: &str, wanted: &str) -> AgentResult<Option<String>> {
     let wanted = wanted.trim();
     if wanted.is_empty() || wanted == old {
@@ -250,8 +221,7 @@ fn builtin(kind: Kind) -> Instruction {
     )
 }
 
-/// The instruction `name` as it applies with these layers: the nearest file,
-/// else the built-in one.
+/// The instruction `name` under these layers: nearest file, else built-in.
 pub fn find(name: &str, layers: &Layers) -> Option<Instruction> {
     if !valid_name(name) {
         return None;
@@ -265,8 +235,7 @@ pub fn find(name: &str, layers: &Layers) -> Option<Instruction> {
     kind_of_key(name).map(builtin)
 }
 
-/// Every instruction that applies with these layers, by name: the built-in
-/// ones and every file, each as `find` gives it.
+/// Every instruction under these layers, by name: built-in and files.
 pub fn list(layers: &Layers) -> Vec<Instruction> {
     let mut names: Vec<String> = KINDS.iter().map(|k| k.key().to_string()).collect();
     for (_, dir) in layers {
@@ -289,9 +258,7 @@ pub fn list(layers: &Layers) -> Vec<Instruction> {
     names.iter().filter_map(|n| find(n, layers)).collect()
 }
 
-/// Whether `raw` is an instruction that can be kept: its front matter reads,
-/// it has a prompt, and the prompt has no placeholder iter does not know (an
-/// agent must never be told a literal `{{taks}}`).
+/// Whether `raw` can be kept: front matter reads, has a prompt, and no unknown placeholder (an agent must never see a literal `{{taks}}`).
 pub fn check(name: &str, raw: &str) -> AgentResult<()> {
     let (yaml, body) = split(raw);
     let front = match yaml {
@@ -321,16 +288,13 @@ pub fn check(name: &str, raw: &str) -> AgentResult<()> {
     prompt::render(body, kind, &ctx).map(|_| ())
 }
 
-/// The model to start a form with: `model` of the front matter when the
-/// harness offers it (opencode writes `anthropic/claude-sonnet-5-5`; the
-/// provider is dropped), else none.
+/// `model` of the front matter if the harness offers it (opencode's `anthropic/claude-sonnet-5-5` loses the provider), else none.
 pub fn preferred_model(front: &Front, offered: &[String]) -> Option<String> {
     let model = front.model.as_deref()?;
     let bare = model.rsplit('/').next().unwrap_or(model);
     offered.iter().find(|m| m.as_str() == bare).cloned()
 }
 
-/// The prompt a new instruction starts from: the built-in `develop` one.
 pub fn starter_prompt() -> String {
     split(Kind::Develop.builtin())
         .1
@@ -338,17 +302,14 @@ pub fn starter_prompt() -> String {
         .to_string()
 }
 
-/// What the instruction form asks for, field by field.
 #[derive(Clone, Debug, Default)]
 pub struct Fields<'a> {
     pub description: &'a str,
-    /// One of the built-in kinds; none leaves the file's `kind` as it is (a
-    /// built-in instruction has no field for it).
+    /// A built-in kind; none leaves the file's `kind` as it is.
     pub kind: Option<&'a str>,
     pub model: &'a str,
     pub mode: &'a str,
     pub temperature: &'a str,
-    /// YAML, as the opencode `permission:` key takes it.
     pub permission: &'a str,
     pub prompt: &'a str,
 }
@@ -370,10 +331,7 @@ fn text_value(text: &str) -> Option<Value> {
     (!text.is_empty()).then(|| Value::String(text.replace('\n', " ")))
 }
 
-/// The text of an instruction file from its fields. The front matter is
-/// `existing`'s with the fields written over it (an empty field removes its
-/// key; keys the form knows nothing about stay as they were), then a blank
-/// line and the prompt. An error says which field is wrong.
+/// An instruction file from its fields: `existing`'s front matter with the fields written over it (empty removes a key, unknown keys stay), a blank line, the prompt.
 pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
     let mut map = existing
         .and_then(|raw| split(raw).0)
@@ -584,7 +542,6 @@ mod tests {
         );
         assert!(map.get("kind").is_none());
         assert_eq!(body.trim(), "New prompt");
-        // nothing but a prompt: no front matter at all
         let bare = compose(
             None,
             &Fields {
@@ -618,7 +575,6 @@ mod tests {
                 .to_string()
                 .starts_with("permission")
         );
-        // a number that is not one stays text; check() still judges the whole
         let hot = Fields {
             temperature: "hot",
             ..fields("x")

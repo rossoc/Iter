@@ -2,7 +2,6 @@
 
 use super::*;
 
-/// The placeholders an instruction's prompt may use, as the forms say them.
 pub(super) fn placeholder_hint() -> String {
     format!(
         "Filled in for the task when an agent starts: {}.",
@@ -14,9 +13,7 @@ pub(super) fn placeholder_hint() -> String {
     )
 }
 
-/// The pop-up of a new instruction (`?new=instruction`): a name, what it is
-/// for, and the prompt, which starts as the `develop` one. It is made a
-/// `develop`; Settings changes that.
+/// Made a `develop` instruction; Settings changes that.
 #[component]
 pub async fn new_instruction_modal(scope: &Scope) -> Result<impl View> {
     let project = scope
@@ -42,8 +39,7 @@ pub async fn new_instruction_modal(scope: &Scope) -> Result<impl View> {
     })
 }
 
-/// Where a saved instruction leads: the list, or (for a project's own) the
-/// project, which no longer has a tab for them.
+/// Where a saved instruction leads: the list, or the project for a project's own.
 pub(super) fn instructions_target(scope: &Scope) -> String {
     match &scope.project {
         Some(p) => project_url(p.id()),
@@ -62,8 +58,6 @@ struct NewForm {
     project: String,
 }
 
-/// `POST /instructions`: writes a new instruction (a `develop` one, with the
-/// description and the prompt asked for) and opens its Settings tab.
 #[route(POST "/instructions")]
 pub(super) async fn create_instruction(Form(form): Form<NewForm>) -> Result<Response> {
     let db = open_db()?;
@@ -100,29 +94,23 @@ pub(super) async fn create_instruction(Form(form): Form<NewForm>) -> Result<Resp
     Err(see_other(to).into())
 }
 
-/// The buttons of the instruction form (`name="do"`).
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 enum SaveButton {
-    /// Write the file at this scope (and rename it, when asked).
     Save,
-    /// Delete this scope's file, so the inherited one shows again.
     Reset,
 }
 
 #[derive(Deserialize)]
 struct SaveForm {
-    /// The button pressed; a submission without one is refused (a 400).
     #[serde(rename = "do")]
     action: SaveButton,
     #[serde(default)]
     project: String,
-    /// The name to save it under; empty or the same: no change.
     #[serde(default)]
     new_name: String,
     #[serde(default)]
     description: String,
-    /// Absent for a built-in instruction, which keeps its kind.
     #[serde(default)]
     kind: Option<String>,
     #[serde(default)]
@@ -137,10 +125,7 @@ struct SaveForm {
     prompt: String,
 }
 
-/// `POST /instruction/{name}`: keeps the fields as the instruction of the
-/// page's scope (`do=save`), or removes that file so the inherited one applies
-/// again (`do=reset`). With `new_name` a save also renames: the file at the
-/// scope's home moves to the new name (runs already made keep the old one).
+/// `do=save` keeps the fields; `do=reset` removes the file at this scope so the inherited one applies; `new_name` also renames.
 #[route(POST "/instruction/{name}")]
 pub(super) async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Response> {
     let name = path_param::<Name>(cx)?.clone();

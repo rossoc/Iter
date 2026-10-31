@@ -1,6 +1,4 @@
-//! `iter task solve`, `iter task runs`: handing a task to an agent that works
-//! on its own in the task's worktree. The files of a run are
-//! `agent::run`'s; the harness is whatever `Harness` says to start.
+//! `iter task solve`, `iter task runs`: handing a task to an agent working on its own in the task's worktree.
 
 use crate::agent::error::AgentError;
 use crate::agent::prompt::Kind;
@@ -15,7 +13,6 @@ use crate::models::Project;
 use crate::utils::resolve::task_display;
 use crate::wiki::ingest_job::Auto;
 
-/// What the command line says while a run begins.
 struct Console;
 
 impl Observer for Console {
@@ -39,8 +36,7 @@ pub struct SolveRequest<'a> {
     pub extra: &'a [String],
 }
 
-/// What the buffer holds: the front matter and, below it, the description the
-/// agent is given.
+/// The buffer: front matter, then the description the agent is given.
 fn render(spec: &Spec, description: &str) -> Result<String> {
     Ok(format!(
         "---\n{}---\n\n{}\n",

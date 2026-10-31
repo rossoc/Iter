@@ -1,5 +1,4 @@
-//! Daily notes: the list of a Notes tab (grouped by month, the latest day
-//! first) and the way between the days of a note's page.
+//! Daily notes: the Notes tab list (by month, latest day first) and links between days.
 
 use super::empty_line::empty_line;
 use super::table::{AddRow, cell, data_table, row, section_row};
@@ -8,8 +7,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// One row of the list, ready to show (see `web/daily_notes.rs`). `title` is
-/// there only when the note has one of its own, as the day is shown anyway.
+/// One row of the list; `title` only when the note has its own.
 pub struct NoteItem<'a> {
     pub href: String,
     pub day: String,
@@ -18,16 +16,13 @@ pub struct NoteItem<'a> {
     pub preview: String,
 }
 
-/// The rows of one month.
 pub struct Month<'a> {
     pub label: String,
     pub items: Vec<NoteItem<'a>>,
 }
 
-/// The Notes tab: a headerless `data_table` (see `table.rs`) whose first row
-/// adds today's note and whose rows are grouped under their month. `today`
-/// is where that row posts; `set_path` is where to go to name the folder,
-/// shown when there is none.
+/// The Notes tab: a headerless `data_table` whose first row adds today's note
+/// (`today` is where it posts); `set_path` leads to naming the folder, shown when none.
 #[component]
 pub async fn notes_tab(
     months: &[Month<'_>],
@@ -65,14 +60,12 @@ pub async fn notes_tab(
     })
 }
 
-/// A neighbouring day of a note: where it is, and what to call it.
 pub struct NoteLink {
     pub href: String,
     pub day: String,
     pub title: String,
 }
 
-/// The links to the previous (older) and the next (newer) note.
 #[component]
 pub async fn note_nav(prev: Option<&NoteLink>, next: Option<&NoteLink>) -> Result<impl View> {
     Ok(view! {

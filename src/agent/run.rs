@@ -1,8 +1,4 @@
-//! A run: one headless agent working on a task in its worktree. Each run is
-//! a record (`runs/<n>.yaml`), the prompt it was given (`runs/<n>.prompt.md`)
-//! and what the harness printed (`runs/<n>.log`), in the task's folder. Like
-//! the plan, they are files: `iter task runs` and the Agent tab read the same
-//! ones.
+//! A run: one headless agent working on a task in its worktree, kept as `runs/<n>.yaml`, `.prompt.md` and `.log` in the task's folder.
 
 use crate::agent::error::AgentResult;
 use crate::agent::prompt::Kind;
@@ -19,8 +15,7 @@ pub enum Harness {
     Claude,
 }
 
-/// What one headless run of a harness is asked to do. Named fields, because
-/// the model and the effort are both text and easy to swap as arguments.
+/// What one headless run of a harness is asked to do.
 #[derive(Clone, Copy, Default)]
 pub struct Invocation<'a> {
     pub prompt: &'a str,
@@ -28,8 +23,7 @@ pub struct Invocation<'a> {
     pub model: &'a str,
     /// Empty: the harness's own default.
     pub effort: &'a str,
-    /// Folders besides the working one the agent may read and write (the
-    /// task's folder).
+    /// Extra folders the agent may read and write.
     pub dirs: &'a [&'a Path],
     pub allowed: &'a [String],
     /// Goes last, for what the harness takes that iter does not know about.
@@ -43,8 +37,7 @@ impl Harness {
         }
     }
 
-    /// The models the harness takes, the ones a form offers: its own aliases
-    /// and names, unless `configured` (`agent.models`) says otherwise.
+    /// The models a form offers: the harness's aliases, unless `configured` (`agent.models`) overrides.
     pub fn models(self, configured: &[String]) -> Vec<String> {
         if !configured.is_empty() {
             return configured.to_vec();
@@ -64,15 +57,12 @@ impl Harness {
         }
     }
 
-    /// How hard the harness can be told to work.
     pub fn efforts(self) -> &'static [&'static str] {
         match self {
             Harness::Claude => &["low", "medium", "high", "xhigh", "max"],
         }
     }
 
-    /// The program and the arguments that run `job` once, headless, to the
-    /// end.
     pub fn command(self, job: &Invocation) -> (&'static str, Vec<String>) {
         self.backend().command(job)
     }
@@ -84,15 +74,11 @@ impl Harness {
     }
 }
 
-/// How one agent program is driven: which binary, and the arguments that
-/// make it run an [`Invocation`] headless. [`Harness`] is the closed set of
-/// them and dispatches here, so adding a program means a type implementing
-/// this and an arm in [`Harness::backend`].
+/// How one agent program is driven; `Harness::backend` dispatches here.
 pub trait AgentBackend {
     fn command(&self, job: &Invocation) -> (&'static str, Vec<String>);
 }
 
-/// Anthropic's `claude` CLI.
 struct ClaudeCode;
 
 impl AgentBackend for ClaudeCode {
@@ -118,9 +104,7 @@ impl AgentBackend for ClaudeCode {
             args.push("--add-dir".into());
             args.push(dir.display().to_string());
         }
-        // headless there is nobody to ask: edits are allowed, and so
-        // are the commands the prompts tell the agent to run; the
-        // rest is the harness's own settings
+        // headless: nobody to ask, so edits and the commands the prompts name are allowed
         args.push("--permission-mode".into());
         args.push("acceptEdits".into());
         if !allowed.is_empty() {
@@ -135,13 +119,11 @@ impl AgentBackend for ClaudeCode {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Status {
-    /// Written down, not started: it begins when asked to, or when the run
-    /// before it ends.
+    /// Written down, not started.
     Queued,
     Running,
     Done,
     Failed,
-    /// Stopped by the user, while it waited or while it worked.
     Cancelled,
 }
 
@@ -163,15 +145,12 @@ pub struct RunRecord {
     pub agent: Harness,
     pub model: String,
     pub effort: String,
-    /// What the agent was asked to do.
     pub kind: Kind,
-    /// The instruction it was given (`instructions/<name>.md`); a run from
-    /// before there were any has none, and its kind is the name.
+    /// The instruction name; empty for runs that predate instructions (the kind is the name).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instruction: Option<String>,
     pub status: Status,
-    /// `YYYY-MM-DD HH:MM:SS`, local time: when the run began (a queued one
-    /// has not: this is when it was written down).
+    /// `YYYY-MM-DD HH:MM:SS` local time the run began (queued: when written).
     pub started: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ended: Option<String>,
@@ -186,10 +165,7 @@ pub struct RunRecord {
 }
 
 impl RunRecord {
-    /// The status to show: a run that says it is running but whose process
-    /// is gone (killed, or the machine restarted) is `lost`. One that never
-    /// got a process (the start failed halfway) is `lost` once it is a
-    /// minute old.
+    /// The status to show: `lost` for a running run whose process is gone, or one that never got a process after a minute.
     pub fn shown_status(&self) -> &'static str {
         match (self.status, self.pid) {
             (Status::Running, Some(pid)) if !alive(pid) => "lost",
@@ -198,17 +174,14 @@ impl RunRecord {
         }
     }
 
-    /// The name of the instruction the run was given.
     pub fn instruction_name(&self) -> &str {
         self.instruction.as_deref().unwrap_or(self.kind.key())
     }
 
-    /// Whether the run waits for its turn.
     pub fn is_queued(&self) -> bool {
         self.status == Status::Queued
     }
 
-    /// Whether an agent is working on this run.
     pub fn is_running(&self) -> bool {
         self.shown_status() == "running"
     }
@@ -220,8 +193,7 @@ impl RunRecord {
     }
 }
 
-/// Whether process `pid` exists and is not a zombie (a child nobody has
-/// waited for still answers `kill -0`).
+/// Whether `pid` exists and is not a zombie (`kill -0` answers for those).
 pub fn alive(pid: u32) -> bool {
     let pid = pid.to_string();
     if !crate::process::succeeds("kill", None, &["-0".to_string(), pid.clone()]) {
@@ -231,8 +203,7 @@ pub fn alive(pid: u32) -> bool {
         .is_none_or(|stat| !stat.starts_with('Z'))
 }
 
-/// Asks the process of a run to stop: its whole group when it leads one (a
-/// detached worker and the harness under it), else the process alone.
+/// Asks a run's process to stop: its whole group when it leads one, else the process.
 pub fn interrupt(pid: u32) -> bool {
     let pid = pid.to_string();
     let args = |target: String| ["-TERM".to_string(), "--".to_string(), target];
@@ -257,8 +228,7 @@ impl TaskDir {
         self.runs_dir().join(format!("{n}.prompt.md"))
     }
 
-    /// The number the next run gets: one more than the highest file in the
-    /// folder, readable or not.
+    /// The next run number: one past the highest file in the folder.
     pub fn next_run(&self) -> u32 {
         let highest = std::fs::read_dir(self.runs_dir())
             .into_iter()
@@ -272,9 +242,7 @@ impl TaskDir {
         highest.unwrap_or(0) + 1
     }
 
-    /// Takes the next number for good: the record file is made, empty, with
-    /// a call that fails if it is there, so two runs started at once get two
-    /// numbers.
+    /// Claims the next number: the record is created with a call that fails if it exists, so concurrent runs get distinct numbers.
     pub fn claim_run(&self) -> AgentResult<u32> {
         std::fs::create_dir_all(self.runs_dir())?;
         loop {
@@ -312,8 +280,7 @@ impl TaskDir {
         )?)
     }
 
-    /// Every run, the first one first. A record that cannot be read is left
-    /// out.
+    /// Every run, first first; unreadable records are skipped.
     pub fn runs(&self) -> Vec<RunRecord> {
         let Ok(entries) = std::fs::read_dir(self.runs_dir()) else {
             return Vec::new();
@@ -430,7 +397,6 @@ mod tests {
                 .any(|w| w == ["--allowedTools", "Bash(git *)"])
         );
         assert_eq!(args.last().map(String::as_str), Some("--verbose"));
-        // no model, no effort: the harness's own defaults
         let (_, bare) = Harness::Claude.command(&Invocation {
             prompt: "x",
             ..Invocation::default()

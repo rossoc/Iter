@@ -1,11 +1,5 @@
-//! `iter serve`: a browser UI over the same database the CLI uses.
-//!
-//! A local topcoat server, bound to loopback only. Nothing is copied: every
-//! request opens the configured database file itself (WAL + busy timeout,
-//! so it coexists with a concurrent `iter` command), reads or writes through
-//! the same `Db` methods the CLI does, and drops the connection again. A
-//! `rusqlite::Connection` isn't `Sync`, which is the other reason to open
-//! one per request instead of sharing one.
+//! `iter serve`: a browser UI over the same database the CLI uses; one connection per request.
+//! Architecture and route map: `doc/web_server.md`.
 
 mod agenda;
 mod agenda_cards;
@@ -81,13 +75,10 @@ use topcoat::router::{LayerFn, Router, path_param};
 // The `{id}` of every route with one: a number, else a 400.
 path_param!(id: i64, error = bad_request);
 
-/// A connection for the duration of one request.
 fn open_db() -> topcoat::Result<Db> {
     Ok(Db::open(config().db_path()?)?)
 }
 
-/// The local time now: what every page measures "today" and open sessions
-/// against.
 fn now() -> chrono::NaiveDateTime {
     chrono::Local::now().naive_local()
 }
@@ -134,7 +125,6 @@ fn router() -> Router {
     .build()
 }
 
-/// Serves until interrupted, optionally opening the browser first.
 pub fn serve(port: u16, open: bool) -> Result<()> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -149,7 +139,6 @@ pub fn serve(port: u16, open: bool) -> Result<()> {
             } else {
                 "xdg-open"
             };
-            // Best effort: the URL is printed either way.
             let _ = std::process::Command::new(opener).arg(&url).spawn();
         }
         topcoat::serve(listener, router()).await?;

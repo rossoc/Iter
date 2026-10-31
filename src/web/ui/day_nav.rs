@@ -1,7 +1,5 @@
-//! A day's heading with its way around: previous day, Today, next day. The
-//! title is a date field's label: with script, it opens the browser's date
-//! picker; without, the field is a plain date input and a hidden button
-//! submits it. Everything else is plain links.
+//! A day's heading with previous, Today and next links. With script the title
+//! opens the date picker; without, a hidden button submits the date input.
 
 use super::{CALENDAR, CHEVRON_LEFT, CHEVRON_RIGHT, icon};
 use topcoat::{
@@ -9,25 +7,18 @@ use topcoat::{
     view::{Child, View, component, view},
 };
 
-/// A link to another day: `label` is its accessible name ("Previous day,
-/// Monday 28 September").
+/// A link to another day; `label` is its accessible name.
 #[derive(Clone)]
 pub struct DayLink {
     pub href: String,
     pub label: String,
 }
 
-/// The id of the date field (`board.js` opens its picker when the title is
-/// clicked).
+/// The id of the date field (`board.js` opens its picker from the title).
 pub const DAY_INPUT: &str = "day-input";
 
-/// `id` is the heading's id (the hours are labelled by it); `title` is the day
-/// written out; `iso` is `yyyy-mm-dd` (the `<time>`'s value and the date
-/// field's); `action` is the page the date is sent to, and `pick` the task
-/// being moved, and `folded` the Unscheduled column folded, both kept
-/// through the change of day; `today` is the link to today,
-/// marked when it is the day shown (the caller may point it at the current
-/// hour). The child nodes are extra controls beside the day links.
+/// `pick` (task being moved) and `folded` are kept through a change of day;
+/// `today` is marked when shown; child nodes are extra controls.
 #[component]
 pub async fn day_nav(
     id: &str,

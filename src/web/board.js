@@ -1,35 +1,22 @@
-// Drag-and-drop for the board pages (the agenda and the matrix). It is
-// an enhancement: every page also moves a task with plain links and forms
-// (the pick mode), so nothing here is needed to use the page.
+// Drag-and-drop for the board pages (agenda, matrix): an enhancement, as every
+// page also moves a task with plain links and forms (the pick mode).
 //
 // The contract, all in the markup (the script knows no page):
-//   [data-post]   the board's root; the URL a drop is POSTed to, as a form
-//                 (task_id, target). The script adds .can-drag to it: the
-//                 grab cursor and the dashed drop targets show only then.
-//   [data-task]   a card that can be dragged (the task's id); the script
-//                 makes it draggable. It is dragged by its id: the card's own
-//                 id is card-<task>, what a link (#card-7) or a focus lands on.
-//   [data-target] a drop zone; what is POSTed as `target` (an hour's start,
-//                 empty for the lists, a quadrant's name).
-//   .dragging     set on the card while it is dragged; .over on the zone
-//                 above which it is.
-//   .board-notes  (optional, inside the root; a role=status region) where the
-//                 page says a move was done and where a failed drop is said,
-//                 as an alert; made when the page has none.
-// The server decides where a card belongs, so after a drop that worked the
-// page loads again (with ?moved=<task>, as a pick form's redirect does): the
-// keyboard lands on the moved card (the #card-<task> fragment) and the
-// status region says "Moved <task> to <place>". One that failed says so and
-// leaves the page as it is.
-// The agenda's convenience, only when the page has the piece: the day's
-// title opens the browser's date picker (a date picked there goes to that
-// day at once). A date typed into the field, or stepped with the arrow keys,
-// goes when the typing ends: on Enter (the form's hidden submit button), or
-// when focus leaves the form, not on each keystroke, since Chrome reports a
-// change after every digit of a year ("0002", "0020", ...). Only a complete
-// date with a four-digit year from 1970 counts. Without script the date is a
-// plain field with a hidden submit button. (The Not scheduled column folds
-// with a link, ?side=off: the server draws it.)
+//   [data-post]   the board's root; the URL a drop is POSTed to (task_id, target).
+//                 The script adds .can-drag: grab cursor and dashed drop targets.
+//   [data-task]   a draggable card (the task's id); the card's own id is
+//                 card-<task>, what a link (#card-7) or a focus lands on.
+//   [data-target] a drop zone; what is POSTed as `target`.
+//   .dragging     on the card while dragged; .over on the zone above it.
+//   .board-notes  (optional, a role=status region in the root) where a done move
+//                 and a failed drop (as an alert) are said; made if missing.
+// The server decides where a card belongs, so after a good drop the page reloads
+// (?moved=<task>, as a pick form's redirect): the keyboard lands on #card-<task>
+// and the status says "Moved <task> to <place>". A failed drop says so and stays.
+// Agenda extra, only when the page has the pieces: the day title opens the date
+// picker; a typed or stepped date goes on Enter or when focus leaves the form, not per
+// keystroke (Chrome reports a change after every digit of a year); a year from
+// 1970 counts. Without script the date is a plain field with a hidden submit button.
 (function () {
   var input = document.getElementById("day-input");
   var label = document.querySelector(".day-label");
@@ -71,9 +58,7 @@
     card.setAttribute("draggable", "true");
   });
 
-  // The page says a move was done ("Moved Task to Plan") in the status region.
-  // A live region reads a change, not what was there when the page loaded, so
-  // the note is written again once the page is up.
+  // A live region reads a change, not what was there on load: write the note again once the page is up.
   var notes = board.querySelector(".board-notes");
   if (notes && notes.textContent.trim()) {
     var said = notes.firstElementChild;
@@ -84,24 +69,18 @@
     }, 100);
   }
 
-  // The note is for that one load: leave `moved` out of the URL (a reload
-  // or a copied link does not say it again).
+  // The note is for that one load: drop `moved` from the URL.
   var here = new URL(location.href);
   if (here.searchParams.has("moved")) {
     here.searchParams.delete("moved");
     history.replaceState(null, "", here);
   }
 
-  // The scroll position across a board action. Each pick step (Schedule, Move,
-  // Place, Cancel), each form that posts and each drop leaves the page by a
-  // full load whose URL ends in #card-<task>, and the browser scrolls that card
-  // to the top of the window on every one. So before a board action leaves the
-  // page its scroll is kept in sessionStorage, and the next load of the same
-  // board on the same day (the key: path and ?date=) puts it back, once the
-  // browser has done its own fragment scroll. The #card-<task> hash stays, so
-  // the keyboard still lands on the card: it is focused without scrolling. A
-  // different board or day drops the entry; storage can be blocked, and then
-  // the page loads at the card as it did before.
+  // Scroll across a board action: each pick step, posting form and drop reloads the
+  // page at #card-<task>, which the browser scrolls to the window top. So the scroll is
+  // kept in sessionStorage before leaving and restored on the next load of the same
+  // board and day (key: path and ?date=), after the browser's fragment scroll; the
+  // card is focused without scrolling. Blocked storage just loads at the card.
   var SCROLL = "board-scroll";
 
   function key(url) {
@@ -113,7 +92,6 @@
     try {
       sessionStorage.setItem(SCROLL, JSON.stringify({ key: key(location), y: window.scrollY }));
     } catch (_) {
-      // Storage is blocked or full: the page still works without it.
     }
   }
 
@@ -122,7 +100,6 @@
     saved = JSON.parse(sessionStorage.getItem(SCROLL));
     sessionStorage.removeItem(SCROLL);
   } catch (_) {
-    // Nothing saved, or storage is blocked.
   }
   if (saved && saved.key === key(location)) {
     history.scrollRestoration = "manual";
@@ -138,9 +115,7 @@
     else window.addEventListener("load", restore);
   }
 
-  // A link to a pick step (its #card- fragment or its pick= parameter) or a
-  // form that posts (the pick-here, unschedule and unplace forms, in the board
-  // or the pick bar) is a board action.
+  // A pick-step link or a posting form (pick-here, unschedule, unplace) is a board action.
   document.addEventListener("click", function (e) {
     var a = e.target.closest && e.target.closest("a[href]");
     if (!a) return;
@@ -208,8 +183,7 @@
     fetch(board.dataset.post, { method: "POST", body: body })
       .then(function (r) {
         if (!r.ok) return fail("error " + r.status);
-        // Back to the same page, on the moved card (the keyboard lands on it),
-        // which says it was moved: what a pick form's redirect does too.
+        // Back to the same page on the moved card, as a pick form's redirect does.
         var next = new URL(location.href);
         next.searchParams.set("moved", task);
         next.hash = "card-" + task;

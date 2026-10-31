@@ -1,15 +1,8 @@
-//! The shared design as single-feature components, one file per feature, each
-//! with its rules in a `.css` file next to it (the frame wrapper is `.page`). A page
-//! assembles them; see `doc/web_components.md` for the API of each and the
-//! pages that use it.
-//!
-//! `/style.css` serves `base.css` (tokens, themes, links, focus) followed by every
-//! component sheet and the report's `org.css`, concatenated at compile time:
-//! one cached request, linked in the document's `<head>` (`web/layout.rs`).
+//! Shared components, one file per feature with its rules in a `.css` next to
+//! it; see `doc/web_components.md`. `/style.css` is `base.css`, every component
+//! sheet and `org.css`, concatenated at compile time (`web/layout.rs` links it).
 
-// A component and its module share a name (`frame::frame`), so a component
-// is imported from its module; only the plain types and functions are
-// re-exported here.
+// A component shares its module's name (`frame::frame`): import it from the module.
 pub mod board_root;
 pub mod breadcrumb;
 pub mod button;
@@ -64,6 +57,7 @@ use topcoat::{
     router::{RouterBuilder, response::Response, route},
 };
 
+// Order is the cascade: later sheets win, `org.css` last.
 static CSS: Asset = Asset::css(concat!(
     include_str!("../base.css"),
     include_str!("frame.css"),
@@ -108,7 +102,6 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("modal.css"),
     include_str!("search.css"),
     include_str!("combobox.css"),
-    // last, as when it was its own sheet linked after this one
     include_str!("../org.css"),
 ));
 

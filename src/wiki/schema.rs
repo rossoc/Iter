@@ -1,6 +1,4 @@
-//! The instructions an agent gets (`iter wiki schema`): the text in
-//! `schema.md`, with the parts that come from the ontology filled in, so they
-//! cannot drift from what `check` enforces.
+//! The instructions an agent gets (`iter wiki schema`): `schema.md` with the ontology-derived parts filled in, so they cannot drift from `check`.
 
 use super::ontology::{NS, Ontology, ns};
 use oxigraph::model::TermRef;

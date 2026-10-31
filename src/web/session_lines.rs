@@ -6,7 +6,6 @@ use crate::models::{START_TIME_FMT, Session, end_text};
 use crate::reporting::{SessionRow, non_empty};
 use chrono::NaiveDateTime;
 
-/// The lines of an Organization report's task: the report's own strings.
 pub fn report_lines(rows: &[SessionRow]) -> Vec<SessionLine<'_>> {
     rows.iter()
         .map(|r| SessionLine {
@@ -29,7 +28,6 @@ pub fn report_lines(rows: &[SessionRow]) -> Vec<SessionLine<'_>> {
 /// `T` the attribute wants between the date and the time.
 const DATETIME_ATTR: &str = "%Y-%m-%dT%H:%M";
 
-/// A moment with its machine-readable form.
 fn timed(t: NaiveDateTime, text: String) -> Moment<'static> {
     Moment {
         text: text.into(),
@@ -37,9 +35,7 @@ fn timed(t: NaiveDateTime, text: String) -> Moment<'static> {
     }
 }
 
-/// The lines of a task's sessions, in the order given. The start is dated;
-/// an end on the same day is just the time. An open session is measured
-/// against `now`.
+/// An end on the same day as the start is just the time; an open session is measured against `now`.
 pub fn task_lines(sessions: &[Session], now: NaiveDateTime) -> Vec<SessionLine<'_>> {
     sessions
         .iter()

@@ -1,12 +1,6 @@
-// The report tab's script: applies the From/To dates as they change, and wires
-// the Share form (copying in the page where the clipboard is available).
-//
-// Dates: a date picked from the calendar applies at once. A typed one applies
-// on Enter (the form's Apply button) or when focus leaves both fields, not on
-// each keystroke, since Chrome reports a change after every digit of a year
-// ("0002", "0020", ...). Only a four-digit year from 1970 counts as typed.
-// Share: a copy writes the chosen format (`data-worklog`, `data-status`) and says so
-// for two seconds; a push is posted.
+// Report tab: applies the From/To dates as they change and wires the Share form.
+// A typed date applies on Enter or when focus leaves both fields, not per keystroke
+// (Chrome reports a change after every digit of a year); only a year from 1970 counts.
 (function () {
   var form = document.querySelector(".range");
   if (!form) return;
@@ -19,7 +13,7 @@
     if (!typing && ready(e.target.value)) go();
   });
   // Over the calendar icon a click picks the whole date, so the whole date
-  // lights up (.whole, base.css). The icon is the last 14px before the right
+  // lights up (.whole, ui/control.css). The icon is the last 14px before the right
   // padding and border; 8px of its left margin count too.
   form.querySelectorAll("input[type=date]").forEach(function (input) {
     input.addEventListener("mousemove", function (e) {
@@ -37,11 +31,9 @@
   });
 })();
 
-// The Share pop-up (org_share.rs `share_modal`): the way to share picks which
-// settings and which button show (without script, both ways show with their
-// own button); a copy is written to the clipboard here and says so for two
-// seconds, a push is posted. Without a clipboard the form posts and the
-// server answers with the text.
+// The Share pop-up (org_share.rs `share_modal`): picks which settings and button show
+// (both show without script); a copy goes to the clipboard, a push is posted. Without a
+// clipboard the form posts and the server answers with the text.
 (function () {
   var form = document.querySelector("form.sharing");
   if (!form) return;
@@ -54,9 +46,8 @@
     var checked = form.querySelector("input[name=mode]:checked");
     return checked ? checked.value : "copy";
   };
-  // a hidden control is disabled too, so only the chosen way is submitted --
-  // buttons included: a hidden Copy button that stayed enabled would be the
-  // form's default, and Enter in a push field would copy instead of pushing
+  // a hidden control is disabled too, so only the chosen way is submitted: a hidden but
+  // enabled Copy button would be the form's default and Enter in a push field would copy
   var sync = function () {
     var now = mode();
     form.querySelectorAll("[data-for]").forEach(function (el) {

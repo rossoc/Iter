@@ -1,21 +1,10 @@
-//! The prompts that tell an agent what to do with a task: plan it, work on it,
-//! fix it, investigate it. Each is a markdown template with `{{placeholders}}`
-//! filled from the task.
-//!
-//! The templates are data, and are called instructions (`instruction.rs`). The
-//! built-in ones can be replaced, so a task that needs another structure of
-//! plan, or a project with its own way of working, says so in a file: the
-//! first of `tasks/<id>/instructions/<kind>.md`,
-//! `<project notes>/instructions/<kind>.md`,
-//! `<organization notes>/instructions/<kind>.md` and
-//! `<iter's config folder>/instructions/<kind>.md` that exists is used, the
-//! built-in one if none does.
+//! Prompts that tell an agent what to do with a task: templates (`instruction.rs`) filled from the task.
+//! A template is overridden by the first `instructions/<kind>.md` in the task, project notes, organization notes or config folder.
 
 use crate::agent::error::{AgentError, AgentResult};
 use std::path::{Path, PathBuf};
 
-/// What an agent is asked to do. Saved in a run's record, where the names
-/// older versions wrote (`execute`, `investigate`) still read.
+/// What an agent is asked to do; saved in a run's record.
 #[derive(
     Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum, serde::Serialize, serde::Deserialize,
 )]
@@ -57,7 +46,6 @@ impl Kind {
         }
     }
 
-    /// Whether the work changes code, and so happens in the task's worktree.
     pub fn changes_code(self) -> bool {
         matches!(self, Kind::Develop | Kind::Test | Kind::Fix)
     }
@@ -73,10 +61,7 @@ impl Kind {
     }
 }
 
-/// `word` as one shell word: a backslash before every character the shell
-/// would read as something else (`app/Fix\ it`). A task is named
-/// `<project>/<task>` and a task name may have spaces, and `{{task}}` is what
-/// goes after `iter task ...` in a command.
+/// `word` as one shell word, backslash-escaped (`app/Fix\ it`): task names may contain spaces.
 pub fn shell_word(word: &str) -> String {
     if word.is_empty() {
         return "''".to_string();
@@ -97,9 +82,7 @@ pub fn shell_word(word: &str) -> String {
     out
 }
 
-/// What a template can say about a task.
 pub struct Context<'a> {
-    /// `<project>/<task>`: what the `iter task ...` commands take.
     pub task: &'a str,
     pub task_name: &'a str,
     pub task_description: &'a str,
@@ -107,13 +90,10 @@ pub struct Context<'a> {
     pub task_dir: &'a Path,
     pub project_name: &'a str,
     pub project_path: &'a str,
-    /// The task's worktree, when it has one.
     pub worktree: Option<&'a str>,
     pub plan_path: &'a Path,
-    /// The plan's text, when there is one.
     pub plan: Option<&'a str>,
-    /// What the project knows that bears on the task (any text; empty when
-    /// nothing was found or nothing was asked).
+    /// Wiki onboarding text; empty when none.
     pub onboarding: &'a str,
 }
 
@@ -156,9 +136,7 @@ fn value(ctx: &Context<'_>, key: &str, kind: Kind) -> Option<String> {
     })
 }
 
-/// `template` with its `{{placeholders}}` filled. An unknown one is an error
-/// naming it and the known ones: a typo in a template should not reach an
-/// agent as a literal `{{taks.name}}`.
+/// `template` with its placeholders filled; an unknown one is an error, not a literal `{{taks.name}}` in the prompt.
 pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> AgentResult<String> {
     let (mut out, mut rest) = (String::with_capacity(template.len()), template);
     while let Some(open) = rest.find("{{") {
@@ -180,9 +158,7 @@ pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> AgentResult<Stri
     Ok(out)
 }
 
-/// The template to use for `kind`: the prompt of the first
-/// `instructions/<kind>.md` in `dirs` (nearest first), with where it came
-/// from, or of the built-in one. The front matter is not part of it.
+/// The template for `kind`: the first `instructions/<kind>.md` in `dirs` (nearest first) and where it came from, else the built-in.
 pub fn template(kind: Kind, dirs: &[PathBuf]) -> (Option<PathBuf>, String) {
     for dir in dirs {
         let path = crate::agent::instruction::file(dir, kind.key());
@@ -247,7 +223,6 @@ mod tests {
             &ctx(Some("## Goal\nx"), "wiki/a: a thing", dir),
         )
         .unwrap();
-        // no worktree yet: the project's own folder
         assert_eq!(
             text,
             "app/Fix\\ it|7|/notes/app/tasks/7|/code/app|## Goal\nx|wiki/a: a thing"
@@ -277,7 +252,6 @@ mod tests {
             e.starts_with("unknown placeholder {{taks.name}} (known: task, "),
             "{e}"
         );
-        // an unclosed brace pair is just text
         assert_eq!(
             render("a {{ b", Kind::Plan, &ctx(None, "", dir)).unwrap(),
             "a {{ b"
@@ -298,7 +272,6 @@ mod tests {
             (from, text.as_str()),
             (Some(task.join("instructions/plan.md")), "from the task")
         );
-        // the task has no `fix` override, the project neither: built in
         let (from, text) = template(Kind::Fix, &dirs);
         assert_eq!(from, None);
         assert!(text.starts_with("You are fixing a defect"), "{text}");
@@ -306,8 +279,7 @@ mod tests {
         assert_eq!(template(Kind::Plan, &dirs).1, "from the project");
     }
 
-    /// A run written by an older version still reads: the kinds were `execute`
-    /// and `investigate` before they were `develop` and `check`.
+    /// Legacy names `execute` and `investigate` still read.
     #[test]
     fn a_kind_reads_the_names_older_runs_were_saved_with() {
         let read = |word: &str| serde_yaml::from_str::<Kind>(word).unwrap();

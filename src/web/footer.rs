@@ -1,6 +1,4 @@
-//! The footer of every page (`ui/site_footer.rs`): loads what it shows and
-//! renders it after the page, from the layout. A footer that cannot be built
-//! (no database, a read error) is left out: it must never break a page.
+//! The footer of every page (`ui/site_footer.rs`); one that cannot be built is left out, never breaking a page.
 
 use super::open_db;
 use super::ui::site_footer::{FooterData, FooterGroup, FooterLink, site_footer};
@@ -12,10 +10,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// How many projects of one list (an organization's, the loose ones) and how
-/// many boards the footer shows before a "N more…" link. The footer is on
-/// every page, so what it reads must stay bounded however large the database
-/// grows.
+/// Bounded: the footer is on every page, so what it reads must stay small however large the database.
 pub const FOOTER_LIMIT: usize = 8;
 
 fn project_link(p: &Project) -> FooterLink {
@@ -25,9 +20,6 @@ fn project_link(p: &Project) -> FooterLink {
     }
 }
 
-/// What the footer shows: the first `FOOTER_LIMIT` projects of each
-/// organization, the first of the loose projects and of the boards, each
-/// list with its total. Three queries, however many there are.
 pub fn load(db: &Db) -> crate::error::Result<FooterData> {
     let orgs = db
         .organizations_with_projects(FOOTER_LIMIT)?
@@ -62,7 +54,6 @@ pub fn load(db: &Db) -> crate::error::Result<FooterData> {
     })
 }
 
-/// The footer of a page, or nothing when it cannot be loaded.
 #[component]
 pub async fn site_footer_for() -> Result<impl View> {
     let data = open_db().ok().and_then(|db| load(&db).ok());

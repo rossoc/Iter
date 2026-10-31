@@ -1,9 +1,4 @@
-//! New task: the pop-up over a Tasks tab (`?new=task`, see `ui/modal.rs`)
-//! that holds the whole task form, and its write, `POST /task/new`. The
-//! first row of the task table opens it. Done, the browser lands back on the
-//! list it came from; refused, that page comes back with the pop-up open, the
-//! error and what was typed. The write is `edit::create_to`, the twin of the
-//! edit pages' `edit::submit`.
+//! New task: the pop-up over a Tasks tab (`?new=task`, `ui/modal.rs`) and its write, `POST /task/new`.
 
 use super::Id;
 use super::edit::create_to;
@@ -41,8 +36,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(old_form).page(save)
 }
 
-/// The Tasks tab a New task pop-up sits on: a project's, or an
-/// organization's (the pop-up then asks for the project).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TaskHome {
     Project(i64),
@@ -57,20 +50,15 @@ impl TaskHome {
         }
     }
 
-    /// The list with the search `q`: where a created task lands, and where
-    /// the pop-up closes to.
     pub fn list_url(self, q: Option<&str>) -> String {
         tasks_list_url(&self.base(), q)
     }
 
-    /// The list with the pop-up open: where the table's first row leads.
     pub fn open_url(self, q: Option<&str>) -> String {
         page_url(&self.list_url(q), &[("new", Some("task"))])
     }
 }
 
-/// The task a new task in `project` starts as: the project's branch prefix
-/// and the configured status.
 fn template(project: &Project) -> Task {
     Task::template(
         project.id(),
@@ -79,14 +67,9 @@ fn template(project: &Project) -> Task {
     )
 }
 
-/// What the pop-up shows: where it sits (and the list's search `q`, kept
-/// through the round trip), the projects to choose from (an organization's
-/// list; none on a project's), the chosen project, the form's values and
-/// the refusal of the last try, if any.
 pub struct TaskCreate {
     pub home: TaskHome,
     pub q: Option<String>,
-    /// `(id, name)`; empty when `home` is a project.
     pub projects: Vec<(String, String)>,
     pub project: String,
     pub values: TaskForm,
@@ -94,8 +77,6 @@ pub struct TaskCreate {
 }
 
 impl TaskCreate {
-    /// The pop-up of project `project`'s list, as it starts out: the
-    /// project's template.
     pub fn in_project(project: &Project, q: Option<&str>) -> TaskCreate {
         TaskCreate {
             home: TaskHome::Project(project.id()),
@@ -107,9 +88,7 @@ impl TaskCreate {
         }
     }
 
-    /// The pop-up of organization `org`'s list, asking for one of
-    /// `projects` (the first chosen); none to choose from, no pop-up. The
-    /// branch prefix starts empty: it then follows the chosen project.
+    /// The branch prefix starts empty: it then follows the chosen project.
     pub fn in_org(org: i64, projects: &[Project], q: Option<&str>) -> Option<TaskCreate> {
         let first = projects.first()?;
         let mut values = TaskForm::of(&template(first), "");
@@ -132,8 +111,6 @@ impl TaskCreate {
     }
 }
 
-/// The pop-up: the project (an organization's list), Name, Description and
-/// the rest of the task's fields, the way out back to the list.
 #[component]
 pub async fn task_modal(create: &TaskCreate) -> Result<impl View> {
     let error = create.error.as_ref();
@@ -164,9 +141,6 @@ pub async fn task_modal(create: &TaskCreate) -> Result<impl View> {
     })
 }
 
-/// What the pop-up posts: the task's form, the project, and where the list
-/// is (`org`: an organization's, else the project's own) with its search
-/// (`q`), so the browser lands back on it.
 #[derive(Deserialize)]
 struct NewTask {
     project: String,
@@ -179,8 +153,7 @@ struct NewTask {
 impl NewTask {
     const PROJECT: &'static str = "project";
 
-    /// The list the task was added from, built from ids (never from text
-    /// the request carries, besides the search).
+    /// Built from ids, never from text the request carries (besides the search).
     fn home(&self, project: i64) -> TaskHome {
         match self.org.as_deref().and_then(|o| o.trim().parse().ok()) {
             Some(org) => TaskHome::Org(org),
@@ -189,15 +162,12 @@ impl NewTask {
     }
 }
 
-/// The old full-page form: the pop-up on the project's list now.
 #[page("/project/{id}/task/new")]
 async fn old_form(cx: &Cx) -> Result<()> {
     let id = *path_param::<Id>(cx)?;
     Err(see_other(TaskHome::Project(id).open_url(Some(DEFAULT))).into())
 }
 
-/// `POST /task/new`: the task is built from the project's template and the
-/// form, as the edit form builds one (the same validation).
 #[page(POST "/task/new")]
 async fn save(Form(new): Form<NewTask>) -> Result<impl View> {
     let id: i64 = new
@@ -221,7 +191,6 @@ async fn save(Form(new): Form<NewTask>) -> Result<impl View> {
         |_, ()| Ok(()),
         |_| home.list_url(q.as_deref()),
     )?;
-    // Refused: the list again, with the pop-up showing what was typed.
     let now = now();
     let (org_page, project_page) = match home {
         TaskHome::Org(org) => (
@@ -299,8 +268,6 @@ mod tests {
         );
     }
 
-    /// An organization's pop-up asks for the project, starting on the first;
-    /// with no projects there is none.
     #[test]
     fn an_organization_pop_up_chooses_among_its_projects() {
         assert!(TaskCreate::in_org(3, &[], None).is_none());

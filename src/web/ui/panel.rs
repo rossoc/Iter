@@ -1,6 +1,4 @@
-//! A titled aside of label / value rows: `panel` draws the [`Row`]s it is
-//! given. What the rows say is the caller's business (see
-//! `web/settings_panel.rs`, `web/task_panel.rs`).
+//! A titled aside of label / value rows; the caller decides what the rows say.
 
 use super::status::status;
 use super::tag_chips::{Chip, tag_chips};
@@ -11,15 +9,10 @@ use topcoat::{
     view::{View, component, view},
 };
 
-/// One row: its label, then its value.
 pub enum Row<'a> {
-    /// Text in mono, "Not set" when empty.
     Text(&'a str, String),
-    /// Yes or no.
     Flag(&'a str, bool),
-    /// Chips, "Not set" when there are none.
     Chips(&'a str, Vec<Chip<'a>>),
-    /// A task's status.
     Status(&'a str, TaskStatus),
 }
 
@@ -33,7 +26,6 @@ impl Row<'_> {
         }
     }
 
-    /// A text or chips row with nothing in it.
     fn is_unset(&self) -> bool {
         match self {
             Row::Text(_, value) => value.is_empty(),
@@ -43,7 +35,6 @@ impl Row<'_> {
     }
 }
 
-/// `id` is the heading's id, unique on the page (`aria-labelledby`).
 #[component]
 pub async fn panel(id: &str, title: &str, rows: &[Row<'_>]) -> Result<impl View> {
     Ok(view! {
@@ -75,7 +66,6 @@ async fn row(r: &Row<'_>) -> Result<impl View> {
     })
 }
 
-/// The value of a yes/no row.
 #[component]
 async fn flag(on: bool) -> Result<impl View> {
     Ok(view! {
@@ -86,7 +76,7 @@ async fn flag(on: bool) -> Result<impl View> {
     })
 }
 
-/// The value of a row with nothing to show: "—", read as "Not set".
+/// The value of an empty row: "—", read as "Not set".
 #[component]
 async fn unset() -> Result<impl View> {
     Ok(view! {
