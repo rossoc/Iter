@@ -291,10 +291,6 @@ pub const NEW_TASK: &str = "/task/new";
 /// The folder browser the project create row opens.
 pub const FOLDERS: &str = "/folders";
 
-/// Where New project's Choose button posts: the system's folder picker
-/// (`folder_picker.rs`).
-pub const PICK_FOLDER: &str = "/folders/pick";
-
 /// The folder browser at `path`, for the list `home` (a `Home` token); `name`
 /// is what was typed in the create row, `hidden` shows the folders that start
 /// with a dot.
@@ -360,7 +356,10 @@ mod tests {
         assert_eq!(agents_url(), "/agents");
         assert_eq!(run_action_url(5, 2, "cancel"), "/task/5/runs/2/cancel");
         assert_eq!(wiki_tab_url("/task/5"), "/task/5?tab=wiki");
-        assert_eq!(wiki_action_url(5, WikiAction::Accept), "/task/5/wiki/accept");
+        assert_eq!(
+            wiki_action_url(5, WikiAction::Accept),
+            "/task/5/wiki/accept"
+        );
         for action in [WikiAction::Accept, WikiAction::Revert, WikiAction::Ingest] {
             assert_eq!(action.as_str().parse(), Ok(action));
         }

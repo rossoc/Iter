@@ -5,6 +5,7 @@
 //! server only lists directory names; it is the user's own machine (the
 //! server answers loopback only).
 
+use super::folder_picker::{Picked, pick};
 use super::project_new::Home;
 use super::project_rows::tilde;
 use super::ui::field::field;
@@ -17,12 +18,49 @@ use std::path::{Component, Path, PathBuf};
 use topcoat::{
     Result,
     context::Cx,
-    router::{RouterBuilder, error::bad_request, page, query_params},
+    router::{
+        RouterBuilder,
+        content::Form,
+        error::bad_request,
+        page, query_params,
+        response::{IntoResponse, Response},
+        route,
+    },
     view::{View, component, view},
 };
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.page(browse)
+    builder.page(browse).route(pick_folder)
+}
+
+/// What the folder button of a `path_field` posts: the path typed so far.
+#[derive(serde::Deserialize)]
+struct PickStart {
+    #[serde(default)]
+    start: String,
+}
+
+/// `POST /folders/pick`: opens the system's folder chooser at the nearest
+/// existing folder of `start` (else the home folder) and answers JSON:
+/// `{"path": ...}` for a chosen folder, `{}` when cancelled, and
+/// `{"unavailable": true}` when the system has no chooser. `path_pick.js`
+/// calls it; the guard (`guard.rs`) lets only same-origin posts through.
+#[route(POST "/folders/pick")]
+async fn pick_folder(cx: &Cx, Form(posted): Form<PickStart>) -> Result<Response> {
+    let start = start_folder(&posted.start, &expand_home("~"));
+    let body = match pick(&start) {
+        Picked::Folder(folder) => serde_json::json!({ "path": folder.to_string_lossy() }),
+        Picked::Cancelled => serde_json::json!({}),
+        Picked::Unavailable => serde_json::json!({ "unavailable": true }),
+    };
+    (
+        [(
+            topcoat::router::header::CONTENT_TYPE,
+            topcoat::router::HeaderValue::from_static("application/json"),
+        )],
+        body.to_string(),
+    )
+        .into_response(cx)
 }
 
 #[query_params(error = bad_request)]
