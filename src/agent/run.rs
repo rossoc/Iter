@@ -73,6 +73,29 @@ impl Harness {
     /// The program and the arguments that run `job` once, headless, to the
     /// end.
     pub fn command(self, job: &Invocation) -> (&'static str, Vec<String>) {
+        self.backend().command(job)
+    }
+
+    fn backend(self) -> &'static dyn AgentBackend {
+        match self {
+            Harness::Claude => &ClaudeCode,
+        }
+    }
+}
+
+/// How one agent program is driven: which binary, and the arguments that
+/// make it run an [`Invocation`] headless. [`Harness`] is the closed set of
+/// them and dispatches here, so adding a program means a type implementing
+/// this and an arm in [`Harness::backend`].
+pub trait AgentBackend {
+    fn command(&self, job: &Invocation) -> (&'static str, Vec<String>);
+}
+
+/// Anthropic's `claude` CLI.
+struct ClaudeCode;
+
+impl AgentBackend for ClaudeCode {
+    fn command(&self, job: &Invocation) -> (&'static str, Vec<String>) {
         let Invocation {
             prompt,
             model,
@@ -81,34 +104,30 @@ impl Harness {
             allowed,
             extra,
         } = *job;
-        match self {
-            Harness::Claude => {
-                let mut args = vec!["-p".to_string(), prompt.to_string()];
-                if !model.is_empty() {
-                    args.push("--model".into());
-                    args.push(model.into());
-                }
-                if !effort.is_empty() {
-                    args.push("--effort".into());
-                    args.push(effort.into());
-                }
-                for dir in dirs {
-                    args.push("--add-dir".into());
-                    args.push(dir.display().to_string());
-                }
-                // headless there is nobody to ask: edits are allowed, and so
-                // are the commands the prompts tell the agent to run; the
-                // rest is the harness's own settings
-                args.push("--permission-mode".into());
-                args.push("acceptEdits".into());
-                if !allowed.is_empty() {
-                    args.push("--allowedTools".into());
-                    args.extend(allowed.iter().cloned());
-                }
-                args.extend(extra.iter().cloned());
-                ("claude", args)
-            }
+        let mut args = vec!["-p".to_string(), prompt.to_string()];
+        if !model.is_empty() {
+            args.push("--model".into());
+            args.push(model.into());
         }
+        if !effort.is_empty() {
+            args.push("--effort".into());
+            args.push(effort.into());
+        }
+        for dir in dirs {
+            args.push("--add-dir".into());
+            args.push(dir.display().to_string());
+        }
+        // headless there is nobody to ask: edits are allowed, and so
+        // are the commands the prompts tell the agent to run; the
+        // rest is the harness's own settings
+        args.push("--permission-mode".into());
+        args.push("acceptEdits".into());
+        if !allowed.is_empty() {
+            args.push("--allowedTools".into());
+            args.extend(allowed.iter().cloned());
+        }
+        args.extend(extra.iter().cloned());
+        ("claude", args)
     }
 }
 
@@ -312,6 +331,32 @@ impl TaskDir {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_harness_dispatches_to_its_backend() {
+        let dirs = [Path::new("/tasks/7")];
+        let allowed = ["Bash(git:*)".to_string()];
+        let extra = ["--verbose".to_string()];
+        let job = Invocation {
+            prompt: "do it",
+            model: "opus",
+            effort: "",
+            dirs: &dirs,
+            allowed: &allowed,
+            extra: &extra,
+        };
+        let (program, args) = Harness::Claude.command(&job);
+        assert_eq!(program, "claude");
+        assert_eq!(
+            args,
+            [
+                "-p", "do it", "--model", "opus", "--add-dir", "/tasks/7",
+                "--permission-mode", "acceptEdits", "--allowedTools", "Bash(git:*)",
+                "--verbose",
+            ]
+        );
+        assert_eq!(ClaudeCode.command(&job), (program, args));
+    }
 
     fn dir(name: &str) -> TaskDir {
         let root = std::env::temp_dir().join(format!("iter-run-{}-{name}", std::process::id()));
