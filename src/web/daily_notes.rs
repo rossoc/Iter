@@ -145,8 +145,10 @@ fn months<'a>(base: &str, notes: &'a [Note]) -> Vec<Month<'a>> {
 #[component]
 pub async fn notes_section(base: &str, notes: &NotesTab) -> Result<impl View> {
     let months = months(base, &notes.notes);
+    let today = notes_today_url(base);
+    let set_path = edit_url(base);
     Ok(view! {
-        notes_tab(months: &months, configured: notes.dir.is_some(), today: notes_today_url(base), set_path: edit_url(base))
+        notes_tab(months: &months, configured: notes.dir.is_some(), today: &today, set_path: &set_path)
     })
 }
 

@@ -1,39 +1,30 @@
-/* project rows highlight like the task table's rows, with the same inset.
-   A row is the name, then the path on the same line. The name wraps when it
-   must (it breaks anywhere); the path never wraps: when it does not fit, its
-   start is cut with an ellipsis (a right-to-left box, the path isolated
-   inside it in its own order), so the last segment always shows. */
-.project-list{list-style:none;margin:0;padding:0;border-bottom:1px solid var(--line)}
-.project-list li{display:flex;align-items:baseline;gap:12px;padding:10px 14px 10px 4px;border-top:1px solid var(--line);
-  transition:background var(--fast) var(--ease-out)}
-.project-list li:hover{background:var(--bg-2)}
-.project-list a{flex:0 1 auto;min-width:0;max-width:70%;overflow-wrap:anywhere}
-/* the last segment is what tells projects apart: strong; the directories
-   before it stay muted */
-.path{flex:1 1 0;min-width:3rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left;
+/* projects: rows of the table (table.css), the name then the path on the same
+   line. The name wraps when it must (it breaks anywhere); the path never
+   wraps: when it does not fit, its start is cut with an ellipsis (a
+   right-to-left box, the path isolated inside it in its own order), so the
+   last segment always shows. */
+.projects td:first-child{white-space:nowrap}
+.projects td.path-cell{width:100%;max-width:0;padding-left:0}  /* takes what the name leaves, and cuts */
+.path{display:block;min-width:3rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left;
   font:.75rem var(--mono);color:var(--muted)}
 .path-in{direction:ltr;unicode-bidi:isolate}
 .path .leaf{color:var(--fg);font-weight:600}
-/* with a mouse, the path shows only on the row under it (or holding focus);
-   its space stays reserved, so nothing moves. Touch screens always show it. */
+/* the last segment is what tells projects apart: strong; the directories
+   before it stay muted. With a mouse, the path shows only on the row under
+   it (or holding focus); its space stays reserved, so nothing moves. Touch
+   screens always show it. */
 @media (hover:hover){
-  .project-list .path{opacity:0;transition:opacity var(--fast) var(--ease-out)}
+  .projects .path,.project-list .path{opacity:0;transition:opacity var(--fast) var(--ease-out)}
+  .projects tr:hover .path,.projects tr:focus-within .path,
   .project-list li:hover .path,.project-list li:focus-within .path{opacity:1}
 }
-/* inside a card: no highlight, dashed separators, tighter */
-.project-list.compact{border-bottom:0}
-.project-list.compact li{padding:5px 0;border-top:1px dashed var(--line)}
-.project-list.compact li:first-child{border-top:0}
-.project-list.compact li:hover{background:none}
-.project-list.compact a{font-size:.9375rem}
-/* the row that opens New project: the whole row is the link (the ::after
-   covers it). Its background looks hovered while no other row is (as the New task row) */
-.project-list li.add{position:relative;border-top:0;border-bottom:1px dashed var(--line-2);padding:0}
-.project-list .add-link{display:flex;flex-direction:row;align-items:center;gap:8px;padding:10px 14px 10px 4px;color:var(--fg);font-weight:500;
-  transition:color var(--fast) var(--ease-out)}
-.project-list .add-link::after{content:"";position:absolute;inset:0}
-.project-list li.add:hover .add-link{color:var(--accent)}
-.project-list:not(:has(li:not(.add):hover)) li.add{background:var(--bg-2)}
-.project-list .add-link:focus-visible{outline:none}
-.project-list li.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
-.project-list li.add + li{border-top:0}
+@media (max-width:600px){
+  .projects td:first-child{white-space:normal}
+  .projects td.path-cell{flex:1 1 0;width:auto;max-width:none;min-width:0}
+}
+/* inside a card: a plain list, no highlight, dashed separators, tighter */
+.project-list{list-style:none;margin:0;padding:0}
+.project-list li{display:flex;align-items:baseline;gap:12px;padding:5px 0;border-top:1px dashed var(--line)}
+.project-list li:first-child{border-top:0}
+.project-list a{flex:0 1 auto;min-width:0;max-width:70%;overflow-wrap:anywhere;font-size:.9375rem}
+.project-list .path{flex:1 1 0}

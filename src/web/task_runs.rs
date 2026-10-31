@@ -13,11 +13,10 @@
 use super::errors::refused;
 use super::sections::TabQuery;
 use super::task_agent::{Open, step_panel};
-use super::ui::button::add_link;
 use super::ui::empty_line::empty_line;
 use super::ui::field::{field, select, textarea};
 use super::ui::modal::modal;
-use super::ui::table::{cell, col_head};
+use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::{PLAY, STOP, X, icon};
 use super::url::{agent_tab_url, agent_url, run_action_url, run_post_url, runs_url, task_url};
 use super::{Id, open_db};
@@ -229,7 +228,7 @@ pub(super) async fn state_pill(run: &RunRecord) -> Result<impl View> {
 async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl View> {
     let shown = run.shown_status();
     Ok(view! {
-        <tr role="row" if current { class="current" }>
+        row(class: if current { "current" } else { "" },
             cell(
                 <a class="u" href=(agent_url(task_id, run.n)) if current { aria-current="true" }>
                     "#" (run.n.to_string()) " " (label_of(run.instruction_name()))
@@ -246,7 +245,7 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
                     act(action: run_action_url(task_id, run.n, "cancel"), label: "Stop", svg: STOP)
                 }
             )
-        </tr>
+        )
     })
 }
 
@@ -256,24 +255,12 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
 async fn agents_table(task_id: i64, roster: &Roster) -> Result<impl View> {
     let new = format!("{}&new=agent", agent_tab_url(&task_url(task_id)));
     Ok(view! {
-        <table class="tasks agents" role="table">
-            <caption class="sr">"Agents of this task, the latest first"</caption>
-            <thead role="rowgroup">
-                <tr role="row">
-                    col_head("Agent")
-                    col_head("Status")
-                    col_head(<span class="sr">"Actions"</span>)
-                </tr>
-            </thead>
-            <tbody role="rowgroup">
-                <tr class="add" role="row">
-                    cell(colspan: "3", add_link(href: &new, label: "New agent\u{2026}"))
-                </tr>
-                for run in roster.runs.iter() {
-                    agent_row(task_id: task_id, run: run, current: roster.current == Some(run.n))
-                }
-            </tbody>
-        </table>
+        data_table(caption: "Agents of this task, the latest first", columns: &["Agent", "Status"], actions: true,
+            class: "tasks agents", add: Some(AddRow::link(&new, "New agent\u{2026}")),
+            for run in roster.runs.iter() {
+                agent_row(task_id: task_id, run: run, current: roster.current == Some(run.n))
+            }
+        )
     })
 }
 

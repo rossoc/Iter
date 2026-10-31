@@ -1,8 +1,10 @@
 //! Adding a session by hand to a task (a stretch of work that was not timed):
-//! the form over the Sessions tab (`?tab=sessions&new=session`) and the route
+//! the pop-up over the Sessions tab (`?tab=sessions&new=session`) and the route
 //! that stores it. Sessions the timer records are `iter session`'s.
 
 use super::ui::field::{field, textarea};
+use super::ui::form::form_shell;
+use super::ui::modal::modal;
 use super::url::{sessions_tab_url, task_url};
 use super::{Id, open_db};
 use crate::models::{Session, Task};
@@ -26,26 +28,22 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(add_session)
 }
 
-/// The form: when it began, when it ended, and what was done.
+/// The New session pop-up (`?tab=sessions&new=session`): when it began, when
+/// it ended, and what was done. The first row of the sessions table opens it.
 #[component]
-pub async fn session_form(task_id: i64) -> Result<impl View> {
+pub async fn session_modal(task_id: i64) -> Result<impl View> {
     let close = sessions_tab_url(&task_url(task_id));
     let action = format!("{}/sessions", task_url(task_id));
     Ok(view! {
-        <section class="panel compose" aria-labelledby="session-title">
-            <h2 id="session-title" class="label">"New session"</h2>
-            <form method="post" action=(action.as_str())>
+        modal(id: "session-title", title: "New session", close: close.as_str(),
+            form_shell(action: action.as_str(), error: None, cancel: close.as_str(), submit_label: "Add session",
                 <div class="compose-pick">
-                    field(name: "start", label: "Start", value: "", input_type: "datetime-local", required: true)
+                    field(name: "start", label: "Start", value: "", input_type: "datetime-local", required: true, autofocus: true)
                     field(name: "end", label: "End", value: "", input_type: "datetime-local", required: true)
                 </div>
                 textarea(name: "message", label: "Note", value: "")
-                <div class="compose-actions">
-                    <button class="button primary" type="submit">"Add session"</button>
-                    <a class="button" href=(close.as_str())>"Close"</a>
-                </div>
-            </form>
-        </section>
+            )
+        )
     })
 }
 

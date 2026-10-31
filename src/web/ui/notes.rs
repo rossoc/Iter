@@ -2,7 +2,7 @@
 //! first) and the way between the days of a note's page.
 
 use super::empty_line::empty_line;
-use super::{PLUS, icon};
+use super::table::{AddRow, cell, data_table, row, section_row};
 use topcoat::{
     Result,
     view::{View, component, view},
@@ -24,48 +24,43 @@ pub struct Month<'a> {
     pub items: Vec<NoteItem<'a>>,
 }
 
-/// The Notes tab. `today` is where the button that opens today's note posts;
-/// `set_path` is where to go to name the folder, shown when there is none.
+/// The Notes tab: a headerless `data_table` (see `table.rs`) whose first row
+/// adds today's note and whose rows are grouped under their month. `today`
+/// is where that row posts; `set_path` is where to go to name the folder,
+/// shown when there is none.
 #[component]
 pub async fn notes_tab(
     months: &[Month<'_>],
     configured: bool,
-    #[into] today: String,
-    #[into] set_path: String,
+    today: &str,
+    set_path: &str,
 ) -> Result<impl View> {
+    let add = AddRow::post(today, "Today\u{2019}s note\u{2026}");
     Ok(view! {
         if !configured {
-            empty_line(<span>"No notes folder yet. " <a class="u" href=(set_path.as_str())>"Set a notes path"</a> "."</span>)
+            empty_line(<span>"No notes folder yet. " <a class="u" href=(set_path)>"Set a notes path"</a> "."</span>)
         } else {
-            // the first row, as of any list: it adds today's note (or opens it)
-            <ul class="notes new">
-                <li class="add">
-                    <form method="post" action=(today.as_str())>
-                        <button type="submit" class="add-link">(icon(PLUS)) "Today\u{2019}s note\u{2026}"</button>
-                    </form>
-                </li>
-            </ul>
-            if months.is_empty() {
-                empty_line("No notes yet.")
-            }
-            for month in months.iter() {
-                <section class="notes-month">
-                    <h2 class="label">(month.label.as_str())</h2>
-                    <ul class="notes">
-                        for n in month.items.iter() {
-                            <li>
-                                <a href=(n.href.as_str())>
-                                    <time class="note-day" datetime=(n.iso.as_str())>(n.day.as_str())</time>
-                                    if let Some(title) = n.title {
-                                        <span class="note-title">(title)</span>
-                                    }
-                                    <span class="note-preview">(n.preview.as_str())</span>
+            data_table(caption: "Notes", columns: &["Day", "Note"], class: "notes inline", headed: false,
+                add: Some(add), empty: months.is_empty().then_some("No notes yet."),
+                for month in months.iter() {
+                    section_row(label: month.label.as_str(), span: 2)
+                    for n in month.items.iter() {
+                        row(
+                            cell(class: "note-day",
+                                <a class="cover" href=(n.href.as_str())>
+                                    <time datetime=(n.iso.as_str())>(n.day.as_str())</time>
                                 </a>
-                            </li>
-                        }
-                    </ul>
-                </section>
-            }
+                            )
+                            cell(class: "note-text",
+                                if let Some(title) = n.title {
+                                    <span class="note-title">(title)</span>
+                                }
+                                <span class="note-preview">(n.preview.as_str())</span>
+                            )
+                        )
+                    }
+                }
+            )
         }
     })
 }

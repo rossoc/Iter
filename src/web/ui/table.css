@@ -1,0 +1,53 @@
+/* the table every list is built from (table.rs): the tasks table's look.
+   The variants (.tasks, .sessions, .projects, .notes, .agents, .instructions)
+   add their own cells' rules in their component's sheet. */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:0 14px 10px}  /* look: the shared th rule (base.css) */
+.tbl td{padding:12px 14px;border-bottom:1px solid var(--line)}
+.tbl td:first-child{overflow-wrap:anywhere}  /* a long name wraps, also at 320px */
+.tbl th:first-child,.tbl td:first-child{padding-left:4px}
+.tbl tbody tr{position:relative;transition:background var(--fast) var(--ease-out)}
+.tbl tbody tr:not(.add,.section,.empty):hover{background:var(--bg-2)}
+.tbl .muted{color:var(--muted)}
+/* a link that is the whole row (a note's date): its ::after covers the row */
+.tbl a.cover::after{content:"";position:absolute;inset:0}
+
+/* the row that adds: the whole row is the link or button (the ::after
+   covers it). Its background looks hovered while no other row is (the text
+   stays --fg until the row is really hovered): the first thing to
+   do is add one, until the pointer picks another row */
+.tbl tr.add td{padding:0;border-bottom:1px dashed var(--line-2)}
+.tbl .add-form{margin:0}
+.tbl .add-link{display:flex;width:100%;box-sizing:border-box;align-items:center;gap:8px;padding:12px 14px 12px 4px;
+  border:0;background:none;font:inherit;font-weight:500;color:var(--fg);text-align:left;cursor:pointer;
+  transition:color var(--fast) var(--ease-out)}
+.tbl .add-link::after{content:"";position:absolute;inset:0}
+.tbl tr.add:hover .add-link{color:var(--accent)}
+.tbl:not(:has(tbody tr:not(.add,.section,.empty):hover)) tr.add{background:var(--bg-2)}
+.tbl .add-link:focus-visible{outline:none}
+.tbl tr.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+
+/* a group of rows under a heading (a month) */
+.tbl tr.section td{padding:20px 4px 8px;border-bottom:1px solid var(--line)}
+.tbl tr.add + tr.section td{padding-top:24px}
+/* nothing to show: a quiet line, spaced and indented like a row */
+.tbl tr.empty td{color:var(--muted);border-bottom:0}
+
+/* narrow screens: each row stacks -- the first cell, then the others beside
+   each other (`.inline`: all of them on one line) */
+@media (max-width:600px){
+  .tbl thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .tbl tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+  .tbl td{display:block;padding:0;border:0}
+  .tbl td:first-child{flex-basis:100%;padding:0}
+  .tbl.inline td:first-child{flex-basis:auto}
+  .tbl tbody tr.add,.tbl tbody tr.empty,.tbl tbody tr.section{display:block;padding:0}
+  .tbl tr.section td{padding:16px 0 6px}
+  .tbl tr.empty td{padding:12px 4px}
+}
+
+/* the tasks table */
+.tasks td.project{min-width:0}
+@media (max-width:600px){
+  .tasks td.project{font-size:.875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 0}
+}

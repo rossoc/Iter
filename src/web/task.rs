@@ -10,10 +10,9 @@ use super::session_lines::task_lines;
 use super::task_agent::{self, AgentTab, agent_tab, files_block, plan_block};
 use super::task_panel::task_panel;
 use super::task_runs::compose_modal;
-use super::task_sessions::session_form;
+use super::task_sessions::session_modal;
 use super::task_wiki::{self, WikiTab, wiki_tab};
 use super::ui::breadcrumb::Crumb;
-use super::ui::empty_line::empty_line;
 use super::ui::frame::frame;
 use super::ui::layout::info_columns;
 use super::ui::page_header::{Kicker, page_header};
@@ -124,7 +123,6 @@ async fn sessions_block(
     task: &Task,
     sessions: &[Session],
     now: NaiveDateTime,
-    adding: bool,
 ) -> Result<impl View> {
     let lines = task_lines(sessions, now);
     let caption = format!("Sessions of {}", task.name);
@@ -133,15 +131,7 @@ async fn sessions_block(
         &[("new", Some("session"))],
     );
     Ok(view! {
-        <div class="sessions-block">
-            if adding {
-                session_form(task_id: task.id())
-            }
-            sessions_table(lines: &lines, caption: &caption, show_end: true, add: Some(add))
-            if lines.is_empty() {
-                empty_line("No sessions yet.")
-            }
-        </div>
+        sessions_table(lines: &lines, caption: &caption, show_end: true, add: Some(add), empty: lines.is_empty().then_some("No sessions yet."))
     })
 }
 
@@ -186,9 +176,13 @@ pub async fn screen(
     // page's own crumb is plain text.
     let crumbs = trail(&parents.org, Some(&parents.project), Crumb::label("Task"));
     let parts = [section.title("Task"), task.name.as_str()];
-    let dialog = agent
-        .and_then(|a| a.roster.compose.as_ref())
-        .map(|c| Child::new(view! { compose_modal(task_id: task.id(), c: c) }));
+    let dialog = if add_session && section == TaskSection::Sessions {
+        Some(Child::new(view! { session_modal(task_id: task.id()) }))
+    } else {
+        agent
+            .and_then(|a| a.roster.compose.as_ref())
+            .map(|c| Child::new(view! { compose_modal(task_id: task.id(), c: c) }))
+    };
     Ok(view! {
         frame(
             title: &parts,
@@ -196,7 +190,7 @@ pub async fn screen(
             page_header(title: &task.name, kicker: Kicker::Crumbs(&crumbs))
             tabs(label: "Sections", items: &items)
             if section == TaskSection::Sessions {
-                sessions_block(task: task, sessions: rows, now: now, adding: add_session)
+                sessions_block(task: task, sessions: rows, now: now)
             } else if let (TaskSection::Agent, Some(agent)) = (section, agent) {
                 agent_tab(task_id: task.id(), agent: agent)
             } else if let (TaskSection::Notes, Some(files)) = (section, files) {

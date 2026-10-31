@@ -11,11 +11,22 @@ use topcoat::{
 
 /// The link that adds an entity (a "+" then `label`): the first row of a
 /// list or a table, which opens the New pop-up (`modal.rs`). Its look is the
-/// row's (`project_list.css`, `task_table.css`).
+/// add row's (`table.css`).
 #[component]
 pub async fn add_link(href: &str, label: &str) -> Result<impl View> {
     Ok(view! {
         <a class="add-link" href=(href)>(icon(PLUS)) (label)</a>
+    })
+}
+
+/// The add row's other form: a button that posts to `action` (it adds
+/// today's note, or opens it), looking like [`add_link`].
+#[component]
+pub async fn add_post(action: &str, label: &str) -> Result<impl View> {
+    Ok(view! {
+        <form class="add-form" method="post" action=(action)>
+            <button type="submit" class="add-link">(icon(PLUS)) (label)</button>
+        </form>
     })
 }
 
