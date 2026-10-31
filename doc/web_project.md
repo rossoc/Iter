@@ -100,3 +100,7 @@ The Tasks tab has the same search box and quick-add row as the organization's (s
 ## Update: New task pop-up
 
 The full-page New task form, the "New task" button and the quick-add row are gone: the Tasks table's first row ("+ New task…") opens the New task pop-up over the list (`?tab=tasks&new=task`, `POST /task/new`), with every field the page had. `GET /project/{id}/task/new` redirects to it. See `doc/web_components.md`, "Pop-ups and the "?" syntax help".
+
+## Update: Settings tab
+
+The Edit button is gone. **Settings** is the last tab (after Info, Tasks, Notes, Instructions) and leads to `/project/{id}/edit`, which shows the page header and tab row with Settings current.

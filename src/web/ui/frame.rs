@@ -1,7 +1,7 @@
 //! The frame: the top bar and the centered main pane.
 
 use super::search::{palette, search_button};
-use super::{KANBAN, MARK, SLIDERS, icon};
+use super::{BOT, FILE_TEXT, KANBAN, MARK, SLIDERS, icon};
 use topcoat::{
     Result,
     view::{Child, View, component, view},
@@ -10,8 +10,10 @@ use topcoat::{
 /// The links of the main nav: `(label, href, icon)`. The hrefs are
 /// `web::url::BOARDS` and `SETTINGS` (a test in `web/url.rs` keeps them equal): `ui` does
 /// not know the routes.
-pub const NAV: [(&str, &str, &str); 2] = [
+pub const NAV: [(&str, &str, &str); 4] = [
     ("Board", "/boards", KANBAN),
+    ("Agents", "/agents", BOT),
+    ("Instructions", "/instructions", FILE_TEXT),
     ("Settings", "/settings", SLIDERS),
 ];
 
@@ -52,6 +54,7 @@ pub async fn frame(
     Ok(view! {
         <title>(document_title(title, error))</title>
         <script src="/search.js"></script>
+        <script src="/combobox.js" defer=""></script>
         <div class="page">
             <a class="skip" href="#main" if covered { inert="" }>"Skip to content"</a>
             <header class="bar" if covered { inert="" }>

@@ -9,14 +9,13 @@ use super::daily_notes::{NotesTab, notes_section};
 use super::load::tasks_or_count;
 use super::org_report::{Report, report_view, tab_url};
 use super::project_new::{Home, ProjectCreate, project_modal};
-use super::project_rows::{project_search, projects_section};
-use super::sections::{Section, TabQuery, section_tabs};
+use super::project_rows::{project_search_in, projects_section};
+use super::sections::{Section, TabQuery, section_tabs, settings_tab};
 use super::settings_panel::settings_panel;
 use super::task_new::{TaskCreate, TaskHome, task_modal};
 use super::task_query::TaskQuery;
 use super::task_rows::{group_rows, search};
 use super::text::NO_PROJECTS;
-use super::ui::button::edit_button;
 use super::ui::frame::frame;
 use super::ui::labelled::mono_value;
 use super::ui::layout::info_columns;
@@ -24,7 +23,7 @@ use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::tabs::tabs;
 use super::ui::tasks_tab::tasks_tab;
-use super::url::{edit_url, org_url};
+use super::url::org_url;
 use super::{now, open_db};
 use crate::db::{Db, Table};
 use crate::models::{Configured, Organization, Project, Task};
@@ -122,7 +121,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
         _ => None,
     };
     let project_create = match (section, query.new.as_deref()) {
-        (Section::Info, Some("project")) => {
+        (Section::Projects, Some("project")) => {
             Some(Home::Org(id).create(query.name.as_deref(), query.base_path.as_deref())?)
         }
         _ => None,
@@ -132,14 +131,9 @@ async fn show(cx: &Cx) -> Result<impl View> {
     })
 }
 
+/// The Info tab: description and notes path, the Settings aside.
 #[component]
-async fn info(
-    org: &Organization,
-    projects: &[Project],
-    q: Option<&str>,
-    add: String,
-) -> Result<impl View> {
-    let search = project_search(org_url(org.id()), q);
+async fn info(org: &Organization) -> Result<impl View> {
     Ok(view! {
         info_columns(
             <div>
@@ -147,10 +141,23 @@ async fn info(
                 if !org.notes_path.is_empty() {
                     mono_value(id: "notes-path-title", label: "Notes path", value: &org.notes_path)
                 }
-                projects_section(projects: projects, empty: NO_PROJECTS, search: Some(search), add: Some(add))
             </div>
             settings_panel(s: org.settings())
         )
+    })
+}
+
+/// The Projects tab: the search box, the list, its first row opening New project.
+#[component]
+async fn projects_tab(
+    org: &Organization,
+    projects: &[Project],
+    q: Option<&str>,
+    add: String,
+) -> Result<impl View> {
+    let search = project_search_in(org_url(org.id()), "projects", q);
+    Ok(view! {
+        projects_section(projects: projects, empty: NO_PROJECTS, search: Some(search), add: Some(add), titled: false)
     })
 }
 
@@ -176,13 +183,15 @@ pub async fn screen(
         report,
     } = page;
     let base = org_url(org.id());
-    let items = section_tabs(
+    let mut items = section_tabs(
         &base,
         section,
+        Some(projects.len()),
         *task_count,
         NotesTab::badge(Some(notes)),
         Some(tab_url(&base, today)),
     );
+    items.push(settings_tab(&base, false));
     let parts = [section.title("Organization"), org.name.as_str()];
     let rows = group_rows(tasks);
     // the first row of Tasks opens New task, when there is a project to put it in
@@ -200,16 +209,18 @@ pub async fn screen(
             title: &parts,
             error: refused,
             dialog: dialog,
-            page_header(title: &org.name, kicker: Kicker::Eyebrow("Organization"), edit_button(href: edit_url(&base)))
+            page_header(title: &org.name, kicker: Kicker::Eyebrow("Organization"))
             tabs(label: "Sections", items: &items)
             if section == Section::Tasks {
                 tasks_tab(rows: &rows, caption: "Tasks in this organization", total: *task_count, search: search(&base, q), add: add_task)
             } else if section == Section::Notes {
                 notes_section(base: &base, notes: notes)
+            } else if section == Section::Projects {
+                projects_tab(org: org, projects: projects, q: q, add: add_project)
             } else if let Some(r) = report {
                 report_view(base: &base, report: r, today: today)
             } else {
-                info(org: org, projects: projects, q: q, add: add_project)
+                info(org: org)
             }
         )
     })

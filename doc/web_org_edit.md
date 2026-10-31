@@ -88,3 +88,7 @@ Five reviewers (accessibility, complexity, composability, DRY, design). Each cla
 | Projects before Settings | skipped: keeps the old form's order |
 
 Checked in a browser again (throwaway database via `XDG_CONFIG_HOME`): GET, save with Enter, empty name, unknown project, the error link, Cancel, tab order. axe: 0 violations for the edit page (GET and both errors), Home and Org (Info, Tasks, Report) at 1280px and 320px, light and dark, no horizontal scroll. `?design=old` keeps its own old-design violations (form labels, one contrast), which the cleanup pass removes with the design. `cargo fmt --check`, clippy (0 warnings), 191 tests with `web` and 170 without.
+
+## Update: the form is the Settings tab
+
+`/org/{id}/edit` is reached from the Settings tab. The page shows the normal header (`Organization` eyebrow, the name as `h1`) and the tab row with Settings current, then the form; the document title is "Settings - Name - iter". Create pages (New …) are unchanged. `edit_page` takes `sections` (the tab row, built without counts by `edit_page::settings_row`); `crumbs::edit_trail` is gone.

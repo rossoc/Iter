@@ -2,11 +2,14 @@
 //! fix it, investigate it. Each is a markdown template with `{{placeholders}}`
 //! filled from the task.
 //!
-//! The templates are data. The built-in ones can be replaced, so a task that
-//! needs another structure of plan, or a project with its own way of working,
-//! says so in a file: the first of `tasks/<id>/prompts/<kind>.md`,
-//! `<project notes>/prompts/<kind>.md` and `<organization notes>/prompts/<kind>.md`
-//! that exists is used, the built-in one if none does.
+//! The templates are data, and are called instructions (`instruction.rs`). The
+//! built-in ones can be replaced, so a task that needs another structure of
+//! plan, or a project with its own way of working, says so in a file: the
+//! first of `tasks/<id>/instructions/<kind>.md`,
+//! `<project notes>/instructions/<kind>.md`,
+//! `<organization notes>/instructions/<kind>.md` and
+//! `<iter's config folder>/instructions/<kind>.md` that exists is used, the
+//! built-in one if none does.
 
 use std::path::{Path, PathBuf};
 
@@ -14,33 +17,50 @@ use std::path::{Path, PathBuf};
 pub enum Kind {
     /// Read the task and write its plan; change no code
     Plan,
-    /// Work through the plan
-    Execute,
+    /// Work through the plan's development steps
+    #[value(alias = "execute")]
+    Develop,
+    /// Write and run the tests for the work
+    Test,
+    /// Check the work against the plan; change no code
+    #[value(alias = "investigate")]
+    Check,
     /// Reproduce a defect, find its cause and fix it
     Fix,
-    /// Answer a question about the project; change no code
-    Investigate,
 }
 
 impl Kind {
     #[cfg(test)]
-    pub const ALL: [Kind; 4] = [Kind::Plan, Kind::Execute, Kind::Fix, Kind::Investigate];
+    pub const ALL: [Kind; 5] = [
+        Kind::Plan,
+        Kind::Develop,
+        Kind::Test,
+        Kind::Check,
+        Kind::Fix,
+    ];
 
     pub fn key(self) -> &'static str {
         match self {
             Kind::Plan => "plan",
-            Kind::Execute => "execute",
+            Kind::Develop => "develop",
+            Kind::Test => "test",
+            Kind::Check => "check",
             Kind::Fix => "fix",
-            Kind::Investigate => "investigate",
         }
+    }
+
+    /// Whether the work changes code, and so happens in the task's worktree.
+    pub fn changes_code(self) -> bool {
+        matches!(self, Kind::Develop | Kind::Test | Kind::Fix)
     }
 
     pub fn builtin(self) -> &'static str {
         match self {
             Kind::Plan => include_str!("prompts/plan.md"),
-            Kind::Execute => include_str!("prompts/execute.md"),
+            Kind::Develop => include_str!("prompts/develop.md"),
+            Kind::Test => include_str!("prompts/test.md"),
+            Kind::Check => include_str!("prompts/check.md"),
             Kind::Fix => include_str!("prompts/fix.md"),
-            Kind::Investigate => include_str!("prompts/investigate.md"),
         }
     }
 }
@@ -89,7 +109,7 @@ pub struct Context<'a> {
     pub onboarding: &'a str,
 }
 
-const PLACEHOLDERS: [&str; 12] = [
+pub const PLACEHOLDERS: [&str; 12] = [
     "task",
     "task.name",
     "task.description",
@@ -152,16 +172,29 @@ pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> Result<String, S
     Ok(out)
 }
 
-/// The template to use for `kind`: the first `prompts/<kind>.md` in `dirs`
-/// (nearest first), with where it came from, or the built-in one.
+/// The template to use for `kind`: the prompt of the first
+/// `instructions/<kind>.md` in `dirs` (nearest first), with where it came
+/// from, or of the built-in one. The front matter is not part of it.
 pub fn template(kind: Kind, dirs: &[PathBuf]) -> (Option<PathBuf>, String) {
     for dir in dirs {
-        let path = dir.join("prompts").join(format!("{}.md", kind.key()));
+        let path = crate::agent::instruction::file(dir, kind.key());
         if let Ok(text) = std::fs::read_to_string(&path) {
-            return (Some(path), text);
+            return (
+                Some(path),
+                crate::agent::instruction::split(&text)
+                    .1
+                    .trim_start_matches('\n')
+                    .to_string(),
+            );
         }
     }
-    (None, kind.builtin().to_string())
+    (
+        None,
+        crate::agent::instruction::split(kind.builtin())
+            .1
+            .trim_start_matches('\n')
+            .to_string(),
+    )
 }
 
 #[cfg(test)]
@@ -246,19 +279,20 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         let (task, project) = (root.join("task"), root.join("project"));
         for (dir, text) in [(&task, "from the task"), (&project, "from the project")] {
-            std::fs::create_dir_all(dir.join("prompts")).unwrap();
-            std::fs::write(dir.join("prompts/plan.md"), text).unwrap();
+            std::fs::create_dir_all(dir.join("instructions")).unwrap();
+            std::fs::write(dir.join("instructions/plan.md"), text).unwrap();
         }
         let dirs = [task.clone(), project.clone()];
         let (from, text) = template(Kind::Plan, &dirs);
         assert_eq!(
             (from, text.as_str()),
-            (Some(task.join("prompts/plan.md")), "from the task")
+            (Some(task.join("instructions/plan.md")), "from the task")
         );
         // the task has no `fix` override, the project neither: built in
         let (from, text) = template(Kind::Fix, &dirs);
-        assert_eq!((from, text), (None, Kind::Fix.builtin().to_string()));
-        std::fs::remove_file(task.join("prompts/plan.md")).unwrap();
+        assert_eq!(from, None);
+        assert!(text.starts_with("You are fixing a defect"), "{text}");
+        std::fs::remove_file(task.join("instructions/plan.md")).unwrap();
         assert_eq!(template(Kind::Plan, &dirs).1, "from the project");
     }
 }

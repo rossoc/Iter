@@ -219,7 +219,7 @@ fn keywords(name: &str, description: &str) -> String {
     words.join(" ")
 }
 
-/// The folders that may hold a `prompts/<kind>.md` for this task, nearest
+/// The folders that may hold an `instructions/<kind>.md` for this task, nearest
 /// first: the task's, its project's notes, its organization's notes.
 fn override_dirs(app: &App, project: &Project, dir: &TaskDir) -> Result<Vec<PathBuf>> {
     let org = match project.organization_id {
@@ -229,6 +229,8 @@ fn override_dirs(app: &App, project: &Project, dir: &TaskDir) -> Result<Vec<Path
     let mut dirs = vec![dir.root().to_path_buf()];
     dirs.extend(notes::project_dir(project, &org));
     dirs.extend(org.as_ref().and_then(notes::org_dir));
+    // what every project of the user shares: iter's own config folder
+    dirs.extend(crate::config::config_dir().ok());
     Ok(dirs)
 }
 
@@ -242,11 +244,13 @@ pub fn prompt_text(
     template: Option<&Path>,
     onboarding_wanted: bool,
 ) -> Result<String> {
-    prompt_for(app, task, kind, template, onboarding_wanted, None)
+    prompt_for(app, task, kind, template, onboarding_wanted, None, false)
 }
 
 /// As [`prompt_text`], with `description` told to the agent in place of the
-/// task's own (`solve` lets it be edited for one run).
+/// task's own (`solve` lets it be edited for one run). `defer_worktree` keeps
+/// `{{worktree}}` in the text when the task has no worktree yet: a prompt that
+/// is shown and edited before its run begins does not know where that will be.
 pub fn prompt_for(
     app: &App,
     task: Option<&str>,
@@ -254,6 +258,7 @@ pub fn prompt_for(
     template: Option<&Path>,
     onboarding_wanted: bool,
     description: Option<&str>,
+    defer_worktree: bool,
 ) -> Result<String> {
     let (project, task, dir) = locate(app, task)?;
     // an agent following the prompt writes sketches here: have the folder
@@ -265,6 +270,7 @@ pub fn prompt_for(
         .and_then(|s| s.worktree_path);
     let text = match template {
         Some(path) => std::fs::read_to_string(path)
+            .map(|t| crate::agent::instruction::split(&t).1.to_string())
             .map_err(|e| failed(format!("cannot read {}: {e}", path.display())))?,
         None => prompt::template(kind, &override_dirs(app, &project, &dir)?).1,
     };
@@ -282,7 +288,9 @@ pub fn prompt_for(
         task_dir: dir.root(),
         project_name: &project.name,
         project_path: &project.base_path,
-        worktree: worktree.as_deref(),
+        worktree: worktree
+            .as_deref()
+            .or(defer_worktree.then_some("{{worktree}}")),
         plan_path: &plan_path,
         plan: plan_text.as_deref(),
         onboarding: &known,
@@ -416,7 +424,7 @@ mod tests {
     #[test]
     fn the_prompt_names_the_task_the_plan_and_its_folder() {
         let (app, notes) = world("prompt");
-        let text = prompt_text(&app, Some("app/Fix it"), Kind::Execute, None, true).unwrap();
+        let text = prompt_text(&app, Some("app/Fix it"), Kind::Develop, None, true).unwrap();
         assert!(text.contains("Fix it") && text.contains("Retries hammer the api."));
         assert!(text.contains("(there is no plan yet)"));
         assert!(text.contains(&notes.join("tasks/1/sketches").display().to_string()));
@@ -455,7 +463,7 @@ mod tests {
     #[test]
     fn a_task_can_bring_its_own_template_and_a_typo_is_refused() {
         let (app, notes) = world("template");
-        let dir = notes.join("tasks/1/prompts");
+        let dir = notes.join("tasks/1/instructions");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("plan.md"), "Plan {{task.name}} as a haiku.").unwrap();
         assert_eq!(

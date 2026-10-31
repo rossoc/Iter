@@ -2,17 +2,10 @@
 .plan-progress{display:flex;align-items:center;gap:12px;margin:0 0 16px;color:var(--muted);font-size:.875rem}
 .plan-progress progress{flex:0 1 16rem;height:8px;accent-color:var(--accent)}
 .plan-part{margin:0 0 18px}
+/* the plan is a section of the Info tab, a level above Goal, How and Checkpoints (small-caps labels) */
+.plan-block{margin-top:44px;padding-top:20px;border-top:1px solid var(--line)}
+.plan-title{margin:0 0 16px;font-size:1.125rem;font-weight:600;letter-spacing:-.01em;color:var(--fg)}
 .plan-part .label{margin-bottom:6px}
-.steps{list-style:none;margin:0;padding:0;border-top:1px dashed var(--line)}
-.steps li{border-bottom:1px dashed var(--line)}
-.steps a,.steps .loose{display:flex;gap:10px;align-items:flex-start;padding:9px 8px;border-radius:var(--r-sm)}
-.steps a:hover{background:var(--bg-2)}
-.steps li.current a{background:var(--accent-tint)}
-.steps .i{margin-top:.25em;color:var(--faint)}
-.steps .doing .i{color:var(--accent)}
-.steps .done .i{color:var(--ok)}
-.steps .step-text{flex:1;min-width:0;overflow-wrap:anywhere}
-.steps .done .step-text{color:var(--muted)}
 .step-tag{flex:none;margin-top:.15em;padding:0 8px;border:1px solid var(--line-2);border-radius:var(--r-pill);font-size:.75rem;color:var(--muted)}
 .step-panel .status{margin-bottom:10px}
 .step-panel .step-tag{margin-left:8px}
@@ -21,13 +14,10 @@
 .files details{border-bottom:1px dashed var(--line);padding:8px 0}
 .files summary{cursor:pointer;color:var(--fg)}
 .files details[open] summary{margin-bottom:8px}
-@media (forced-colors:active){.steps li.current a{outline:2px solid Highlight}}
-.launch{margin-top:16px}
-.launch form{display:grid;gap:12px}
-.runs summary .run-state{padding:0 8px;border:1px solid var(--line-2);border-radius:var(--r-pill);font-size:.75rem}
-.runs .run-state.running{color:var(--accent)}
-.runs .run-state.done{color:var(--ok)}
-.runs .run-state.failed,.runs .run-state.lost{color:var(--danger)}
+.run-state{display:inline-flex;align-items:center;gap:6px;padding:0 8px;border:1px solid var(--line-2);border-radius:var(--r-pill);font-size:.75rem}
+.run-state.running{color:var(--accent)}
+.run-state.done{color:var(--ok)}
+.run-state.failed,.run-state.lost{color:var(--danger)}
 .log{margin:8px 0 0;padding:10px;max-height:24rem;overflow:auto;background:var(--bg-2);border-radius:var(--r-sm);font:.8125rem/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .diffs summary{display:flex;gap:6px;align-items:baseline}
 .diff{margin:8px 0 0;padding:10px;max-height:28rem;overflow:auto;background:var(--bg-2);border-radius:var(--r-sm);font:.8125rem/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
@@ -35,3 +25,96 @@
 .diff .del{color:var(--danger)}
 .diff .hunk,.diff .meta{color:var(--muted)}
 .waiting{margin:0 0 12px;padding-left:1.2em}
+
+/* the Agent tab: the plan's steps on the left, the agents and files on the right */
+.agent-grid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;align-items:start}
+.agent-grid.bare{grid-template-columns:minmax(0,1fr)}
+.agent-main{min-width:0}
+.plan-rail{position:sticky;top:var(--stick-top)}
+.plan-rail .rail-sum{margin:6px 0 0;color:var(--muted);font-size:.8125rem}
+.plan-rail ol{list-style:none;margin:10px 0 0;padding:0}
+.plan-rail li+li{margin-top:2px}
+.plan-rail a,.plan-rail .loose{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 12px;padding:8px 10px;border-radius:var(--r-md);
+  transition:background var(--fast) var(--ease-out)}
+.plan-rail a:hover{background:var(--bg-2)}
+.plan-rail a[aria-current]{background:var(--bg-2);color:var(--accent)}
+.plan-rail .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.plan-rail .state{font:.75rem var(--mono);color:var(--muted)}
+.plan-rail .share{grid-column:1/-1;height:3px;border-radius:var(--r-sm);background:var(--bg-3);overflow:hidden}
+.plan-rail .share i{display:block;height:100%;background:var(--accent);border-radius:var(--r-sm)}
+.plan-rail li.done .name{color:var(--muted)}
+@media (max-width:900px){.agent-grid{grid-template-columns:minmax(0,1fr);gap:28px}.plan-rail{position:static}}
+
+/* the agents: the tasks table's look (ui/task_table.css); the model and effort show on the row under the pointer, as a project's path does */
+.agents .hint{display:inline;margin:0 0 0 12px;font:.75rem var(--mono);color:var(--muted)}
+@media (hover:hover){
+  .agents .hint{opacity:0;transition:opacity var(--fast) var(--ease-out)}
+  .agents tr:hover .hint,.agents tr:focus-within .hint{opacity:1}
+}
+.agents tr.current{background:var(--accent-tint)}
+.agents td.acts{width:1%;white-space:nowrap;text-align:right}
+.agents td.acts .post-form+.post-form{margin-left:6px}
+.button.icon-only{padding:3px 8px}
+.panel.compose,.panel.run-page{position:static;margin:0 0 20px}
+.compose .kinds{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 14px}
+.compose .kinds a{padding:4px 0;color:var(--muted);border-bottom:2px solid transparent}
+.compose .kinds a:hover{color:var(--fg)}
+.compose .kinds a[aria-current]{color:var(--fg);border-bottom-color:var(--accent)}
+.compose form{display:grid;gap:14px;min-width:0}
+.compose form>*,.compose-pick>*{min-width:0}
+.compose-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:12px}
+.compose textarea.control{min-height:22rem;font:.8125rem/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.compose-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
+.compose-drop{margin-top:10px}
+.run-page dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:4px 0 14px}
+.run-page .told{margin-top:12px}
+.run-page h3.label{margin:16px 0 6px}
+.empty-line.note{margin-top:12px}
+.prompts-intro{margin:0 0 24px;max-width:var(--measure);color:var(--muted)}
+.prompt-form{display:grid;gap:12px}
+.prompt-from{margin:0 0 8px;overflow-wrap:anywhere}
+.prompt-form textarea.control{min-height:14rem;font:.8125rem/1.5 var(--mono)}
+/* the instructions list: a description under the name, the last use after the count */
+.instructions .sub{display:block;margin-top:2px;font-size:.8125rem;color:var(--muted);overflow-wrap:anywhere}
+.instructions .hint,.tasks .hint{font:.75rem var(--mono);color:var(--muted)}
+.prompt-head{margin:20px 0 6px}
+/* big steps in the plan rail: a head with the count and a bar, the small steps under it */
+.plan-rail li.phase+li.phase,.plan-rail li:not(.phase)+li.phase{margin-top:10px}
+.plan-rail .phase-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 12px;padding:8px 10px 4px}
+.plan-rail .phase-head .name{font-weight:600;text-transform:capitalize}
+.plan-rail .phase-head .share{grid-column:1/-1}
+.plan-rail ol.sub{list-style:none;margin:0;padding:0 0 0 10px}
+.plan-rail ol.sub a,.plan-rail ol.sub .loose{padding:5px 10px;font-size:.875rem}
+.plan-rail ol.sub .name{font-weight:400}
+.plan-rail ol.sub li.done .name{text-decoration:line-through;text-decoration-color:var(--faint)}
+/* the instructions list: a description shows on the row under the pointer (always on touch screens); its space stays reserved */
+@media (hover:hover){
+  .instructions .sub{opacity:0;transition:opacity var(--fast) var(--ease-out)}
+  .instructions tr:hover .sub,.instructions tr:focus-within .sub{opacity:1}
+}
+/* the instructions list: the description sits to the right of the name, on the same line */
+.instructions .sub{display:inline;margin:0 0 0 12px}
+.compose-instruction{display:flex;gap:12px;align-items:flex-end}
+.compose-instruction .labelled{flex:1 1 auto;min-width:0}
+/* the checkpoints on the Info tab: a state glyph, the step, a tag for a check */
+.points{list-style:none;margin:0 0 10px;padding:0}
+.points li{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line)}
+.points .i{margin-top:.25em;color:var(--faint)}
+.points .doing .i{color:var(--accent)}
+.points .done .i{color:var(--ok)}
+.points .step-text{flex:1;min-width:0;overflow-wrap:anywhere}
+.points .done .step-text{color:var(--muted)}
+/* a big step under Checkpoints: below the label in rank (small, muted, normal weight), its count in mono at the right */
+.point-head{display:flex;justify-content:space-between;gap:12px;margin:14px 0 2px;font-size:.8125rem;font-weight:500;color:var(--muted);text-transform:capitalize}
+.point-head .state{font:.75rem var(--mono);color:var(--muted);font-weight:400}
+.plan-rail .rail-sum{display:none}
+/* an agent's page: the facts in a box on the right, the answer under the tabs */
+.run-box{position:static}
+.run-box .compose-actions{margin-top:14px}
+.output-links{display:flex;gap:16px;margin:16px 0 0;font-size:.875rem}
+.settings-form{display:grid;gap:14px}
+.settings-form textarea.control{min-height:22rem;font:.8125rem/1.5 var(--mono)}
+/* the instruction forms: the prompt is a tall monospace area, the permission a short one */
+.new-instruction textarea.control,.compose #f-prompt{min-height:20rem;font:.8125rem/1.5 var(--mono)}
+.compose #f-permission{min-height:6rem;font:.8125rem/1.5 var(--mono)}
+.compose-pick{align-items:start}

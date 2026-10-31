@@ -5,24 +5,24 @@
 use super::Id;
 use super::crumbs::trail;
 use super::daily_notes::{NotesTab, notes_section};
+use super::instructions::{InstructionsTab, instructions_tab, new_instruction_modal};
 use super::load::{Parents, parents_of, tasks_or_count};
 use super::open_db;
-use super::sections::section_tabs;
 use super::sections::{Section, TabQuery};
+use super::sections::{section_tabs, settings_tab};
 use super::settings_panel::settings_panel;
 use super::task_new::{TaskCreate, TaskHome, task_modal};
 use super::task_query::TaskQuery;
 use super::task_rows::{project_rows, search};
 use super::ui::breadcrumb::Crumb;
-use super::ui::button::edit_button;
 use super::ui::frame::frame;
 use super::ui::labelled::mono_value;
 use super::ui::layout::info_columns;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
-use super::ui::tabs::tabs;
+use super::ui::tabs::{Tab, tabs};
 use super::ui::tasks_tab::tasks_tab;
-use super::url::{edit_url, project_url};
+use super::url::{instructions_tab_url, project_url};
 use crate::db::{Db, Table};
 use crate::models::{Configured, Organization, Project, Task};
 use topcoat::{
@@ -39,8 +39,11 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
 /// The tab a `?tab=` value asks for: a project has no Report, so that is
 /// Info.
 pub fn section(tab: Option<&str>) -> Section {
+    if tab == Some("instructions") {
+        return Section::Instructions;
+    }
     match Section::of(tab) {
-        Section::Report => Section::Info,
+        Section::Report | Section::Instructions => Section::Info,
         other => other,
     }
 }
@@ -92,11 +95,16 @@ async fn show(cx: &Cx) -> Result<impl View> {
         notes,
     } = page;
     let q = query.q.as_deref();
+    let instructions = (tab == Section::Instructions)
+        .then(|| InstructionsTab::load(&open_db()?, project.id()))
+        .transpose()?;
+    let adding_instruction =
+        tab == Section::Instructions && query.new.as_deref() == Some("instruction");
     // `?new=task` on the Tasks tab: the New task pop-up over the list
     let create = (tab == Section::Tasks && query.new.as_deref() == Some("task"))
         .then(|| TaskCreate::in_project(&project, q));
     Ok(view! {
-        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, notes: Some(&notes), section: tab, q: q, task_create: create.as_ref())
+        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, notes: Some(&notes), instructions: instructions.as_ref(), adding_instruction: adding_instruction, section: tab, q: q, task_create: create.as_ref())
     })
 }
 
@@ -127,28 +135,50 @@ pub async fn screen(
     task_count: usize,
     section: Section,
     #[default] notes: Option<&NotesTab>,
+    #[default] instructions: Option<&InstructionsTab>,
+    #[default] adding_instruction: bool,
     #[default] q: Option<&str>,
     #[default] task_create: Option<&TaskCreate>,
 ) -> Result<impl View> {
     let base = project_url(project.id());
-    let items = section_tabs(&base, section, task_count, NotesTab::badge(notes), None);
+    let mut items = section_tabs(
+        &base,
+        section,
+        None,
+        task_count,
+        NotesTab::badge(notes),
+        None,
+    );
+    items.push(
+        Tab::link("Instructions", instructions_tab_url(&base))
+            .marked(section == Section::Instructions),
+    );
+    items.push(settings_tab(&base, false));
     let parts = [section.title("Project"), project.name.as_str()];
     // The page has tabs, so the current tab is the current item; the crumb
     // is plain text, and with no organization the kicker is just a label.
     let crumbs = trail(org, None, Crumb::label("Project"));
     let rows = project_rows(tasks);
     let add = TaskHome::Project(project.id()).open_url(q);
-    let dialog = task_create.map(|create| Child::new(view! { task_modal(create: create) }));
+    let dialog = match (task_create, instructions) {
+        (Some(create), _) => Some(Child::new(view! { task_modal(create: create) })),
+        (None, Some(tab)) if adding_instruction => Some(Child::new(
+            view! { new_instruction_modal(scope: &tab.scope) },
+        )),
+        _ => None,
+    };
     let refused = task_create.is_some_and(|c| c.error.is_some());
     Ok(view! {
         frame(
             title: &parts,
             error: refused,
             dialog: dialog,
-            page_header(title: &project.name, kicker: if org.is_some() { Kicker::Crumbs(&crumbs) } else { Kicker::Eyebrow("Project") }, edit_button(href: edit_url(&base)))
+            page_header(title: &project.name, kicker: if org.is_some() { Kicker::Crumbs(&crumbs) } else { Kicker::Eyebrow("Project") })
             tabs(label: "Sections", items: &items)
             if section == Section::Tasks {
                 tasks_tab(rows: &rows, caption: "Tasks in this project", total: task_count, search: search(&base, q), add: Some(add))
+            } else if let (Section::Instructions, Some(tab)) = (section, instructions) {
+                instructions_tab(tab: tab)
             } else if let (Section::Notes, Some(notes)) = (section, notes) {
                 notes_section(base: &base, notes: notes)
             } else {

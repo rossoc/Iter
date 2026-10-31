@@ -180,3 +180,7 @@ The Info tab's project rows now highlight like the Tasks table's rows: the same 
 ## Update: New task / New project pop-ups
 
 The quick-add row and the inline project create row are replaced by a clickable first row ("+ New task…", "+ New project…") that opens a pop-up with the whole form (`ui/modal`, no script: `?new=task|project`, the page behind `inert`). New task posts to `POST /task/new` and asks for the project on an organization; New project has description, base path (Browse folders) and the Settings group. The folder browser returns to the pop-up instead of creating the project. See `doc/web_components.md`, "Pop-ups and the "?" syntax help".
+
+## Update: Projects and Settings tabs
+
+The organization page has the tabs Info, Projects (with the count), Tasks, Notes, Report and Settings. The project list (search, "New project…" row, rows) moved from Info to **Projects** (`?tab=projects`, `org::projects_tab`); Info keeps the description, the notes path and the settings aside. New project opens from there (`/org/{id}?tab=projects&new=project`; `Home::Org.page_url()` is that tab, and the folder browser sends `tab=projects` back as a field). The Edit button is gone: **Settings** is always the last tab and leads to `/org/{id}/edit`, which shows the page header and tab row with Settings current (`edit_page`'s `sections`).

@@ -3,16 +3,18 @@
 //! own (the Projects checklist is the board form's, built by
 //! `project_options`).
 
-use super::Id;
-use super::crumbs::edit_trail;
+use super::daily_notes::NotesTab;
 use super::edit::{Loaded, load, submit};
-use super::edit_page::edit_page;
+use super::edit_page::{edit_page, settings_row};
 use super::forms::OrgForm;
+use super::org_report::tab_url;
 use super::project_options::{group_options, project_checklist};
 use super::settings_fields::settings_fields;
+use super::ui::breadcrumb::Crumb;
 use super::ui::field::{CheckOption, field};
 use super::ui::form_error::FormError;
-use super::url::{org_edit_url, org_url};
+use super::url::{notes_tab_url, org_edit_url, org_url, projects_tab_url, tasks_tab_url};
+use super::{Id, open_db};
 use crate::db::Table;
 use crate::models::{Configured, Organization};
 use topcoat::{
@@ -62,8 +64,25 @@ pub async fn screen(
     #[default] error: Option<&FormError>,
 ) -> Result<impl View> {
     let base = org_url(stored.id());
-    let crumbs = edit_trail(&None, None, &stored.name, &base);
+    let crumbs = [Crumb::label("Organization")];
     let settings = org.settings();
+    // the badges the organization page itself shows
+    let db = open_db()?;
+    let (projects_n, tasks_n) = (
+        db.projects_in::<Organization>(stored.id())?.len(),
+        db.count_tasks_in::<Organization>(stored.id())?,
+    );
+    let notes = NotesTab::load(crate::notes::org_dir(stored), false);
+    let sections = settings_row(
+        &base,
+        &[
+            ("Info", base.clone(), None),
+            ("Projects", projects_tab_url(&base), Some(projects_n)),
+            ("Tasks", tasks_tab_url(&base), Some(tasks_n)),
+            ("Notes", notes_tab_url(&base), NotesTab::badge(Some(&notes))),
+            ("Report", tab_url(&base, super::now().date()), None),
+        ],
+    );
     Ok(view! {
         edit_page(
             kind: "organization",
@@ -71,6 +90,7 @@ pub async fn screen(
             name: &org.name,
             description: &org.description,
             crumbs: &crumbs,
+            sections: Some(&sections),
             action: org_edit_url(stored.id()),
             cancel: base,
             error: error,

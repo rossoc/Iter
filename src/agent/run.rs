@@ -24,6 +24,34 @@ impl Harness {
         }
     }
 
+    /// The models the harness takes, the ones a form offers: its own aliases
+    /// and names, unless `configured` (`agent.models`) says otherwise.
+    pub fn models(self, configured: &[String]) -> Vec<String> {
+        if !configured.is_empty() {
+            return configured.to_vec();
+        }
+        match self {
+            Harness::Claude => [
+                "haiku",
+                "sonnet",
+                "opus",
+                "claude-haiku-5-5",
+                "claude-sonnet-5-5",
+                "claude-opus-5-5",
+                "claude-fable-5-1",
+            ]
+            .map(String::from)
+            .to_vec(),
+        }
+    }
+
+    /// How hard the harness can be told to work.
+    pub fn efforts(self) -> &'static [&'static str] {
+        match self {
+            Harness::Claude => &["low", "medium", "high", "xhigh", "max"],
+        }
+    }
+
     /// The program and the arguments that run `prompt` once, headless, to
     /// the end. `dirs` are folders besides the working one the agent may
     /// read and write (the task's folder). `extra` goes last, for what the
@@ -71,17 +99,24 @@ impl Harness {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Status {
+    /// Written down, not started: it begins when asked to, or when the run
+    /// before it ends.
+    Queued,
     Running,
     Done,
     Failed,
+    /// Stopped by the user, while it waited or while it worked.
+    Cancelled,
 }
 
 impl Status {
     pub fn label(self) -> &'static str {
         match self {
+            Status::Queued => "queued",
             Status::Running => "running",
             Status::Done => "done",
             Status::Failed => "failed",
+            Status::Cancelled => "cancelled",
         }
     }
 }
@@ -92,10 +127,15 @@ pub struct Run {
     pub agent: Harness,
     pub model: String,
     pub effort: String,
-    /// What the agent was asked to do: `execute`, `fix` or `investigate`.
+    /// What the agent was asked to do: `plan`, `execute`, `fix` or `investigate`.
     pub kind: String,
+    /// The instruction it was given (`instructions/<name>.md`); a run from
+    /// before there were any has none, and its kind is the name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instruction: Option<String>,
     pub status: Status,
-    /// `YYYY-MM-DD HH:MM:SS`, local time.
+    /// `YYYY-MM-DD HH:MM:SS`, local time: when the run began (a queued one
+    /// has not: this is when it was written down).
     pub started: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ended: Option<String>,
@@ -122,6 +162,16 @@ impl Run {
         }
     }
 
+    /// The name of the instruction the run was given.
+    pub fn instruction_name(&self) -> &str {
+        self.instruction.as_deref().unwrap_or(&self.kind)
+    }
+
+    /// Whether the run waits for its turn.
+    pub fn is_queued(&self) -> bool {
+        self.status == Status::Queued
+    }
+
     /// Whether an agent is working on this run.
     pub fn is_running(&self) -> bool {
         self.shown_status() == "running"
@@ -143,6 +193,15 @@ pub fn alive(pid: u32) -> bool {
     }
     crate::process::output_trimmed("ps", None, &["-o", "stat=", "-p", &pid])
         .is_none_or(|stat| !stat.starts_with('Z'))
+}
+
+/// Asks the process of a run to stop: its whole group when it leads one (a
+/// detached worker and the harness under it), else the process alone.
+pub fn interrupt(pid: u32) -> bool {
+    let pid = pid.to_string();
+    let args = |target: String| ["-TERM".to_string(), "--".to_string(), target];
+    crate::process::succeeds("kill", None, &args(format!("-{pid}")))
+        || crate::process::succeeds("kill", None, &args(pid))
 }
 
 impl TaskDir {
@@ -250,7 +309,8 @@ mod tests {
             agent: Harness::Claude,
             model: "haiku".into(),
             effort: "medium".into(),
-            kind: "execute".into(),
+            kind: "develop".into(),
+            instruction: None,
             status: Status::Running,
             started: "2026-10-30 10:00:00".into(),
             ended: None,

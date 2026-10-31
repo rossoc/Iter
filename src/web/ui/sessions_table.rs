@@ -2,6 +2,7 @@
 //! Organization report and the task page show the same table, with
 //! different columns.
 
+use super::button::add_link;
 use super::table::{cell, col_head};
 use std::borrow::Cow;
 use topcoat::{
@@ -74,15 +75,18 @@ async fn moment(m: &Moment<'_>) -> Result<impl View> {
 /// `caption` is read by screen readers only. `show_end` adds the End column
 /// (an open session reads "ongoing" there); without it the open session is
 /// marked next to its duration. The `role`s repeat the native table
-/// semantics (see `table.rs`). The caller shows its own empty state
-/// instead of an empty table.
+/// semantics (see `table.rs`). `add` is where the first row leads, when the
+/// table has one ("New session…"). The caller shows its own empty state
+/// instead of an empty table, unless the table has that row.
 #[component]
 pub async fn sessions_table(
     lines: &[SessionLine<'_>],
     caption: &str,
     #[default] show_end: bool,
+    #[default] add: Option<String>,
 ) -> Result<impl View> {
     let dated = lines.iter().any(|l| l.date.is_some());
+    let columns = (3 + usize::from(dated) + usize::from(show_end)).to_string();
     Ok(view! {
         <table class="sessions" role="table">
             <caption class="sr">(caption)</caption>
@@ -100,6 +104,11 @@ pub async fn sessions_table(
                 </tr>
             </thead>
             <tbody role="rowgroup">
+                if let Some(href) = &add {
+                    <tr class="add" role="row">
+                        cell(colspan: columns.as_str(), add_link(href: href, label: "New session\u{2026}"))
+                    </tr>
+                }
                 for l in lines.iter() {
                     session_row(l: l, dated: dated, show_end: show_end)
                 }

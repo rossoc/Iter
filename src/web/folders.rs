@@ -167,6 +167,10 @@ async fn screen(view: &FolderView) -> Result<impl View> {
             page_header(title: "Choose a folder", kicker: Kicker::Eyebrow("New project"))
             <p class="value mono"><bdi>(view.shown.as_str())</bdi></p>
             <form class="folder-use" method="get" action=(view.action.as_str())>
+                // a GET form drops the query of its action: the tab goes along as a field
+                if view.action.contains("tab=projects") {
+                    <input type="hidden" name="tab" value="projects">
+                }
                 <input type="hidden" name="new" value="project">
                 <input type="hidden" name="base_path" value=(view.path.as_str())>
                 field(name: "name", label: "Project name", value: &view.name, identifier: true)

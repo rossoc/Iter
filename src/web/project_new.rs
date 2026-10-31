@@ -24,8 +24,8 @@ use super::ui::form_error::FormError;
 use super::ui::modal::modal;
 use super::ui::{FOLDER, icon};
 use super::url::{
-    PICK_FOLDER, board_info_url, folders_url, org_url, page_url, quick_board_project_url,
-    quick_project_url,
+    PICK_FOLDER, board_info_url, folders_url, org_url, page_url, projects_tab_url,
+    quick_board_project_url, quick_project_url,
 };
 use super::{Id, now, open_db};
 use crate::config::{config, expand_home};
@@ -84,7 +84,7 @@ impl Home {
     /// The page with the list, where a created project lands.
     pub fn page_url(self) -> String {
         match self {
-            Home::Org(id) => org_url(id),
+            Home::Org(id) => projects_tab_url(&org_url(id)),
             Home::Board(id) => board_info_url(id),
         }
     }
@@ -238,14 +238,14 @@ async fn list_page(home: Home, create: &ProjectCreate) -> Result<impl View> {
     let now = now();
     let (org_page, board_page) = match home {
         Home::Org(id) => (
-            Some(load_org(&db, id, Section::Info, None, None, None, now)?),
+            Some(load_org(&db, id, Section::Projects, None, None, None, now)?),
             None,
         ),
         Home::Board(id) => (None, Some(load_board(&db, id)?)),
     };
     Ok(view! {
         if let Some(page) = &org_page {
-            org_screen(page: page, section: Section::Info, today: now.date(), project_create: Some(create))
+            org_screen(page: page, section: Section::Projects, today: now.date(), project_create: Some(create))
         } else if let Some((board, projects)) = &board_page {
             board_screen(board: board, projects: projects, project_create: Some(create))
         }
@@ -333,7 +333,7 @@ mod tests {
         assert_eq!(Home::Org(3).quick_url(), "/org/3/project/quick");
         assert_eq!(Home::Board(7).quick_url(), "/board/7/project/quick");
         assert_eq!(Home::Board(7).page_url(), "/board/7/info");
-        assert_eq!(Home::Org(3).open_url(), "/org/3?new=project");
+        assert_eq!(Home::Org(3).open_url(), "/org/3?tab=projects&new=project");
         assert_eq!(
             Home::Board(7).open_url_with("my app", "/src"),
             "/board/7/info?new=project&name=my%20app&base_path=%2Fsrc"

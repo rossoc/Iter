@@ -439,7 +439,7 @@ pub enum TaskCommand {
         task: Option<String>,
 
         /// What the agent is to do
-        #[clap(long, short = 'k', value_enum, default_value_t = PromptKind::Execute)]
+        #[clap(long, short = 'k', value_enum, default_value_t = PromptKind::Develop)]
         kind: PromptKind,
 
         /// The harness that runs the agent

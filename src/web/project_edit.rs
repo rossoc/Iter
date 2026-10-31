@@ -2,16 +2,20 @@
 //! organization one: the routes and the view. The page is `edit_page`; this
 //! supplies the crumbs and the controls of its own.
 
-use super::Id;
-use super::crumbs::edit_trail;
+use super::crumbs::trail;
+use super::daily_notes::NotesTab;
 use super::edit::{Loaded, load, submit};
-use super::edit_page::edit_page;
+use super::edit_page::{edit_page, settings_row};
 use super::forms::ProjectForm;
 use super::load::org_in;
 use super::settings_fields::settings_fields;
+use super::ui::breadcrumb::Crumb;
 use super::ui::field::{field, id_text, optional_options, select};
 use super::ui::form_error::FormError;
-use super::url::{project_edit_url, project_url};
+use super::url::{
+    instructions_tab_url, notes_tab_url, project_edit_url, project_url, tasks_tab_url,
+};
+use super::{Id, open_db};
 use crate::db::Table;
 use crate::models::{Configured, Organization, Project};
 use topcoat::{
@@ -59,13 +63,25 @@ pub async fn screen(
     #[default] error: Option<&FormError>,
 ) -> Result<impl View> {
     let base = project_url(stored.id());
-    let crumbs = edit_trail(org, None, &stored.name, &base);
+    let crumbs = trail(org, None, Crumb::label("Project"));
     let options = optional_options(
         "No organization",
         orgs.iter().map(|o| (o.id(), o.name.as_str())),
     );
     let current = id_text(project.organization_id);
     let settings = project.settings();
+    // the badges the project page itself shows
+    let tasks_n = open_db()?.count_tasks_for_project(stored.id())?;
+    let notes = NotesTab::load(crate::notes::project_dir(stored, org), false);
+    let sections = settings_row(
+        &base,
+        &[
+            ("Info", base.clone(), None),
+            ("Tasks", tasks_tab_url(&base), Some(tasks_n)),
+            ("Notes", notes_tab_url(&base), NotesTab::badge(Some(&notes))),
+            ("Instructions", instructions_tab_url(&base), None),
+        ],
+    );
     Ok(view! {
         edit_page(
             kind: "project",
@@ -73,6 +89,7 @@ pub async fn screen(
             name: &project.name,
             description: &project.description,
             crumbs: &crumbs,
+            sections: Some(&sections),
             action: project_edit_url(stored.id()),
             cancel: base,
             error: error,

@@ -109,6 +109,7 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("form_actions.css"),
     include_str!("modal.css"),
     include_str!("search.css"),
+    include_str!("combobox.css"),
     // last, as when it was its own sheet linked after this one
     include_str!("../org.css"),
 ));
@@ -116,6 +117,7 @@ static CSS: Asset = Asset::css(concat!(
 static MODAL_JS: Asset = Asset::js(include_str!("modal.js"));
 static FILTER_BAR_JS: Asset = Asset::js(include_str!("filter_bar.js"));
 static SEARCH_JS: Asset = Asset::js(include_str!("search.js"));
+static COMBOBOX_JS: Asset = Asset::js(include_str!("combobox.js"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder
@@ -123,6 +125,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .route(modal_script)
         .route(filter_bar_script)
         .route(search_script)
+        .route(combobox_script)
 }
 
 #[route(GET "/style.css")]
@@ -138,6 +141,11 @@ async fn modal_script(cx: &Cx) -> Result<Response> {
 #[route(GET "/filter_bar.js")]
 async fn filter_bar_script(cx: &Cx) -> Result<Response> {
     FILTER_BAR_JS.respond(cx)
+}
+
+#[route(GET "/combobox.js")]
+async fn combobox_script(cx: &Cx) -> Result<Response> {
+    COMBOBOX_JS.respond(cx)
 }
 
 #[route(GET "/search.js")]

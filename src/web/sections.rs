@@ -2,7 +2,9 @@
 //! rows: the parsing and the URLs live here, `ui/tabs.rs` only draws.
 
 use super::ui::tabs::Tab;
-use super::url::{agent_tab_url, notes_tab_url, sessions_tab_url, tasks_tab_url, wiki_tab_url};
+use super::url::{
+    agent_tab_url, notes_tab_url, projects_tab_url, sessions_tab_url, tasks_tab_url, wiki_tab_url,
+};
 use topcoat::router::query_params;
 
 /// The query of the pages with tabs: `?tab=`, and the organization report's
@@ -21,8 +23,20 @@ pub struct TabQuery {
     /// What New project starts with, when the folder browser sends it back.
     pub name: Option<String>,
     pub base_path: Option<String>,
-    /// The task page's Agent tab: the step open beside the plan.
+    /// The task page's Agent tab: the step open over the agents.
     pub step: Option<String>,
+    /// The Agent tab: the agent open (`?run=3`), and the instruction a new
+    /// one starts with (`?new=agent&instruction=fix`; `new` is shared with
+    /// the other pages' pop-ups).
+    pub run: Option<String>,
+    /// An agent's Output tab: the text as it is (`?tab=output&raw=1`).
+    pub raw: Option<String>,
+    pub instruction: Option<String>,
+    /// An instruction page: which tab is open is `tab`; `edit` opens its form.
+    pub edit: Option<String>,
+    /// An instruction page: the project whose instructions apply (none: the
+    /// global ones).
+    pub project: Option<String>,
 }
 
 /// The query of a page that is only a search (`?q=`): a board's Info.
@@ -42,6 +56,10 @@ pub enum Section {
     Tasks,
     Notes,
     Report,
+    /// An organization's: its projects.
+    Projects,
+    /// A project's: the instructions that apply to it (`instructions.rs`).
+    Instructions,
 }
 
 impl Section {
@@ -51,6 +69,7 @@ impl Section {
             Some("tasks") => Section::Tasks,
             Some("notes") => Section::Notes,
             Some("report") => Section::Report,
+            Some("projects") => Section::Projects,
             _ => Section::Info,
         }
     }
@@ -63,6 +82,8 @@ impl Section {
             Section::Tasks => "Tasks",
             Section::Notes => "Notes",
             Section::Report => "Report",
+            Section::Projects => "Projects",
+            Section::Instructions => "Instructions",
         }
     }
 }
@@ -76,19 +97,32 @@ pub fn tabs_for<S: PartialEq>(current: S, entries: impl IntoIterator<Item = (S, 
         .collect()
 }
 
-/// The Info, Tasks and Notes tabs of the page at `base` (the Tasks one with
-/// its count, the Notes one with `notes`, the number of notes when the page
+/// The last tab of a page that can be edited: Settings, which leads to the
+/// edit form (`{base}/edit`). `current` is whether the form is showing.
+pub fn settings_tab(base: &str, current: bool) -> Tab {
+    Tab::link("Settings", format!("{base}/edit")).marked(current)
+}
+
+/// The Info, Projects (when `projects` says how many), Tasks and Notes tabs of
+/// the page at `base` (the Tasks one with its count, the Notes one with `notes`, the number of notes when the page
 /// has a folder for them), and the Report tab when the page has one:
 /// `report` is its URL.
 pub fn section_tabs(
     base: &str,
     current: Section,
+    projects: Option<usize>,
     task_count: usize,
     notes: Option<usize>,
     report: Option<String>,
 ) -> Vec<Tab> {
-    let mut entries = vec![
-        (Section::Info, Tab::link("Info", base.to_string())),
+    let mut entries = vec![(Section::Info, Tab::link("Info", base.to_string()))];
+    if let Some(n) = projects {
+        entries.push((
+            Section::Projects,
+            Tab::link("Projects", projects_tab_url(base)).count(n),
+        ));
+    }
+    entries.extend([
         (
             Section::Tasks,
             Tab::link("Tasks", tasks_tab_url(base)).count(task_count),
@@ -100,7 +134,7 @@ pub fn section_tabs(
                 None => tab,
             }
         }),
-    ];
+    ]);
     if let Some(href) = report {
         entries.push((Section::Report, Tab::link("Report", href)));
     }
@@ -113,7 +147,10 @@ pub enum TaskSection {
     Info,
     Sessions,
     Agent,
+    Notes,
     Wiki,
+    /// The edit form (`/task/{id}/edit`), which shows the page's tab row.
+    Settings,
 }
 
 impl TaskSection {
@@ -122,6 +159,7 @@ impl TaskSection {
         match tab {
             Some("sessions") => TaskSection::Sessions,
             Some("agent") => TaskSection::Agent,
+            Some("notes") => TaskSection::Notes,
             Some("wiki") => TaskSection::Wiki,
             _ => TaskSection::Info,
         }
@@ -134,14 +172,16 @@ impl TaskSection {
             TaskSection::Info => page,
             TaskSection::Sessions => "Sessions",
             TaskSection::Agent => "Agent",
+            TaskSection::Notes => "Notes",
             TaskSection::Wiki => "Wiki",
+            TaskSection::Settings => "Settings",
         }
     }
 }
 
 /// The Info, Sessions (with its count), Agent and Wiki tabs of the task page at
 /// `base`.
-pub fn task_tabs(base: &str, current: TaskSection, sessions: usize) -> Vec<Tab> {
+pub fn task_tabs(base: &str, current: TaskSection, sessions: usize, agents: usize) -> Vec<Tab> {
     tabs_for(
         current,
         [
@@ -150,8 +190,16 @@ pub fn task_tabs(base: &str, current: TaskSection, sessions: usize) -> Vec<Tab> 
                 TaskSection::Sessions,
                 Tab::link("Sessions", sessions_tab_url(base)).count(sessions),
             ),
-            (TaskSection::Agent, Tab::link("Agent", agent_tab_url(base))),
+            (
+                TaskSection::Agent,
+                Tab::link("Agents", agent_tab_url(base)).count(agents),
+            ),
+            (TaskSection::Notes, Tab::link("Notes", notes_tab_url(base))),
             (TaskSection::Wiki, Tab::link("Wiki", wiki_tab_url(base))),
+            (
+                TaskSection::Settings,
+                Tab::link("Settings", format!("{base}/edit")),
+            ),
         ],
     )
 }
@@ -169,12 +217,13 @@ mod tests {
         assert_eq!(TaskSection::of(Some("tasks")), TaskSection::Info);
         assert_eq!(TaskSection::Info.title("Task"), "Task");
         assert_eq!(TaskSection::Agent.title("Task"), "Agent");
+        assert_eq!(TaskSection::of(Some("settings")), TaskSection::Info);
     }
 
     #[test]
     fn task_tabs_mark_the_current_one() {
-        let items = task_tabs("/task/7", TaskSection::Sessions, 3);
-        assert_eq!(items.len(), 4);
+        let items = task_tabs("/task/7", TaskSection::Sessions, 3, 2);
+        assert_eq!(items.len(), 6);
         assert!(!items[0].is_current() && items[1].is_current() && !items[2].is_current());
         assert_eq!(
             (items[1].href(), items[1].badge()),
@@ -208,7 +257,7 @@ mod tests {
 
     #[test]
     fn section_tabs_mark_the_current_one() {
-        let items = section_tabs("/project/1", Section::Tasks, 4, None, None);
+        let items = section_tabs("/project/1", Section::Tasks, None, 4, None, None);
         assert_eq!(items.len(), 3);
         assert!(!items[0].is_current() && items[1].is_current());
         assert_eq!(
@@ -216,8 +265,16 @@ mod tests {
             ("/project/1?tab=tasks&q=is%3Aopen", Some(4))
         );
         assert_eq!(
-            section_tabs("/org/1", Section::Info, 0, Some(2), Some("/r".into())).len(),
-            4
+            section_tabs(
+                "/org/1",
+                Section::Info,
+                Some(9),
+                0,
+                Some(2),
+                Some("/r".into())
+            )
+            .len(),
+            5
         );
     }
 }

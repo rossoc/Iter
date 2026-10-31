@@ -3,11 +3,13 @@
 //! the Projects checklist and the loading.
 
 use super::Id;
-use super::crumbs::board_edit_trail;
+use super::board_header::{BoardSection, board_tabs};
+use super::crumbs::boards_crumb;
 use super::edit::{Loaded, load_among, submit};
 use super::edit_page::edit_page;
 use super::forms::BoardForm;
 use super::project_options::{group_options, project_checklist, project_options};
+use super::ui::breadcrumb::Crumb;
 use super::ui::field::CheckOption;
 use super::ui::form_error::FormError;
 use super::url::{BOARDS, board_edit_url, board_info_url};
@@ -35,7 +37,8 @@ pub async fn screen(
     #[default] error: Option<&FormError>,
 ) -> Result<impl View> {
     let base = board_info_url(stored.id());
-    let crumbs = board_edit_trail(&stored.name, &base);
+    let crumbs = [boards_crumb(), Crumb::label("Settings")];
+    let sections = board_tabs(stored.id(), BoardSection::Settings);
     Ok(view! {
         edit_page(
             kind: "board",
@@ -43,6 +46,7 @@ pub async fn screen(
             name: &board.name,
             description: &board.description,
             crumbs: &crumbs,
+            sections: Some(&sections),
             action: board_edit_url(stored.id()),
             cancel: base,
             error: error,

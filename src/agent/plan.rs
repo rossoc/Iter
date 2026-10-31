@@ -75,6 +75,9 @@ pub struct Item {
     pub text: String,
     /// The indented lines under the step, outdented.
     pub detail: String,
+    /// The big step it is under (`### name` in the checklist): an index into
+    /// [`Plan::phases`]; none for a step above the first heading.
+    pub phase: Option<usize>,
     /// The step's line in the file, counting from 0.
     #[serde(skip)]
     pub line: usize,
@@ -85,6 +88,8 @@ pub struct Plan {
     pub goal: String,
     pub how: String,
     pub items: Vec<Item>,
+    /// The big steps: the `### ` headings of the checklist, in order.
+    pub phases: Vec<String>,
     /// The headings of the other sections, which are left alone.
     pub other: Vec<String>,
 }
@@ -111,6 +116,17 @@ impl Plan {
             }
         }
         p
+    }
+
+    /// How far big step `phase` is: `(done, total)` of its small steps.
+    pub fn phase_progress(&self, phase: usize) -> (usize, usize) {
+        let mine = self.items.iter().filter(|i| i.phase == Some(phase));
+        let (mut done, mut total) = (0, 0);
+        for i in mine {
+            total += 1;
+            done += (i.state == State::Done) as usize;
+        }
+        (done, total)
     }
 
     pub fn item(&self, id: &str) -> Option<&Item> {
@@ -240,13 +256,16 @@ pub fn parse(content: &str) -> Plan {
             Section::Goal => goal.push(line),
             Section::How => how.push(line),
             Section::Checklist if !fenced => {
-                if let Some(s) = step(line) {
+                if let Some(name) = line.strip_prefix("### ") {
+                    plan.phases.push(name.trim().to_string());
+                } else if let Some(s) = step(line) {
                     plan.items.push(Item {
                         id: s.id.unwrap_or("").to_string(),
                         state: s.state,
                         verify: s.verify,
                         text: s.text.to_string(),
                         detail: String::new(),
+                        phase: plan.phases.len().checked_sub(1),
                         line: n,
                     });
                 } else if let Some(last) = plan.items.last_mut() {
@@ -564,5 +583,26 @@ mod tests {
         assert_eq!(p.goal, "g");
         // a front matter that never closes is not one
         assert_eq!(parse("---\nunclosed\n## Goal\ng\n").goal, "g");
+    }
+
+    #[test]
+    fn big_steps_are_the_headings_of_the_checklist_and_have_their_own_progress() {
+        let p = parse(
+            "## Checklist\n- [x] {s1} before any heading\n### develop\n- [x] {s2} a\n- [~] {s3} b\n### test\n- [ ] {s4} c\n",
+        );
+        assert_eq!(p.phases, ["develop", "test"]);
+        let phases: Vec<Option<usize>> = p.items.iter().map(|i| i.phase).collect();
+        assert_eq!(phases, [None, Some(0), Some(0), Some(1)]);
+        assert_eq!((p.phase_progress(0), p.phase_progress(1)), ((1, 2), (0, 1)));
+        // a plan without headings has no big steps
+        assert!(parse("## Checklist\n- [ ] a\n").phases.is_empty());
+        // ticking a step still edits that character only
+        let marked = mark(
+            "## Checklist\n### develop\n- [ ] {s1} a\n",
+            "s1",
+            State::Done,
+        )
+        .unwrap();
+        assert_eq!(marked, "## Checklist\n### develop\n- [x] {s1} a\n");
     }
 }

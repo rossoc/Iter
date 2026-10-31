@@ -84,3 +84,7 @@ Five reviewers (accessibility, complexity, composability, DRY, design). Each fin
 | S5 `--form-gap` | fixed: `.form` defines it; the group's gap and the closer checkbox rows derive from it (`group.css`); stale text in `web_org_edit.md` and `web_components.md` updated |
 
 Checked in a browser (throwaway database copy via `XDG_CONFIG_HOME`): Org edit, Project edit and New task: GET, save (organization changed and restored), refused cases (empty name, duplicate name, empty base path, unknown project, unknown tag), Cancel, the marker and the select label; the Project and Org pages are unchanged; axe 0 violations on all edit pages (GET and refused), the Project and Org pages, at 1280px and 320px, light and dark; no horizontal scroll; keyboard pass (skip link, brand, Board, crumbs, fields in order, Save, Cancel; the notice takes focus after a refusal and Tab leaves it for the first control); forced colors; `?design=old` still renders. Verified: `cargo fmt --check`, `cargo clippy --features web`, `cargo test --features web` (208), `cargo test --no-default-features`.
+
+## Update: the form is the Settings tab
+
+`/project/{id}/edit` is reached from the Settings tab and shows the project's normal header (`Org / Project` crumbs, name as `h1`) and tab row with Settings current. Document title "Settings - Name - iter". The task edit page (`/task/{id}/edit`) does the same.

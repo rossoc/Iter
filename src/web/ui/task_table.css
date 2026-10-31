@@ -12,15 +12,15 @@
    covers it). Its background looks hovered while no other row is (the text
    stays --fg until the row is really hovered): the first thing to
    do is add one, until the pointer picks another row */
-.tasks tr.add{position:relative;transition:background var(--fast) var(--ease-out)}
-.tasks tr.add td{padding:0;border-bottom:1px dashed var(--line-2)}
-.tasks .add-link{display:flex;align-items:center;gap:8px;padding:12px 14px 12px 4px;color:var(--fg);font-weight:500;
+:is(.tasks,.sessions) tr.add{position:relative;transition:background var(--fast) var(--ease-out)}
+:is(.tasks,.sessions) tr.add td{padding:0;border-bottom:1px dashed var(--line-2)}
+:is(.tasks,.sessions) .add-link{display:flex;align-items:center;gap:8px;padding:12px 14px 12px 4px;color:var(--fg);font-weight:500;
   transition:color var(--fast) var(--ease-out)}
-.tasks .add-link::after{content:"";position:absolute;inset:0}
-.tasks tr.add:hover .add-link{color:var(--accent)}
-.tasks:not(:has(tbody tr:not(.add):hover)) tr.add{background:var(--bg-2)}
-.tasks .add-link:focus-visible{outline:none}
-.tasks tr.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+:is(.tasks,.sessions) .add-link::after{content:"";position:absolute;inset:0}
+:is(.tasks,.sessions) tr.add:hover .add-link{color:var(--accent)}
+:is(.tasks,.sessions):not(:has(tbody tr:not(.add):hover)) tr.add{background:var(--bg-2)}
+:is(.tasks,.sessions) .add-link:focus-visible{outline:none}
+:is(.tasks,.sessions) tr.add:has(.add-link:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
 
 /* narrow screens: each task row stacks -- the name, then project, status and issue */
 @media (max-width:600px){
@@ -30,5 +30,5 @@
   .tasks td{display:block;padding:0;border:0}
   .tasks td:first-child{grid-column:1/-1;padding:0}
   .tasks td.project{font-size:.875rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tasks tbody tr.add{display:block;padding:0}
+  .tasks tbody tr.add,.sessions tr.add{display:block;padding:0}
 }

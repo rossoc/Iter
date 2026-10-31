@@ -1,10 +1,10 @@
 //! The top of the agenda, matrix and info pages: the heading (crumbs, the
-//! board's name, Edit) and the section tabs (`board_header`).
+//! board's name) and the section tabs (`board_header`), the last of which
+//! is Settings: the board's edit form.
 
 use super::crumbs::boards_crumb;
 use super::sections::tabs_for;
 use super::ui::breadcrumb::Crumb;
-use super::ui::button::edit_button;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::tabs::{Tab, tabs};
 use super::url::{board_edit_url, board_info_url, board_matrix_url, board_url};
@@ -21,6 +21,8 @@ pub enum BoardSection {
     Agenda,
     Matrix,
     Info,
+    /// The edit form (`/board/{id}/edit`).
+    Settings,
 }
 
 impl BoardSection {
@@ -30,6 +32,7 @@ impl BoardSection {
             BoardSection::Agenda => "Agenda",
             BoardSection::Matrix => "Eisenhower matrix",
             BoardSection::Info => "Info",
+            BoardSection::Settings => "Settings",
         }
     }
 }
@@ -45,8 +48,8 @@ pub fn title_parts<'a>(lead: &'a str, rest: &[&'a str]) -> Vec<&'a str> {
         .collect()
 }
 
-/// The three tabs of board `id`, `current` marked.
-fn board_tabs(id: i64, current: BoardSection) -> Vec<Tab> {
+/// The tabs of board `id`, `current` marked; Settings is the last.
+pub fn board_tabs(id: i64, current: BoardSection) -> Vec<Tab> {
     let tab = |section: BoardSection, href: String| (section, Tab::link(section.label(), href));
     tabs_for(
         current,
@@ -54,17 +57,18 @@ fn board_tabs(id: i64, current: BoardSection) -> Vec<Tab> {
             tab(BoardSection::Agenda, board_url(id)),
             tab(BoardSection::Matrix, board_matrix_url(id)),
             tab(BoardSection::Info, board_info_url(id)),
+            tab(BoardSection::Settings, board_edit_url(id)),
         ],
     )
 }
 
-/// The board's name as the heading, with its crumbs (`Boards / {here}`) and
-/// the Edit button. `here` is the page's name, shown as the last crumb.
+/// The board's name as the heading, with its crumbs (`Boards / {here}`).
+/// `here` is the page's name, shown as the last crumb.
 #[component]
 pub async fn board_heading(board: &Board, here: &'static str) -> Result<impl View> {
     let crumbs = [boards_crumb(), Crumb::label(here)];
     Ok(view! {
-        page_header(title: board.name.as_str(), kicker: Kicker::Crumbs(&crumbs), edit_button(href: board_edit_url(board.id())))
+        page_header(title: board.name.as_str(), kicker: Kicker::Crumbs(&crumbs))
     })
 }
 
@@ -93,9 +97,10 @@ mod tests {
     }
 
     #[test]
-    fn a_board_has_the_three_tabs() {
+    fn a_board_has_four_tabs_and_settings_is_the_last() {
         let items = board_tabs(2, BoardSection::Matrix);
-        assert_eq!(items.len(), 3);
+        assert_eq!(items.len(), 4);
+        assert_eq!(items[3].href(), "/board/2/edit");
         assert_eq!(items.iter().filter(|t| t.is_current()).count(), 1);
         assert_eq!(BoardSection::Matrix.label(), "Eisenhower matrix");
     }

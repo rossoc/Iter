@@ -1,3 +1,7 @@
+---
+description: Reproduce a defect, find its cause and fix it
+---
+
 You are fixing a defect in the project {{project.name}}: "{{task.name}}".
 
 ## The report

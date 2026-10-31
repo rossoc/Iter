@@ -1,3 +1,7 @@
 .labelled .label .count{margin-left:6px}
-.labelled .label{margin-bottom:10px}
-.labelled .value{margin:0 0 40px;font-size:.875rem;overflow-wrap:anywhere}
+.labelled .label{margin-bottom:8px}
+.labelled .value{margin:0;font-size:.875rem;overflow-wrap:anywhere}
+/* sections one after the other (a tab's body): one gap between the end of a section and the next heading */
+.labelled+.labelled{margin-top:36px}
+.side .labelled+.labelled{margin-top:0}  /* the side lists are spaced by their own gap */
+.labelled .label+table{margin-top:8px}

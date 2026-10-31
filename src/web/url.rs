@@ -150,6 +150,31 @@ pub fn sessions_tab_url(base: &str) -> String {
     page_url(base, &[("tab", Some("sessions"))])
 }
 
+/// The Projects tab of the organization page at `base`.
+pub fn projects_tab_url(base: &str) -> String {
+    page_url(base, &[("tab", Some("projects"))])
+}
+
+/// The Instructions tab of the project page at `base`.
+pub fn instructions_tab_url(base: &str) -> String {
+    page_url(base, &[("tab", Some("instructions"))])
+}
+
+/// The list of the global instructions.
+pub fn instructions_url() -> String {
+    "/instructions".to_string()
+}
+
+/// The page of instruction `name`: the global one, or as it applies to
+/// project `project`.
+pub fn instruction_url(name: &str, project: Option<i64>) -> String {
+    let project = project.map(|p| p.to_string());
+    page_url(
+        &format!("/instruction/{}", encode(name)),
+        &[("project", project.as_deref())],
+    )
+}
+
 /// The Agent tab of the task page at `base`.
 pub fn agent_tab_url(base: &str) -> String {
     page_url(base, &[("tab", Some("agent"))])
@@ -179,9 +204,34 @@ pub fn plan_step_url(id: i64, step: &str) -> String {
     format!("{}/plan/{}", task_url(id), encode(step))
 }
 
-/// Where the form that hands task `id` to an agent is posted.
-pub fn solve_url(id: i64) -> String {
-    format!("{}/solve", task_url(id))
+/// Where the form of a new agent for task `id` is posted.
+pub fn runs_url(id: i64) -> String {
+    format!("{}/runs", task_url(id))
+}
+
+/// The list of every agent of every task.
+pub fn agents_url() -> String {
+    "/agents".to_string()
+}
+
+/// The page of agent `n` of task `id`.
+pub fn agent_url(id: i64, n: u32) -> String {
+    format!("/agent/{id}/{n}")
+}
+
+/// Where a link to agent `n` of task `id` leads: its page.
+pub fn run_url(id: i64, n: u32) -> String {
+    agent_url(id, n)
+}
+
+/// Where the form of a queued agent is posted.
+pub fn run_post_url(id: i64, n: u32) -> String {
+    format!("{}/{n}", runs_url(id))
+}
+
+/// Where a button on agent `n` posts: `run` or `cancel`.
+pub fn run_action_url(id: i64, n: u32, action: &str) -> String {
+    format!("{}/{action}", run_post_url(id, n))
 }
 
 /// The note of `day` on the page at `base`.
@@ -259,7 +309,16 @@ mod tests {
     fn step_urls_open_the_agent_tab_and_post_to_the_step() {
         assert_eq!(task_step_url(5, "s3"), "/task/5?tab=agent&step=s3");
         assert_eq!(plan_step_url(5, "s3"), "/task/5/plan/s3");
-        assert_eq!(solve_url(5), "/task/5/solve");
+        assert_eq!(instruction_url("fix", None), "/instruction/fix");
+        assert_eq!(
+            instruction_url("fix", Some(3)),
+            "/instruction/fix?project=3"
+        );
+        assert_eq!(projects_tab_url("/org/3"), "/org/3?tab=projects");
+        assert_eq!(runs_url(5), "/task/5/runs");
+        assert_eq!(run_url(5, 2), "/agent/5/2");
+        assert_eq!(agents_url(), "/agents");
+        assert_eq!(run_action_url(5, 2, "cancel"), "/task/5/runs/2/cancel");
         assert_eq!(wiki_tab_url("/task/5"), "/task/5?tab=wiki");
         assert_eq!(wiki_action_url(5, "accept"), "/task/5/wiki/accept");
         // whatever the id, it is one path segment
@@ -304,7 +363,8 @@ mod tests {
     #[test]
     fn the_nav_links_to_the_boards() {
         assert_eq!(super::super::ui::frame::NAV[0].1, BOARDS);
-        assert_eq!(super::super::ui::frame::NAV[1].1, SETTINGS);
+        assert_eq!(super::super::ui::frame::NAV[1].1, agents_url());
+        assert_eq!(super::super::ui::frame::NAV[3].1, SETTINGS);
         assert_eq!(settings_saved_url(), "/settings?saved=1");
     }
 }

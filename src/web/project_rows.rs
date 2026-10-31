@@ -5,7 +5,7 @@ use super::ui::empty_line::empty_line;
 use super::ui::filter_bar::{Search, filter_bar};
 use super::ui::labelled::labelled_section;
 use super::ui::project_list::{ProjectItem, project_list};
-use super::url::project_url;
+use super::url::{page_url, project_url};
 use crate::db::Table;
 use crate::models::Project;
 use topcoat::{
@@ -60,11 +60,19 @@ const SYNTAX: &[(&str, &str)] = &[
 
 /// The search box over a project list at `base` (the Info tab), showing `q`.
 pub fn project_search(base: String, q: Option<&str>) -> Search {
+    project_search_in(base, "", q)
+}
+
+/// [`project_search`] for a list in the tab `tab` of its page.
+pub fn project_search_in(base: String, tab: &'static str, q: Option<&str>) -> Search {
     let q = q.unwrap_or("").trim();
     Search {
-        clear: (!q.is_empty()).then(|| base.clone()),
+        clear: (!q.is_empty()).then(|| match tab {
+            "" => base.clone(),
+            tab => page_url(&base, &[("tab", Some(tab))]),
+        }),
         action: base,
-        tab: "",
+        tab,
         q: q.to_string(),
         label: "Filter projects",
         syntax: SYNTAX,
@@ -82,31 +90,37 @@ pub async fn projects_section(
     empty: &str,
     #[default] search: Option<Search>,
     #[default] add: Option<String>,
+    #[default(true)] titled: bool,
 ) -> Result<impl View> {
     let shown = match &search {
         Some(s) => matching(projects, &s.q),
         None => projects.iter().collect(),
     };
     let items = items_of(shown.iter().copied());
-    Ok(view! {
-        labelled_section(id: "projects-title", label: "Projects", count: Some(projects.len()),
-            if let Some(search) = &search {
-                if !projects.is_empty() {
-                    filter_bar(search: search)
-                    if items.len() != projects.len() {
-                        <p class="filter-count" role="status">(items.len()) " of " (projects.len()) " projects match"</p>
-                    }
+    let body = view! {
+        if let Some(search) = &search {
+            if !projects.is_empty() {
+                filter_bar(search: search)
+                if items.len() != projects.len() {
+                    <p class="filter-count" role="status">(items.len()) " of " (projects.len()) " projects match"</p>
                 }
             }
-            if add.is_some() || !items.is_empty() {
-                project_list(items: &items, add: add)
-            }
-            if projects.is_empty() {
-                empty_line((empty))
-            } else if items.is_empty() {
-                empty_line("No projects match.")
-            }
-        )
+        }
+        if add.is_some() || !items.is_empty() {
+            project_list(items: &items, add: add)
+        }
+        if projects.is_empty() {
+            empty_line((empty))
+        } else if items.is_empty() {
+            empty_line("No projects match.")
+        }
+    };
+    Ok(view! {
+        if titled {
+            labelled_section(id: "projects-title", label: "Projects", count: Some(projects.len()), (body))
+        } else {
+            (body)
+        }
     })
 }
 

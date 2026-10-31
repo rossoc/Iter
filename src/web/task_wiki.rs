@@ -6,6 +6,7 @@
 //! and the three routes (`POST /task/{id}/wiki/{accept|revert|ingest}`), each
 //! of which goes back to the tab.
 
+use super::task_agent::{Doc, files_block};
 use super::ui::button::post_button;
 use super::ui::empty_line::empty_line;
 use super::ui::labelled::labelled_section;
@@ -184,7 +185,7 @@ async fn waiting_block(task_id: i64, review: &Review) -> Result<impl View> {
 
 /// The tab's body.
 #[component]
-pub async fn wiki_tab(tab: &WikiTab) -> Result<impl View> {
+pub async fn wiki_tab(tab: &WikiTab, sketches: &[Doc]) -> Result<impl View> {
     Ok(view! {
         if let WikiTab::Unavailable(why) = tab {
             empty_line((why.as_str()))
@@ -192,6 +193,7 @@ pub async fn wiki_tab(tab: &WikiTab) -> Result<impl View> {
             changes_block(task_id: *task_id, review: review, files: files)
             waiting_block(task_id: *task_id, review: review)
         }
+        files_block(id: "sketches-title", label: "Sketches", noun: "sketches", docs: sketches)
     })
 }
 

@@ -12,6 +12,7 @@ mod agenda_cards;
 mod agenda_day;
 mod agenda_drop;
 mod agenda_pick;
+mod agents;
 mod assets;
 mod blocking;
 mod board_cards;
@@ -32,6 +33,7 @@ mod footer;
 mod forms;
 mod guard;
 mod home;
+mod instructions;
 mod layout;
 mod load;
 mod matrix;
@@ -61,6 +63,8 @@ mod task_new;
 mod task_panel;
 mod task_query;
 mod task_rows;
+mod task_runs;
+mod task_sessions;
 mod task_wiki;
 mod text;
 mod ui;
@@ -98,10 +102,14 @@ fn router() -> Router {
         project::register,
         task::register,
         task_agent::register,
+        task_runs::register,
+        agents::register,
+        task_sessions::register,
         task_wiki::register,
         daily_notes::register,
         org_edit::register,
         project_edit::register,
+        instructions::register,
         project_new::register,
         folders::register,
         task_edit::register,

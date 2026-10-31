@@ -1,21 +1,13 @@
-//! Buttons: `.button` (one look, `button.css`), with the pencil Edit link and
-//! the "+" add row link as the shared instances. A submit button is `<button class="button primary">`
+//! Buttons: `.button` (one look, `button.css`), with the "+" add row link as
+//! the shared instance. A submit button is `<button class="button primary">`
 //! (see `form::form_shell`).
 
-use super::{PENCIL, PLUS, icon};
+use super::{PLUS, icon};
 use topcoat::view::Child;
 use topcoat::{
     Result,
     view::{View, component, view},
 };
-
-/// The link that opens an entity's edit form.
-#[component]
-pub async fn edit_button(#[into] href: String) -> Result<impl View> {
-    Ok(view! {
-        <a class="button" href=(href.as_str())>(icon(PENCIL)) "Edit"</a>
-    })
-}
 
 /// The link that adds an entity (a "+" then `label`): the first row of a
 /// list or a table, which opens the New pop-up (`modal.rs`). Its look is the

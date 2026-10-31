@@ -290,3 +290,12 @@ Shared by the agenda and the matrix (page 10): `task_card`, `drop_zone`, `unplac
 - **Tests**: `src/fixtures.rs` (`#[cfg(test)]`) has `db()`, `project(name)`, `add_project(db, name)` and `board(name)`. Use them in place of a new `Db::open(":memory:")` or `Project::template` + name + base path.
 - **`prose::description(text, #[default("desc")] class)`** renders the description as markdown (CommonMark plus tables, strikethrough and task lists, via `pulldown-cmark`, web feature only), styled by `prose.css` (`.prose`). Raw HTML is shown as text. Links and images keep only `http(s)`, `mailto` and relative URLs; any other is dropped to its text. Headings move two levels down (`#` becomes `<h3>`). The org report uses it too (`class: "pdesc"` / `"tdesc"`). `prose::markdown(text)` is the renderer.
 - **Checkboxes** (`field.css` `.check input`): `font:inherit`, so the `1lh` that centres the box on the first line is the label's line, not the input's smaller own one.
+
+
+## Lists of choices (`ui/combobox.js`, `ui/combobox.css`)
+
+One look for every choice list, by progressive enhancement (without the script the native controls work as they did):
+
+- `select.control` (not `multiple`, not `size`) is replaced by a button (`role=combobox`, labelled by the field's label) that opens a listbox under it; the `<select>` stays in the page, hidden, and is kept in sync (value, and `input`/`change` events from it), so forms post it and `label for` still points at it.
+- `input[list]` (a text field with a `<datalist>`) loses its native suggestions and shows the same list: a click or ArrowDown shows every choice, typing filters by name, the first match is highlighted and Enter picks it. Any text may be typed; the server decides. Entering the field selects its text.
+- Both: ArrowUp/Down, Home/End, type-ahead (select), Enter/Space pick, Esc closes the list only, Tab closes, a click picks; the picked value sends bubbling `input` and `change`. The list is appended to the body (`position:fixed`, flips above when there is no room, z-index above the pop-up) so no `overflow` clips it and a pop-up's inert page does not disable it. Forced colors: outline on the highlighted choice.

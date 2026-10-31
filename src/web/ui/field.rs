@@ -86,7 +86,10 @@ async fn labelled(
 /// marked, but left to the server to enforce, so its message is the form's
 /// own. `autofocus` is for the first control of a pop-up (`modal.rs`).
 /// `beside` is a control on the input's line, after it (a button that fills
-/// the field in).
+/// the field in). `input_type` is `datetime-local` and the like; text when empty. `list` is the id
+/// of a `<datalist>` that suggests values (any text may still be typed); `form`
+/// the id of the form the input belongs to when it sits outside it; `autoload`
+/// has `modal.js` submit that form when the value changes.
 #[component]
 pub async fn field(
     name: &str,
@@ -99,17 +102,29 @@ pub async fn field(
     #[default] numeric: bool,
     #[default] autofocus: bool,
     #[default] beside: Option<Child<'_>>,
+    #[default] input_type: &str,
+    #[default] list: &str,
+    #[default] form: &str,
+    #[default] autoload: bool,
 ) -> Result<impl View> {
     let id = field_id(name);
+    let input_type = if input_type.is_empty() {
+        "text"
+    } else {
+        input_type
+    };
     let invalid = is_about(error, name);
     let described = described_by(&id, hint, invalid);
     let input_id = id.clone();
     let input = view! {
-        <input type="text" class="control" id=(input_id.as_str()) name=(name) value=(value)
+        <input type=(input_type) class="control" id=(input_id.as_str()) name=(name) value=(value)
             if identifier { spellcheck="false" autocapitalize="off" autocorrect="off" }
             if identifier { autocomplete="off" }
             if numeric { inputmode="numeric" }
             if autofocus { autofocus="" }
+            if !list.is_empty() { list=(list) }
+            if !form.is_empty() { form=(form) }
+            if autoload { data-autoload="" }
             if required { aria-required="true" }
             if invalid { aria-invalid="true" }
             if !described.is_empty() { aria-describedby=(described.as_str()) }>
@@ -133,6 +148,7 @@ pub async fn textarea(
     #[default] hint: &str,
     #[default] error: Option<&FormError>,
     #[default] required: bool,
+    #[default] loaded: &str,
 ) -> Result<impl View> {
     let id = field_id(name);
     let invalid = is_about(error, name);
@@ -140,6 +156,7 @@ pub async fn textarea(
     Ok(view! {
         labelled(id: &id, label: label, hint: hint, required: required, invalid: invalid,
             <textarea class="control" id=(id.as_str()) name=(name)
+                if !loaded.is_empty() { data-loaded=(loaded) }
                 if required { aria-required="true" }
                 if invalid { aria-invalid="true" }
                 if !described.is_empty() { aria-describedby=(described.as_str()) }>(value)</textarea>

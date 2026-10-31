@@ -55,11 +55,14 @@ pub struct AgentConfig {
     /// (`Bash(git *)` for Claude). A command that a hook rewrites (`rtk git
     /// status`) is matched after the rewrite: add `Bash(rtk *)` then.
     pub allowed_tools: Vec<String>,
+    /// The models a form offers, when not the harness's own list.
+    pub models: Vec<String>,
 }
 
 impl Default for AgentConfig {
     fn default() -> Self {
         AgentConfig {
+            models: Vec::new(),
             allowed_tools: [
                 // what the prompts tell an agent to run: its plan, the wiki, the notes
                 "Bash(iter task plan *)",

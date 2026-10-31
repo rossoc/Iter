@@ -76,3 +76,7 @@ Five reviewers (accessibility, complexity, composability, DRY, design). Each fin
 | S4 docs | done: this file, `web_components.md`, `web_org_edit.md`, `web.md` |
 
 Checked again after the fixes: board and org edit (GET, save with ticks changed then restored, refused empty and duplicate names with typed values and ticks kept), empty project list, 100-character name at 320px, 1280px and 320px, light and dark, reduced motion, forced colors, axe 0 violations on all of them, keyboard (Tab through the boxes, Space toggles), `?design=old`, other pages 200; `cargo fmt --check`, `cargo clippy --features web`, `cargo test --features web`, `cargo test --no-default-features`.
+
+## Settings tab (current)
+
+The board's pages (agenda, matrix, info) have no Edit button: Settings is their last tab, and it leads here. The form is shown under the board's own header (breadcrumb `Boards / Settings`, the board's name as the title) with the tab row (Agenda, Eisenhower matrix, Info, Settings current), through `edit_page`'s `sections`. The document title is "Settings - Name - iter". The Settings pages of organizations, projects and tasks show the same count badges as their pages.

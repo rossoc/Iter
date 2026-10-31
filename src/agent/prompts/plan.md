@@ -1,3 +1,7 @@
+---
+description: Read the task and write its plan; change no code
+---
+
 You are planning the task "{{task.name}}" of the project {{project.name}}.
 Do not change any code: what you produce is a plan.
 
@@ -26,11 +30,14 @@ The plan is markdown with these `##` sections:
 - **Goal**: what done looks like, in a few lines. It may be narrower than the
   description: say what is in and what is not.
 - **How**: the approach, and what is difficult or risky about it.
-- **Checklist**: the steps, one per line, as `- [ ] step`. Put steps that do
-  the work and steps that check it side by side, and mark the checks
-  `(verify)`: a command to run, something to look at. Keep each step to one
-  sitting, in the order you would do them. Do not number them: `iter` gives
-  each one an id.
+- **Checklist**: the work in a few big steps, each a `### ` heading, and under
+  each heading its small steps, one per line, as `- [ ] step`. Name a big step
+  after the kind of agent that will do it: `### develop`, `### test`,
+  `### check`, `### fix` (leave out the ones this task does not need, and add a
+  `### <name>` of your own when it has a kind of work the others do not cover).
+  Say how many small steps each needs: as few as do the job, each one sitting
+  of work. Mark the steps that check rather than do `(verify)`: a command to
+  run, something to look at. Do not number them: `iter` gives each one an id.
 
 If this task needs another shape, add sections of your own and keep these three.
 If a plan exists above, revise it rather than starting again, and keep the
