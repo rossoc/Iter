@@ -24,7 +24,7 @@ use super::{Id, open_db};
 use crate::agent::instruction::{self, Layers};
 use crate::agent::plan::Item;
 use crate::agent::prompt::Kind;
-use crate::agent::run::{Harness, Run};
+use crate::agent::run::{Harness, RunRecord};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
 use crate::commands::solve::{self, Spec};
@@ -81,7 +81,7 @@ pub struct Compose {
 #[derive(Default)]
 pub struct Roster {
     /// Latest first.
-    pub runs: Vec<Run>,
+    pub runs: Vec<RunRecord>,
     pub compose: Option<Compose>,
     /// The run the table marks (the one being edited).
     pub current: Option<u32>,
@@ -213,7 +213,7 @@ pub(super) async fn act(
 }
 
 #[component]
-pub(super) async fn state_pill(run: &Run) -> Result<impl View> {
+pub(super) async fn state_pill(run: &RunRecord) -> Result<impl View> {
     let shown = run.shown_status();
     Ok(view! {
         <span class=(format!("run-state {shown}"))>
@@ -226,7 +226,7 @@ pub(super) async fn state_pill(run: &Run) -> Result<impl View> {
 }
 
 #[component]
-async fn agent_row(task_id: i64, run: &Run, current: bool) -> Result<impl View> {
+async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl View> {
     let shown = run.shown_status();
     Ok(view! {
         <tr role="row" if current { class="current" }>
@@ -433,8 +433,7 @@ fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Kind, Spec
 /// them with.
 fn world(id: i64) -> Result<(App, String, Task, Project)> {
     let db = open_db()?;
-    let task = db.get::<Task>(id)?.ok_or_not_found()?;
-    let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
+    let (task, project) = super::load::task_with_project(&db, id)?;
     // a task without a place for its folder has no runs to act on
     taskdir::of(&db, &project, &task)?;
     let name = task_display(&project, &task);

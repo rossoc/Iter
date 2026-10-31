@@ -196,6 +196,11 @@ fn name_scope(kind: &str) -> &'static str {
     }
 }
 
+/// A "ran, but failed" error with a message: the one-liner the commands share.
+pub fn failed(message: impl Into<String>) -> IterError {
+    IterError::CommandFailed(message.into())
+}
+
 pub type Result<T> = std::result::Result<T, IterError>;
 
 #[cfg(test)]

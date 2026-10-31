@@ -17,6 +17,23 @@ pub enum Harness {
     Claude,
 }
 
+/// What one headless run of a harness is asked to do. Named fields, because
+/// the model and the effort are both text and easy to swap as arguments.
+#[derive(Clone, Copy, Default)]
+pub struct Invocation<'a> {
+    pub prompt: &'a str,
+    /// Empty: the harness's own default.
+    pub model: &'a str,
+    /// Empty: the harness's own default.
+    pub effort: &'a str,
+    /// Folders besides the working one the agent may read and write (the
+    /// task's folder).
+    pub dirs: &'a [&'a Path],
+    pub allowed: &'a [String],
+    /// Goes last, for what the harness takes that iter does not know about.
+    pub extra: &'a [String],
+}
+
 impl Harness {
     pub fn key(self) -> &'static str {
         match self {
@@ -52,19 +69,17 @@ impl Harness {
         }
     }
 
-    /// The program and the arguments that run `prompt` once, headless, to
-    /// the end. `dirs` are folders besides the working one the agent may
-    /// read and write (the task's folder). `extra` goes last, for what the
-    /// harness takes that iter does not know about.
-    pub fn command(
-        self,
-        model: &str,
-        effort: &str,
-        prompt: &str,
-        dirs: &[&Path],
-        allowed: &[String],
-        extra: &[String],
-    ) -> (&'static str, Vec<String>) {
+    /// The program and the arguments that run `job` once, headless, to the
+    /// end.
+    pub fn command(self, job: &Invocation) -> (&'static str, Vec<String>) {
+        let Invocation {
+            prompt,
+            model,
+            effort,
+            dirs,
+            allowed,
+            extra,
+        } = *job;
         match self {
             Harness::Claude => {
                 let mut args = vec!["-p".to_string(), prompt.to_string()];
@@ -122,7 +137,7 @@ impl Status {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Run {
+pub struct RunRecord {
     pub n: u32,
     pub agent: Harness,
     pub model: String,
@@ -149,7 +164,7 @@ pub struct Run {
     pub pid: Option<u32>,
 }
 
-impl Run {
+impl RunRecord {
     /// The status to show: a run that says it is running but whose process
     /// is gone (killed, or the machine restarted) is `lost`. One that never
     /// got a process (the start failed halfway) is `lost` once it is a
@@ -255,7 +270,7 @@ impl TaskDir {
         }
     }
 
-    pub fn read_run(&self, n: u32) -> std::io::Result<Option<Run>> {
+    pub fn read_run(&self, n: u32) -> std::io::Result<Option<RunRecord>> {
         match std::fs::read_to_string(self.run_path(n)) {
             Ok(text) => serde_yaml::from_str(&text)
                 .map(Some)
@@ -265,7 +280,7 @@ impl TaskDir {
         }
     }
 
-    pub fn write_run(&self, run: &Run) -> std::io::Result<()> {
+    pub fn write_run(&self, run: &RunRecord) -> std::io::Result<()> {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
@@ -274,11 +289,11 @@ impl TaskDir {
 
     /// Every run, the first one first. A record that cannot be read is left
     /// out.
-    pub fn runs(&self) -> Vec<Run> {
+    pub fn runs(&self) -> Vec<RunRecord> {
         let Ok(entries) = std::fs::read_dir(self.runs_dir()) else {
             return Vec::new();
         };
-        let mut runs: Vec<Run> = entries
+        let mut runs: Vec<RunRecord> = entries
             .flatten()
             .filter_map(|e| {
                 let path = e.path();
@@ -303,8 +318,8 @@ mod tests {
         TaskDir::new(root)
     }
 
-    fn run(n: u32) -> Run {
-        Run {
+    fn run(n: u32) -> RunRecord {
+        RunRecord {
             n,
             agent: Harness::Claude,
             model: "haiku".into(),
@@ -339,14 +354,14 @@ mod tests {
     #[test]
     fn claude_runs_headless_with_the_prompt_and_the_model() {
         let dir = Path::new("/n/tasks/1");
-        let (program, args) = Harness::Claude.command(
-            "haiku",
-            "low",
-            "do it",
-            &[dir],
-            &["Bash(git *)".into()],
-            &["--verbose".into()],
-        );
+        let (program, args) = Harness::Claude.command(&Invocation {
+            prompt: "do it",
+            model: "haiku",
+            effort: "low",
+            dirs: &[dir],
+            allowed: &["Bash(git *)".into()],
+            extra: &["--verbose".into()],
+        });
         assert_eq!(program, "claude");
         assert_eq!(
             args[..6],
@@ -359,7 +374,10 @@ mod tests {
         );
         assert_eq!(args.last().map(String::as_str), Some("--verbose"));
         // no model, no effort: the harness's own defaults
-        let (_, bare) = Harness::Claude.command("", "", "x", &[], &[], &[]);
+        let (_, bare) = Harness::Claude.command(&Invocation {
+            prompt: "x",
+            ..Invocation::default()
+        });
         assert!(!bare.contains(&"--model".to_string()) && !bare.contains(&"--effort".to_string()));
     }
 }

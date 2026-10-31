@@ -4,7 +4,7 @@
 //! and the answer.
 
 use super::open_db;
-use crate::models::{Priority, Project, Task};
+use crate::models::{Priority, Task};
 use serde::Deserialize;
 use topcoat::{
     Result,
@@ -38,8 +38,7 @@ pub fn drop_on(
     apply: impl FnOnce(&mut Task, &str) -> std::result::Result<Option<Priority>, String>,
 ) -> Result<Json<bool>> {
     let db = open_db()?;
-    let mut task = db.get::<Task>(drop.task_id)?.ok_or_not_found()?;
-    let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
+    let (mut task, project) = super::load::task_with_project(&db, drop.task_id)?;
     (project.board_id == Some(board_id))
         .then_some(())
         .ok_or_not_found()?;

@@ -15,7 +15,7 @@ use super::ui::prose::description;
 use super::url::{edit_url, note_url, notes_tab_url, notes_today_url, org_url, project_url};
 use super::{now, open_db};
 use crate::db::Db;
-use crate::models::Organization;
+use crate::models::{Organization, Project};
 use crate::notes::{self as journal, Note};
 use chrono::{Datelike, NaiveDate};
 use std::path::PathBuf;
@@ -144,16 +144,83 @@ fn day_of(cx: &Cx) -> topcoat::Result<NaiveDate> {
     Ok(journal::parse_date(text).ok_or_not_found()?)
 }
 
-fn project_dir(db: &Db, id: i64) -> topcoat::Result<(Parents, PathBuf)> {
-    let parents = parents_of(db, id)?;
-    let dir = dir_or_404(journal::project_dir(&parents.project, &parents.org))?;
-    Ok((parents, dir))
+/// Whose notes a page shows: a project (with the organization it is in) or
+/// an organization, with the folder they are in and the page they belong to.
+struct Owner {
+    name: String,
+    /// The owner's own page, which the notes' URLs hang from.
+    base: String,
+    dir: PathBuf,
+    org: Option<Organization>,
+    project: Option<Project>,
 }
 
-fn org_dir(db: &Db, id: i64) -> topcoat::Result<(Organization, PathBuf)> {
-    let org = db.get::<Organization>(id)?.ok_or_not_found()?;
-    let dir = dir_or_404(journal::org_dir(&org))?;
-    Ok((org, dir))
+impl Owner {
+    /// Project `id`. No such project, or one with no notes folder, is a 404.
+    fn project(db: &Db, id: i64) -> topcoat::Result<Owner> {
+        let Parents { project, org } = parents_of(db, id)?;
+        let dir = dir_or_404(journal::project_dir(&project, &org))?;
+        Ok(Owner {
+            name: project.name.clone(),
+            base: project_url(id),
+            dir,
+            org,
+            project: Some(project),
+        })
+    }
+
+    /// Organization `id`, with the same 404s.
+    fn org(db: &Db, id: i64) -> topcoat::Result<Owner> {
+        let org = db.get::<Organization>(id)?.ok_or_not_found()?;
+        let dir = dir_or_404(journal::org_dir(&org))?;
+        Ok(Owner {
+            name: org.name.clone(),
+            base: org_url(id),
+            dir,
+            org: Some(org),
+            project: None,
+        })
+    }
+
+    /// The crumbs up to the Notes tab.
+    fn crumbs(&self) -> Vec<Crumb> {
+        trail(
+            &self.org,
+            self.project.as_ref(),
+            Crumb::link("Notes", notes_tab_url(&self.base)),
+        )
+    }
+
+    /// The note of `day`, with its neighbours. No such note is a 404.
+    fn note_page(&self, day: NaiveDate) -> topcoat::Result<NotePage> {
+        let notes = journal::list(&self.dir);
+        let (prev, next) = journal::neighbours(&notes, day);
+        let (prev, next) = (
+            prev.map(|n| link(&self.base, n)),
+            next.map(|n| link(&self.base, n)),
+        );
+        let note = notes
+            .into_iter()
+            .find(|n| n.date == day)
+            .ok_or_not_found()?;
+        let mut crumbs = self.crumbs();
+        crumbs.push(Crumb::here(day_label(day)));
+        Ok(NotePage {
+            owner: self.name.clone(),
+            crumbs,
+            note,
+            prev,
+            next,
+        })
+    }
+
+    /// Makes sure today's note exists, then redirects to it: always an
+    /// `Err`, as every redirect here is.
+    fn open_today(&self) -> Result<Response> {
+        let today = now().date();
+        journal::create(&self.dir, today)?;
+        Err(see_other(note_url(&self.base, today)).into())
+    }
 }
 
 fn day_label(day: NaiveDate) -> String {
@@ -168,44 +235,11 @@ fn link(base: &str, note: &Note) -> NoteLink {
     }
 }
 
-/// The note of `day` in `dir` under the page at `base`; `crumbs` lead to the
-/// Notes tab, the page's own crumb is added. No such note is a 404.
-fn load_note(
-    dir: &std::path::Path,
-    day: NaiveDate,
-    base: &str,
-    owner: &str,
-    mut crumbs: Vec<Crumb>,
-) -> topcoat::Result<NotePage> {
-    let notes = journal::list(dir);
-    let (prev, next) = journal::neighbours(&notes, day);
-    let (prev, next) = (prev.map(|n| link(base, n)), next.map(|n| link(base, n)));
-    let note = notes
-        .into_iter()
-        .find(|n| n.date == day)
-        .ok_or_not_found()?;
-    crumbs.push(Crumb::here(day_label(day)));
-    Ok(NotePage {
-        owner: owner.to_string(),
-        crumbs,
-        note,
-        prev,
-        next,
-    })
-}
-
 #[page("/project/{id}/notes/{date}")]
 async fn project_note(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let day = day_of(cx)?;
-    let (Parents { project, org }, dir) = project_dir(&open_db()?, id)?;
-    let base = project_url(id);
-    let crumbs = trail(
-        &org,
-        Some(&project),
-        Crumb::link("Notes", notes_tab_url(&base)),
-    );
-    let page = load_note(&dir, day, &base, &project.name, crumbs)?;
+    let page = Owner::project(&open_db()?, id)?.note_page(day)?;
     Ok(view! { note_screen(page: &page) })
 }
 
@@ -213,14 +247,7 @@ async fn project_note(cx: &Cx) -> Result<impl View> {
 async fn org_note(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let day = day_of(cx)?;
-    let (org, dir) = org_dir(&open_db()?, id)?;
-    let base = org_url(id);
-    let crumbs = trail(
-        &Some(org.clone()),
-        None,
-        Crumb::link("Notes", notes_tab_url(&base)),
-    );
-    let page = load_note(&dir, day, &base, &org.name, crumbs)?;
+    let page = Owner::org(&open_db()?, id)?.note_page(day)?;
     Ok(view! { note_screen(page: &page) })
 }
 
@@ -228,24 +255,14 @@ async fn org_note(cx: &Cx) -> Result<impl View> {
 #[route(POST "/project/{id}/notes/today")]
 async fn project_today(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
-    let (_, dir) = project_dir(&open_db()?, id)?;
-    open_today(&dir, &project_url(id))
+    Owner::project(&open_db()?, id)?.open_today()
 }
 
 /// `POST /org/{id}/notes/today`: as the project's.
 #[route(POST "/org/{id}/notes/today")]
 async fn org_today(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
-    let (_, dir) = org_dir(&open_db()?, id)?;
-    open_today(&dir, &org_url(id))
-}
-
-/// Makes sure today's note exists, then redirects to it: always an `Err`,
-/// as every redirect here is.
-fn open_today(dir: &std::path::Path, base: &str) -> Result<Response> {
-    let today = now().date();
-    journal::create(dir, today)?;
-    Err(see_other(note_url(base, today)).into())
+    Owner::org(&open_db()?, id)?.open_today()
 }
 
 #[component]

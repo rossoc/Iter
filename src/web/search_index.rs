@@ -139,48 +139,23 @@ fn push_notes(
     }
 }
 
-/// `text` as a JSON string.
-fn json_str(text: &str, out: &mut String) {
-    out.push('"');
-    for c in text.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-            c => out.push(c),
-        }
-    }
-    out.push('"');
-}
-
 fn to_json(hits: &[Hit]) -> String {
-    let mut out = String::from("[");
-    for (i, hit) in hits.iter().enumerate() {
-        let e = hit.entry;
-        if i > 0 {
-            out.push(',');
-        }
-        out.push_str("{\"kind\":");
-        json_str(e.kind.word(), &mut out);
-        out.push_str(",\"title\":");
-        json_str(&e.title, &mut out);
-        out.push_str(",\"path\":");
-        let path: Vec<&str> = e.ancestors.iter().map(|(_, t)| t.as_str()).collect();
-        json_str(&path.join(" / "), &mut out);
-        out.push_str(",\"url\":");
-        json_str(&e.url, &mut out);
-        out.push_str(",\"status\":");
-        json_str(&e.status, &mut out);
-        out.push_str(",\"marks\":[");
-        let marks: Vec<String> = hit.marks.iter().map(|m| m.to_string()).collect();
-        out.push_str(&marks.join(","));
-        out.push_str("]}");
-    }
-    out.push(']');
-    out
+    let rows: Vec<serde_json::Value> = hits
+        .iter()
+        .map(|hit| {
+            let e = hit.entry;
+            let path: Vec<&str> = e.ancestors.iter().map(|(_, t)| t.as_str()).collect();
+            serde_json::json!({
+                "kind": e.kind.word(),
+                "title": e.title,
+                "path": path.join(" / "),
+                "url": e.url,
+                "status": e.status,
+                "marks": hit.marks,
+            })
+        })
+        .collect();
+    serde_json::Value::Array(rows).to_string()
 }
 
 #[route(GET "/search")]
@@ -199,14 +174,25 @@ async fn results(cx: &Cx) -> Result<Response> {
         .into_response(cx)
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn strings_are_escaped() {
-        let mut out = String::new();
-        json_str("a \"b\"\n\\\u{1}", &mut out);
-        assert_eq!(out, r#""a \"b\"\n\\\u0001""#);
+    fn hits_are_json_with_their_strings_escaped() {
+        let entries = [Entry {
+            kind: Kind::Task,
+            title: "Fix \"quotes\"\n\\".into(),
+            ancestors: vec![(Kind::Org, "acme".into()), (Kind::Project, "web".into())],
+            url: "/task/1".into(),
+            description: String::new(),
+            status: "wip".into(),
+        }];
+        let json = to_json(&search(&entries, "fix", 5));
+        let rows: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
+        assert_eq!(rows[0]["title"], "Fix \"quotes\"\n\\");
+        assert_eq!(rows[0]["path"], "acme / web");
+        assert_eq!(rows[0]["marks"], serde_json::json!([0, 1, 2]));
     }
 }

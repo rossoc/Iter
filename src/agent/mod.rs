@@ -5,6 +5,7 @@
 //! knowledge (the onboarding), the caller passes it in as text, so the wiki can
 //! be replaced without touching this module.
 
+pub mod exec;
 pub mod instruction;
 pub mod plan;
 pub mod prompt;

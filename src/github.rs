@@ -194,11 +194,10 @@ fn normalize_body(body: &str) -> String {
     body.replace("\r\n", "\n").trim_end().to_string()
 }
 
-/// `gh --json` output, parsed. JSON is a subset of YAML, so the parser
-/// already in the tree reads it as-is -- `what` names the `gh` subcommand
-/// whose output didn't parse, since that's all a reader can act on.
+/// `gh --json` output, parsed -- `what` names the `gh` subcommand whose
+/// output didn't parse, since that's all a reader can act on.
 fn parse_json<T: DeserializeOwned>(what: &str, json: &str) -> Result<T> {
-    serde_yaml::from_str(json)
+    serde_json::from_str(json)
         .map_err(|e| IterError::CommandFailed(format!("could not read `gh {what}` output: {e}")))
 }
 
@@ -225,8 +224,7 @@ mod tests {
         "\n"
     );
 
-    /// The load-bearing assumption behind [`parse_json`]: the YAML parser
-    /// reads `gh`'s compact JSON, so no second parser is needed for it.
+    /// `gh`'s compact JSON, including the escapes in a body, reads as issues.
     #[test]
     fn gh_json_parses_into_issues() {
         let issues: Vec<RawIssue> = parse_json("issue list", GH_LIST_OUTPUT).expect("parses");

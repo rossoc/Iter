@@ -342,11 +342,10 @@ mod tests {
 
     /// The settings of a form that keep `settings` as they are.
     fn settings_form(settings: &Settings) -> SettingsForm {
-        let on = |set: bool| set.then(|| "on".to_string());
         SettingsForm {
-            github: on(settings.github),
-            tmux: on(settings.tmux),
-            auto_branch: on(settings.auto_branch),
+            github: settings.github,
+            tmux: settings.tmux,
+            auto_branch: settings.auto_branch,
             branch_template: settings.branch_template.clone(),
             default_branch: settings.default_branch.clone(),
             github_project: settings.github_project.clone(),

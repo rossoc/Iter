@@ -7,7 +7,7 @@
 //! are the user's and are never rewritten.
 
 use super::graph::Wiki;
-use crate::error::{IterError, Result};
+use crate::error::{Result, failed};
 use crate::agent::taskdir::write_atomic;
 use crate::md_edit::split_at_divider;
 use std::path::PathBuf;
@@ -24,10 +24,6 @@ pub struct Moved {
     pub from: String,
     pub to: String,
     pub rewrites: Vec<Rewrite>,
-}
-
-fn failed(message: impl Into<String>) -> IterError {
-    IterError::CommandFailed(message.into())
 }
 
 /// `target`, which names `old_rel` in `label`'s level, as it names `new_rel`.

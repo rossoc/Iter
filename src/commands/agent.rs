@@ -7,7 +7,7 @@ use crate::agent::prompt::{self, Context, Kind};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
 use crate::db::Table;
-use crate::error::{IterError, Result};
+use crate::error::{Result, failed};
 use crate::md_edit::edit_text;
 use crate::models::{Organization, Project, Task};
 use crate::notes;
@@ -16,10 +16,6 @@ use crate::utils::resolve::{resolve_task_or_current, task_display};
 use serde::Serialize;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-
-fn failed(message: impl Into<String>) -> IterError {
-    IterError::CommandFailed(message.into())
-}
 
 /// The task a command is about, with its project and its folder.
 pub(super) fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)> {

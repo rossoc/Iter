@@ -11,7 +11,7 @@ use super::ui::button::post_button;
 use super::ui::empty_line::empty_line;
 use super::ui::labelled::labelled_section;
 use super::ui::notice::notice;
-use super::url::{task_url, wiki_action_url, wiki_tab_url};
+use super::url::{WikiAction, task_url, wiki_action_url, wiki_tab_url};
 use super::{Id, open_db};
 use crate::commands::ingest::{self, Review};
 use crate::db::{Db, Table};
@@ -22,7 +22,7 @@ use topcoat::{
     context::Cx,
     router::{
         RouterBuilder,
-        error::{RouterErrorExt, bad_request, see_other},
+        error::see_other,
         path_param,
         response::Response,
         route,
@@ -30,7 +30,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-path_param!(action: String, error = bad_request);
+path_param!(action: WikiAction, error = bad_request);
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(act)
@@ -135,8 +135,8 @@ async fn changes_block(task_id: i64, review: &Review, files: &[FileChange]) -> R
                     notice("An agent is writing in the wiki now. Accept or throw away once it has finished.")
                 }
                 <div class="step-actions">
-                    post_button(action: wiki_action_url(task_id, "accept"), fields: vec![], (format!("Accept {} files", files.len())))
-                    post_button(action: wiki_action_url(task_id, "revert"), fields: vec![], (format!("Throw away {} files", files.len())))
+                    post_button(action: wiki_action_url(task_id, WikiAction::Accept), fields: vec![], (format!("Accept {} files", files.len())))
+                    post_button(action: wiki_action_url(task_id, WikiAction::Revert), fields: vec![], (format!("Throw away {} files", files.len())))
                 </div>
                 <p class="empty-line">"Accept commits them in the notes' repository. Throw away removes every uncommitted change under " <code>"wiki/"</code> ", yours too."</p>
                 <div class="files diffs">
@@ -173,7 +173,7 @@ async fn waiting_block(task_id: i64, review: &Review) -> Result<impl View> {
             }
             if review.in_git && !review.busy {
                 <div class="step-actions">
-                    post_button(action: wiki_action_url(task_id, "ingest"), fields: vec![], "Ingest now, with this task's sketches")
+                    post_button(action: wiki_action_url(task_id, WikiAction::Ingest), fields: vec![], "Ingest now, with this task's sketches")
                 </div>
             }
             if review.busy {
@@ -201,15 +201,13 @@ pub async fn wiki_tab(tab: &WikiTab, sketches: &[Doc]) -> Result<impl View> {
 #[route(POST "/task/{id}/wiki/{action}")]
 async fn act(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
-    let action = path_param::<Action>(cx)?.clone();
+    let action = *path_param::<Action>(cx)?;
     let db = open_db()?;
-    let task = db.get::<Task>(id)?.ok_or_not_found()?;
-    let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
-    let done = match action.as_str() {
-        "accept" => ingest::settle(&db, &project, true).map(|_| ()),
-        "revert" => ingest::settle(&db, &project, false).map(|_| ()),
-        "ingest" => ingest::ingest_in_background(&db, &project, &task),
-        other => return Err(bad_request(format!("'{other}' is not an action")).into()),
+    let (task, project) = super::load::task_with_project(&db, id)?;
+    let done = match action {
+        WikiAction::Accept => ingest::settle(&db, &project, true).map(|_| ()),
+        WikiAction::Revert => ingest::settle(&db, &project, false).map(|_| ()),
+        WikiAction::Ingest => ingest::ingest_in_background(&db, &project, &task),
     };
     done.map_err(super::errors::refused)?;
     Err(see_other(wiki_tab_url(&task_url(id))).into())

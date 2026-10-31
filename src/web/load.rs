@@ -1,7 +1,7 @@
 //! Lookups shared by several pages' `load` functions.
 
 use crate::db::{Db, Table};
-use crate::models::{Board, Card, Organization, Project, ProjectGroup};
+use crate::models::{Board, Card, Organization, Project, ProjectGroup, Task};
 use std::collections::HashMap;
 use topcoat::router::error::RouterErrorExt;
 
@@ -94,6 +94,14 @@ pub struct Parents {
 /// Project `id`: one lookup by key. No such project is a 404.
 pub fn project_of(db: &Db, id: i64) -> topcoat::Result<Project> {
     Ok(db.get::<Project>(id)?.ok_or_not_found()?)
+}
+
+/// Task `id` and the project it is in: two lookups by key. No such task (or
+/// project) is a 404.
+pub fn task_with_project(db: &Db, id: i64) -> topcoat::Result<(Task, Project)> {
+    let task = db.get::<Task>(id)?.ok_or_not_found()?;
+    let project = project_of(db, task.project_id)?;
+    Ok((task, project))
 }
 
 /// Loads project `id` and its organization (only when it has one): two

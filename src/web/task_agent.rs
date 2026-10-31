@@ -430,12 +430,8 @@ pub enum Refusal {
 
 /// Puts `step` of the plan in `dir` into the state `state` names.
 pub fn set_state(dir: &TaskDir, step: &str, state: &str) -> std::result::Result<(), Refusal> {
-    let state = match state {
-        "todo" => State::Todo,
-        "doing" => State::Doing,
-        "done" => State::Done,
-        other => return Err(Refusal::State(format!("'{other}' is not a state"))),
-    };
+    let state = <State as clap::ValueEnum>::from_str(state, false)
+        .map_err(|_| Refusal::State(format!("'{state}' is not a state")))?;
     // taking turns with whoever else is writing the plan (an agent ticking a step)
     dir.update_plan(|content| {
         let missing = || IterError::NotFound {
@@ -460,8 +456,7 @@ async fn mark_step(cx: &Cx, Form(form): Form<MarkForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let step = path_param::<Step>(cx)?.clone();
     let db = open_db()?;
-    let task = db.get::<Task>(id)?.ok_or_not_found()?;
-    let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
+    let (task, project) = super::load::task_with_project(&db, id)?;
     let dir = taskdir::of(&db, &project, &task).ok().ok_or_not_found()?;
     match set_state(&dir, &step, &form.state) {
         Ok(()) => {}

@@ -185,10 +185,42 @@ pub fn wiki_tab_url(base: &str) -> String {
     page_url(base, &[("tab", Some("wiki"))])
 }
 
-/// Where the Wiki tab's buttons post: `action` is `accept`, `revert` or
-/// `ingest`.
-pub fn wiki_action_url(id: i64, action: &str) -> String {
-    format!("{}/wiki/{action}", task_url(id))
+/// What a Wiki tab button does. The URL builder and the route read the same
+/// words from here, so they cannot drift apart.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WikiAction {
+    /// Keep the agent's changes.
+    Accept,
+    /// Throw them away.
+    Revert,
+    /// Start an ingest now.
+    Ingest,
+}
+
+impl WikiAction {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            WikiAction::Accept => "accept",
+            WikiAction::Revert => "revert",
+            WikiAction::Ingest => "ingest",
+        }
+    }
+}
+
+impl std::str::FromStr for WikiAction {
+    type Err = String;
+
+    fn from_str(word: &str) -> Result<Self, String> {
+        [WikiAction::Accept, WikiAction::Revert, WikiAction::Ingest]
+            .into_iter()
+            .find(|a| a.as_str() == word)
+            .ok_or_else(|| format!("'{word}' is not an action"))
+    }
+}
+
+/// Where the Wiki tab's buttons post.
+pub fn wiki_action_url(id: i64, action: WikiAction) -> String {
+    format!("{}/wiki/{}", task_url(id), action.as_str())
 }
 
 /// The Agent tab of task `id` with `step` open beside the plan.
@@ -320,7 +352,11 @@ mod tests {
         assert_eq!(agents_url(), "/agents");
         assert_eq!(run_action_url(5, 2, "cancel"), "/task/5/runs/2/cancel");
         assert_eq!(wiki_tab_url("/task/5"), "/task/5?tab=wiki");
-        assert_eq!(wiki_action_url(5, "accept"), "/task/5/wiki/accept");
+        assert_eq!(wiki_action_url(5, WikiAction::Accept), "/task/5/wiki/accept");
+        for action in [WikiAction::Accept, WikiAction::Revert, WikiAction::Ingest] {
+            assert_eq!(action.as_str().parse(), Ok(action));
+        }
+        assert!("explode".parse::<WikiAction>().is_err());
         // whatever the id, it is one path segment
         assert_eq!(plan_step_url(5, "a/b c"), "/task/5/plan/a%2Fb%20c");
     }

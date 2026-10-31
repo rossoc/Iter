@@ -25,9 +25,10 @@ pub use task::TaskForm;
 pub const NAME: &str = "name";
 pub const DESCRIPTION: &str = "description";
 
-/// A checkbox is present in the submission (as `on`) only when ticked.
-fn checked(value: &Option<String>) -> bool {
-    value.is_some()
+/// A checkbox is present in the submission (as `on`) only when ticked: for
+/// `#[serde(default, deserialize_with = "ticked")]` on a `bool`.
+fn ticked<'de, D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<bool, D::Error> {
+    Option::<String>::deserialize(deserializer).map(|value| value.is_some())
 }
 
 /// Browsers submit textareas with CRLF line endings; the database (and the
@@ -104,9 +105,12 @@ fn optional<T>(
 /// both the organization and the project form.
 #[derive(Deserialize)]
 pub struct SettingsForm {
-    pub github: Option<String>,
-    pub tmux: Option<String>,
-    pub auto_branch: Option<String>,
+    #[serde(default, deserialize_with = "ticked")]
+    pub github: bool,
+    #[serde(default, deserialize_with = "ticked")]
+    pub tmux: bool,
+    #[serde(default, deserialize_with = "ticked")]
+    pub auto_branch: bool,
     pub branch_template: String,
     pub default_branch: String,
     pub github_project: String,
@@ -123,7 +127,7 @@ impl SettingsForm {
     pub const GITHUB_PROJECT: &'static str = "github_project";
 
     fn parse(pairs: &Pairs) -> SettingsForm {
-        let on = |key| pairs.get(key).map(str::to_string);
+        let on = |key| pairs.get(key).is_some();
         SettingsForm {
             github: on(Self::GITHUB),
             tmux: on(Self::TMUX),
@@ -136,9 +140,9 @@ impl SettingsForm {
 
     pub fn settings(&self) -> Settings {
         Settings {
-            github: checked(&self.github),
-            tmux: checked(&self.tmux),
-            auto_branch: checked(&self.auto_branch),
+            github: self.github,
+            tmux: self.tmux,
+            auto_branch: self.auto_branch,
             branch_template: self.branch_template.trim().to_string(),
             default_branch: self.default_branch.trim().to_string(),
             github_project: self.github_project.trim().to_string(),

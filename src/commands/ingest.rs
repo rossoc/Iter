@@ -4,12 +4,13 @@
 //! left uncommitted in the notes' git repository: `pending` shows it, and
 //! accepting is a commit.
 
+use crate::agent::exec;
 use crate::agent::prompt::shell_word;
-use crate::agent::run::alive;
+use crate::agent::run::{Invocation, alive};
 use crate::app::App;
 use crate::args::HarnessOpts;
 use crate::db::Db;
-use crate::error::{IterError, Result};
+use crate::error::{IterError, Result, failed};
 use crate::models::{Project, Task};
 use crate::process;
 use crate::utils::resolve::{resolve_project_or_current, resolve_task, task_display};
@@ -17,13 +18,9 @@ use crate::wiki::graph::Wiki;
 use crate::wiki::ingest::{self, Job, Mode};
 use crate::wiki::schema;
 use crate::wiki::scope::{self, Spec};
-use std::os::unix::process::CommandExt;
-use std::path::PathBuf;
-use std::process::Stdio;
 
-fn failed(message: impl Into<String>) -> IterError {
-    IterError::CommandFailed(message.into())
-}
+use std::path::PathBuf;
+
 
 /// A project's wiki, and where it is kept.
 struct Target {
@@ -154,27 +151,14 @@ fn run_agent(
     let log = std::fs::File::create(&log_path)?;
     let _lock = lock(target)?;
     let harness = opts.agent.unwrap_or_default();
-    let (program, args) = harness.command(
-        opts.model.as_deref().unwrap_or(""),
-        "",
+    let (program, args) = harness.command(&Invocation {
         prompt,
-        &[],
-        &crate::config::config().agent.allowed_tools,
-        &opts.extra,
-    );
-    let outcome = std::process::Command::new(program)
-        .args(&args)
-        .current_dir(&target.notes_dir)
-        .stdin(Stdio::null())
-        .stdout(log.try_clone()?)
-        .stderr(log)
-        .status();
-    let ok = outcome
-        .map_err(|source| IterError::Spawn {
-            tool: "claude",
-            source,
-        })?
-        .success();
+        model: opts.model.as_deref().unwrap_or(""),
+        allowed: &crate::config::config().agent.allowed_tools,
+        extra: &opts.extra,
+        ..Invocation::default()
+    });
+    let ok = exec::run_logged(program, &args, &target.notes_dir, log)?.success();
     Ok((log_path, ok))
 }
 
@@ -198,20 +182,7 @@ fn spawn_ingest(project: &Project, task: Option<&Task>, opts: &HarnessOpts) -> R
     if !opts.extra.is_empty() {
         command.arg("--").args(&opts.extra);
     }
-    let mut child = command
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .process_group(0)
-        .spawn()
-        .map_err(|source| IterError::Spawn {
-            tool: "iter",
-            source,
-        })?;
-    // waited for, so that in the web server it does not stay a zombie
-    std::thread::spawn(move || {
-        let _ = child.wait();
-    });
+    exec::spawn_detached(&mut command)?;
     Ok(())
 }
 
@@ -490,11 +461,7 @@ pub fn ingest_in_background(db: &Db, project: &Project, task: &Task) -> Result<(
     if busy(&target) {
         return Err(failed("an ingest is already running"));
     }
-    let none = HarnessOpts {
-        agent: None,
-        model: None,
-        extra: Vec::new(),
-    };
+    let none = HarnessOpts::default();
     spawn_ingest(project, Some(task), &none)
 }
 
@@ -555,11 +522,7 @@ pub fn auto(app: &App, project: &Project, task: &Task, trigger: Trigger) {
         if ingest::waiting(&target.wiki).is_empty() && !sketches {
             return Ok(false);
         }
-        let none = HarnessOpts {
-            agent: None,
-            model: None,
-            extra: Vec::new(),
-        };
+        let none = HarnessOpts::default();
         spawn_ingest(project, sketches.then_some(task), &none)?;
         Ok(true)
     })();

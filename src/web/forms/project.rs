@@ -95,9 +95,9 @@ mod tests {
             notes_path: String::new(),
             organization: org.into(),
             settings: SettingsForm {
-                github: Some("on".into()),
-                tmux: None,
-                auto_branch: None,
+                github: true,
+                tmux: false,
+                auto_branch: false,
                 branch_template: "feat/".into(),
                 default_branch: "main".into(),
                 github_project: String::new(),
@@ -111,5 +111,23 @@ mod tests {
         assert!(p.github && !p.tmux);
         assert_eq!(apply("", "/tmp/p").0.organization_id, None);
         assert!(matches!(apply("", " ").1, Err(IterError::EmptyBasePath)));
+    }
+
+    /// Through serde (flattened), as a real submission arrives: a box is
+    /// there as `on` when ticked and absent when not.
+    #[test]
+    fn a_project_submission_decodes_its_ticks_as_bools() {
+        let decode = |body: &str| {
+            let topcoat::router::content::Form(form) =
+                topcoat::router::content::Form::<ProjectForm>::from_bytes(body.as_bytes())
+                    .expect("decodes");
+            form.settings
+        };
+        let base = "name=p&description=&base_path=%2Ftmp%2Fp&organization=\
+                    &branch_template=f&default_branch=main&github_project=";
+        let ticked = decode(&format!("{base}&github=on&auto_branch=on"));
+        assert!(ticked.github && !ticked.tmux && ticked.auto_branch);
+        let none = decode(base);
+        assert!(!none.github && !none.tmux && !none.auto_branch);
     }
 }

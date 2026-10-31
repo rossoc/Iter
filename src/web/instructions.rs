@@ -30,7 +30,7 @@ use super::url::{instruction_url, instructions_url, page_url, project_url, run_u
 use crate::agent::instruction::{self, Instruction, Layers, Source};
 use crate::agent::prompt::{Kind, PLACEHOLDERS};
 use crate::agent::run::Harness;
-use crate::agent::run::Run;
+use crate::agent::run::RunRecord;
 use crate::agent::taskdir;
 use crate::config::config;
 use crate::db::{Db, Table};
@@ -133,7 +133,7 @@ impl Scope {
 pub struct Use {
     pub task_id: i64,
     pub task: String,
-    pub run: Run,
+    pub run: RunRecord,
 }
 
 /// Every run that was given an instruction, in the tasks of `only` (a
@@ -739,7 +739,7 @@ mod tests {
         let run = |n: u32, instruction: Option<&str>, kind: &str| Use {
             task_id: 1,
             task: "app/Fix it".into(),
-            run: Run {
+            run: RunRecord {
                 n,
                 agent: crate::agent::run::Harness::Claude,
                 model: "haiku".into(),
@@ -788,7 +788,7 @@ mod tests {
             db.get::<Task>(task).unwrap().unwrap(),
         );
         let dir = taskdir::of(&db, &p, &t).unwrap();
-        let mut run = Run {
+        let mut run = RunRecord {
             n: 1,
             agent: crate::agent::run::Harness::Claude,
             model: "haiku".into(),

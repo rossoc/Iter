@@ -184,9 +184,9 @@ mod tests {
             pause_gap_minutes: gap.into(),
             status: status.into(),
             settings: SettingsForm {
-                github: Some("on".into()),
-                tmux: None,
-                auto_branch: None,
+                github: true,
+                tmux: false,
+                auto_branch: false,
                 branch_template: "feat/{task}".into(),
                 default_branch: trunk.into(),
                 github_project: String::new(),

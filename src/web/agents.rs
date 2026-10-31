@@ -20,10 +20,9 @@ use super::url::{
     agent_tab_url, agent_url, agents_url, page_url, run_action_url, run_post_url, task_url,
 };
 use super::{Id, open_db};
-use crate::agent::run::Run;
+use crate::agent::run::RunRecord;
 use crate::agent::taskdir;
 use crate::config::config;
-use crate::models::{Project, Task};
 use crate::utils::resolve::task_display;
 use topcoat::{
     Result,
@@ -52,7 +51,7 @@ fn tail(log: &str) -> (String, bool) {
 }
 
 /// The title of an agent's page: `#3 Develop`.
-fn heading(run: &Run) -> String {
+fn heading(run: &RunRecord) -> String {
     format!("#{} {}", run.n, label_of(run.instruction_name()))
 }
 
@@ -114,7 +113,7 @@ async fn list_screen(uses: &[Use]) -> Result<impl View> {
 struct Loaded {
     task_id: i64,
     task: String,
-    run: Run,
+    run: RunRecord,
     prompt: String,
     log: String,
     cut: bool,
@@ -122,8 +121,7 @@ struct Loaded {
 
 fn load(id: i64, n: u32) -> Result<Loaded> {
     let db = open_db()?;
-    let task = db.get::<Task>(id)?.ok_or_not_found()?;
-    let project = db.get::<Project>(task.project_id)?.ok_or_not_found()?;
+    let (task, project) = super::load::task_with_project(&db, id)?;
     let dir = taskdir::of(&db, &project, &task)?;
     let run = dir.read_run(n)?.ok_or_not_found()?;
     let (log, cut) = tail(&std::fs::read_to_string(dir.run_log_path(n)).unwrap_or_default());
@@ -174,7 +172,7 @@ async fn detail_page(cx: &Cx) -> Result<impl View> {
 /// The buttons that fit the agent's state: a waiting one is run or removed,
 /// a working one is stopped.
 #[component]
-async fn actions(task_id: i64, run: &Run) -> Result<impl View> {
+async fn actions(task_id: i64, run: &RunRecord) -> Result<impl View> {
     let shown = run.shown_status();
     Ok(view! {
         <div class="compose-actions">
@@ -376,7 +374,7 @@ mod tests {
 
     #[test]
     fn the_title_says_the_number_and_what_it_does() {
-        let mut run = Run {
+        let mut run = RunRecord {
             n: 3,
             agent: crate::agent::run::Harness::Claude,
             model: "haiku".into(),

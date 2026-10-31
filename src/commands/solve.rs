@@ -2,26 +2,24 @@
 //! on its own in the task's worktree. The files of a run are
 //! `agent::run`'s; the harness is whatever `Harness` says to start.
 
+use crate::agent::exec;
 use crate::agent::prompt::Kind;
-use crate::agent::run::{Harness, Run, Status};
+use crate::agent::run::{Harness, Invocation, RunRecord, Status};
 use crate::agent::taskdir::TaskDir;
 use crate::app::App;
 use crate::commands::agent::{locate, prompt_for};
 use crate::commands::ingest::{self, Trigger};
 use crate::db::Table;
-use crate::error::{IterError, Result};
+use crate::error::{IterError, Result, failed};
 use crate::git;
 use crate::md_edit::{edit_text, split_at_divider};
 use crate::models::{Project, SessionConfig, Task, TaskStatus};
 use crate::utils::resolve::task_display;
 use crate::utils::workspace::create_task_worktree;
 use serde::{Deserialize, Serialize};
-use std::os::unix::process::CommandExt;
-use std::process::Stdio;
+use std::path::Path;
 
-fn failed(message: impl Into<String>) -> IterError {
-    IterError::CommandFailed(message.into())
-}
+
 
 /// What a run is told to be -- the harness, the model, how hard to work --
 /// and the front matter of the buffer `solve` opens.
@@ -200,7 +198,7 @@ pub fn create(
         _ => prompt_for(app, Some(name), kind, None, true, Some(description), true)?,
     };
     let n = dir.claim_run()?;
-    let run = Run {
+    let run = RunRecord {
         n,
         agent: spec.agent,
         model: spec.model.clone(),
@@ -272,7 +270,7 @@ pub fn begin(app: &App, name: &str, n: u32, wait: bool, extra: &[String]) -> Res
             run.shown_status()
         )));
     }
-    let fail = |mut run: Run, e: IterError| {
+    let fail = |mut run: RunRecord, e: IterError| {
         run.status = Status::Failed;
         run.ended = Some(now());
         let _ = std::fs::write(dir.run_log_path(n), format!("iter: {e}\n"));
@@ -325,25 +323,12 @@ pub fn begin(app: &App, name: &str, n: u32, wait: bool, extra: &[String]) -> Res
             work(&project, &dir, run.clone(), extra)?;
             return Ok(());
         }
-        let mut child = std::process::Command::new(std::env::current_exe()?)
-            .args(["task", "run-worker", &task.id().to_string(), &n.to_string()])
-            .arg("--")
-            .args(extra)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .process_group(0)
-            .spawn()
-            .map_err(|source| IterError::Spawn {
-                tool: "iter",
-                source,
-            })?;
-        let pid = child.id();
-        // in the web server this process lives on: the worker is waited for,
-        // so that it does not stay a zombie that still looks alive
-        std::thread::spawn(move || {
-            let _ = child.wait();
-        });
+        let pid = exec::spawn_detached(
+            std::process::Command::new(std::env::current_exe()?)
+                .args(["task", "run-worker", &task.id().to_string(), &n.to_string()])
+                .arg("--")
+                .args(extra),
+        )?;
         // the worker writes its own record; only fill in its pid if it has not yet
         if let Some(mut current) = dir.read_run(n)?
             && current.status == Status::Running
@@ -383,36 +368,26 @@ pub fn cancel(app: &App, name: &str, n: u32) -> Result<()> {
 
 /// Starts the harness of `run` and waits for it; its output goes to the
 /// run's log.
-fn launch(project: &Project, dir: &TaskDir, run: &Run, extra: &[String]) -> Result<Option<i32>> {
+fn launch(project: &Project, dir: &TaskDir, run: &RunRecord, extra: &[String]) -> Result<Option<i32>> {
     let prompt = std::fs::read_to_string(dir.run_prompt_path(run.n))?;
     let log = std::fs::File::create(dir.run_log_path(run.n))?;
-    let (program, args) = run.agent.command(
-        &run.model,
-        &run.effort,
-        &prompt,
-        &[dir.root()],
-        &crate::config::config().agent.allowed_tools,
+    let (program, args) = run.agent.command(&Invocation {
+        prompt: &prompt,
+        model: &run.model,
+        effort: &run.effort,
+        dirs: &[dir.root()],
+        allowed: &crate::config::config().agent.allowed_tools,
         extra,
-    );
+    });
     let cwd = run.worktree.as_deref().unwrap_or(&project.base_path);
-    let status = std::process::Command::new(program)
-        .args(&args)
-        .current_dir(cwd)
-        .stdin(Stdio::null())
-        .stdout(log.try_clone()?)
-        .stderr(log)
-        .status()
-        .map_err(|source| IterError::Spawn {
-            tool: program,
-            source,
-        })?;
-    Ok(status.success().then_some(0).or(status.code().or(Some(-1))))
+    let status = exec::run_logged(program, &args, Path::new(cwd), log)?;
+    Ok(exec::exit_code(status))
 }
 
 /// Runs the harness of `run` in its worktree to the end and records how it
 /// went. A run that cannot start is recorded as failed, with the reason in
 /// its log.
-fn work(project: &Project, dir: &TaskDir, mut run: Run, extra: &[String]) -> Result<Run> {
+fn work(project: &Project, dir: &TaskDir, mut run: RunRecord, extra: &[String]) -> Result<RunRecord> {
     let outcome = launch(project, dir, &run, extra);
     // an agent that wrote the plan itself leaves the steps without ids: number them now
     let _ = dir.update_plan(|text| {

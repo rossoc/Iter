@@ -873,7 +873,7 @@ pub enum WikiCommand {
 
 /// How a job that runs an agent is run (the agent of `iter wiki ingest` and
 /// `iter wiki build-concept`).
-#[derive(clap::Args, Debug)]
+#[derive(clap::Args, Debug, Default)]
 pub struct HarnessOpts {
     /// The harness that runs the agent
     #[clap(long, value_enum)]
