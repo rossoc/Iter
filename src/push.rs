@@ -16,7 +16,7 @@ use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::github::IssueTracker;
 use crate::models::{Organization, Project, Push, Task, TaskStatus};
-use crate::platform::{Named, TimePlatform};
+use crate::platform::{PlatformItem, TimePlatform};
 use crate::reporting::{DateRange, Worklog, WorklogEntry, fmt_date, worklog_line};
 use crate::utils::report::project_reports;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -300,7 +300,7 @@ pub fn unknown_targets(platform: &dyn TimePlatform, target: &Target) -> Vec<Stri
 /// projects, and the activities of the project `project` names (by id or
 /// name). Whatever cannot be fetched is an empty list -- the fields stay
 /// free text.
-pub fn choices(platform: &dyn TimePlatform, project: &str) -> (Vec<Named>, Vec<Named>) {
+pub fn choices(platform: &dyn TimePlatform, project: &str) -> (Vec<PlatformItem>, Vec<PlatformItem>) {
     let projects = platform.projects().unwrap_or_default();
     let activities = match projects.iter().find(|p| p.is(project)) {
         Some(found) => platform.activities(&found.id).unwrap_or_default(),
@@ -589,16 +589,16 @@ mod tests {
     #[test]
     fn choices_are_the_platforms_lists_and_empty_without_a_project() {
         let mut platform = FakePlatform::default();
-        platform.projects = vec![Named::new("p1", "Acme")];
-        platform.activities = vec![Named::new("a1", "Dev")];
+        platform.projects = vec![PlatformItem::new("p1", "Acme")];
+        platform.activities = vec![PlatformItem::new("a1", "Dev")];
         let both = (
-            vec![Named::new("p1", "Acme")],
-            vec![Named::new("a1", "Dev")],
+            vec![PlatformItem::new("p1", "Acme")],
+            vec![PlatformItem::new("a1", "Dev")],
         );
         // by name or by id
         assert_eq!(choices(&platform, "acme"), both);
         assert_eq!(choices(&platform, "p1"), both);
-        assert_eq!(choices(&platform, "").1, Vec::<Named>::new());
+        assert_eq!(choices(&platform, "").1, Vec::<PlatformItem>::new());
     }
 
     #[test]
@@ -850,13 +850,13 @@ mod tests {
         };
         assert!(unknown_targets(&FakePlatform::default(), &target).is_empty());
         let wrong_project = FakePlatform {
-            projects: vec![Named::new("p2", "beta")],
+            projects: vec![PlatformItem::new("p2", "beta")],
             ..Default::default()
         };
         assert!(unknown_targets(&wrong_project, &target)[0].contains("not one of your projects"));
         let wrong_activity = FakePlatform {
-            projects: vec![Named::new("p1", "acme")],
-            activities: vec![Named::new("a1", "ops")],
+            projects: vec![PlatformItem::new("p1", "acme")],
+            activities: vec![PlatformItem::new("a1", "ops")],
             ..Default::default()
         };
         assert!(unknown_targets(&wrong_activity, &target)[0].contains("not an activity of 'acme'"));
@@ -867,8 +867,8 @@ mod tests {
         let (db, org) = setup();
         let plan = the_plan(&db, &org);
         let platform = FakePlatform {
-            projects: vec![Named::new("p1", "ACME")],
-            activities: vec![Named::new("a1", "Dev")],
+            projects: vec![PlatformItem::new("p1", "ACME")],
+            activities: vec![PlatformItem::new("a1", "Dev")],
             ..Default::default()
         };
         let check = check(&db, &org, &plan, &platform).unwrap();

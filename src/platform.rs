@@ -51,16 +51,16 @@ impl EntryResult {
 /// A project or an activity of the platform: what is sent is its `id`, what
 /// is shown (and typed) its `name`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct Named {
+pub struct PlatformItem {
     pub id: String,
     #[serde(default)]
     pub name: String,
 }
 
-impl Named {
+impl PlatformItem {
     #[cfg(test)]
     pub fn new(id: &str, name: &str) -> Self {
-        Named {
+        PlatformItem {
             id: id.into(),
             name: name.into(),
         }
@@ -136,13 +136,13 @@ struct Results {
 #[derive(Deserialize)]
 struct Projects {
     #[serde(default)]
-    projects: Vec<Named>,
+    projects: Vec<PlatformItem>,
 }
 
 #[derive(Deserialize)]
 struct Activities {
     #[serde(default)]
-    activities: Vec<Named>,
+    activities: Vec<PlatformItem>,
 }
 
 pub trait TimePlatform {
@@ -152,9 +152,9 @@ pub trait TimePlatform {
     /// The entries already logged on the days `from..=to`.
     fn fetch(&self, from: NaiveDate, to: NaiveDate) -> Result<Vec<WorklogEntry>>;
     /// The user's projects.
-    fn projects(&self) -> Result<Vec<Named>>;
+    fn projects(&self) -> Result<Vec<PlatformItem>>;
     /// The activities of the project with this id.
-    fn activities(&self, project_id: &str) -> Result<Vec<Named>>;
+    fn activities(&self, project_id: &str) -> Result<Vec<PlatformItem>>;
 }
 
 /// `text` as one URL path segment.
@@ -331,7 +331,7 @@ impl TimePlatform for JsonWebhook {
         )))
     }
 
-    fn projects(&self) -> Result<Vec<Named>> {
+    fn projects(&self) -> Result<Vec<PlatformItem>> {
         // No such endpoint: the platform does not list its projects.
         match self.get_or_missing(&format!("{}/projects", self.url), &[], true)? {
             Some(body) => Ok(self.parse::<Projects>(&body)?.projects),
@@ -339,7 +339,7 @@ impl TimePlatform for JsonWebhook {
         }
     }
 
-    fn activities(&self, project_id: &str) -> Result<Vec<Named>> {
+    fn activities(&self, project_id: &str) -> Result<Vec<PlatformItem>> {
         let url = format!(
             "{}/projects/{}/activities",
             self.url,
@@ -365,8 +365,8 @@ pub mod fake {
         pub refuse: Option<String>,
         /// Days the platform refuses with a conflict.
         pub conflicts: Vec<String>,
-        pub projects: Vec<Named>,
-        pub activities: Vec<Named>,
+        pub projects: Vec<PlatformItem>,
+        pub activities: Vec<PlatformItem>,
     }
 
     impl TimePlatform for FakePlatform {
@@ -393,10 +393,10 @@ pub mod fake {
         fn fetch(&self, _: NaiveDate, _: NaiveDate) -> Result<Vec<WorklogEntry>> {
             Ok(self.existing.clone())
         }
-        fn projects(&self) -> Result<Vec<Named>> {
+        fn projects(&self) -> Result<Vec<PlatformItem>> {
             Ok(self.projects.clone())
         }
-        fn activities(&self, _: &str) -> Result<Vec<Named>> {
+        fn activities(&self, _: &str) -> Result<Vec<PlatformItem>> {
             Ok(self.activities.clone())
         }
     }
@@ -610,13 +610,13 @@ mod tests {
         let (url, request) = stub("200 OK", r#"{"projects":[{"id":"p1","name":"Acme"}]}"#);
         assert_eq!(
             webhook(&url).projects().unwrap(),
-            vec![Named::new("p1", "Acme")]
+            vec![PlatformItem::new("p1", "Acme")]
         );
         assert!(request.join().unwrap().starts_with("GET /log/projects "));
         let (url, request) = stub("200 OK", r#"{"activities":[{"id":"a1","name":"Dev"}]}"#);
         assert_eq!(
             webhook(&url).activities("p 1/x").unwrap(),
-            vec![Named::new("a1", "Dev")]
+            vec![PlatformItem::new("a1", "Dev")]
         );
         assert!(
             request
@@ -628,7 +628,7 @@ mod tests {
 
     #[test]
     fn a_name_matches_without_regard_to_case_and_an_id_exactly() {
-        let n = Named::new("p1", "Next-gen Energy");
+        let n = PlatformItem::new("p1", "Next-gen Energy");
         assert!(n.is("p1") && n.is(" next-GEN energy ") && !n.is("P1x"));
     }
 

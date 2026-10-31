@@ -157,7 +157,7 @@ fn plan_update(tasks: &Tasks, index: usize, issue: &Issue, link: bool, body: boo
 
 /// What `push` does about one of the project's tasks.
 #[derive(Debug, PartialEq, Eq)]
-pub enum Push {
+pub enum PushAction {
     /// The task tracks no issue: open one for it. `state` is what that
     /// issue has to end up in -- a `done` task's new issue is opened (there
     /// is no other way to make one) and then closed. A new issue always
@@ -186,19 +186,19 @@ pub enum Push {
 
 /// What `push` should do about `task`, given the repo's issues by number
 /// and whether `--body` was asked for.
-pub fn plan_push(task: &Task, issues: &HashMap<i64, Issue>, body: bool) -> Push {
+pub fn plan_push(task: &Task, issues: &HashMap<i64, Issue>, body: bool) -> PushAction {
     let state = IssueState::for_status(task.status);
     let Some(number) = task.github_issue else {
-        return Push::Create { state };
+        return PushAction::Create { state };
     };
     let Some(issue) = issues.get(&number) else {
-        return Push::Missing { number };
+        return PushAction::Missing { number };
     };
     let state = (issue.state != state).then_some(state);
     let body = body && issue.body != task.description;
     match state.is_some() || body {
-        false => Push::Unchanged,
-        true => Push::Update {
+        false => PushAction::Unchanged,
+        true => PushAction::Update {
             number,
             state,
             body,
@@ -435,7 +435,7 @@ mod tests {
                 &HashMap::new(),
                 false
             ),
-            Push::Create {
+            PushAction::Create {
                 state: IssueState::Open
             }
         );
@@ -451,7 +451,7 @@ mod tests {
                 &HashMap::new(),
                 false
             ),
-            Push::Create {
+            PushAction::Create {
                 state: IssueState::Closed
             }
         );
@@ -462,7 +462,7 @@ mod tests {
         let issues = HashMap::from([(4, issue(4, "login", IssueState::Open))]);
         assert_eq!(
             plan_push(&task("login", Some(4), TaskStatus::Done), &issues, false),
-            Push::Update {
+            PushAction::Update {
                 number: 4,
                 state: Some(IssueState::Closed),
                 body: false,
@@ -475,7 +475,7 @@ mod tests {
         let issues = HashMap::from([(4, issue(4, "login", IssueState::Closed))]);
         assert_eq!(
             plan_push(&task("login", Some(4), TaskStatus::Queue), &issues, false),
-            Push::Update {
+            PushAction::Update {
                 number: 4,
                 state: Some(IssueState::Open),
                 body: false,
@@ -492,7 +492,7 @@ mod tests {
         for status in [TaskStatus::Queue, TaskStatus::Wip] {
             assert_eq!(
                 plan_push(&task("login", Some(4), status), &issues, false),
-                Push::Unchanged
+                PushAction::Unchanged
             );
         }
     }
@@ -504,7 +504,7 @@ mod tests {
         let issues = HashMap::from([(4, issue(4, "login", IssueState::Open))]);
         assert_eq!(
             plan_push(&task("gone", Some(99), TaskStatus::Wip), &issues, false),
-            Push::Missing { number: 99 }
+            PushAction::Missing { number: 99 }
         );
     }
 
@@ -517,10 +517,10 @@ mod tests {
         let mut local = task("login", Some(4), TaskStatus::Wip);
         local.description = "notes from the work".to_string();
         let issues = HashMap::from([(4, issue(4, "login", IssueState::Open))]);
-        assert_eq!(plan_push(&local, &issues, false), Push::Unchanged);
+        assert_eq!(plan_push(&local, &issues, false), PushAction::Unchanged);
         assert_eq!(
             plan_push(&local, &issues, true),
-            Push::Update {
+            PushAction::Update {
                 number: 4,
                 state: None,
                 body: true,

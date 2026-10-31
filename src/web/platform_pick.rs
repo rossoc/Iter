@@ -11,7 +11,7 @@
 use super::assets::Asset;
 use super::{Id, open_db};
 use crate::models::Organization;
-use crate::platform::{JsonWebhook, Named};
+use crate::platform::{JsonWebhook, PlatformItem};
 use crate::push;
 use crate::secret::{self, Keychain};
 use serde::Deserialize;
@@ -52,7 +52,7 @@ pub fn open(org: &Organization) -> Option<JsonWebhook> {
 
 /// The platform's projects, and the activities of `project` (an id or a
 /// name; the organization's own project when empty).
-pub fn lists(org: &Organization, project: &str) -> (Vec<Named>, Vec<Named>) {
+pub fn lists(org: &Organization, project: &str) -> (Vec<PlatformItem>, Vec<PlatformItem>) {
     let Some(platform) = open(org) else {
         return Default::default();
     };
@@ -71,8 +71,8 @@ pub const LIST_ACTIVITIES: &str = "platform-activities";
 #[component]
 pub async fn platform_lists(
     url: &str,
-    projects: &[Named],
-    activities: &[Named],
+    projects: &[PlatformItem],
+    activities: &[PlatformItem],
 ) -> Result<impl View> {
     Ok(view! {
         <datalist id=(LIST_PROJECTS)>

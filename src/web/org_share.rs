@@ -20,7 +20,7 @@ use super::{Id, now, open_db};
 use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
 use crate::models::Organization;
-use crate::platform::{JsonWebhook, Named, TimePlatform};
+use crate::platform::{JsonWebhook, PlatformItem, TimePlatform};
 use crate::github::{GhCli, IssueTracker};
 use crate::push::{self, Item, Target};
 use crate::reporting::{DateRange, fmt_date, worklog_text};
@@ -112,8 +112,8 @@ pub struct ShareDialog {
     pub worklog: String,
     pub status: String,
     pub target: Target,
-    pub projects: Vec<Named>,
-    pub activities: Vec<Named>,
+    pub projects: Vec<PlatformItem>,
+    pub activities: Vec<PlatformItem>,
     /// Why a push is not possible yet, if it is not.
     pub hint: String,
 }

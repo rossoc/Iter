@@ -193,7 +193,7 @@ fn push_task(
     body: bool,
 ) -> Result<Pushed> {
     match sync::plan_push(task, issues, body) {
-        sync::Push::Create { state } => {
+        sync::PushAction::Create { state } => {
             let number = gh.create(
                 &project.base_path,
                 &task.name,
@@ -217,7 +217,7 @@ fn push_task(
             }
             Ok(Pushed::Opened)
         }
-        sync::Push::Update {
+        sync::PushAction::Update {
             number,
             state,
             body,
@@ -239,8 +239,8 @@ fn push_task(
             }
             Ok(Pushed::Edited)
         }
-        sync::Push::Unchanged => Ok(Pushed::Nothing),
-        sync::Push::Missing { number } => {
+        sync::PushAction::Unchanged => Ok(Pushed::Nothing),
+        sync::PushAction::Missing { number } => {
             eprintln!("warning: '{display}' skipped -- issue #{number} isn't in this repo");
             Ok(Pushed::Nothing)
         }
