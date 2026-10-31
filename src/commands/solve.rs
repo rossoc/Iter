@@ -10,7 +10,8 @@ use crate::app::App;
 use crate::commands::agent::{locate, prompt_for};
 use crate::commands::ingest::{self, Trigger};
 use crate::db::Table;
-use crate::error::{IterError, Result, failed};
+use crate::agent::error::AgentError;
+use crate::error::{IterError, Result};
 use crate::git;
 use crate::md_edit::{edit_text, split_at_divider};
 use crate::models::{Project, SessionConfig, Task, TaskStatus};
@@ -54,8 +55,8 @@ fn render(spec: &Spec, description: &str) -> Result<String> {
 fn parse(buffer: &str) -> Result<(Spec, String)> {
     let buffer = buffer.strip_prefix("---\n").unwrap_or(buffer);
     let (front, body) = split_at_divider(buffer)
-        .ok_or_else(|| failed("the buffer lost its front matter (the lines between `---`)"))?;
-    let spec = serde_yaml::from_str(front).map_err(|e| failed(format!("front matter: {e}")))?;
+        .ok_or(AgentError::BufferLostFront)?;
+    let spec = serde_yaml::from_str(front).map_err(AgentError::BufferFront)?;
     Ok((spec, body.trim().to_string()))
 }
 
@@ -75,10 +76,7 @@ fn workspace(
         return Ok((None, None));
     }
     if !git::is_git_repo(&project.base_path) {
-        return Err(failed(format!(
-            "{} is not a git repository",
-            project.base_path
-        )));
+        return Err(AgentError::NotAGitRepo(project.base_path.clone()).into());
     }
     let (branch, path) = create_task_worktree(project, task, None)?;
     let row = SessionConfig {
@@ -142,7 +140,7 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
         req.extra,
     )?;
     if req.wait {
-        let run = dir.read_run(n)?.ok_or_else(|| failed("the run vanished"))?;
+        let run = dir.read_run(n)?.ok_or(AgentError::RunVanished(n))?;
         println!("run {n}: {}", run.shown_status());
     } else {
         println!(
@@ -168,10 +166,11 @@ pub fn start(
 ) -> Result<u32> {
     let (_, _, dir) = locate(app, Some(name))?;
     if let Some(r) = dir.runs().iter().find(|r| r.is_running()) {
-        return Err(failed(format!(
-            "run {} is still working on '{name}': wait for it, or stop it first",
-            r.n
-        )));
+        return Err(AgentError::RunBusy {
+            run: r.n,
+            task: name.to_string(),
+        }
+        .into());
     }
     let n = create(app, name, kind, spec, description, None, None)?;
     begin(app, name, n, wait, extra)?;
@@ -237,9 +236,9 @@ pub fn amend(
     prompt: &str,
 ) -> Result<()> {
     let (_, _, dir) = locate(app, Some(name))?;
-    let mut run = dir.read_run(n)?.ok_or_else(|| failed("no such run"))?;
+    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
     if !run.is_queued() {
-        return Err(failed(format!("run {n} has begun: it cannot be edited")));
+        return Err(AgentError::RunBegun(n).into());
     }
     run.agent = spec.agent;
     run.model = spec.model.clone();
@@ -258,17 +257,19 @@ pub fn amend(
 pub fn begin(app: &App, name: &str, n: u32, wait: bool, extra: &[String]) -> Result<()> {
     let (project, mut task, dir) = locate(app, Some(name))?;
     if let Some(r) = dir.runs().iter().find(|r| r.is_running()) {
-        return Err(failed(format!(
-            "run {} is still working on '{name}': wait for it, or stop it first",
-            r.n
-        )));
+        return Err(AgentError::RunBusy {
+            run: r.n,
+            task: name.to_string(),
+        }
+        .into());
     }
-    let mut run = dir.read_run(n)?.ok_or_else(|| failed("no such run"))?;
+    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
     if !run.is_queued() {
-        return Err(failed(format!(
-            "run {n} is {}, not queued",
-            run.shown_status()
-        )));
+        return Err(AgentError::RunNotQueued {
+            run: n,
+            status: run.shown_status().to_string(),
+        }
+        .into());
     }
     let fail = |mut run: RunRecord, e: IterError| {
         run.status = Status::Failed;
@@ -278,10 +279,11 @@ pub fn begin(app: &App, name: &str, n: u32, wait: bool, extra: &[String]) -> Res
         e
     };
     let Ok(kind) = <Kind as clap::ValueEnum>::from_str(&run.kind, true) else {
-        let e = failed(format!(
-            "run {n} has a kind that is not known: {}",
-            run.kind
-        ));
+        let e: IterError = AgentError::RunKindUnknown {
+            run: n,
+            kind: run.kind.clone(),
+        }
+        .into();
         return Err(fail(run, e));
     };
     // a run that only reads has no use for a branch of its own; one that
@@ -347,13 +349,14 @@ pub fn begin(app: &App, name: &str, n: u32, wait: bool, extra: &[String]) -> Res
 /// to stop. Either ends `cancelled`.
 pub fn cancel(app: &App, name: &str, n: u32) -> Result<()> {
     let (_, _, dir) = locate(app, Some(name))?;
-    let mut run = dir.read_run(n)?.ok_or_else(|| failed("no such run"))?;
+    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
     let working = run.is_running();
     if !working && !run.is_queued() {
-        return Err(failed(format!(
-            "run {n} is {}: nothing to stop",
-            run.shown_status()
-        )));
+        return Err(AgentError::RunNotStoppable {
+            run: n,
+            status: run.shown_status().to_string(),
+        }
+        .into());
     }
     // the record first: the worker, when it wakes, leaves a cancelled run as it is
     let pid = run.pid.filter(|_| working);
@@ -430,13 +433,13 @@ pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
     let task = app
         .db
         .get::<Task>(task_id)?
-        .ok_or_else(|| failed("no such task"))?;
+        .ok_or(AgentError::TaskGone)?;
     let project = app
         .db
         .get::<Project>(task.project_id)?
-        .ok_or_else(|| failed("no such project"))?;
+        .ok_or(AgentError::ProjectGone)?;
     let dir = crate::agent::taskdir::of(&app.db, &project, &task)?;
-    let mut run = dir.read_run(n)?.ok_or_else(|| failed("no such run"))?;
+    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
     run.pid = Some(std::process::id());
     dir.write_run(&run)?;
     work(&project, &dir, run, extra).map(|_| ())
@@ -446,7 +449,7 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
     let (project, task, dir) = locate(app, task)?;
     if let Some(n) = log {
         let text = std::fs::read_to_string(dir.run_log_path(n))
-            .map_err(|_| failed(format!("run {n} has no log")))?;
+            .map_err(|_| AgentError::RunLogMissing(n))?;
         print!("{text}");
         return Ok(());
     }

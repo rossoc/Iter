@@ -10,7 +10,8 @@ use crate::agent::run::{Invocation, alive};
 use crate::app::App;
 use crate::args::HarnessOpts;
 use crate::db::Db;
-use crate::error::{IterError, Result, failed};
+use crate::agent::error::AgentError;
+use crate::error::{IterError, Result};
 use crate::models::{Project, Task};
 use crate::process;
 use crate::utils::resolve::{resolve_project_or_current, resolve_task, task_display};
@@ -59,10 +60,7 @@ impl Target {
     fn require_git(&self) -> Result<()> {
         match self.in_git() {
             true => Ok(()),
-            false => Err(failed(format!(
-                "{} is not in a git repository, so the changes of an agent could not be reviewed: `git init` there first",
-                self.notes_dir.display()
-            ))),
+            false => Err(AgentError::NotesNotInGit(self.notes_dir.clone()).into()),
         }
     }
 }
@@ -126,14 +124,14 @@ fn lock(target: &Target) -> Result<Lock> {
             }
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
                 if busy(target) {
-                    return Err(failed("an agent is already writing in this wiki"));
+                    return Err(AgentError::WikiBusy.into());
                 }
                 let _ = std::fs::remove_file(&path);
             }
             Err(e) => return Err(e.into()),
         }
     }
-    Err(failed("could not take the wiki's lock"))
+    Err(AgentError::WikiLockUnavailable.into())
 }
 
 /// Runs the harness on `prompt` in the notes folder, its output in a log
@@ -257,7 +255,7 @@ pub fn ingest(
 
 fn finish(target: &Target, (log, ok): (PathBuf, bool)) -> Result<()> {
     if !ok {
-        return Err(failed(format!("the agent failed: see {}", log.display())));
+        return Err(AgentError::AgentFailed(log).into());
     }
     println!(
         "done (log: {}). Review with `iter wiki pending {}`",
@@ -277,7 +275,7 @@ pub fn build_concept(
     let (project, _) = project_of(app, project, None)?;
     let target = Target::new(&app.db, project)?;
     if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
-        return Err(failed("the name is a file name: no slash, not empty"));
+        return Err(AgentError::ConceptName.into());
     }
     for idea in ideas {
         if target.wiki.node(0, idea).is_none() {
@@ -289,7 +287,7 @@ pub fn build_concept(
     }
     target.require_git()?;
     if busy(&target) {
-        return Err(failed("an agent is already writing in this wiki"));
+        return Err(AgentError::WikiBusy.into());
     }
     let schema_text = schema::render(&target.wiki.ontology);
     let scope = target.scope();
@@ -421,9 +419,7 @@ pub fn settle(db: &Db, project: &Project, accept: bool) -> Result<Vec<String>> {
     let target = Target::new(db, project.clone())?;
     target.require_git()?;
     if busy(&target) {
-        return Err(failed(
-            "an agent is writing in the wiki: wait for it to finish",
-        ));
+        return Err(AgentError::WikiWriting.into());
     }
     let list = changes(&target)?;
     if list.is_empty() {
@@ -459,7 +455,7 @@ pub fn ingest_in_background(db: &Db, project: &Project, task: &Task) -> Result<(
     let target = Target::new(db, project.clone())?;
     target.require_git()?;
     if busy(&target) {
-        return Err(failed("an ingest is already running"));
+        return Err(AgentError::IngestRunning.into());
     }
     let none = HarnessOpts::default();
     spawn_ingest(project, Some(task), &none)
@@ -560,7 +556,7 @@ pub fn bridge_task_notes(app: &App, project: &Project, task: &Task) -> Result<us
         None => None,
     };
     let notes_dir = crate::notes::project_dir(project, &org)
-        .ok_or_else(|| failed("no notes folder for the project"))?;
+        .ok_or(AgentError::NoNotesFolder)?;
     let today = chrono::Local::now().date_naive();
     let added =
         crate::notes::append_section(&notes_dir, today, &format!("Task: {}", task.name), &body)?;

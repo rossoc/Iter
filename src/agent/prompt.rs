@@ -11,6 +11,7 @@
 //! `<iter's config folder>/instructions/<kind>.md` that exists is used, the
 //! built-in one if none does.
 
+use crate::agent::error::{AgentError, AgentResult};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum)]
@@ -151,7 +152,7 @@ fn value(ctx: &Context<'_>, key: &str, kind: Kind) -> Option<String> {
 /// `template` with its `{{placeholders}}` filled. An unknown one is an error
 /// naming it and the known ones: a typo in a template should not reach an
 /// agent as a literal `{{taks.name}}`.
-pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> Result<String, String> {
+pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> AgentResult<String> {
     let (mut out, mut rest) = (String::with_capacity(template.len()), template);
     while let Some(open) = rest.find("{{") {
         let Some(close) = rest[open + 2..].find("}}") else {
@@ -159,10 +160,10 @@ pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> Result<String, S
         };
         let key = rest[open + 2..open + 2 + close].trim();
         let Some(text) = value(ctx, key, kind) else {
-            return Err(format!(
-                "unknown placeholder {{{{{key}}}}} (known: {})",
-                PLACEHOLDERS.join(", ")
-            ));
+            return Err(AgentError::UnknownPlaceholder {
+                key: key.to_string(),
+                known: PLACEHOLDERS.join(", "),
+            });
         };
         out.push_str(&rest[..open]);
         out.push_str(&text);
@@ -262,6 +263,8 @@ mod tests {
     fn an_unknown_placeholder_is_an_error_that_names_it() {
         let dir = Path::new("/x");
         let e = render("hello {{taks.name}}", Kind::Plan, &ctx(None, "", dir)).unwrap_err();
+        assert!(matches!(&e, AgentError::UnknownPlaceholder { key, .. } if key == "taks.name"));
+        let e = e.to_string();
         assert!(
             e.starts_with("unknown placeholder {{taks.name}} (known: task, "),
             "{e}"

@@ -4,6 +4,7 @@
 //! the plan, they are files: `iter task runs` and the Agent tab read the same
 //! ones.
 
+use crate::agent::error::AgentResult;
 use crate::agent::taskdir::TaskDir;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -254,7 +255,7 @@ impl TaskDir {
     /// Takes the next number for good: the record file is made, empty, with
     /// a call that fails if it is there, so two runs started at once get two
     /// numbers.
-    pub fn claim_run(&self) -> std::io::Result<u32> {
+    pub fn claim_run(&self) -> AgentResult<u32> {
         std::fs::create_dir_all(self.runs_dir())?;
         loop {
             let n = self.next_run();
@@ -265,26 +266,26 @@ impl TaskDir {
             {
                 Ok(_) => return Ok(n),
                 Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-                Err(e) => return Err(e),
+                Err(e) => return Err(e.into()),
             }
         }
     }
 
-    pub fn read_run(&self, n: u32) -> std::io::Result<Option<RunRecord>> {
+    pub fn read_run(&self, n: u32) -> AgentResult<Option<RunRecord>> {
         match std::fs::read_to_string(self.run_path(n)) {
-            Ok(text) => serde_yaml::from_str(&text)
+            Ok(text) => Ok(serde_yaml::from_str(&text)
                 .map(Some)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e)),
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 
-    pub fn write_run(&self, run: &RunRecord) -> std::io::Result<()> {
+    pub fn write_run(&self, run: &RunRecord) -> AgentResult<()> {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        crate::agent::taskdir::write_whole(&self.runs_dir(), &self.run_path(run.n), &text)
+        Ok(crate::agent::taskdir::write_whole(&self.runs_dir(), &self.run_path(run.n), &text)?)
     }
 
     /// Every run, the first one first. A record that cannot be read is left

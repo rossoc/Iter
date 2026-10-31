@@ -7,7 +7,8 @@ use crate::agent::prompt::{self, Context, Kind};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
 use crate::db::Table;
-use crate::error::{Result, failed};
+use crate::agent::error::AgentError;
+use crate::error::Result;
 use crate::md_edit::edit_text;
 use crate::models::{Organization, Project, Task};
 use crate::notes;
@@ -72,7 +73,7 @@ pub struct Saved {
 /// Checklist is saved, and says so.
 pub fn save_plan(dir: &TaskDir, text: &str) -> Result<Saved> {
     if text.trim().is_empty() {
-        return Err(failed("the plan is empty: nothing was saved"));
+        return Err(AgentError::EmptyPlan.into());
     }
     let mut text = plan::normalize(text);
     if !text.ends_with('\n') {
@@ -98,9 +99,8 @@ pub fn save_plan(dir: &TaskDir, text: &str) -> Result<Saved> {
 /// Puts step `id` of the plan of `dir` in `state`; the plan's progress after.
 pub fn mark_step(dir: &TaskDir, id: &str, state: State) -> Result<Progress> {
     dir.update_plan(|content| {
-        let content = content
-            .ok_or_else(|| failed("there is no plan yet: write one with `iter task plan`"))?;
-        let marked = plan::mark(&content, id, state).map_err(|e| failed(e.to_string()))?;
+        let content = content.ok_or(AgentError::NoPlan)?;
+        let marked = plan::mark(&content, id, state).map_err(AgentError::from)?;
         let progress = plan::parse(&marked).progress();
         Ok((Some(marked), progress))
     })
@@ -123,7 +123,7 @@ pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
     let word = prompt::shell_word(&name);
     if let [step, state] = req.mark {
         let state = <State as clap::ValueEnum>::from_str(state, true)
-            .map_err(|_| failed(format!("`{state}` is not a state: todo, doing or done")))?;
+            .map_err(|_| AgentError::UnknownState(state.clone()))?;
         let p = mark_step(&dir, step, state)?;
         println!("{step}: {} -- {}", state.label(), progress_line(&p));
         return Ok(());
@@ -267,7 +267,10 @@ pub fn prompt_for(
     let text = match template {
         Some(path) => std::fs::read_to_string(path)
             .map(|t| crate::agent::instruction::split(&t).1.to_string())
-            .map_err(|e| failed(format!("cannot read {}: {e}", path.display())))?,
+            .map_err(|source| AgentError::TemplateUnreadable {
+                path: path.to_path_buf(),
+                source,
+            })?,
         None => prompt::template(kind, &override_dirs(app, &project, &dir)?).1,
     };
     let known = match onboarding_wanted {
@@ -291,7 +294,7 @@ pub fn prompt_for(
         plan: plan_text.as_deref(),
         onboarding: &known,
     };
-    prompt::render(&text, kind, &ctx).map_err(failed)
+    Ok(prompt::render(&text, kind, &ctx)?)
 }
 
 pub fn prompt_cmd(

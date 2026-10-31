@@ -3,6 +3,7 @@
 //! not in the task's worktree, so discarding a branch does not discard what
 //! was planned or learned.
 
+use crate::agent::error::AgentResult;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::models::{Organization, Project, Task};
@@ -51,25 +52,25 @@ impl TaskDir {
     }
 
     /// Makes the folder and its two subfolders if they are not there.
-    pub fn ensure(&self) -> std::io::Result<()> {
+    pub fn ensure(&self) -> AgentResult<()> {
         std::fs::create_dir_all(self.notes_dir())?;
-        std::fs::create_dir_all(self.sketches_dir())
+        Ok(std::fs::create_dir_all(self.sketches_dir())?)
     }
 
     /// The plan's text, or `None` when there is no plan yet.
-    pub fn read_plan(&self) -> std::io::Result<Option<String>> {
+    pub fn read_plan(&self) -> AgentResult<Option<String>> {
         match std::fs::read_to_string(self.plan_path()) {
             Ok(text) => Ok(Some(text)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 
     /// Replaces the plan with `text`, all at once: a reader never sees half
     /// of it.
-    pub fn write_plan(&self, text: &str) -> std::io::Result<()> {
+    pub fn write_plan(&self, text: &str) -> AgentResult<()> {
         self.ensure()?;
-        write_whole(&self.root, &self.plan_path(), text)
+        Ok(write_whole(&self.root, &self.plan_path(), text)?)
     }
 
     /// Reads the plan, lets `change` make the new one from it, and writes

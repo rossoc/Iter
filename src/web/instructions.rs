@@ -627,8 +627,8 @@ async fn create_instruction(Form(form): Form<NewForm>) -> Result<Response> {
             ..Default::default()
         },
     )
-    .map_err(bad_request)?;
-    instruction::check(&name, &text).map_err(bad_request)?;
+    .map_err(|e| bad_request(e.to_string()))?;
+    instruction::check(&name, &text).map_err(|e| bad_request(e.to_string()))?;
     std::fs::create_dir_all(path.parent().unwrap_or(&home))?;
     crate::agent::taskdir::write_atomic(&path, &text)?;
     let to = page_url(&scope.url(&name), &[("tab", Some("settings"))]);
@@ -678,7 +678,7 @@ async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Respons
     let path = instruction::file(&home, &name);
     match form.action.as_str() {
         "save" => {
-            let renamed = instruction::rename_target(&name, &form.new_name).map_err(bad_request)?;
+            let renamed = instruction::rename_target(&name, &form.new_name).map_err(|e| bad_request(e.to_string()))?;
             let target = renamed.as_deref().unwrap_or(&name);
             // the keys the form does not know stay as they are in the file
             let kind = if instruction::is_builtin(&name) {
@@ -698,8 +698,8 @@ async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Respons
                     prompt: &form.prompt,
                 },
             )
-            .map_err(bad_request)?;
-            instruction::check(target, &text).map_err(bad_request)?;
+            .map_err(|e| bad_request(e.to_string()))?;
+            instruction::check(target, &text).map_err(|e| bad_request(e.to_string()))?;
             let to = instruction::file(&home, target);
             if renamed.is_some() && to.exists() {
                 return Err(bad_request(format!("'{target}' exists already")).into());
