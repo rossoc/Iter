@@ -8,9 +8,15 @@ pub fn create_session(name: &str, cwd: &str) -> Result<()> {
     Tmux.run(&["new-session", "-d", "-s", name, "-c", cwd])
 }
 
+/// A tmux target that names exactly this session: a bare name would match by
+/// prefix (`web/a` also hits `web/ab`) and treat `*`/`?` as globs.
+fn exact(name: &str) -> String {
+    format!("={name}")
+}
+
 /// Kills a tmux session if it's running. Not an error if it's already gone.
 pub fn kill_session(name: &str) {
-    let _ = Tmux.run(&["kill-session", "-t", name]);
+    let _ = Tmux.run(&["kill-session", "-t", &exact(name)]);
 }
 
 /// Whether this process is itself running inside a tmux client -- which
@@ -29,11 +35,11 @@ pub fn attach_session(name: &str) -> Result<()> {
     } else {
         "attach-session"
     };
-    Tmux.run(&[verb, "-t", name])
+    Tmux.run(&[verb, "-t", &exact(name)])
 }
 
 pub fn session_exists(name: &str) -> bool {
-    Tmux.succeeds(&["has-session", "-t", name])
+    Tmux.succeeds(&["has-session", "-t", &exact(name)])
 }
 
 /// The names of every session on the server; empty when there is no server.
@@ -144,12 +150,12 @@ pub const DETACH_MESSAGE_OPTION: &str = "@iter_detach_message";
 const HOOKS: [(&str, &str); 3] = [
     (
         "client-session-changed",
-        "\"#{hook_client}\" \"#{session_name}\" \"#{client_last_session}\"",
+        "#{q:hook_client} #{q:session_name} #{q:client_last_session}",
     ),
-    ("client-detached", "\"#{hook_client}\""),
+    ("client-detached", "#{q:hook_client}"),
     // The backstop for a session torn down another way (`tmux kill-session`,
     // the shell in it exiting) while still attached.
-    ("session-closed", "\"#{hook_session_name}\""),
+    ("session-closed", "#{q:hook_session_name}"),
 ];
 
 /// Installs the global tmux hooks that drive `iter internal hook <event>
@@ -164,6 +170,11 @@ const HOOKS: [(&str, &str); 3] = [
 /// would quietly re-point the hooks at a binary that may not outlive the
 /// afternoon.
 pub fn ensure_hooks_installed(iter_bin: &str) -> Result<()> {
+    if iter_bin.contains('\'') {
+        return Err(crate::error::IterError::CommandFailed(format!(
+            "cannot install the tmux hooks for a binary path containing a quote: {iter_bin}"
+        )));
+    }
     for (event, args) in HOOKS {
         if hook_is_current(event, args) {
             continue;
@@ -189,15 +200,17 @@ fn hook_is_current(event: &str, args: &str) -> bool {
     !existing.trim().is_empty() && format_variables(&existing) == format_variables(args)
 }
 
-/// The `#{...}` variables in a hook body, in order and without the quoting
-/// around them, which differs between what we write and what a `tmux.conf`
-/// does.
+/// The variables named by the `#{...}` in a hook body, in order, without the
+/// braces or a `q:` quoting modifier: that quoting differs between what we
+/// write (`#{q:x}`, so a name with a quote or `$(...)` stays one word for the
+/// shell) and what a `tmux.conf` does.
 fn format_variables(action: &str) -> Vec<&str> {
     action
         .match_indices("#{")
         .filter_map(|(start, _)| {
-            let rest = &action[start..];
-            rest.find('}').map(|end| &rest[..=end])
+            let rest = &action[start + 2..];
+            let name = &rest[..rest.find('}')?];
+            Some(name.strip_prefix("q:").unwrap_or(name))
         })
         .collect()
 }
@@ -207,7 +220,10 @@ fn format_variables(action: &str) -> Vec<&str> {
 /// one is invisible at runtime -- the hook fires and quietly matches no
 /// session.
 fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
-    format!("run-shell '{iter_bin} internal hook {event} {args}'")
+    // The action is a tmux command, and inside its single quotes a `'` cannot
+    // be written at all; everything else is quoted for the shell it runs in.
+    let bin = crate::agent::prompt::shell_word(iter_bin);
+    format!("run-shell '{bin} internal hook {event} {args}'")
 }
 
 /// Takes the detach message off `session`, if something left one there:
@@ -264,7 +280,7 @@ pub fn last_resurrect_save() -> Option<NaiveDateTime> {
     let home = std::env::var("HOME").ok()?;
     let dir = match Tmux.output_trimmed(&["show-options", "-gqv", "@resurrect-dir"]) {
         Some(dir) if !dir.is_empty() => {
-            PathBuf::from(dir.replace("$HOME", &home).replace('~', &home))
+            crate::config::expand_home(&dir.replace("$HOME", &home))
         }
         _ => {
             let legacy = Path::new(&home).join(".tmux/resurrect");
@@ -301,7 +317,7 @@ mod tests {
     fn the_client_hooks_are_told_the_client_by_hook_client() {
         for event in ["client-session-changed", "client-detached"] {
             let action = action_for(event);
-            assert!(action.contains("\"#{hook_client}\""), "{event}: {action}");
+            assert!(action.contains("#{q:hook_client}"), "{event}: {action}");
             assert!(!action.contains("client_name"), "{event}: {action}");
         }
     }
@@ -313,7 +329,7 @@ mod tests {
     fn client_detached_is_not_told_a_session() {
         assert_eq!(
             format_variables(&action_for("client-detached")),
-            vec!["#{hook_client}"]
+            vec!["hook_client"]
         );
     }
 
@@ -322,8 +338,8 @@ mod tests {
     #[test]
     fn session_closed_is_told_the_session_by_hook_session_name() {
         let action = action_for("session-closed");
-        assert!(action.contains("\"#{hook_session_name}\""), "{action}");
-        assert!(!action.contains("\"#{session_name}\""), "{action}");
+        assert!(action.contains("#{q:hook_session_name}"), "{action}");
+        assert!(!action.contains("session_name}") || action.contains("hook_session_name}"), "{action}");
     }
 
     /// `client-session-changed` records the session and closes the one being
@@ -333,11 +349,7 @@ mod tests {
     fn client_session_changed_is_told_the_session_and_the_one_left() {
         assert_eq!(
             format_variables(&action_for("client-session-changed")),
-            vec![
-                "#{hook_client}",
-                "#{session_name}",
-                "#{client_last_session}"
-            ]
+            vec!["hook_client", "session_name", "client_last_session"]
         );
     }
 
@@ -371,16 +383,23 @@ mod tests {
     fn format_variables_reads_them_in_order_without_quoting() {
         assert_eq!(
             format_variables("a '#{session_name}' b \"#{client_last_session}\" c"),
-            vec!["#{session_name}", "#{client_last_session}"]
+            vec!["session_name", "client_last_session"]
         );
         assert_eq!(format_variables("run-shell 'echo hi'"), Vec::<&str>::new());
+    }
+
+    /// A path with a space stays one word for the shell the hook runs in.
+    #[test]
+    fn a_binary_path_with_a_space_is_escaped() {
+        let action = hook_action("/my dir/iter", "session-closed", "#{q:hook_session_name}");
+        assert!(action.starts_with("run-shell '/my\\ dir/iter internal hook"), "{action}");
     }
 
     #[test]
     fn a_hook_action_invokes_the_internal_subcommand() {
         assert_eq!(
             action_for("client-detached"),
-            "run-shell '/usr/bin/iter internal hook client-detached \"#{hook_client}\"'"
+            "run-shell '/usr/bin/iter internal hook client-detached #{q:hook_client}'"
         );
     }
 }

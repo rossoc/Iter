@@ -166,6 +166,9 @@ mod datetime_opt {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Duration(pub i64);
 
+/// The longest duration `hh:mm` accepts: a year of hours.
+const MAX_HOURS: i64 = 24 * 366;
+
 impl Duration {
     pub fn minutes(self) -> i64 {
         self.0
@@ -181,9 +184,13 @@ impl Duration {
         if minutes >= 60 {
             return None;
         }
-        // Checked: `hours` is whatever was typed, and a huge one must be a
-        // parse failure rather than an overflow.
-        hours.checked_mul(60)?.checked_add(minutes).map(Duration)
+        // A task slot is never longer than a year. Without a cap a huge
+        // `hours` parses, and then overflows the date arithmetic that
+        // schedules it (`Task::end_time`).
+        if hours > MAX_HOURS {
+            return None;
+        }
+        Some(Duration(hours * 60 + minutes))
     }
 }
 
@@ -261,7 +268,8 @@ impl crate::models::MarkdownBody for TaskEdit {
 impl Task {
     /// When the scheduled slot ends: `start_time + duration`, if both are set.
     pub fn end_time(&self) -> Option<NaiveDateTime> {
-        Some(self.start_time? + chrono::Duration::minutes(self.duration?.minutes()))
+        let span = chrono::Duration::try_minutes(self.duration?.minutes())?;
+        self.start_time?.checked_add_signed(span)
     }
 
     /// `start_time` as typed and shown, or empty when unscheduled.
@@ -399,5 +407,20 @@ mod tests {
         assert!(serde_yaml::from_str::<Task>("name: t\nstart_time: tomorrow\n").is_err());
         assert!(serde_yaml::from_str::<Task>("name: t\nduration: 1:75\n").is_err());
         assert!(serde_yaml::from_str::<Task>("name: t\nduration: soon\n").is_err());
+    }
+
+    #[test]
+    fn a_huge_duration_is_a_parse_failure_not_a_panic_later() {
+        assert!(Duration::parse("99999999999999:00").is_none());
+        assert!(Duration::parse("8784:00").is_some());
+        assert!(Duration::parse("8785:00").is_none());
+    }
+
+    #[test]
+    fn the_end_of_a_slot_past_the_calendar_is_none_not_a_panic() {
+        let mut task = Task::template(1, String::new(), TaskStatus::Queue);
+        task.start_time = Some(NaiveDateTime::MAX);
+        task.duration = Some(Duration(60));
+        assert_eq!(task.end_time(), None);
     }
 }

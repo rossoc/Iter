@@ -68,10 +68,14 @@ fn hook_cmd(app: &App, event: &HookEvent) -> Result<()> {
 /// waiting for the last one out -- the server going away is everyone
 /// leaving at once, and tmux fires no hook that would say so.
 fn kill_server_cmd(app: &App) -> Result<()> {
-    for session in tmux::list_sessions() {
-        stop_for_tmux_session(&app.db, &session)?;
-    }
-    tmux::kill_server()
+    // One session failing to stop must not leave the server (and the other
+    // sessions' clocks) behind: kill it regardless, then report the first error.
+    let stopped: Result<()> = tmux::list_sessions()
+        .iter()
+        .map(|session| stop_for_tmux_session(&app.db, session))
+        .fold(Ok(()), |first, next| first.and(next));
+    tmux::kill_server()?;
+    stopped
 }
 
 /// Puts iter back on a tmux server that has just come up -- after a reboot,

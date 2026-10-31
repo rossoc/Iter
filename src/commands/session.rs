@@ -204,7 +204,7 @@ fn tmux_session_name(project: &Project, task: &Task) -> String {
 /// `session:window.pane`, so a task called `web: x` makes a session nothing
 /// can attach to, check or kill ("can't find window:  x").
 fn tmux_name_part(name: &str) -> String {
-    name.replace('/', "-").replace([':', '.'], "_")
+    name.replace('/', "-").replace([':', '.', '*', '?'], "_")
 }
 
 #[cfg(test)]
@@ -214,6 +214,7 @@ mod tests {
     #[test]
     fn a_name_part_has_no_tmux_target_separators() {
         assert_eq!(tmux_name_part("web: a.b/c"), "web_ a_b-c");
+        assert_eq!(tmux_name_part("a*b?"), "a_b_");
     }
 }
 

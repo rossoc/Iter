@@ -120,6 +120,12 @@ impl Project {
     /// different repo to ask whether it's one.
     fn check(&mut self) -> crate::error::Result<()> {
         require_no_comma(Self::KIND, &self.name)?;
+        if self.name.contains('/') {
+            return Err(crate::error::IterError::SlashInName {
+                kind: Self::KIND,
+                name: self.name.clone(),
+            });
+        }
         let base_path = self.base_path.trim();
         if base_path.is_empty() {
             return Err(crate::error::IterError::EmptyBasePath);

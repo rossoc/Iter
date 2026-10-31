@@ -8,7 +8,6 @@ use crate::error::{IterError, Result};
 use crate::models::{Organization, Project, Task};
 use crate::notes;
 use std::path::{Path, PathBuf};
-#[cfg(any(feature = "web", test))]
 use std::time::SystemTime;
 
 #[derive(Clone, Debug)]
@@ -17,7 +16,6 @@ pub struct TaskDir {
 }
 
 /// One markdown file of the folder.
-#[cfg(any(feature = "web", test))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct File {
     /// The name without `.md`.
@@ -98,7 +96,6 @@ impl TaskDir {
     }
 
     /// The markdown files directly in `dir`, by name.
-    #[cfg(any(feature = "web", test))]
     pub fn files(dir: &Path) -> Vec<File> {
         let Ok(entries) = std::fs::read_dir(dir) else {
             return Vec::new();

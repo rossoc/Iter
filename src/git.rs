@@ -70,13 +70,23 @@ pub fn remove_worktree(base_path: &str, worktree_path: &str) -> Result<()> {
     Git(Some(base_path)).run(&["worktree", "remove", "--force", worktree_path])
 }
 
+/// A branch name starting with `-` would be read by git as an option.
+fn refuse_option(name: &str) -> Result<()> {
+    if name.starts_with('-') {
+        return Err(crate::error::IterError::CommandFailed(format!(
+            "invalid branch name '{name}'"
+        )));
+    }
+    Ok(())
+}
+
 /// Deletes a branch created by `create_worktree`. `-D` (not `-d`), like
 /// `remove_worktree`'s `--force`: the task is done and we don't want
 /// unmerged commits to block cleanup. Must run after the branch's worktree
 /// (if any) has already been removed -- git refuses to delete a branch
 /// that's still checked out in one.
 pub fn delete_branch(base_path: &str, branch: &str) -> Result<()> {
-    Git(Some(base_path)).run(&["branch", "-D", branch])
+    Git(Some(base_path)).run(&["branch", "-D", "--", branch])
 }
 
 /// The branch checked out at `path` -- `None` if `HEAD` is detached, or if
@@ -95,6 +105,7 @@ pub fn current_branch(path: &str) -> Option<String> {
 /// in `dir` spells out, is the point. The caller's job is to stop and say
 /// where, not to tidy it away.
 pub fn merge(dir: &str, branch: &str) -> Result<bool> {
+    refuse_option(branch)?;
     Git(Some(dir)).run_status(&["merge", branch])
 }
 
@@ -102,7 +113,7 @@ pub fn merge(dir: &str, branch: &str) -> Result<bool> {
 /// `source` can be a GitHub (or any remote) URL or a local path to another
 /// repo. `dest` must not already exist (or must be empty); `git` creates it.
 pub fn clone_repo(source: &str, dest: &str) -> Result<()> {
-    Git(None).run(&["clone", source, dest])
+    Git(None).run(&["clone", "--", source, dest])
 }
 
 #[cfg(test)]

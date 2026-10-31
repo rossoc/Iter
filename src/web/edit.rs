@@ -51,9 +51,9 @@ pub(super) trait EditForm {
 /// [`NAME`] when `error` is about the name every edit form has: empty, taken
 /// or with a comma in it.
 pub(super) fn name_field(error: &crate::error::IterError) -> Option<&'static str> {
-    use crate::error::IterError::{CommaInName, EmptyName, NameTaken};
+    use crate::error::IterError::{CommaInName, EmptyName, NameTaken, SlashInName};
     match error {
-        EmptyName(_) | NameTaken { .. } | CommaInName { .. } => Some(NAME),
+        EmptyName(_) | NameTaken { .. } | CommaInName { .. } | SlashInName { .. } => Some(NAME),
         _ => None,
     }
 }

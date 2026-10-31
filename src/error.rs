@@ -100,6 +100,11 @@ pub enum IterError {
     #[error("{kind} name '{name}' cannot contain a comma")]
     CommaInName { kind: &'static str, name: String },
 
+    /// A project's name is the first half of `<project>/<task>`, so a slash
+    /// in it would make that reference read back as a different task.
+    #[error("{kind} name '{name}' cannot contain a slash")]
+    SlashInName { kind: &'static str, name: String },
+
     /// A `UNIQUE` name refused on write (see `Db::insert`): `kind` is the
     /// entity, "project", "task", ... A task's name is unique within its
     /// project, the others' across the database.
