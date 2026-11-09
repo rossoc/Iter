@@ -26,7 +26,7 @@ fn create_project_interactively(
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
     edited(template, Project::KIND, "created", |mut project| {
-        // Also absolutises `base_path` -- see `Project::check`.
+        scaffold::absolutise_base_path(&mut project)?;
         project.validate()?;
         populate(&project.base_path)?;
         db.insert(&project)?;
@@ -184,7 +184,7 @@ fn project_edit(
     // neither is in the buffer, so a move is saved even if the buffer is untouched
     let moved =
         (existing.organization_id, existing.board_id) != (stored.organization_id, stored.board_id);
-    update(db, &existing, moved, |_| Ok(()))
+    update(db, &existing, moved, scaffold::absolutise_base_path)
 }
 
 fn project_delete(app: &App, name: Option<&str>) -> Result<()> {

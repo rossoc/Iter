@@ -273,7 +273,7 @@ impl TaskDir {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(crate::agent::taskdir::write_whole(
+        Ok(crate::utils::fs::write_whole(
             &self.runs_dir(),
             &self.run_path(run.n),
             &text,

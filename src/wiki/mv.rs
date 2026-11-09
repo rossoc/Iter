@@ -2,9 +2,9 @@
 //! each keeping its spelling. Raw notes are never rewritten.
 
 use super::graph::Wiki;
-use crate::agent::taskdir::write_atomic;
 use crate::error::{Result, failed};
 use crate::md_edit::split_closed;
+use crate::utils::fs::write_atomic;
 use serde::Serialize;
 use std::path::PathBuf;
 

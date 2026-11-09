@@ -195,7 +195,7 @@ pub fn save(dir: &Path, date: NaiveDate, content: &str) -> Result<()> {
     if !path.is_file() {
         return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no such note").into());
     }
-    crate::agent::taskdir::write_atomic(&path, content)?;
+    crate::utils::fs::write_atomic(&path, content)?;
     Ok(())
 }
 
@@ -240,7 +240,7 @@ pub fn append_section(dir: &Path, day: NaiveDate, heading: &str, body: &str) -> 
         text.push('\n');
     }
     text.push_str(&format!("{line}\n\n{}\n", body.trim_end()));
-    crate::agent::taskdir::write_atomic(&path, &text)?;
+    crate::utils::fs::write_atomic(&path, &text)?;
     Ok(true)
 }
 
