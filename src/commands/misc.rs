@@ -48,15 +48,15 @@ fn hook_cmd(app: &App, tmux: &dyn Multiplexer, event: &HookEvent) -> Result<()> 
                 .as_deref()
                 .filter(|p| !p.is_empty() && p != session)
             {
-                client_left_tmux_session(db, previous)?;
+                client_left_tmux_session(db, tmux, previous)?;
             }
             start_for_tmux_session(db, session)
         }
         HookEvent::ClientDetached { client } => match tmux.take_client_session(client) {
-            Some(session) => client_left_tmux_session(db, &session),
+            Some(session) => client_left_tmux_session(db, tmux, &session),
             None => Ok(()), // attached before the hooks were installed
         },
-        HookEvent::SessionClosed { session } => stop_for_tmux_session(db, session),
+        HookEvent::SessionClosed { session } => stop_for_tmux_session(db, tmux, session),
     }
 }
 
@@ -65,7 +65,7 @@ fn kill_server_cmd(app: &App, tmux: &dyn Multiplexer) -> Result<()> {
     // one session failing to stop must not leave the server behind: kill it regardless, report the first error
     let mut stopped: Result<()> = Ok(());
     for session in tmux.list_sessions() {
-        let result = stop_for_tmux_session(&app.db, &session);
+        let result = stop_for_tmux_session(&app.db, tmux, &session);
         if stopped.is_ok() {
             stopped = result;
         }

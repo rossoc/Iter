@@ -13,6 +13,7 @@ use oxigraph::store::Store;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use std::fmt::Write as _;
 
 #[derive(Clone, Debug)]
 pub struct Level {
@@ -88,7 +89,7 @@ fn encode(s: &str) -> String {
         if b.is_ascii_alphanumeric() || b"-._~/".contains(&b) {
             out.push(b as char);
         } else {
-            out.push_str(&format!("%{b:02X}"));
+            let _ = write!(out, "%{b:02X}");
         }
     }
     out
@@ -276,10 +277,6 @@ impl Wiki {
         }
     }
 
-    pub fn node(&self, from: usize, id: &str) -> Option<usize> {
-        self.resolve(from, id)
-    }
-
     /// Relations from `node`, written and derived (inverses: backlinks are `referencedBy`, `includedIn`, `sourceOf`), as `(property, node)`;
     /// a property implied by a more specific one for the same target is left out. Sorted.
     pub fn edges_out(&self, node: usize) -> Vec<(String, usize)> {
@@ -430,7 +427,7 @@ impl Wiki {
             QueryResults::Graph(triples) => {
                 let mut out = String::new();
                 for t in triples {
-                    out.push_str(&format!("{} .\n", t.map_err(failed)?));
+                    let _ = write!(out, "{} .\n", t.map_err(failed)?);
                 }
                 Ok(Answer::Triples(out))
             }
@@ -784,7 +781,7 @@ mod tests {
         for from in 0..w.levels.len() {
             for node in 0..w.nodes.len() {
                 let id = w.id(node, from);
-                assert_eq!(w.node(from, &id), Some(node), "{id} from {from}");
+                assert_eq!(w.resolve(from, &id), Some(node), "{id} from {from}");
             }
         }
         let task_page = w

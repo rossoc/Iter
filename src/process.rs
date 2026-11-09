@@ -24,6 +24,24 @@ fn failure_message<S: AsRef<OsStr>>(tool: &str, args: &[S]) -> String {
     format!("{tool} {} failed", args.join(" "))
 }
 
+/// `Ok` for a zero exit, else the error naming the command: shared by [`run`] and [`Runner::run`].
+fn exited_zero<S: AsRef<OsStr>>(tool: &str, args: &[S], success: bool) -> Result<()> {
+    match success {
+        true => Ok(()),
+        false => Err(IterError::CommandFailed(failure_message(tool, args))),
+    }
+}
+
+/// `output` trimmed, `None` when empty or failed: shared by [`output_trimmed`] and [`Runner::output_trimmed`].
+fn trimmed(output: Result<String>) -> Option<String> {
+    let output = output.ok()?;
+    let value = output.trim();
+    match value.is_empty() {
+        true => None,
+        false => Some(value.to_string()),
+    }
+}
+
 /// Runs `tool` with inherited stdio and reports whether it exited zero. Only a spawn failure is
 /// an error: for callers where nonzero is a plain "no" (an editor quit without saving).
 pub fn run_status<S: AsRef<OsStr>>(
@@ -39,11 +57,7 @@ pub fn run_status<S: AsRef<OsStr>>(
 
 /// Runs `tool` as [`run_status`] does, but treats a nonzero exit as an error.
 pub fn run<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -> Result<()> {
-    if run_status(tool, dir, args)? {
-        Ok(())
-    } else {
-        Err(IterError::CommandFailed(failure_message(tool, args)))
-    }
+    exited_zero(tool, args, run_status(tool, dir, args)?)
 }
 
 /// Captures stdout verbatim (untrimmed). A nonzero exit reports `stderr` with the command.
@@ -75,12 +89,7 @@ pub fn output_trimmed<S: AsRef<OsStr>>(
     dir: Option<&str>,
     args: &[S],
 ) -> Option<String> {
-    let value = output(tool, dir, args).ok()?;
-    let value = value.trim();
-    match value.is_empty() {
-        true => None,
-        false => Some(value.to_string()),
-    }
+    trimmed(output(tool, dir, args))
 }
 
 /// Whether `tool` ran and exited zero, silently. For probes where "couldn't run" and "said no"
@@ -143,10 +152,7 @@ pub trait Runner {
 
     /// See [`run`].
     fn run(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<()> {
-        match self.run_status(tool, dir, args)? {
-            true => Ok(()),
-            false => Err(IterError::CommandFailed(failure_message(tool, args))),
-        }
+        exited_zero(tool, args, self.run_status(tool, dir, args)?)
     }
 
     /// See [`output_trimmed`].
@@ -156,12 +162,7 @@ pub trait Runner {
         dir: Option<&str>,
         args: &[&str],
     ) -> Option<String> {
-        let value = self.output(tool, dir, args).ok()?;
-        let value = value.trim();
-        match value.is_empty() {
-            true => None,
-            false => Some(value.to_string()),
-        }
+        trimmed(self.output(tool, dir, args))
     }
 }
 

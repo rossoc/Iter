@@ -10,6 +10,7 @@ use crate::reporting::non_empty;
 use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
 use crate::utils::resolve::resolve_group_or_current;
+use std::fmt::Write as _;
 
 impl Run for BoardCommand {
     fn run(&self, app: &App) -> Result<()> {
@@ -39,14 +40,14 @@ fn board_info(app: &App, board: &Board) -> Result<()> {
 fn render_info(board: &Board, projects: &[Project], cards: &[Card]) -> String {
     let mut out = format!("{}\n", board.name);
     if let Some(description) = non_empty(&board.description) {
-        out.push_str(&format!("\n{description}\n"));
+        let _ = write!(out, "\n{description}\n");
     }
     out.push_str("\nprojects:\n");
     if projects.is_empty() {
         out.push_str("  (none)\n");
     }
     for project in projects {
-        out.push_str(&format!("  {}\n", project.name));
+        let _ = write!(out, "  {}\n", project.name);
     }
     out.push_str(&render_agenda(cards));
     out
@@ -68,18 +69,18 @@ fn render_agenda(cards: &[Card]) -> String {
         let start = card.task.start_time.expect("partitioned on start_time");
         let mut slot = start.format(START_TIME_FMT).to_string();
         if let Some(end) = card.task.end_time() {
-            slot.push_str(&format!("-{}", end_text(start, end)));
+            let _ = write!(slot, "-{}", end_text(start, end));
         }
-        out.push_str(&format!(
+        let _ = write!(out, 
             "  {slot}  {}{}\n",
             card.label,
             markers(card.priority)
-        ));
+        );
     }
     if !unscheduled.is_empty() {
         out.push_str("\nunscheduled:\n");
         for card in unscheduled {
-            out.push_str(&format!("  {}{}\n", card.label, markers(card.priority)));
+            let _ = write!(out, "  {}{}\n", card.label, markers(card.priority));
         }
     }
     out

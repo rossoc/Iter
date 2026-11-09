@@ -14,6 +14,33 @@ use crate::wiki::ingest_job::{
 use crate::wiki::schema;
 use std::path::PathBuf;
 
+/// The text a [`Job`] borrows, rendered once per run.
+struct JobText {
+    scope: String,
+    stamp: String,
+    schema: String,
+}
+
+impl JobText {
+    fn of(target: &Target) -> Self {
+        JobText {
+            scope: target.scope(),
+            stamp: now(),
+            schema: schema::render(&target.wiki.ontology),
+        }
+    }
+
+    fn job<'a>(&'a self, target: &'a Target) -> Job<'a> {
+        Job {
+            project: &target.project.name,
+            notes_dir: &target.notes_dir,
+            scope: &self.scope,
+            now: &self.stamp,
+            schema: &self.schema,
+        }
+    }
+}
+
 fn choice(opts: &HarnessOpts) -> HarnessChoice {
     HarnessChoice {
         agent: opts.agent,
@@ -88,17 +115,8 @@ pub fn ingest(
         );
         return Ok(());
     }
-    let schema_text = schema::render(&target.wiki.ontology);
-    let scope = target.scope();
-    let stamp = now();
-    let job = Job {
-        project: &target.project.name,
-        notes_dir: &target.notes_dir,
-        scope: &scope,
-        now: &stamp,
-        schema: &schema_text,
-    };
-    let prompt = ingest::ingest_prompt(&job, &waiting, sketches.as_deref());
+    let text = JobText::of(&target);
+    let prompt = ingest::ingest_prompt(&text.job(&target), &waiting, sketches.as_deref());
     println!(
         "ingesting {} notes of {}...",
         waiting.len(),
@@ -135,7 +153,7 @@ pub fn build_concept(
         return Err(AgentError::ConceptName.into());
     }
     for idea in ideas {
-        if target.wiki.node(0, idea).is_none() {
+        if target.wiki.resolve(0, idea).is_none() {
             return Err(IterError::NotFound {
                 kind: "wiki page",
                 name: idea.clone(),
@@ -146,17 +164,8 @@ pub fn build_concept(
     if busy(&target) {
         return Err(AgentError::WikiBusy.into());
     }
-    let schema_text = schema::render(&target.wiki.ontology);
-    let scope = target.scope();
-    let stamp = now();
-    let job = Job {
-        project: &target.project.name,
-        notes_dir: &target.notes_dir,
-        scope: &scope,
-        now: &stamp,
-        schema: &schema_text,
-    };
-    let prompt = ingest::concept_prompt(&job, name, ideas);
+    let text = JobText::of(&target);
+    let prompt = ingest::concept_prompt(&text.job(&target), name, ideas);
     println!("building the concept {name} from {} ideas...", ideas.len());
     finish(
         &target,

@@ -13,6 +13,7 @@ use crate::utils::resolve::task_display;
 use serde::Serialize;
 use std::io::Read;
 use std::path::Path;
+use std::fmt::Write as _;
 
 #[derive(Serialize)]
 struct PlanView {
@@ -43,10 +44,10 @@ fn view(task: &str, dir: &TaskDir, content: Option<&str>) -> PlanView {
 fn progress_line(p: &Progress) -> String {
     let mut line = format!("{}/{} steps done", p.done, p.total);
     if p.doing > 0 {
-        line.push_str(&format!(", {} in progress", p.doing));
+        let _ = write!(line, ", {} in progress", p.doing);
     }
     if p.verify_total > 0 {
-        line.push_str(&format!(" (checks {}/{})", p.verify_done, p.verify_total));
+        let _ = write!(line, " (checks {}/{})", p.verify_done, p.verify_total);
     }
     line
 }
