@@ -1,5 +1,6 @@
 //! The agents of a task at the top of its Agent tab: the table, the form that writes a new one, and the page of one that has begun.
 
+use super::assets::json;
 use super::errors::refused;
 use super::sections::TabQuery;
 use super::ui::field::{field, select, textarea};
@@ -19,7 +20,6 @@ use crate::config::config;
 use crate::models::{Project, Task};
 use crate::utils::resolve::task_display;
 use serde::Deserialize;
-use topcoat::router::{HeaderValue, header::CONTENT_TYPE, response::IntoResponse};
 use topcoat::{
     Result,
     context::Cx,
@@ -314,11 +314,7 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
         "prompt": prompt,
         "model": instruction::preferred_model(&inst.front, &models),
     });
-    (
-        [(CONTENT_TYPE, HeaderValue::from_static("application/json"))],
-        body.to_string(),
-    )
-        .into_response(cx)
+    json(cx, body.to_string(), false)
 }
 
 fn follow_up(app: &App, name: &str, n: u32, action: RunButton) -> Result<()> {

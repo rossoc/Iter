@@ -1,7 +1,7 @@
 //! The organization page (`/org/{id}`): route, loading and view of the tabs; the Report tab is `org_report.rs`.
 
 use super::Id;
-use super::assets::Asset;
+use super::assets::{Asset, serve};
 use super::daily_notes::{NotesTab, notes_section};
 use super::load::tasks_or_count;
 use super::org_report::{Report, report_link, report_view, tab_url};
@@ -30,23 +30,15 @@ use chrono::{NaiveDate, NaiveDateTime};
 use topcoat::{
     Result,
     context::Cx,
-    router::{
-        RouterBuilder, error::RouterErrorExt, page, path_param, query_params, response::Response,
-        route,
-    },
+    router::{RouterBuilder, error::RouterErrorExt, page, path_param, query_params},
     view::{Child, View, component, view},
 };
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.route(script).page(show)
+    serve(builder, &[("/org.js", &ORG_JS)]).page(show)
 }
 
 static ORG_JS: Asset = Asset::js(include_str!("org.js"));
-
-#[route(GET "/org.js")]
-async fn script(cx: &Cx) -> Result<Response> {
-    ORG_JS.respond(cx)
-}
 
 pub struct Loaded {
     pub org: Organization,

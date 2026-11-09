@@ -51,12 +51,8 @@ pub mod unplaced_list;
 pub use breadcrumb::Crumb;
 pub use icons::*;
 
-use super::assets::Asset;
-use topcoat::{
-    Result,
-    context::Cx,
-    router::{RouterBuilder, response::Response, route},
-};
+use super::assets::{Asset, serve};
+use topcoat::router::RouterBuilder;
 
 // Order is the cascade: later sheets win, `org.css` last.
 static CSS: Asset = Asset::css(concat!(
@@ -112,41 +108,15 @@ static COMBOBOX_JS: Asset = Asset::js(include_str!("combobox.js"));
 static PATH_PICK_JS: Asset = Asset::js(include_str!("path_pick.js"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder
-        .route(stylesheet)
-        .route(modal_script)
-        .route(filter_bar_script)
-        .route(search_script)
-        .route(combobox_script)
-        .route(path_pick_script)
-}
-
-#[route(GET "/style.css")]
-async fn stylesheet(cx: &Cx) -> Result<Response> {
-    CSS.respond(cx)
-}
-
-#[route(GET "/modal.js")]
-async fn modal_script(cx: &Cx) -> Result<Response> {
-    MODAL_JS.respond(cx)
-}
-
-#[route(GET "/filter_bar.js")]
-async fn filter_bar_script(cx: &Cx) -> Result<Response> {
-    FILTER_BAR_JS.respond(cx)
-}
-
-#[route(GET "/combobox.js")]
-async fn combobox_script(cx: &Cx) -> Result<Response> {
-    COMBOBOX_JS.respond(cx)
-}
-
-#[route(GET "/path_pick.js")]
-async fn path_pick_script(cx: &Cx) -> Result<Response> {
-    PATH_PICK_JS.respond(cx)
-}
-
-#[route(GET "/search.js")]
-async fn search_script(cx: &Cx) -> Result<Response> {
-    SEARCH_JS.respond(cx)
+    serve(
+        builder,
+        &[
+            ("/style.css", &CSS),
+            ("/modal.js", &MODAL_JS),
+            ("/filter_bar.js", &FILTER_BAR_JS),
+            ("/search.js", &SEARCH_JS),
+            ("/combobox.js", &COMBOBOX_JS),
+            ("/path_pick.js", &PATH_PICK_JS),
+        ],
+    )
 }

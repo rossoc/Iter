@@ -1,6 +1,6 @@
 //! Suggestions from the organization's time platform for the project and activity fields (settings form, Share pop-up); a platform that cannot answer gives none.
 
-use super::assets::Asset;
+use super::assets::{Asset, json, serve};
 use super::{Id, open_db};
 use crate::models::Organization;
 use crate::platform::{JsonWebhook, PlatformItem};
@@ -10,26 +10,17 @@ use serde::Deserialize;
 use topcoat::{
     Result,
     context::Cx,
-    router::{
-        RouterBuilder, path_param, query_params,
-        response::{IntoResponse, Response},
-        route,
-    },
+    router::{RouterBuilder, path_param, query_params, response::Response, route},
     view::{View, component, view},
 };
 
 const WAIT_SECONDS: u64 = 5;
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.route(script).route(activities_of)
+    serve(builder, &[("/platform.js", &PLATFORM_JS)]).route(activities_of)
 }
 
 static PLATFORM_JS: Asset = Asset::js(include_str!("platform.js"));
-
-#[route(GET "/platform.js")]
-async fn script(cx: &Cx) -> Result<Response> {
-    PLATFORM_JS.respond(cx)
-}
 
 pub fn open(org: &Organization) -> Option<JsonWebhook> {
     let url = org.platform_url.trim();
@@ -100,12 +91,5 @@ async fn activities_of(cx: &Cx) -> Result<Response> {
         None => Vec::new(),
     };
     let body = serde_json::to_string(&Activities { activities: names }).unwrap_or_default();
-    (
-        [(
-            topcoat::router::header::CONTENT_TYPE,
-            topcoat::router::HeaderValue::from_static("application/json"),
-        )],
-        body,
-    )
-        .into_response(cx)
+    json(cx, body, false)
 }
