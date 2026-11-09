@@ -160,6 +160,17 @@ struct PushFlags<'a> {
     activity: Option<&'a str>,
 }
 
+/// The plan, the platform's warnings about the target, and the days it already holds.
+fn show(prepared: &push::Prepared) {
+    print!("{}", prepared.plan.preview());
+    for warning in &prepared.warnings {
+        eprintln!("warning: {warning}");
+    }
+    for line in prepared.check.conflict_lines() {
+        println!("{}", red(&format!("CONFLICT {line}")));
+    }
+}
+
 fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) -> Result<()> {
     let db = &app.db;
     let organization: Organization = resolve_group_or_current(db, name)?;
@@ -177,49 +188,51 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
     if let Some(value) = flags.activity {
         target.activity = value.to_string();
     }
-    let plan = push::plan(db, &organization, range, app.now, &target)?;
-
     // the platform is asked what it already holds (read-only), so a dry run shows conflicts too
     let platform = secret::resolve_env(&Keychain, &organization.name)
         .and_then(|key| JsonWebhook::new(&organization.platform_url, key));
-    let check = match (&platform, flags.dry_run) {
-        (Ok(platform), false) => Some(push::check(db, &organization, &plan, platform)?),
-        (Ok(platform), true) => match push::check(db, &organization, &plan, platform) {
-            Ok(check) => Some(check),
-            Err(e) => {
-                eprintln!("warning: {e}");
-                None
+    let prepared = match (&platform, flags.dry_run) {
+        (Ok(platform), false) => Some(push::prepare(
+            db,
+            &organization,
+            range,
+            app.now,
+            &target,
+            platform,
+        )?),
+        (Ok(platform), true) => {
+            match push::prepare(db, &organization, range, app.now, &target, platform) {
+                Ok(prepared) => Some(prepared),
+                Err(e) => {
+                    eprintln!("warning: {e}");
+                    None
+                }
             }
-        },
+        }
         (Err(_), true) => None,
         (Err(e), false) => return Err(IterError::Platform(e.to_string())),
     };
 
-    print!("{}", plan.preview());
-    if let Ok(platform) = &platform {
-        for warning in push::unknown_targets(platform, &target) {
-            eprintln!("warning: {warning}");
-        }
-    }
-    if let Some(check) = &check {
-        for line in check.conflict_lines() {
-            println!("{}", red(&format!("CONFLICT {line}")));
-        }
-    }
     if flags.dry_run {
-        if check.is_none() {
-            println!(
-                "\nThe platform was not asked what it already holds (no API key, or it did not answer)."
-            );
+        match &prepared {
+            Some(prepared) => show(prepared),
+            None => {
+                let plan = push::plan(db, &organization, range, app.now, &target)?;
+                print!("{}", plan.preview());
+                println!(
+                    "\nThe platform was not asked what it already holds (no API key, or it did not answer)."
+                );
+            }
         }
         println!("\nDry run: nothing was sent.");
         return Ok(());
     }
 
-    let (Ok(platform), Some(check)) = (&platform, &check) else {
+    let (Ok(platform), Some(prepared)) = (&platform, &prepared) else {
         return Err(IterError::Platform("the platform was not asked".into()));
     };
-    if let Some(line) = check.already_pushed_line()
+    show(prepared);
+    if let Some(line) = prepared.check.already_pushed_line()
         && !flags.force
     {
         println!("\n{line}");
@@ -232,8 +245,9 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
     let items = push::execute(
         db,
         &organization,
-        &plan,
-        check,
+        &prepared.plan,
+        &prepared.check,
+        prepared.resolved()?,
         platform,
         &GhCli::system(),
         app.now,

@@ -295,16 +295,21 @@ fn push_step(
     if !form.activity.is_empty() {
         target.activity = form.activity.clone();
     }
-    let plan = push::plan(db, org, range, now, &target)?;
     let platform = connect(org)?;
-    let check = push::check(db, org, &plan, platform.as_ref())?;
+    let prepared = push::prepare(db, org, range, now, &target, platform.as_ref())?;
+    let push::Prepared {
+        plan,
+        check,
+        warnings,
+        ..
+    } = &prepared;
 
     // An identical worklog already pushed is previewed (flagged), never pushed twice.
     if form.confirm && form.hash == plan.hash && !check.already_pushed {
-        let items = push::execute(db, org, &plan, &check, platform.as_ref(), gh, now)?;
+        let ids = prepared.resolved()?;
+        let items = push::execute(db, org, plan, check, ids, platform.as_ref(), gh, now)?;
         return Ok(Outcome::Done(items));
     }
-    let warnings = push::unknown_targets(platform.as_ref(), &target);
     let mut next = form.clone();
     next.hash = plan.hash.clone();
     next.organization = target.organization;
@@ -312,7 +317,7 @@ fn push_step(
     next.confirm = false;
     Ok(Outcome::Preview(Box::new(Preview {
         text: plan.preview(),
-        warnings,
+        warnings: warnings.clone(),
         conflicts: check.conflict_lines(),
         already: check.already_pushed,
         // asked to confirm a worklog that is no longer the one previewed

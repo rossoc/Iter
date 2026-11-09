@@ -191,12 +191,7 @@ fn conflict_line(e: &WorklogEntry) -> String {
     )
 }
 
-pub fn check(
-    db: &Db,
-    org: &Organization,
-    plan: &Plan,
-    platform: &dyn TimePlatform,
-) -> Result<Check> {
+fn check(db: &Db, org: &Organization, plan: &Plan, platform: &dyn TimePlatform) -> Result<Check> {
     let already_pushed = db
         .find_push(org.id(), &plan.hash)?
         .is_some_and(|row| row.complete());
@@ -220,7 +215,7 @@ pub struct Resolved {
 
 /// The platform's project and activity that `target` names, by id or name. A platform without such lists resolves nothing (the text is sent as is);
 /// a list that fails to load is an error, since a name sent where an id is expected files hours under the wrong project; named but unlisted is an error.
-pub fn resolve(platform: &dyn TimePlatform, target: &Target) -> Result<Resolved> {
+fn resolve(platform: &dyn TimePlatform, target: &Target) -> Result<Resolved> {
     let mut out = Resolved {
         project: target.organization.clone(),
         activity: target.activity.clone(),
@@ -249,15 +244,49 @@ pub fn resolve(platform: &dyn TimePlatform, target: &Target) -> Result<Resolved>
     Ok(out)
 }
 
-pub fn unknown_targets(platform: &dyn TimePlatform, target: &Target) -> Vec<String> {
-    match resolve(platform, target) {
-        Ok(_) => Vec::new(),
-        Err(e) => vec![
-            e.to_string()
-                .trim_start_matches("time platform: ")
-                .to_string(),
-        ],
+/// Everything a push needs from the platform, asked once: the plan, what the platform already holds, and the ids the target names.
+#[derive(Debug)]
+pub struct Prepared {
+    pub plan: Plan,
+    pub check: Check,
+    /// The target resolved to ids, or why it did not (also in `warnings`); a preview can show it, [`Prepared::resolved`] refuses to push with it.
+    resolved: std::result::Result<Resolved, String>,
+    /// Problems the user should see before pushing (an unknown project or activity).
+    pub warnings: Vec<String>,
+}
+
+impl Prepared {
+    pub fn resolved(&self) -> Result<&Resolved> {
+        self.resolved
+            .as_ref()
+            .map_err(|e| IterError::Platform(e.clone()))
     }
+}
+
+/// [`plan`], [`check`] and [`resolve`] in one: the platform is asked for its projects, activities and entries once per push.
+/// A target that does not resolve is a warning here and an error at [`Prepared::resolved`].
+pub fn prepare(
+    db: &Db,
+    org: &Organization,
+    range: DateRange,
+    now: NaiveDateTime,
+    target: &Target,
+    platform: &dyn TimePlatform,
+) -> Result<Prepared> {
+    let plan = plan(db, org, range, now, target)?;
+    let check = check(db, org, &plan, platform)?;
+    let resolved = resolve(platform, target).map_err(|e| {
+        e.to_string()
+            .trim_start_matches("time platform: ")
+            .to_string()
+    });
+    let warnings = resolved.as_ref().err().cloned().into_iter().collect();
+    Ok(Prepared {
+        plan,
+        check,
+        resolved,
+        warnings,
+    })
 }
 
 /// What the platform offers for the settings form: projects, and the activities of `project`; whatever cannot be fetched is an empty list (free text).
@@ -307,6 +336,7 @@ pub fn execute(
     org: &Organization,
     plan: &Plan,
     check: &Check,
+    resolved: &Resolved,
     platform: &dyn TimePlatform,
     gh: &dyn IssueTracker,
     now: NaiveDateTime,
@@ -347,11 +377,10 @@ pub fn execute(
         open: plan.worklog.open,
     };
     if !free.entries.is_empty() {
-        // the platform takes ids; the plan holds what was chosen (a name or an id)
-        let ids = resolve(platform, &plan.target)?;
+        // the platform takes ids; the plan holds what was chosen (a name or an id), resolved once by `prepare`
         for entry in &mut free.entries {
-            entry.project = ids.project.clone();
-            entry.activity = ids.activity.clone();
+            entry.project = resolved.project.clone();
+            entry.activity = resolved.activity.clone();
         }
         for result in platform.push(&free)? {
             match result.accepted() {
@@ -521,7 +550,8 @@ mod tests {
         gh: &FakeGh,
     ) -> Result<Vec<Item>> {
         let c = check(db, org, plan, platform)?;
-        execute(db, org, plan, &c, platform, gh, now())
+        let ids = resolve(platform, &plan.target)?;
+        execute(db, org, plan, &c, &ids, platform, gh, now())
     }
 
     fn a_task(db: &Db, org: &Organization) -> i64 {
@@ -619,7 +649,8 @@ mod tests {
         let gh = FakeGh::default();
         let c = check(&db, &org, &plan, &platform).unwrap();
         assert!(c.conflicts_on("2026-09-04") && c.conflict_lines()[0].contains("not pushed"));
-        let items = execute(&db, &org, &plan, &c, &platform, &gh, now()).unwrap();
+        let ids = resolve(&platform, &plan.target).unwrap();
+        let items = execute(&db, &org, &plan, &c, &ids, &platform, &gh, now()).unwrap();
         assert!(platform.pushed.borrow().is_empty());
         assert!(gh.calls.borrow().is_empty());
         assert!(items.iter().all(|i| i.error.is_some()));
@@ -650,7 +681,8 @@ mod tests {
         };
         let gh = FakeGh::default();
         let c = check(&db, &org, &plan, &platform).unwrap();
-        let items = execute(&db, &org, &plan, &c, &platform, &gh, now()).unwrap();
+        let ids = resolve(&platform, &plan.target).unwrap();
+        let items = execute(&db, &org, &plan, &c, &ids, &platform, &gh, now()).unwrap();
         let sent = platform.pushed.borrow();
         assert_eq!(sent[0].entries.len(), 1);
         assert_eq!(sent[0].entries[0].day, "2026-09-03");
@@ -781,18 +813,24 @@ mod tests {
             organization: "acme".into(),
             activity: "dev".into(),
         };
-        assert!(unknown_targets(&FakePlatform::default(), &target).is_empty());
+        let (db, org) = setup();
+        let unknown = |platform: &FakePlatform| {
+            prepare(&db, &org, range(), now(), &target, platform)
+                .unwrap()
+                .warnings
+        };
+        assert!(unknown(&FakePlatform::default()).is_empty());
         let wrong_project = FakePlatform {
             projects: vec![PlatformItem::new("p2", "beta")],
             ..Default::default()
         };
-        assert!(unknown_targets(&wrong_project, &target)[0].contains("not one of your projects"));
+        assert!(unknown(&wrong_project)[0].contains("not one of your projects"));
         let wrong_activity = FakePlatform {
             projects: vec![PlatformItem::new("p1", "acme")],
             activities: vec![PlatformItem::new("a1", "ops")],
             ..Default::default()
         };
-        assert!(unknown_targets(&wrong_activity, &target)[0].contains("not an activity of 'acme'"));
+        assert!(unknown(&wrong_activity)[0].contains("not an activity of 'acme'"));
     }
 
     #[test]
@@ -804,15 +842,16 @@ mod tests {
             activities: vec![PlatformItem::new("a1", "Dev")],
             ..Default::default()
         };
-        let check = check(&db, &org, &plan, &platform).unwrap();
+        let prepared = prepare(&db, &org, range(), now(), &plan.target, &platform).unwrap();
         execute(
             &db,
             &org,
-            &plan,
-            &check,
+            &prepared.plan,
+            &prepared.check,
+            prepared.resolved().unwrap(),
             &platform,
             &FakeGh::default(),
-            dt("2026-09-04 18:00"),
+            now(),
         )
         .unwrap();
         let sent = platform.pushed.borrow();
@@ -828,5 +867,52 @@ mod tests {
     fn the_fingerprint_is_stable() {
         let (db, org) = setup();
         assert_eq!(the_plan(&db, &org).hash, the_plan(&db, &org).hash);
+    }
+
+    #[test]
+    fn a_push_asks_the_platform_once_and_a_bad_target_is_a_warning_then_a_refusal() {
+        let (db, org) = setup();
+        let platform = FakePlatform {
+            projects: vec![PlatformItem::new("p1", "acme")],
+            activities: vec![PlatformItem::new("a1", "Dev")],
+            ..Default::default()
+        };
+        let target = Target::of(&org);
+        let prepared = prepare(&db, &org, range(), now(), &target, &platform).unwrap();
+        assert_eq!(
+            *platform.calls.borrow(),
+            ["fetch", "projects", "activities"],
+            "one round-trip each"
+        );
+        assert!(prepared.warnings.is_empty());
+        execute(
+            &db,
+            &org,
+            &prepared.plan,
+            &prepared.check,
+            prepared.resolved().unwrap(),
+            &platform,
+            &FakeGh::default(),
+            now(),
+        )
+        .unwrap();
+        assert_eq!(
+            platform.calls.borrow().len(),
+            4,
+            "execute adds only the push itself"
+        );
+
+        let wrong = FakePlatform {
+            projects: vec![PlatformItem::new("p2", "beta")],
+            ..Default::default()
+        };
+        let bad = prepare(&db, &org, range(), now(), &target, &wrong).unwrap();
+        assert_eq!(bad.warnings.len(), 1);
+        assert!(
+            bad.resolved()
+                .unwrap_err()
+                .to_string()
+                .contains("not one of your projects")
+        );
     }
 }

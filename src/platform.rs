@@ -346,10 +346,13 @@ pub mod fake {
         pub conflicts: Vec<String>,
         pub projects: Vec<PlatformItem>,
         pub activities: Vec<PlatformItem>,
+        /// Which methods were called, in order.
+        pub calls: RefCell<Vec<&'static str>>,
     }
 
     impl TimePlatform for FakePlatform {
         fn push(&self, worklog: &Worklog) -> Result<Vec<EntryResult>> {
+            self.calls.borrow_mut().push("push");
             if let Some(why) = &self.refuse {
                 return Err(IterError::Platform(why.clone()));
             }
@@ -370,12 +373,15 @@ pub mod fake {
                 .collect())
         }
         fn fetch(&self, _: NaiveDate, _: NaiveDate) -> Result<Vec<WorklogEntry>> {
+            self.calls.borrow_mut().push("fetch");
             Ok(self.existing.clone())
         }
         fn projects(&self) -> Result<Vec<PlatformItem>> {
+            self.calls.borrow_mut().push("projects");
             Ok(self.projects.clone())
         }
         fn activities(&self, _: &str) -> Result<Vec<PlatformItem>> {
+            self.calls.borrow_mut().push("activities");
             Ok(self.activities.clone())
         }
     }
