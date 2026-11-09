@@ -25,22 +25,15 @@ enum Asked {
     Organization(Organization),
 }
 
-fn org_of(db: &Db, project: &Project) -> Result<Option<Organization>> {
-    match project.organization_id {
-        Some(id) => Ok(db.get::<Organization>(id)?),
-        None => Ok(None),
-    }
-}
-
 fn ask(db: &Db, spec: &Spec) -> Result<Asked> {
     if let Some(reference) = &spec.task {
         let (project, task) = resolve_task(db, reference)?;
-        let org = org_of(db, &project)?;
+        let org = db.org_of(&project)?;
         return Ok(Asked::Task(project, task, org));
     }
     if let Some(name) = &spec.project {
         let project = db.resolve::<Project>(name)?;
-        let org = org_of(db, &project)?;
+        let org = db.org_of(&project)?;
         return Ok(Asked::Project(project, org));
     }
     if let Some(name) = &spec.org {
@@ -52,7 +45,7 @@ fn ask(db: &Db, spec: &Spec) -> Result<Asked> {
         ),
         other => other,
     })?;
-    let org = org_of(db, &project)?;
+    let org = db.org_of(&project)?;
     Ok(Asked::Task(project, task, org))
 }
 

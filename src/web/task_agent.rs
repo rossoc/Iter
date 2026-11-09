@@ -107,7 +107,7 @@ pub fn load(app: &App, project: &Project, task: &Task, open: &Open) -> Loaded<Ag
         None => None,
     };
     let name = task_display(project, task);
-    let mut layers = instruction::layers_of(db, project);
+    let mut layers = instruction::layers_of(db, project)?;
     if let Some(dir) = &dir {
         layers.insert(0, (instruction::Source::Task, dir.root().to_path_buf()));
     }
@@ -121,7 +121,7 @@ pub fn load(app: &App, project: &Project, task: &Task, open: &Open) -> Loaded<Ag
         !parsed.items.is_empty(),
     );
     Ok(AgentTab {
-        in_notes: taskdir::in_notes(db, project),
+        in_notes: taskdir::in_notes(db, project)?,
         roster,
         plan: parsed,
         step: open.step.map(String::from),

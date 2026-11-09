@@ -30,10 +30,11 @@ impl Source {
 pub type Layers = Vec<(Source, PathBuf)>;
 
 /// The layers that apply to `project`, nearest first (those that exist).
-pub fn layers_of(db: &crate::db::Db, project: &crate::models::Project) -> Layers {
-    let org = project
-        .organization_id
-        .and_then(|id| db.get::<crate::models::Organization>(id).ok().flatten());
+pub fn layers_of(
+    db: &crate::db::Db,
+    project: &crate::models::Project,
+) -> crate::error::Result<Layers> {
+    let org = db.org_of(project)?;
     let mut layers = Layers::new();
     layers.extend(crate::notes::project_dir(project, &org).map(|d| (Source::Project, d)));
     layers.extend(
@@ -42,7 +43,7 @@ pub fn layers_of(db: &crate::db::Db, project: &crate::models::Project) -> Layers
             .map(|d| (Source::Organization, d)),
     );
     layers.extend(global().map(|d| (Source::Global, d)));
-    layers
+    Ok(layers)
 }
 
 pub fn global() -> Option<PathBuf> {

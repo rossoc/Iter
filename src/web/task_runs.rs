@@ -407,7 +407,7 @@ async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let (app, name, task, project) = world(id)?;
     let (kind, spec) =
-        parse_run(&form, &instruction::layers_of(&app.db, &project)).map_err(bad_request)?;
+        parse_run(&form, &instruction::layers_of(&app.db, &project)?).map_err(bad_request)?;
     let n = solve::create(
         &app,
         &name,
@@ -429,7 +429,7 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<TabQuery>(cx)?;
     let (app, name, task, project) = world(id)?;
-    let mut layers = instruction::layers_of(&app.db, &project);
+    let mut layers = instruction::layers_of(&app.db, &project)?;
     if let Ok(dir) = taskdir::of(&app.db, &project, &task) {
         layers.insert(0, (instruction::Source::Task, dir.root().to_path_buf()));
     }
@@ -470,7 +470,7 @@ async fn edit_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let n = *path_param::<N>(cx)?;
     let (app, name, _, project) = world(id)?;
     let (kind, spec) =
-        parse_run(&form, &instruction::layers_of(&app.db, &project)).map_err(bad_request)?;
+        parse_run(&form, &instruction::layers_of(&app.db, &project)?).map_err(bad_request)?;
     solve::amend(&app, &name, n, kind, &form.instruction, &spec, &form.prompt).map_err(refused)?;
     follow_up(&app, &name, n, form.action)?;
     Err(see_other(agent_url(id, n)).into())

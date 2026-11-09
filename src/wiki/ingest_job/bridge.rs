@@ -20,10 +20,7 @@ pub fn bridge_task_notes(app: &App, project: &Project, task: &Task) -> Result<us
     if count == 0 {
         return Ok(0);
     }
-    let org = match project.organization_id {
-        Some(id) => app.db.get::<crate::models::Organization>(id)?,
-        None => None,
-    };
+    let org = app.db.org_of(project)?;
     let notes_dir = crate::notes::project_dir(project, &org).ok_or(AgentError::NoNotesFolder)?;
     let today = chrono::Local::now().date_naive();
     let added =

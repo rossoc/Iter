@@ -999,6 +999,28 @@ fn a_project_may_belong_to_an_organization_or_to_none() {
     assert_eq!(roster, ["member"], "only members are in the roster");
 }
 
+#[test]
+fn org_of_finds_the_organization_and_propagates_database_errors() {
+    let db = db();
+    let organization = insert_organization(&db, "acme");
+    let mut member = project("member");
+    member.organization_id = Some(organization);
+    let loner = project("loner");
+
+    let found = db.org_of(&member).expect("lookup succeeds");
+    assert_eq!(found.map(|o| o.name), Some("acme".to_string()));
+    assert!(db.org_of(&loner).expect("lookup succeeds").is_none());
+
+    db.conn
+        .execute_batch("DROP TABLE organizations")
+        .expect("drop");
+    assert!(
+        db.org_of(&member).is_err(),
+        "a database error is not 'no organization'"
+    );
+    assert!(db.org_of(&loner).expect("no query needed").is_none());
+}
+
 /// Deleting an organization leaves its projects (and their tasks and sessions) intact.
 #[test]
 fn deleting_an_organization_keeps_its_projects() {

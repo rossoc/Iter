@@ -5,13 +5,6 @@ use crate::models::{Board, Card, Organization, Project, ProjectGroup, Task};
 use std::collections::HashMap;
 use topcoat::router::error::RouterErrorExt;
 
-pub fn org_of(db: &Db, project: &Project) -> crate::error::Result<Option<Organization>> {
-    Ok(match Organization::group_of(project) {
-        Some(id) => db.get(id)?,
-        None => None,
-    })
-}
-
 pub fn org_in<'a>(orgs: &'a [Organization], project: &Project) -> Option<&'a Organization> {
     let id = project.organization_id?;
     orgs.iter().find(|o| o.id() == id)
@@ -87,7 +80,7 @@ pub fn task_with_project(db: &Db, id: i64) -> topcoat::Result<(Task, Project)> {
 
 pub fn parents_of(db: &Db, id: i64) -> topcoat::Result<Parents> {
     let project = project_of(db, id)?;
-    let org = org_of(db, &project)?;
+    let org = db.org_of(&project)?;
     Ok(Parents { project, org })
 }
 

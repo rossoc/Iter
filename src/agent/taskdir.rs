@@ -4,7 +4,7 @@ use crate::agent::error::{AgentError, AgentResult};
 use crate::agent::plan::{self, Progress, State};
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::models::{Organization, Project, Task};
+use crate::models::{Project, Task};
 use crate::notes;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -126,10 +126,7 @@ pub(crate) fn write_atomic(target: &Path, text: &str) -> std::io::Result<()> {
 
 /// The folder of `task`: in the project's notes, else (no notes anywhere) iter's config directory `tasks/<id>/`.
 pub fn of(db: &Db, project: &Project, task: &Task) -> Result<TaskDir> {
-    let org = match project.organization_id {
-        Some(id) => db.get::<Organization>(id)?,
-        None => None,
-    };
+    let org = db.org_of(project)?;
     Ok(TaskDir::new(match notes::project_dir(project, &org) {
         Some(dir) => notes::task_dir(&dir, task.id()),
         None => notes::task_dir(&crate::config::config_dir()?, task.id()),
@@ -137,11 +134,8 @@ pub fn of(db: &Db, project: &Project, task: &Task) -> Result<TaskDir> {
 }
 
 /// Whether the task's folder is in the project's notes (part of its wiki), not the config fallback.
-pub fn in_notes(db: &Db, project: &Project) -> bool {
-    let org = project
-        .organization_id
-        .and_then(|id| db.get::<Organization>(id).ok().flatten());
-    notes::project_dir(project, &org).is_some()
+pub fn in_notes(db: &Db, project: &Project) -> Result<bool> {
+    Ok(notes::project_dir(project, &db.org_of(project)?).is_some())
 }
 
 pub struct Saved {
