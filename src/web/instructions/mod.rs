@@ -82,12 +82,9 @@ impl Scope {
 
     pub fn of_project(db: &Db, id: i64) -> Result<Scope> {
         let project = db.get::<Project>(id)?.ok_or_not_found()?;
-        let org = match project.organization_id {
-            Some(o) => db.get::<Organization>(o)?,
-            None => None,
-        };
+        let org = db.org_of(&project)?;
         Ok(Scope {
-            layers: instruction::layers_of(db, &project),
+            layers: instruction::layers_of(db, &project)?,
             home: crate::notes::project_dir(&project, &org),
             project: Some(project),
             org,

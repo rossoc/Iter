@@ -76,9 +76,8 @@ impl Project {
         project
     }
 
-    /// Beyond a name: no comma ([`require_no_comma`]) and a `base_path`, expanded (`~`) and
-    /// absolutised here for every write path: a relative path names a different directory wherever
-    /// `iter` later runs.
+    /// Beyond a name: no comma ([`require_no_comma`]) and a `base_path`. Callers that write a
+    /// project absolutise the path first ([`crate::scaffold::absolutise_base_path`]).
     fn check(&mut self) -> crate::error::Result<()> {
         require_no_comma(Self::KIND, &self.name)?;
         if self.name.contains('/') {
@@ -87,11 +86,9 @@ impl Project {
                 name: self.name.clone(),
             });
         }
-        let base_path = self.base_path.trim();
-        if base_path.is_empty() {
+        if self.base_path.trim().is_empty() {
             return Err(crate::error::IterError::EmptyBasePath);
         }
-        self.base_path = crate::scaffold::absolute_path(base_path)?;
         Ok(())
     }
 

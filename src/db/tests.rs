@@ -763,6 +763,40 @@ fn deleting_a_project_cascades_to_its_tasks() {
 }
 
 #[test]
+fn a_task_with_a_session_cannot_move_to_another_project() {
+    let db = db();
+    let (a, b) = (insert_project(&db, "alpha"), insert_project(&db, "beta"));
+    let (from, to) = (
+        db.get::<Project>(a).unwrap().unwrap(),
+        db.get::<Project>(b).unwrap().unwrap(),
+    );
+    let task_id = insert_task(&db, a, "build it");
+    let mut task = db.get::<Task>(task_id).unwrap().unwrap();
+
+    db.move_task(task_id, &mut task, &from, &from)
+        .expect("staying is fine");
+    assert_eq!(task.project_id, a);
+    db.move_task(task_id, &mut task, &from, &to)
+        .expect("no session: it moves");
+    assert_eq!(task.project_id, b);
+
+    task.project_id = a;
+    db.insert(&SessionConfig {
+        id: None,
+        task_id,
+        tmux_session_name: None,
+        github_branch: None,
+        worktree_path: None,
+    })
+    .expect("config inserts");
+    let err = db.move_task(task_id, &mut task, &from, &to).unwrap_err();
+    assert!(matches!(&err, IterError::TaskHasSession(n) if n == "alpha/build it"));
+    assert_eq!(task.project_id, a, "a refused move leaves the task alone");
+    db.move_task(task_id, &mut task, &from, &from)
+        .expect("a session does not stop staying");
+}
+
+#[test]
 fn session_config_round_trips_its_optional_columns() {
     let db = db();
     let project_id = insert_project(&db, "alpha");
@@ -997,6 +1031,28 @@ fn a_project_may_belong_to_an_organization_or_to_none() {
         .map(|p| p.name)
         .collect();
     assert_eq!(roster, ["member"], "only members are in the roster");
+}
+
+#[test]
+fn org_of_finds_the_organization_and_propagates_database_errors() {
+    let db = db();
+    let organization = insert_organization(&db, "acme");
+    let mut member = project("member");
+    member.organization_id = Some(organization);
+    let loner = project("loner");
+
+    let found = db.org_of(&member).expect("lookup succeeds");
+    assert_eq!(found.map(|o| o.name), Some("acme".to_string()));
+    assert!(db.org_of(&loner).expect("lookup succeeds").is_none());
+
+    db.conn
+        .execute_batch("DROP TABLE organizations")
+        .expect("drop");
+    assert!(
+        db.org_of(&member).is_err(),
+        "a database error is not 'no organization'"
+    );
+    assert!(db.org_of(&loner).expect("no query needed").is_none());
 }
 
 /// Deleting an organization leaves its projects (and their tasks and sessions) intact.

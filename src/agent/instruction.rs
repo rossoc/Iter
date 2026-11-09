@@ -30,10 +30,11 @@ impl Source {
 pub type Layers = Vec<(Source, PathBuf)>;
 
 /// The layers that apply to `project`, nearest first (those that exist).
-pub fn layers_of(db: &crate::db::Db, project: &crate::models::Project) -> Layers {
-    let org = project
-        .organization_id
-        .and_then(|id| db.get::<crate::models::Organization>(id).ok().flatten());
+pub fn layers_of(
+    db: &crate::db::Db,
+    project: &crate::models::Project,
+) -> crate::error::Result<Layers> {
+    let org = db.org_of(project)?;
     let mut layers = Layers::new();
     layers.extend(crate::notes::project_dir(project, &org).map(|d| (Source::Project, d)));
     layers.extend(
@@ -42,30 +43,19 @@ pub fn layers_of(db: &crate::db::Db, project: &crate::models::Project) -> Layers
             .map(|d| (Source::Organization, d)),
     );
     layers.extend(global().map(|d| (Source::Global, d)));
-    layers
+    Ok(layers)
 }
 
 pub fn global() -> Option<PathBuf> {
     crate::config::config_dir().ok()
 }
 
-pub fn file(dir: &Path, name: &str) -> PathBuf {
-    dir.join("instructions").join(format!("{name}.md"))
-}
+pub use crate::agent::prompt::file;
 
 /// The front matter (between a first line `---` and the next) and the prompt; no `---` means all prompt.
 pub fn split(raw: &str) -> (Option<&str>, &str) {
-    let Some(rest) = raw.strip_prefix("---\n") else {
-        return (None, raw);
-    };
-    if let Some(body) = rest.strip_prefix("---\n") {
-        return (Some(""), body);
-    }
-    if let Some(i) = rest.find("\n---\n") {
-        return (Some(&rest[..=i]), &rest[i + 5..]);
-    }
-    match rest.strip_suffix("\n---") {
-        Some(front) => (Some(front), ""),
+    match crate::md_edit::split_closed(raw) {
+        Some((front, body)) => (Some(front), body),
         None => (None, raw),
     }
 }
@@ -399,7 +389,7 @@ mod tests {
         assert_eq!(split("---\n---\nBody"), (Some(""), "Body"));
         assert_eq!(split("no front"), (None, "no front"));
         assert_eq!(split("---\nnever closed\n"), (None, "---\nnever closed\n"));
-        assert_eq!(split("---\na: 1\n---"), (Some("a: 1"), ""));
+        assert_eq!(split("---\na: 1\n---"), (Some("a: 1\n"), ""));
     }
 
     #[test]

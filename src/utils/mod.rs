@@ -3,6 +3,7 @@
 
 pub mod clock;
 pub mod crud;
+pub mod fs;
 pub mod output;
 pub mod report;
 pub mod resolve;

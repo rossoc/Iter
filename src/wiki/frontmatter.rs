@@ -1,7 +1,7 @@
 //! A page's front matter (strict YAML between a first line `---` and the next) and body links.
 //! `iter:authorable` ontology properties are relations; any other key goes to `unknown` for `check`. A note is never parsed.
 
-use crate::md_edit::split_at_divider;
+use crate::md_edit::{split_closed, strip_bom};
 use serde_yaml::Value;
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -31,21 +31,14 @@ pub struct Split<'a> {
 
 /// Splits `content`; the front matter must open on the first line, a later `---` is a markdown rule.
 pub fn split(content: &str) -> Split<'_> {
-    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
-    let Some(rest) = content.strip_prefix("---\n") else {
-        return Split {
-            yaml: None,
-            body: content,
-        };
-    };
-    match split_at_divider(rest) {
+    match split_closed(content) {
         Some((yaml, body)) => Split {
             yaml: Some(yaml),
             body,
         },
         None => Split {
             yaml: None,
-            body: content,
+            body: strip_bom(content),
         },
     }
 }
