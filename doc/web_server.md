@@ -8,7 +8,7 @@ Nothing is cached or copied. Every request opens the configured database file it
 
 Those SQLite calls block (up to 5 s of `busy_timeout` when the CLI holds the write lock). `blocking.rs` therefore runs each request inside `block_in_place`: the runtime moves the worker's other tasks to another thread first. One layer, no change to any handler. It needs the multi-threaded runtime that `serve` builds.
 
-The layers, outermost first: `blocking::off_the_workers`, `guard::local_only`, `errors::error_pages`. Each page or route module exposes a `register` function that `mod.rs::router` folds into the builder.
+The layers, outermost first: `blocking::off_the_workers`, `guard::security_headers`, `guard::local_only`, `errors::error_pages`. Each page or route module exposes a `register` function that `mod.rs::router` folds into the builder.
 
 ## Route map
 
@@ -52,8 +52,11 @@ Notes on submissions: checkboxes are present (as `on`) only when ticked; repeate
 - `Host` must be a loopback name (`127.0.0.1` or `localhost`, any port), for every request.
 - A state-changing request's `Sec-Fetch-Site`, when sent, must be `same-origin` or `none`, and its `Origin`, when sent, must equal `Host`. `Sec-Fetch-Site` backs `Origin` up: it names a cross-site request even if `Origin` was stripped.
 - A request with neither header is not from a browser tab (a page's request always carries one) and is let through, for `curl`.
+- A state-changing request whose `Sec-Fetch-Dest` is `iframe`, `frame`, `embed` or `object` is made by a framed page: refused (clickjacking, second lock).
 
 A refusal is a 403.
+
+`security_headers` puts `X-Frame-Options: SAMEORIGIN`, `Content-Security-Policy` (`frame-ancestors 'self'; default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'`), `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` on every response. No page may carry an inline script (the CSP has no `script-src 'unsafe-inline'`): scripts are `/*.js` assets, and the palette preview is an iframe of this same origin. `style-src` keeps `'unsafe-inline'` for the `style=` attributes (bar widths, tag colours); `data:` images are the SVG masks in the stylesheet. The tests (`guard.rs`) drive the real router in process, no socket.
 
 ## Errors
 
