@@ -160,6 +160,14 @@ pub fn check_url(url: &str) -> Result<()> {
     }
 }
 
+fn agent(seconds: u64) -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .timeout_global(Some(Duration::from_secs(seconds)))
+        .build()
+        .into()
+}
+
 pub struct JsonWebhook {
     url: String,
     key: Secret,
@@ -171,24 +179,15 @@ impl JsonWebhook {
     /// in the database) cannot send the key anywhere.
     pub fn new(url: &str, key: Secret) -> Result<Self> {
         check_url(url)?;
-        let agent: ureq::Agent = ureq::Agent::config_builder()
-            .http_status_as_error(false)
-            .timeout_global(Some(Duration::from_secs(30)))
-            .build()
-            .into();
         Ok(JsonWebhook {
             url: url.trim_end_matches('/').to_string(),
             key,
-            agent,
+            agent: agent(30),
         })
     }
 
     pub fn with_timeout(mut self, seconds: u64) -> Self {
-        self.agent = ureq::Agent::config_builder()
-            .http_status_as_error(false)
-            .timeout_global(Some(Duration::from_secs(seconds)))
-            .build()
-            .into();
+        self.agent = agent(seconds);
         self
     }
 
@@ -346,10 +345,13 @@ pub mod fake {
         pub conflicts: Vec<String>,
         pub projects: Vec<PlatformItem>,
         pub activities: Vec<PlatformItem>,
+        /// Which methods were called, in order.
+        pub calls: RefCell<Vec<&'static str>>,
     }
 
     impl TimePlatform for FakePlatform {
         fn push(&self, worklog: &Worklog) -> Result<Vec<EntryResult>> {
+            self.calls.borrow_mut().push("push");
             if let Some(why) = &self.refuse {
                 return Err(IterError::Platform(why.clone()));
             }
@@ -370,12 +372,15 @@ pub mod fake {
                 .collect())
         }
         fn fetch(&self, _: NaiveDate, _: NaiveDate) -> Result<Vec<WorklogEntry>> {
+            self.calls.borrow_mut().push("fetch");
             Ok(self.existing.clone())
         }
         fn projects(&self) -> Result<Vec<PlatformItem>> {
+            self.calls.borrow_mut().push("projects");
             Ok(self.projects.clone())
         }
         fn activities(&self, _: &str) -> Result<Vec<PlatformItem>> {
+            self.calls.borrow_mut().push("activities");
             Ok(self.activities.clone())
         }
     }

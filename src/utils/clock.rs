@@ -5,7 +5,7 @@
 use crate::db::{Db, Table};
 use crate::error::Result;
 use crate::models::Session;
-use crate::tmux;
+use crate::tmux::Multiplexer;
 use chrono::{Local, NaiveDateTime};
 
 pub(crate) fn start_session(db: &Db, task_id: i64) -> Result<()> {
@@ -98,22 +98,30 @@ pub(crate) fn start_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> 
 
 /// Closes the open session of the task `tmux_session` belongs to, carrying a detach message (see
 /// `tmux::DETACH_MESSAGE_OPTION`) onto it. Unknown names are ignored.
-pub(crate) fn stop_for_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
+pub(crate) fn stop_for_tmux_session(
+    db: &Db,
+    mux: &dyn Multiplexer,
+    tmux_session: &str,
+) -> Result<()> {
     let Some(session_config) = db.find_session_config_by_tmux_name(tmux_session)? else {
         return Ok(()); // not one of ours -- ignore
     };
-    let message = tmux::take_detach_message(tmux_session);
+    let message = mux.take_detach_message(tmux_session);
     close_open_session(db, session_config.task_id, message.as_deref())?;
     Ok(())
 }
 
 /// A client left `tmux_session`: stops its clock if that was the last client. The leaving client is
 /// already off tmux's list when the hook runs, so what remains is exactly who is still working.
-pub(crate) fn client_left_tmux_session(db: &Db, tmux_session: &str) -> Result<()> {
-    if tmux::any_client_attached(tmux_session) {
+pub(crate) fn client_left_tmux_session(
+    db: &Db,
+    mux: &dyn Multiplexer,
+    tmux_session: &str,
+) -> Result<()> {
+    if mux.any_client_attached(tmux_session) {
         return Ok(()); // somebody else is still in there
     }
-    stop_for_tmux_session(db, tmux_session)
+    stop_for_tmux_session(db, mux, tmux_session)
 }
 
 #[cfg(test)]
@@ -209,6 +217,33 @@ mod tests {
             .expect("closing succeeds");
         assert_eq!(closed, Closed::Nothing);
         assert!(db.sessions_for_task(task_id).expect("lookup")[0].is_ongoing());
+    }
+
+    #[test]
+    fn the_clock_stops_only_when_the_last_client_leaves() {
+        use crate::models::SessionConfig;
+        use crate::process::fake::FakeRunner;
+        use crate::tmux::TmuxClient;
+        let (db, task_id) = open_at_nine();
+        db.insert(&SessionConfig {
+            id: None,
+            task_id,
+            tmux_session_name: Some("s".into()),
+            github_branch: None,
+            worktree_path: None,
+        })
+        .expect("config inserts");
+        let runner = FakeRunner::default();
+        let mux = TmuxClient::new(&runner, false);
+
+        runner.reply("tmux list-clients", "/dev/ttys001\n");
+        client_left_tmux_session(&db, &mux, "s").expect("hook");
+        assert!(db.sessions_for_task(task_id).expect("lookup")[0].is_ongoing());
+
+        runner.replies.borrow_mut().clear();
+        client_left_tmux_session(&db, &mux, "s").expect("hook");
+        assert!(!db.sessions_for_task(task_id).expect("lookup")[0].is_ongoing());
+        assert!(runner.calls().iter().any(|c| c.starts_with("tmux show-options")));
     }
 
     #[test]
