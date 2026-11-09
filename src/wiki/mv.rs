@@ -4,7 +4,7 @@
 use super::graph::Wiki;
 use crate::agent::taskdir::write_atomic;
 use crate::error::{Result, failed};
-use crate::md_edit::split_at_divider;
+use crate::md_edit::split_closed;
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -90,9 +90,15 @@ fn replace_links(body: &str, old: &str, new: &str) -> (String, usize) {
 }
 
 fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
-    let (head, yaml, body) = match content.strip_prefix("---\n").and_then(split_at_divider) {
+    // The byte-order mark, if any, is kept as it was.
+    let bom = &content[..content.len() - crate::md_edit::strip_bom(content).len()];
+    let (head, yaml, body) = match split_closed(content) {
         Some((yaml, body)) => ("---\n", yaml.to_string(), body.to_string()),
-        None => ("", String::new(), content.to_string()),
+        None => (
+            "",
+            String::new(),
+            crate::md_edit::strip_bom(content).to_string(),
+        ),
     };
     let (mut yaml, mut body, mut total) = (yaml, body, 0);
     for (old, new) in renames {
@@ -101,9 +107,9 @@ fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
         (yaml, body, total) = (y, b, total + a + c);
     }
     if head.is_empty() {
-        (body, total)
+        (format!("{bom}{body}"), total)
     } else {
-        (format!("{head}{yaml}---\n{body}"), total)
+        (format!("{bom}{head}{yaml}---\n{body}"), total)
     }
 }
 

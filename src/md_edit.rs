@@ -17,23 +17,67 @@ fn render_template<T: Serialize + MarkdownBody>(item: &T) -> Result<String> {
     Ok(out)
 }
 
-/// Splits `content` on the first line that is exactly `---`, or `None` if
-/// there is no such line.
-pub(crate) fn split_at_divider(content: &str) -> Option<(&str, &str)> {
+/// `content` without a leading byte-order mark.
+pub(crate) fn strip_bom(content: &str) -> &str {
+    content.strip_prefix('\u{feff}').unwrap_or(content)
+}
+
+/// Where front matter ends, the one rule: after an optional byte-order mark, an opening `---`
+/// line (`opened`), then the first line that is exactly `---`. `front` is what lies between (its
+/// last newline included) and `body` what follows the divider. Without a divider `front` is
+/// `None` and `body` is everything after the opening line (all of it when there is none). A
+/// divider with no opening still splits; callers that require the opening check `opened`.
+pub(crate) struct Split<'a> {
+    pub opened: bool,
+    pub front: Option<&'a str>,
+    pub body: &'a str,
+}
+
+pub(crate) fn split_front(content: &str) -> Split<'_> {
+    let content = strip_bom(content);
+    let (opened, rest) = match content.strip_prefix("---\n") {
+        Some(rest) => (true, rest),
+        None => (false, content),
+    };
     let mut consumed = 0;
-    for line in content.split_inclusive('\n') {
+    for line in rest.split_inclusive('\n') {
         if line.trim_end_matches('\n') == "---" {
-            return Some((&content[..consumed], &content[consumed + line.len()..]));
+            return Split {
+                opened,
+                front: Some(&rest[..consumed]),
+                body: &rest[consumed + line.len()..],
+            };
         }
         consumed += line.len();
     }
-    None
+    Split {
+        opened,
+        front: None,
+        body: rest,
+    }
 }
 
-/// Splits an editor buffer into YAML front matter and markdown body.
+/// Front matter and body when `content` opens with `---` and a `---` line closes it.
+pub(crate) fn split_closed(content: &str) -> Option<(&str, &str)> {
+    let split = split_front(content);
+    split
+        .front
+        .filter(|_| split.opened)
+        .map(|f| (f, split.body))
+}
+
+/// Splits an editor buffer into YAML front matter and markdown body; the opening is optional and
+/// an unclosed front matter is all front.
 fn split_front_matter(content: &str) -> (&str, &str) {
-    let content = content.strip_prefix("---\n").unwrap_or(content);
-    split_at_divider(content).unwrap_or((content, ""))
+    let split = split_front(content);
+    (
+        split.front.unwrap_or(split.body),
+        if split.front.is_some() {
+            split.body
+        } else {
+            ""
+        },
+    )
 }
 
 /// Decides whether the edit counts as a save: unchanged content is `Ok(None)` (abort). Front
@@ -167,6 +211,34 @@ mod tests {
             name: name.to_string(),
             description: description.to_string(),
         }
+    }
+
+    #[test]
+    fn split_front_is_the_one_rule() {
+        assert_eq!(
+            split_closed("---\na: 1\n---\nBody\n"),
+            Some(("a: 1\n", "Body\n"))
+        );
+        assert_eq!(split_closed("---\n---\nBody"), Some(("", "Body")));
+        assert_eq!(split_closed("---\na: 1\n---"), Some(("a: 1\n", "")));
+        assert_eq!(
+            split_closed("\u{feff}---\na: 1\n---\nb"),
+            Some(("a: 1\n", "b"))
+        );
+        assert_eq!(split_closed("---\nnever closed\n"), None);
+        assert_eq!(
+            split_closed("a: 1\n---\nb"),
+            None,
+            "closed needs an opening"
+        );
+        assert_eq!(
+            split_closed("---\na: 1\n--- \nb"),
+            None,
+            "the divider is exact"
+        );
+        let open = split_front("a: 1\n---\nb");
+        assert!(!open.opened);
+        assert_eq!((open.front, open.body), (Some("a: 1\n"), "b"));
     }
 
     #[test]

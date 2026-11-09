@@ -8,7 +8,7 @@ use crate::agent::task_prompt::locate;
 use crate::app::App;
 use crate::commands::ingest::say_auto;
 use crate::error::Result;
-use crate::md_edit::{edit_text, split_at_divider};
+use crate::md_edit::{edit_text, split_front};
 use crate::models::Project;
 use crate::utils::resolve::task_display;
 use crate::wiki::ingest_job::Auto;
@@ -46,8 +46,9 @@ fn render(spec: &Spec, description: &str) -> Result<String> {
 }
 
 fn parse(buffer: &str) -> Result<(Spec, String)> {
-    let buffer = buffer.strip_prefix("---\n").unwrap_or(buffer);
-    let (front, body) = split_at_divider(buffer).ok_or(AgentError::BufferLostFront)?;
+    let split = split_front(buffer);
+    let front = split.front.ok_or(AgentError::BufferLostFront)?;
+    let body = split.body;
     let spec = serde_yaml::from_str(front).map_err(AgentError::BufferFront)?;
     Ok((spec, body.trim().to_string()))
 }

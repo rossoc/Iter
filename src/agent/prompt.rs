@@ -158,27 +158,26 @@ pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> AgentResult<Stri
     Ok(out)
 }
 
+/// Where the instruction `name` lives under `dir`.
+pub fn file(dir: &Path, name: &str) -> PathBuf {
+    dir.join("instructions").join(format!("{name}.md"))
+}
+
+/// The prompt of an instruction file: what follows its front matter, if any.
+fn prompt_of(raw: &str) -> String {
+    let body = crate::md_edit::split_closed(raw).map_or(raw, |(_, body)| body);
+    body.trim_start_matches('\n').to_string()
+}
+
 /// The template for `kind`: the first `instructions/<kind>.md` in `dirs` (nearest first) and where it came from, else the built-in.
 pub fn template(kind: Kind, dirs: &[PathBuf]) -> (Option<PathBuf>, String) {
     for dir in dirs {
-        let path = crate::agent::instruction::file(dir, kind.key());
+        let path = file(dir, kind.key());
         if let Ok(text) = std::fs::read_to_string(&path) {
-            return (
-                Some(path),
-                crate::agent::instruction::split(&text)
-                    .1
-                    .trim_start_matches('\n')
-                    .to_string(),
-            );
+            return (Some(path), prompt_of(&text));
         }
     }
-    (
-        None,
-        crate::agent::instruction::split(kind.builtin())
-            .1
-            .trim_start_matches('\n')
-            .to_string(),
-    )
+    (None, prompt_of(kind.builtin()))
 }
 
 #[cfg(test)]
