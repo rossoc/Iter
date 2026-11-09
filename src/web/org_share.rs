@@ -3,12 +3,14 @@
 
 use super::forms::text;
 use super::org::{Loaded, load as load_org, screen};
+use super::org_report::report_link;
 use super::platform_pick::{self, platform_lists};
 use super::sections::Section;
 use super::ui::field::{field, select};
 use super::ui::modal::modal;
 use super::ui::notice::notice;
 use super::ui::{CLIPBOARD_CHECK, COPY, PUSH, icon};
+use super::url::{org_url, page_url};
 use super::{Id, now, open_db};
 use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
@@ -23,7 +25,7 @@ use chrono::NaiveDateTime;
 use topcoat::{
     Result,
     context::Cx,
-    router::{RouterBuilder, content::Form, page, path_param},
+    router::{RouterBuilder, content::Form, error::see_other, page, path_param},
     view::{View, component, view},
 };
 
@@ -204,6 +206,8 @@ pub enum Outcome {
     Copied(String),
     Preview(Box<Preview>),
     Done(Vec<Item>),
+    /// A push already made, read back from the ledger after the redirect (`?pushed=<hash>`): its result lines.
+    Recorded(Vec<String>),
 }
 
 #[derive(Debug)]
@@ -295,7 +299,8 @@ fn push_step(
     let platform = connect(org)?;
     let check = push::check(db, org, &plan, platform.as_ref())?;
 
-    if form.confirm && form.hash == plan.hash {
+    // An identical worklog already pushed is previewed (flagged), never pushed twice.
+    if form.confirm && form.hash == plan.hash && !check.already_pushed {
         let items = push::execute(db, org, &plan, &check, platform.as_ref(), gh, now)?;
         return Ok(Outcome::Done(items));
     }
@@ -316,6 +321,23 @@ fn push_step(
     })))
 }
 
+/// The result of the push with this hash, as the ledger recorded it.
+pub fn recorded(db: &Db, id: i64, hash: &str) -> IterResult<Option<Outcome>> {
+    Ok(db
+        .find_push(id, hash)?
+        .map(|row| Outcome::Recorded(row.results.lines().map(String::from).collect())))
+}
+
+/// Where a confirmed push goes on to (303): the report, naming the ledger row the push wrote.
+/// None for anything else, and for a push the platform took nothing of (no row to show).
+fn pushed_url(db: &Db, id: i64, form: &ShareForm, outcome: &Outcome) -> IterResult<Option<String>> {
+    if !matches!(outcome, Outcome::Done(_)) || db.find_push(id, &form.hash)?.is_none() {
+        return Ok(None);
+    }
+    let report = report_link(&org_url(id), Some(&form.from), Some(&form.to));
+    Ok(Some(page_url(&report, &[("pushed", Some(&form.hash))])))
+}
+
 #[page(POST "/org/{id}/share")]
 async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
@@ -323,6 +345,10 @@ async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl
     let db = open_db()?;
     let now = now();
     let outcome = handle(&db, id, &form, now, &connect_real, &GhCli::system());
+    // A push is answered with a redirect to the report, so a refresh repeats a GET, not the push.
+    if let Some(url) = pushed_url(&db, id, &form, &outcome)? {
+        return Err(see_other(url).into());
+    }
     // the Report tab of the period asked for, or the default when it was bad
     let valid = form.range(now).is_ok();
     let (from, to) = match valid {
@@ -431,6 +457,15 @@ pub async fn share_outcome(outcome: &Outcome) -> Result<impl View> {
             } else if let Outcome::Copied(text) = outcome {
                 notice(id: "share-result", focus: true, "Copy this text:")
                 <textarea class="control share-text" readonly="" rows="8" aria-label="Text to copy">(text.as_str())</textarea>
+            } else if let Outcome::Recorded(lines) = outcome {
+                notice(error: lines.iter().any(|l| l.starts_with("FAILED")), id: "share-result", focus: true,
+                    (if lines.iter().any(|l| l.starts_with("FAILED")) { "Pushed, but some steps failed." } else { "Pushed." })
+                )
+                <ul class="share-items">
+                    for line in lines.iter() {
+                        <li class=(if line.starts_with("FAILED") { "bad" } else { "" })>(line.as_str())</li>
+                    }
+                </ul>
             } else if let Outcome::Done(items) = outcome {
                 notice(error: items.iter().any(|i| i.error.is_some()), id: "share-result", focus: true,
                     (if items.iter().any(|i| i.error.is_some()) { "Pushed, but some steps failed." } else { "Pushed." })
@@ -592,6 +627,46 @@ mod tests {
             panic!("preview")
         };
         assert!(second.already && second.conflicts.is_empty());
+    }
+
+    /// A refresh of the confirming POST must not push again: one ledger row, and the second
+    /// answer is the flagged preview. The first is a redirect to the report naming the row.
+    #[test]
+    fn a_confirmed_push_is_redirected_and_cannot_be_repeated() {
+        let (db, id) = setup("http://x/log");
+        let Outcome::Preview(p) = handle(&db, id, &form("push"), now(), &fake, &NoGh) else {
+            panic!("preview")
+        };
+        let confirm = ShareForm {
+            confirm: true,
+            ..p.form.clone()
+        };
+        let first = handle(&db, id, &confirm, now(), &fake, &NoGh);
+        let url = pushed_url(&db, id, &confirm, &first).unwrap().unwrap();
+        assert_eq!(
+            url,
+            format!(
+                "/org/{id}?tab=report&from=2026-09-04&to=2026-09-04&pushed={}",
+                confirm.hash
+            )
+        );
+
+        let Outcome::Preview(again) = handle(&db, id, &confirm, now(), &fake, &NoGh) else {
+            panic!("a second confirm is previewed, not pushed")
+        };
+        assert!(again.already);
+        assert_eq!(db.list::<crate::models::Push>().unwrap().len(), 1);
+        assert!(
+            pushed_url(&db, id, &confirm, &Outcome::Error("x".into()))
+                .unwrap()
+                .is_none()
+        );
+
+        let Some(Outcome::Recorded(lines)) = recorded(&db, id, &confirm.hash).unwrap() else {
+            panic!("recorded")
+        };
+        assert!(lines[0].starts_with("ok: platform"));
+        assert!(recorded(&db, id, "nope").unwrap().is_none());
     }
 
     #[test]

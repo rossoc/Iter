@@ -5,7 +5,7 @@ use super::assets::Asset;
 use super::daily_notes::{NotesTab, notes_section};
 use super::load::tasks_or_count;
 use super::org_report::{Report, report_link, report_view, tab_url};
-use super::org_share::{Outcome, ShareDialog, preview_modal, share_modal};
+use super::org_share::{Outcome, ShareDialog, preview_modal, recorded, share_modal};
 use super::project_new::{Home, ProjectCreate, project_modal};
 use super::project_rows::{project_search_in, projects_section};
 use super::sections::{Section, TabQuery, section_tabs, settings_tab};
@@ -96,8 +96,13 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let query = query_params::<TabQuery>(cx)?;
     let section = Section::of(query.tab.as_deref());
     let now = now();
+    let db = open_db()?;
+    let recorded = match (section, query.pushed.as_deref()) {
+        (Section::Report, Some(hash)) => recorded(&db, id, hash)?,
+        _ => None,
+    };
     let page = load(
-        &open_db()?,
+        &db,
         id,
         section,
         query.from.as_deref(),
@@ -129,7 +134,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
         _ => None,
     };
     Ok(view! {
-        screen(page: &page, section: section, today: now.date(), q: q, task_create: task_create.as_ref(), project_create: project_create.as_ref(), share_dialog: share_dialog.as_ref())
+        screen(page: &page, section: section, today: now.date(), q: q, task_create: task_create.as_ref(), project_create: project_create.as_ref(), share_dialog: share_dialog.as_ref(), share: recorded.as_ref())
     })
 }
 
