@@ -2,25 +2,22 @@
 
 use super::instructions::{Use, usage};
 use super::sections::TabQuery;
-use super::task_runs::{act, label_of, state_pill};
+use super::task_runs::{Compose, act, compose_form, label_of, state_pill};
 use super::ui::breadcrumb::Crumb;
 use super::ui::empty_line::empty_line;
-use super::ui::field::{field, select, textarea};
 use super::ui::frame::frame;
 use super::ui::layout::info_columns;
 use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::table::{cell, data_table, row};
 use super::ui::tabs::{Tab, tabs};
-use super::ui::{PLAY, STOP, X, icon};
+use super::ui::{PLAY, STOP, X};
 use super::url::{
-    RunAction, agent_tab_url, agent_url, agents_url, page_url, run_action_url, run_post_url,
-    task_url,
+    RunAction, agent_tab_url, agent_url, agents_url, page_url, run_action_url, task_url,
 };
 use super::{Id, open_db};
 use crate::agent::run::RunRecord;
 use crate::agent::taskdir;
-use crate::config::config;
 use crate::utils::resolve::task_display;
 use topcoat::{
     Result,
@@ -240,40 +237,16 @@ async fn output_part(a: &Loaded, raw: bool) -> Result<impl View> {
 #[component]
 async fn settings_part(a: &Loaded) -> Result<impl View> {
     let run = &a.run;
-    let harness = run.agent;
-    let agents = vec![(harness.key().to_string(), "Claude".to_string())];
-    let mut models = harness.models(&config().agent.models);
-    if !models.contains(&run.model) {
-        models.insert(0, run.model.clone());
-    }
-    let mut efforts: Vec<String> = harness.efforts().iter().map(|e| e.to_string()).collect();
-    if !efforts.contains(&run.effort) {
-        efforts.insert(0, run.effort.clone());
-    }
-    let efforts: Vec<(String, String)> = efforts.into_iter().map(|e| (e.clone(), e)).collect();
-    let action = run_post_url(a.task_id, run.n);
-    Ok(view! {
-        <datalist id="model-list">
-            for m in models.iter() {
-                <option value=(m.as_str())></option>
-            }
-        </datalist>
-        <form class="settings-form" method="post" action=(action.as_str())>
-            <input type="hidden" name="instruction" value=(run.instruction_name())>
-            <div class="compose-pick">
-                select(name: "agent", label: "Agent", options: &agents, current: harness.key())
-                field(name: "model", label: "Model", value: &run.model, identifier: true, list: "model-list")
-                select(name: "effort", label: "Effort", options: &efforts, current: &run.effort)
-            </div>
-            textarea(name: "prompt", label: "Prompt", value: &a.prompt,
-                hint: "What the agent is told; edit it freely until it runs.")
-            <div class="compose-actions">
-                <button class="button primary" type="submit" name="do" value="run" title="Run now" aria-label="Run now">(icon(PLAY)) <span class="sr">"Run now"</span></button>
-                <button class="button" type="submit" name="do" value="save">"Save"</button>
-                <button class="button" type="submit" name="do" value="queue">"Queue"</button>
-            </div>
-        </form>
-    })
+    let c = Compose {
+        instruction: run.instruction_name().to_string(),
+        offered: Vec::new(),
+        run: Some(run.n),
+        model: run.model.clone(),
+        effort: run.effort.clone(),
+        prompt: a.prompt.clone(),
+        error: None,
+    };
+    Ok(view! { compose_form(task_id: a.task_id, c: &c, harness: run.agent, close: None) })
 }
 
 #[component]
