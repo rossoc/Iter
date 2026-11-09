@@ -88,7 +88,7 @@ pub(crate) fn task_reports(
     now: chrono::NaiveDateTime,
 ) -> Result<(Vec<TaskReport>, Vec<Session>)> {
     let mut by_task =
-        group_by_task(db.sessions_for_project_in_range(project_id, range.from, range.to)?);
+        group_by_task(db.sessions_for_projects_in_range(&[project_id], range.from, range.to)?);
     let tasks = db.tasks_for_project(project_id)?;
     Ok(build_task_reports(
         tasks,

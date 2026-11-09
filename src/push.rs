@@ -44,7 +44,6 @@ pub struct IssueJob {
 #[derive(Debug, Clone)]
 pub struct Plan {
     pub range: DateRange,
-    pub target: Target,
     pub worklog: Worklog,
     pub issues: Vec<IssueJob>,
     pub hash: String,
@@ -114,7 +113,6 @@ pub fn plan(
     let hash = fingerprint(&worklog)?;
     Ok(Plan {
         range,
-        target: target.clone(),
         worklog,
         issues,
         hash,
@@ -331,6 +329,7 @@ impl Item {
 
 /// Pushes the days of `plan` that `check` found free; days the platform holds are reported as failed items and the rest go through.
 /// A request refused as a whole is the returned error, GitHub untouched, no ledger row. Otherwise each entry's verdict and each GitHub issue of a task completed on an accepted day is an item; the ledger row records them all unless the platform took nothing.
+#[allow(clippy::too_many_arguments)]
 pub fn execute(
     db: &Db,
     org: &Organization,
@@ -550,7 +549,7 @@ mod tests {
         gh: &FakeGh,
     ) -> Result<Vec<Item>> {
         let c = check(db, org, plan, platform)?;
-        let ids = resolve(platform, &plan.target)?;
+        let ids = resolve(platform, &Target::of(org))?;
         execute(db, org, plan, &c, &ids, platform, gh, now())
     }
 
@@ -649,7 +648,7 @@ mod tests {
         let gh = FakeGh::default();
         let c = check(&db, &org, &plan, &platform).unwrap();
         assert!(c.conflicts_on("2026-09-04") && c.conflict_lines()[0].contains("not pushed"));
-        let ids = resolve(&platform, &plan.target).unwrap();
+        let ids = resolve(&platform, &Target::of(&org)).unwrap();
         let items = execute(&db, &org, &plan, &c, &ids, &platform, &gh, now()).unwrap();
         assert!(platform.pushed.borrow().is_empty());
         assert!(gh.calls.borrow().is_empty());
@@ -681,7 +680,7 @@ mod tests {
         };
         let gh = FakeGh::default();
         let c = check(&db, &org, &plan, &platform).unwrap();
-        let ids = resolve(&platform, &plan.target).unwrap();
+        let ids = resolve(&platform, &Target::of(&org)).unwrap();
         let items = execute(&db, &org, &plan, &c, &ids, &platform, &gh, now()).unwrap();
         let sent = platform.pushed.borrow();
         assert_eq!(sent[0].entries.len(), 1);
@@ -842,7 +841,7 @@ mod tests {
             activities: vec![PlatformItem::new("a1", "Dev")],
             ..Default::default()
         };
-        let prepared = prepare(&db, &org, range(), now(), &plan.target, &platform).unwrap();
+        let prepared = prepare(&db, &org, range(), now(), &Target::of(&org), &platform).unwrap();
         execute(
             &db,
             &org,

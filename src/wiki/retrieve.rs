@@ -414,7 +414,7 @@ mod tests {
     #[test]
     fn show_goes_deeper_with_the_depth() {
         let w = build(&fixture("show"));
-        let idea = w.node(1, "ideas/retry").expect("idea");
+        let idea = w.resolve(1, "ideas/retry").expect("idea");
         let a = show(&w, 1, idea, Depth::Description).expect("show");
         assert_eq!(a.description.as_deref(), Some("Retries need a budget"));
         assert_eq!(a.class, "Idea");
@@ -445,12 +445,12 @@ mod tests {
     #[test]
     fn neighbors_walk_the_graph_nearest_first() {
         let w = build(&fixture("neighbors"));
-        let backoff = w.node(1, "concepts/backoff").expect("concept");
+        let backoff = w.resolve(1, "concepts/backoff").expect("concept");
         let one = neighbors(&w, 1, backoff, 1, &[]);
         let ids: Vec<_> = one.iter().map(|n| n.id.as_str()).collect();
         assert!(ids.contains(&"wiki/ideas/retry"));
         assert!(one.iter().all(|n| n.hop == 1));
-        let idea = w.node(1, "ideas/retry").expect("idea");
+        let idea = w.resolve(1, "ideas/retry").expect("idea");
         let two = neighbors(&w, 1, idea, 2, &[]);
         assert!(two.iter().any(|n| n.hop == 2 && n.id == "wiki/entities/ci"));
         let idea_via = &one

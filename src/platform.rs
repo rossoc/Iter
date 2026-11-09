@@ -160,6 +160,14 @@ pub fn check_url(url: &str) -> Result<()> {
     }
 }
 
+fn agent(seconds: u64) -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .timeout_global(Some(Duration::from_secs(seconds)))
+        .build()
+        .into()
+}
+
 pub struct JsonWebhook {
     url: String,
     key: Secret,
@@ -171,24 +179,15 @@ impl JsonWebhook {
     /// in the database) cannot send the key anywhere.
     pub fn new(url: &str, key: Secret) -> Result<Self> {
         check_url(url)?;
-        let agent: ureq::Agent = ureq::Agent::config_builder()
-            .http_status_as_error(false)
-            .timeout_global(Some(Duration::from_secs(30)))
-            .build()
-            .into();
         Ok(JsonWebhook {
             url: url.trim_end_matches('/').to_string(),
             key,
-            agent,
+            agent: agent(30),
         })
     }
 
     pub fn with_timeout(mut self, seconds: u64) -> Self {
-        self.agent = ureq::Agent::config_builder()
-            .http_status_as_error(false)
-            .timeout_global(Some(Duration::from_secs(seconds)))
-            .build()
-            .into();
+        self.agent = agent(seconds);
         self
     }
 

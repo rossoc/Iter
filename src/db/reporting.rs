@@ -17,17 +17,7 @@ impl Db {
         )
     }
 
-    /// Sessions in range of any task of `project_id`, oldest first; one query, each row carries `task_id`.
-    pub fn sessions_for_project_in_range(
-        &self,
-        project_id: i64,
-        from: Option<NaiveDate>,
-        to: NaiveDate,
-    ) -> Result<Vec<Session>> {
-        self.sessions_for_projects_in_range(&[project_id], from, to)
-    }
-
-    /// The same for a set of projects.
+    /// Sessions in range of any task of the projects, oldest first; one query, each row carries `task_id`.
     pub fn sessions_for_projects_in_range(
         &self,
         project_ids: &[i64],

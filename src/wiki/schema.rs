@@ -3,6 +3,7 @@
 use super::ontology::{NS, Ontology, ns};
 use oxigraph::model::TermRef;
 use oxigraph::model::vocab::rdfs;
+use std::fmt::Write as _;
 
 const TEXT: &str = include_str!("schema.md");
 
@@ -29,15 +30,15 @@ pub fn render(onto: &Ontology) -> String {
             format!("`{}`", p.folder)
         };
         let what = comment(onto, &p.class).unwrap_or_default();
-        places.push_str(&format!(
+        let _ = write!(places, 
             "| {class} | {folder} | {} level. {what} |\n",
             p.kind.key()
-        ));
+        );
     }
     let mut relations = String::new();
     for (key, prop) in &onto.authorable {
         let what = comment(onto, prop).unwrap_or_default();
-        relations.push_str(&format!("- `{key}`: {what}\n"));
+        let _ = write!(relations, "- `{key}`: {what}\n");
     }
     let confidence = match onto.allowed_values(&ns("confidence")) {
         Some(values) => format!("one of {}", values.join(", ")),

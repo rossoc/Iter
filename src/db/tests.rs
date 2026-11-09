@@ -318,7 +318,7 @@ fn a_project_range_query_spans_its_tasks_in_time_order() {
     }
 
     let found = db
-        .sessions_for_project_in_range(project, Some(day("2025-03-03")), day("2025-03-05"))
+        .sessions_for_projects_in_range(&[project],Some(day("2025-03-03")), day("2025-03-05"))
         .expect("range query");
     assert_eq!(
         found
