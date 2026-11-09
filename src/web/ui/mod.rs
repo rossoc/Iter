@@ -105,6 +105,7 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("../org.css"),
 ));
 
+static NOTICE_JS: Asset = Asset::js(include_str!("notice.js"));
 static MODAL_JS: Asset = Asset::js(include_str!("modal.js"));
 static FILTER_BAR_JS: Asset = Asset::js(include_str!("filter_bar.js"));
 static SEARCH_JS: Asset = Asset::js(include_str!("search.js"));
@@ -114,6 +115,7 @@ static PATH_PICK_JS: Asset = Asset::js(include_str!("path_pick.js"));
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder
         .route(stylesheet)
+        .route(notice_script)
         .route(modal_script)
         .route(filter_bar_script)
         .route(search_script)
@@ -124,6 +126,11 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
 #[route(GET "/style.css")]
 async fn stylesheet(cx: &Cx) -> Result<Response> {
     CSS.respond(cx)
+}
+
+#[route(GET "/notice.js")]
+async fn notice_script(cx: &Cx) -> Result<Response> {
+    NOTICE_JS.respond(cx)
 }
 
 #[route(GET "/modal.js")]
