@@ -40,7 +40,7 @@
 .share-go .done,.share-go.copied .idle{display:none}
 .share-go.copied .done{display:inline-flex}
 .share-result{margin:0 0 28px}
-.share-preview,.share-check{max-height:50vh;overflow:auto;margin:12px 0;padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font:.8125rem/1.5 var(--mono);color:var(--fg);border:1px solid var(--line,currentColor);border-radius:var(--r-md)}
+.share-preview{max-height:50vh;overflow:auto;margin:12px 0;padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font:.8125rem/1.5 var(--mono);color:var(--fg);border:1px solid var(--line,currentColor);border-radius:var(--r-md)}
 .share-text{width:100%;font:.8125rem/1.5 var(--mono)}
 .share-items .bad{color:var(--danger);font-weight:600}
 .share-items{margin:8px 0 0;padding-left:20px;font:.8125rem/1.6 var(--mono)}
