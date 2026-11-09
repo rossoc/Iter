@@ -137,6 +137,29 @@ fn path_segment(text: &str) -> String {
     })
 }
 
+/// A platform URL is `https`, or `http` to this machine (local platform, test server), and has
+/// no userinfo: the API key goes out as a bearer token with every call, and a prefix check
+/// would accept `http://localhost:1@evil.com` or `http://localhost.evil.com`.
+pub fn check_url(url: &str) -> Result<()> {
+    let bad = |why: &str| {
+        IterError::Platform(format!(
+            "platform_url '{url}' {why} (the API key is sent with every request)"
+        ))
+    };
+    let uri: ureq::http::Uri = url.parse().map_err(|_| bad("is not a valid URL"))?;
+    let authority = uri
+        .authority()
+        .ok_or_else(|| bad("must start with https://"))?;
+    if authority.as_str().contains('@') {
+        return Err(bad("must not carry a user name or password"));
+    }
+    match uri.scheme_str() {
+        Some("https") => Ok(()),
+        Some("http") if matches!(uri.host(), Some("localhost" | "127.0.0.1" | "[::1]")) => Ok(()),
+        _ => Err(bad("must start with https://")),
+    }
+}
+
 pub struct JsonWebhook {
     url: String,
     key: Secret,
@@ -144,17 +167,20 @@ pub struct JsonWebhook {
 }
 
 impl JsonWebhook {
-    pub fn new(url: &str, key: Secret) -> Self {
+    /// Refuses a URL [`check_url`] refuses, so a row saved before the check (or edited
+    /// in the database) cannot send the key anywhere.
+    pub fn new(url: &str, key: Secret) -> Result<Self> {
+        check_url(url)?;
         let agent: ureq::Agent = ureq::Agent::config_builder()
             .http_status_as_error(false)
             .timeout_global(Some(Duration::from_secs(30)))
             .build()
             .into();
-        JsonWebhook {
+        Ok(JsonWebhook {
             url: url.trim_end_matches('/').to_string(),
             key,
             agent,
-        }
+        })
     }
 
     pub fn with_timeout(mut self, seconds: u64) -> Self {
@@ -430,7 +456,26 @@ mod tests {
     }
 
     fn webhook(url: &str) -> JsonWebhook {
-        JsonWebhook::new(url, Secret::new(KEY).unwrap())
+        JsonWebhook::new(url, Secret::new(KEY).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn a_stored_url_that_would_send_the_key_elsewhere_is_refused_at_construction() {
+        for url in [
+            "http://localhost:1@evil.com",
+            "http://127.0.0.1.evil.com",
+            "http://time.example.com",
+            "https://user@time.example.com",
+        ] {
+            assert!(
+                JsonWebhook::new(url, Secret::new(KEY).unwrap()).is_err(),
+                "{url}"
+            );
+        }
+        assert!(
+            JsonWebhook::new("https://time.example.com/api/", Secret::new(KEY).unwrap()).is_ok()
+        );
+        assert!(JsonWebhook::new("http://[::1]:8080", Secret::new(KEY).unwrap()).is_ok());
     }
 
     #[test]

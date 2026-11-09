@@ -37,7 +37,7 @@ pub fn open(org: &Organization) -> Option<JsonWebhook> {
         return None;
     }
     let key = secret::resolve_env(&Keychain, &org.name).ok()?;
-    Some(JsonWebhook::new(url, key).with_timeout(WAIT_SECONDS))
+    Some(JsonWebhook::new(url, key).ok()?.with_timeout(WAIT_SECONDS))
 }
 
 pub fn lists(org: &Organization, project: &str) -> (Vec<PlatformItem>, Vec<PlatformItem>) {

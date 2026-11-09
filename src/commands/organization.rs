@@ -181,7 +181,7 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
 
     // the platform is asked what it already holds (read-only), so a dry run shows conflicts too
     let platform = secret::resolve_env(&Keychain, &organization.name)
-        .map(|key| JsonWebhook::new(&organization.platform_url, key));
+        .and_then(|key| JsonWebhook::new(&organization.platform_url, key));
     let check = match (&platform, flags.dry_run) {
         (Ok(platform), false) => Some(push::check(db, &organization, &plan, platform)?),
         (Ok(platform), true) => match push::check(db, &organization, &plan, platform) {

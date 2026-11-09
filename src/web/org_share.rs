@@ -220,7 +220,7 @@ type Connect<'a> = &'a dyn Fn(&Organization) -> IterResult<Box<dyn TimePlatform>
 
 fn connect_real(org: &Organization) -> IterResult<Box<dyn TimePlatform>> {
     let key = secret::resolve_env(&Keychain, &org.name)?;
-    Ok(Box::new(JsonWebhook::new(&org.platform_url, key)))
+    Ok(Box::new(JsonWebhook::new(&org.platform_url, key)?))
 }
 
 pub fn share_text(report: &super::org_report::Report, format: ShareFormat) -> String {
