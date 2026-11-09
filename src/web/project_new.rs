@@ -2,7 +2,8 @@
 
 use super::board_info::{load as load_board, screen as board_screen};
 use super::edit::create_to;
-use super::forms::{DESCRIPTION, NAME, ProjectForm, SettingsForm};
+use super::edit::{DESCRIPTION, NAME};
+use super::forms::{ProjectForm, SettingsForm};
 use super::org::{load as load_org, screen as org_screen};
 use super::sections::Section;
 use super::settings_fields::settings_fields;

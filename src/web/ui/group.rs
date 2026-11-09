@@ -1,6 +1,6 @@
 //! A `fieldset` whose `legend` names its controls; used by `field::checklist`.
 
-use super::field::{hint_id, invalid_cue};
+use super::field_ids::{hint_id, invalid_cue};
 use topcoat::{
     Result,
     view::{Child, View, component, view},

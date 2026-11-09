@@ -4,7 +4,6 @@ use super::Id;
 use super::crumbs::trail;
 use super::forms;
 use super::load::{Parents, parents_of};
-use super::sections::NoteTab;
 use super::ui::breadcrumb::Crumb;
 use super::ui::empty_line::empty_line;
 use super::ui::field::textarea;
@@ -16,7 +15,7 @@ use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::tabs::{Tab, tabs};
 use super::url::{
-    edit_url, note_tab_url, note_url, notes_tab_url, notes_today_url, org_url, project_url,
+    NoteTab, edit_url, note_tab_url, note_url, notes_tab_url, notes_today_url, org_url, project_url,
 };
 use super::{now, open_db};
 use crate::db::Db;

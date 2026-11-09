@@ -1,14 +1,11 @@
 //! A boxed message: a hint or, as `error`, a problem.
 
-use super::field::field_id;
+use super::field_ids::{ERROR_ID, field_id};
 use super::form_error::FormError;
 use topcoat::{
     Result,
     view::{Child, Unescaped, View, component, view},
 };
-
-/// Id of the form's error notice (`aria-describedby` target).
-pub const ERROR_ID: &str = "form-error";
 
 /// `focus` moves focus to the notice on load via an inline script (`autofocus`
 /// was skipped by Chromium on submit-back pages) and needs an `id`. An error is

@@ -14,8 +14,7 @@ pub use org::OrgForm;
 pub use project::ProjectForm;
 pub use task::TaskForm;
 
-pub const NAME: &str = "name";
-pub const DESCRIPTION: &str = "description";
+use super::edit::{DESCRIPTION, NAME};
 
 /// Present (as `on`) only when ticked: for `deserialize_with = "ticked"` on a `bool`.
 fn ticked<'de, D: serde::Deserializer<'de>>(

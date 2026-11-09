@@ -55,7 +55,7 @@ mod tests {
     use super::*;
     use crate::fixtures;
     use crate::models::Settings;
-    use crate::web::forms::NAME;
+    use crate::web::edit::NAME;
 
     /// A taken name reads as a sentence, not as a database error.
     #[test]

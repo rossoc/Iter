@@ -48,7 +48,7 @@ mod tests {
     use super::*;
     use crate::error::IterError;
     use crate::fixtures;
-    use crate::web::forms::NAME;
+    use crate::web::edit::NAME;
 
     fn pairs(v: &[(&str, &str)]) -> Vec<(String, String)> {
         v.iter()

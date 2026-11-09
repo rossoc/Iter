@@ -12,6 +12,7 @@ pub mod drop_zone;
 pub mod empty_line;
 pub mod empty_state;
 pub mod field;
+pub mod field_ids;
 pub mod filter_bar;
 pub mod folded_list;
 pub mod form;

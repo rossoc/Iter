@@ -2,7 +2,8 @@
 
 use super::Id;
 use super::edit::create_to;
-use super::forms::{DESCRIPTION, NAME, TaskForm};
+use super::edit::{DESCRIPTION, NAME};
+use super::forms::TaskForm;
 use super::load::project_of;
 use super::org::{load as load_org, screen as org_screen};
 use super::project::{load as load_project, screen as project_screen};

@@ -1,10 +1,13 @@
 //! The shape every edit page shares: `GET` loads a row and what its form shows; `POST` applies the form, saves (or creates) and redirects, or shows the form again with the error.
 
-use super::forms::NAME;
 use super::open_db;
 use super::ui::form_error::FormError;
 use crate::db::{Db, Table};
 use topcoat::router::error::{RouterErrorExt, see_other};
+
+/// The field names every edit form shares.
+pub(super) const NAME: &str = "name";
+pub(super) const DESCRIPTION: &str = "description";
 
 pub(super) trait EditForm {
     type Row: Table + Clone;

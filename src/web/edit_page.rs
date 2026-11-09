@@ -1,6 +1,6 @@
 //! The skeleton of every edit and create page: frame, header, form with error box, Name and Description, Save / Cancel.
 
-use super::forms::{DESCRIPTION, NAME};
+use super::edit::{DESCRIPTION, NAME};
 use super::ui::breadcrumb::Crumb;
 use super::ui::field::{field, textarea};
 use super::ui::form::form_shell;
