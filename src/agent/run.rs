@@ -197,15 +197,7 @@ impl RunRecord {
 /// Whether `pid` exists and is not a zombie (`kill -0` answers for those). Pid 0 and 1 are
 /// never a run: `kill -0 0` answers for the caller's own group.
 pub fn alive(pid: u32) -> bool {
-    if pid <= 1 {
-        return false;
-    }
-    let pid = pid.to_string();
-    if !crate::process::succeeds("kill", None, &["-0".to_string(), pid.clone()]) {
-        return false;
-    }
-    crate::process::output_trimmed("ps", None, &["-o", "stat=", "-p", &pid])
-        .is_none_or(|stat| !stat.starts_with('Z'))
+    Procs::recent().alive(pid)
 }
 
 /// Asks a run's process to stop: its whole group, when `pid` is a process iter can vouch for
@@ -241,8 +233,30 @@ impl Procs {
         Procs(text.lines().filter_map(Proc::parse).collect())
     }
 
+    /// The scan of the last second, or a new one: a page asks about every running record in
+    /// turn, and each used to cost two spawns.
+    fn recent() -> std::sync::Arc<Procs> {
+        use std::sync::{Arc, Mutex};
+        use std::time::{Duration, Instant};
+        static LAST: Mutex<Option<(Instant, Arc<Procs>)>> = Mutex::new(None);
+        let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+        match last.as_ref() {
+            Some((at, procs)) if at.elapsed() < Duration::from_secs(1) => procs.clone(),
+            _ => {
+                let procs = Arc::new(Procs::scan(&SYSTEM));
+                *last = Some((Instant::now(), procs.clone()));
+                procs
+            }
+        }
+    }
+
     fn get(&self, pid: u32) -> Option<&Proc> {
         self.0.iter().find(|p| p.pid == pid)
+    }
+
+    /// Exists and is not a zombie; pid 0 and 1 are never a run.
+    fn alive(&self, pid: u32) -> bool {
+        pid > 1 && self.get(pid).is_some_and(|p| !p.zombie)
     }
 
     /// Whether iter may signal `-pid`: a live process other than 0 and init that leads its own
@@ -467,6 +481,16 @@ mod tests {
         assert!(!interrupt_with(&runner, 1));
         assert!(kills(&runner).is_empty());
         assert!(!alive(0) && !alive(1));
+    }
+
+    #[test]
+    fn many_pids_cost_one_ps_and_zombies_are_not_alive() {
+        let runner = ps(&["10 10 S iter", "11 11 Z iter", "12 12 R claude"]);
+        let procs = Procs::scan(&runner);
+        assert_eq!(runner.calls().len(), 1);
+        assert!(procs.alive(10) && !procs.alive(11) && procs.alive(12));
+        assert!(!procs.alive(13) && !procs.alive(0) && !procs.alive(1));
+        assert_eq!(runner.calls().len(), 1, "asking again does not spawn");
     }
 
     #[test]
