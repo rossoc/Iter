@@ -14,8 +14,11 @@
   .project-list li:hover .path,.project-list li:focus-within .path{opacity:1}
 }
 @media (max-width:600px){
+  /* the width is the container's, not what the unbroken paths ask for */
+  .projects{table-layout:fixed}
   .projects td:first-child{white-space:normal}
-  .projects td.path-cell{flex:1 1 0;width:auto;max-width:none;min-width:0}
+  /* min-width: the path's own (.path), so with no room left on the name's line it wraps below */
+  .projects td.path-cell{flex:1 1 0;width:auto;max-width:none;min-width:3rem}
 }
 .project-list{list-style:none;margin:0;padding:0}
 .project-list li{display:flex;align-items:baseline;gap:12px;padding:5px 0;border-top:1px dashed var(--line)}

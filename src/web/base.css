@@ -62,6 +62,8 @@ html{--bar-h:52px;--sticky-head-h:76px;--pickbar-h:164px;--sticky-h:0px;--stick-
   scroll-padding-top:calc(var(--bar-h) + var(--sticky-h) + 16px)}
 html:has(.sticky-head){--sticky-h:var(--sticky-head-h)}
 html:has(.pickbar){--sticky-h:var(--pickbar-h)}
+/* the bar wraps to two lines at this width (ui/frame.css) */
+@media (max-width:700px){html{--bar-h:82px}}
 @media (max-width:900px),(max-height:600px){html:has(.sticky-head),html:has(.pickbar){--sticky-h:0px}}
 
 /* Content links: a 1px line at rest (--control-line, 3:1), an accent line slides in on
