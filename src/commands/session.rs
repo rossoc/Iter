@@ -105,6 +105,7 @@ fn session_new(
         tmux.start_tracked_session(&tmux_session_name, cwd)
             .inspect_err(|_| {
                 unwind_session_setup(
+                    tmux,
                     &project,
                     worktree_path.as_deref(),
                     github_branch.as_deref(),
@@ -129,6 +130,7 @@ fn session_new(
     };
     db.insert(&session_config).inspect_err(|_| {
         unwind_session_setup(
+            tmux,
             &project,
             session_config.worktree_path.as_deref(),
             session_config.github_branch.as_deref(),
@@ -169,7 +171,7 @@ fn adopt_workspace(
     if let Some(id) = config.id
         && let Err(e) = app.db.update(id, &config)
     {
-        unwind_session_setup(project, None, None, Some(&name));
+        unwind_session_setup(tmux, project, None, None, Some(&name));
         return Err(e);
     }
     if task.status == TaskStatus::Queue {

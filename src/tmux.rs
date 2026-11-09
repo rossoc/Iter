@@ -231,21 +231,10 @@ impl Multiplexer for TmuxClient<'_> {
     }
 }
 
-/// Free-function forms over the real `tmux`, for plumbing with no client to hand.
-pub fn kill_session(name: &str) {
-    TmuxClient::system().kill_session(name)
-}
-
+/// The one free-function form left, over the real `tmux`: `resolve::current_session_task` has no client to hand
+/// (threading one through every task-or-current lookup is deferred).
 pub fn current_session_name() -> Option<String> {
     TmuxClient::system().current_session_name()
-}
-
-pub fn take_detach_message(session: &str) -> Option<String> {
-    TmuxClient::system().take_detach_message(session)
-}
-
-pub fn any_client_attached(session: &str) -> bool {
-    TmuxClient::system().any_client_attached(session)
 }
 
 /// Server-wide option prefix recording which session a client is on, e.g.
