@@ -51,7 +51,7 @@ impl TaskHome {
         }
     }
 
-    pub fn list_url(self, q: Option<&str>) -> String {
+    pub(super) fn list_url(self, q: Option<&str>) -> String {
         tasks_list_url(&self.base(), q)
     }
 

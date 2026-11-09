@@ -36,7 +36,7 @@ pub enum Home {
 }
 
 impl Home {
-    pub fn quick_url(self) -> String {
+    pub(super) fn quick_url(self) -> String {
         match self {
             Home::Org(id) => quick_project_url(id),
             Home::Board(id) => quick_board_project_url(id),
@@ -54,7 +54,7 @@ impl Home {
         self.open_url_with("", "")
     }
 
-    pub fn open_url_with(self, name: &str, base_path: &str) -> String {
+    pub(super) fn open_url_with(self, name: &str, base_path: &str) -> String {
         let some = |v: &str| (!v.is_empty()).then(|| v.to_string());
         let (name, base_path) = (some(name), some(base_path));
         page_url(
@@ -123,7 +123,7 @@ pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
 }
 
 #[derive(Deserialize)]
-pub struct NewProject {
+pub(super) struct NewProject {
     pub name: String,
     pub description: String,
     pub base_path: String,

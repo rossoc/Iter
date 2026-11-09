@@ -26,7 +26,7 @@ fn luminance([r, g, b]: [u8; 3]) -> f64 {
 }
 
 /// `#000` or `#fff`, whichever contrasts more (at least 4.58:1); `None` if not `#rrggbb`.
-pub fn readable_ink(color: &str) -> Option<&'static str> {
+pub(super) fn readable_ink(color: &str) -> Option<&'static str> {
     let l = luminance(channels(color)?);
     // Contrast with black is (l + .05) / .05, with white 1.05 / (l + .05); equal at l about .179.
     Some(if (l + 0.05) / 0.05 >= 1.05 / (l + 0.05) {

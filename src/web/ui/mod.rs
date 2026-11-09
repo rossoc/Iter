@@ -3,7 +3,6 @@
 //! sheet and `org.css`, concatenated at compile time (`web/layout.rs` links it).
 
 // A component shares its module's name (`frame::frame`): import it from the module.
-pub mod board_root;
 pub mod breadcrumb;
 pub mod button;
 pub mod count;

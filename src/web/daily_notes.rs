@@ -41,7 +41,7 @@ use topcoat::{
 path_param!(date: String, error = bad_request);
 
 #[query_params(error = bad_request)]
-pub struct NoteQuery {
+pub(super) struct NoteQuery {
     pub tab: Option<String>,
 }
 
@@ -139,7 +139,7 @@ pub async fn notes_section(base: &str, notes: &NotesTab) -> Result<impl View> {
     })
 }
 
-pub struct NotePage {
+pub(super) struct NotePage {
     owner: String,
     crumbs: Vec<Crumb>,
     note: Note,

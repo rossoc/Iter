@@ -15,7 +15,7 @@ pub struct Change {
 }
 
 /// A path as git's pathspec takes it: that exact file, no globbing.
-pub fn literal(path: &str) -> String {
+pub(super) fn literal(path: &str) -> String {
     format!(":(literal){path}")
 }
 

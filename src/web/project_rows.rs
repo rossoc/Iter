@@ -35,7 +35,7 @@ fn items_of<'a>(projects: impl Iterator<Item = &'a Project>) -> Vec<ProjectItem<
         .collect()
 }
 
-pub fn matching<'a>(projects: &'a [Project], q: &str) -> Vec<&'a Project> {
+pub(super) fn matching<'a>(projects: &'a [Project], q: &str) -> Vec<&'a Project> {
     let words: Vec<String> = q.split_whitespace().map(str::to_lowercase).collect();
     projects
         .iter()

@@ -55,7 +55,7 @@ pub fn board_tabs(id: i64, current: BoardSection) -> Vec<Tab> {
 }
 
 #[component]
-pub async fn board_heading(board: &Board, here: &'static str) -> Result<impl View> {
+pub(super) async fn board_heading(board: &Board, here: &'static str) -> Result<impl View> {
     let crumbs = [boards_crumb(), Crumb::label(here)];
     Ok(view! {
         page_header(title: board.name.as_str(), kicker: Kicker::Crumbs(&crumbs))

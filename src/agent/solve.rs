@@ -42,7 +42,7 @@ impl Launch<'_> {
 }
 
 #[cfg(feature = "web")]
-pub struct Quiet;
+pub(super) struct Quiet;
 
 #[cfg(feature = "web")]
 impl Observer for Quiet {}

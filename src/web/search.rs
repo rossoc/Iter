@@ -58,7 +58,7 @@ pub struct Entry {
 }
 
 #[derive(Debug, PartialEq, Default)]
-pub struct Query {
+pub(super) struct Query {
     scopes: Vec<(Option<Kind>, String)>,
     kind: Option<Kind>,
     words: Vec<String>,

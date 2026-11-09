@@ -94,7 +94,7 @@ fn encode(s: &str) -> String {
     out
 }
 
-pub fn level_iri(label: &str) -> NamedNode {
+pub(super) fn level_iri(label: &str) -> NamedNode {
     NamedNode::new_unchecked(format!("{NODE}{}", encode(label)))
 }
 
@@ -446,7 +446,7 @@ impl Wiki {
     }
 }
 
-pub fn term_text(t: &Term) -> String {
+pub(super) fn term_text(t: &Term) -> String {
     match t {
         Term::NamedNode(n) => n.as_str().to_string(),
         Term::BlankNode(b) => format!("_:{}", b.as_str()),

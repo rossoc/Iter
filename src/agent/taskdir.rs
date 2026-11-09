@@ -35,7 +35,7 @@ impl TaskDir {
     }
 
     /// The plan before the last replacement.
-    pub fn previous_plan_path(&self) -> PathBuf {
+    pub(super) fn previous_plan_path(&self) -> PathBuf {
         self.root.join("plan.prev.md")
     }
 

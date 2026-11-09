@@ -8,7 +8,7 @@ use topcoat::{
     view::{View, component, view},
 };
 
-pub const FILTER_ID: &str = "filter-q";
+pub(super) const FILTER_ID: &str = "filter-q";
 
 const SYNTAX_ID: &str = "filter-syntax";
 

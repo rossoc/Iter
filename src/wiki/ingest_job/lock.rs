@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub fn lock_path(target: &Target) -> PathBuf {
+pub(super) fn lock_path(target: &Target) -> PathBuf {
     target.notes_dir.join(".iter").join("wiki.lock")
 }
 
@@ -13,7 +13,7 @@ pub fn busy(target: &Target) -> bool {
         .is_some_and(alive)
 }
 
-pub struct Lock(PathBuf);
+pub(super) struct Lock(PathBuf);
 
 impl Drop for Lock {
     fn drop(&mut self) {

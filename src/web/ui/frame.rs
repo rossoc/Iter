@@ -16,7 +16,7 @@ pub const NAV: [(&str, &str, &str); 4] = [
 ];
 
 /// The document title, most specific part first; `error` prefixes "Error: " so a screen reader announces the failure.
-pub fn document_title(parts: &[&str], error: bool) -> String {
+pub(super) fn document_title(parts: &[&str], error: bool) -> String {
     let mut title = String::new();
     if error {
         title.push_str("Error: ");

@@ -8,7 +8,7 @@ use super::drop::{Drop, back_or, drop_on};
 use super::pick::{PickLinks, PickWords, Picked, moved_note, pick_fields};
 use super::quadrants::{Matrix, QUADRANTS, place, quadrant_index, split};
 use super::ui::button::post_button;
-use super::ui::layout::{jump_link, matrix_grid, side_lists, sticky_head};
+use super::ui::layout::{jump_link, side_lists, sticky_head};
 use super::ui::pick_bar::pick_bar;
 use super::ui::pick_here::pick_here;
 use super::ui::quadrant::quadrant;
@@ -151,7 +151,8 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
             if !folded {
                 jump_link(target: format!("#{NOT_PLACED}"), "Skip to the backlog")
             }
-            matrix_grid(
+            // 1 2 / 3 4; the quadrants stack (still 1 to 4) when narrow
+            <div class="quad-grid">
                 for (n, (q, cards)) in QUADRANTS.iter().zip(matrix.placed.iter()).enumerate() {
                     quadrant(id: q.id, target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
                         if let Some(p) = picked {
@@ -164,7 +165,7 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
                         }
                     )
                 }
-            )
+            </div>
         )
     })
 }

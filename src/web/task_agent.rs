@@ -386,7 +386,7 @@ struct MarkForm {
 }
 
 #[derive(Debug)]
-pub enum Refusal {
+pub(super) enum Refusal {
     State(String),
     Missing,
     Io(std::io::Error),

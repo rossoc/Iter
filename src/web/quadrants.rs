@@ -4,7 +4,7 @@
 use crate::models::{Card, Priority, Task};
 
 /// The order is the reading order (row by row: 1 2 / 3 4).
-pub struct Quadrant {
+pub(super) struct Quadrant {
     pub target: &'static str,
     pub id: &'static str,
     pub flags: Priority,

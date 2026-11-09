@@ -15,7 +15,7 @@ pub struct DayLink {
 }
 
 /// The id of the date field (`board.js` opens its picker from the title).
-pub const DAY_INPUT: &str = "day-input";
+pub(super) const DAY_INPUT: &str = "day-input";
 
 /// `pick` (task being moved) and `folded` are kept through a change of day;
 /// `today` is marked when shown; child nodes are extra controls.
