@@ -28,10 +28,7 @@ impl Run for OrganizationCommand {
                 let (id, old) = (existing.id(), existing.name.clone());
                 update_group(&app.db, existing)?;
                 // an edit that was cancelled or failed has the same name
-                if let Some(now) = app.db.get::<Organization>(id)? {
-                    secret::rename_key(&Keychain, &old, &now.name)?;
-                }
-                Ok(())
+                secret::rename_for(&app.db, id, &old)
             }
             Self::Delete { name } => {
                 let existing = organization(app, name)?;

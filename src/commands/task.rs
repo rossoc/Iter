@@ -4,7 +4,6 @@
 use crate::app::App;
 use crate::args::{ReportOpts, TaskCommand};
 use crate::commands::ingest;
-use crate::wiki::ingest_job::{self, Trigger};
 use crate::commands::sync::{task_pull, task_push};
 use crate::commands::{Run, agent, solve};
 use crate::config::config;
@@ -26,6 +25,7 @@ use crate::utils::resolve::{
     task_display,
 };
 use crate::utils::workspace::teardown_and_kill;
+use crate::wiki::ingest_job::{self, Trigger};
 
 /// Bare `iter task` (unfinished work across projects) is handled in `main`: no `TaskCommand` variant expresses it.
 impl Run for TaskCommand {
@@ -196,12 +196,7 @@ fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
     edited(&template, "task", "updated", |mut edit| {
         let tag_ids = checked_tags(db, &edit)?;
         let target = chosen_project(db, &project, &edit.project)?;
-        if target.id() != project.id() && db.find_session_config_by_task(id)?.is_some() {
-            return Err(IterError::TaskHasSession(task_display(
-                &project, &edit.task,
-            )));
-        }
-        edit.task.project_id = target.id();
+        db.move_task(id, &mut edit.task, &project, &target)?;
         db.update(id, &edit.task)?;
         db.set_task_tags(id, &tag_ids)?;
         Ok(format!(

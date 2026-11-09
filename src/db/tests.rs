@@ -763,6 +763,40 @@ fn deleting_a_project_cascades_to_its_tasks() {
 }
 
 #[test]
+fn a_task_with_a_session_cannot_move_to_another_project() {
+    let db = db();
+    let (a, b) = (insert_project(&db, "alpha"), insert_project(&db, "beta"));
+    let (from, to) = (
+        db.get::<Project>(a).unwrap().unwrap(),
+        db.get::<Project>(b).unwrap().unwrap(),
+    );
+    let task_id = insert_task(&db, a, "build it");
+    let mut task = db.get::<Task>(task_id).unwrap().unwrap();
+
+    db.move_task(task_id, &mut task, &from, &from)
+        .expect("staying is fine");
+    assert_eq!(task.project_id, a);
+    db.move_task(task_id, &mut task, &from, &to)
+        .expect("no session: it moves");
+    assert_eq!(task.project_id, b);
+
+    task.project_id = a;
+    db.insert(&SessionConfig {
+        id: None,
+        task_id,
+        tmux_session_name: None,
+        github_branch: None,
+        worktree_path: None,
+    })
+    .expect("config inserts");
+    let err = db.move_task(task_id, &mut task, &from, &to).unwrap_err();
+    assert!(matches!(&err, IterError::TaskHasSession(n) if n == "alpha/build it"));
+    assert_eq!(task.project_id, a, "a refused move leaves the task alone");
+    db.move_task(task_id, &mut task, &from, &from)
+        .expect("a session does not stop staying");
+}
+
+#[test]
 fn session_config_round_trips_its_optional_columns() {
     let db = db();
     let project_id = insert_project(&db, "alpha");
