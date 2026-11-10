@@ -5,11 +5,13 @@ use super::assets::{Asset, serve};
 use super::create::{Home, ProjectCreate, TaskCreate, TaskHome, project_modal, task_modal};
 use super::daily_notes::{NotesTab, notes_section};
 use super::load::tasks_or_count;
-use super::org_report::{Report, report_link, report_view, tab_url};
-use super::org_share::{Outcome, ShareDialog, preview_modal, share_modal};
+use super::org_report::{
+    Report, report_link, report_view, share_dialog as share_dialog_of, tab_url,
+};
 use super::project_rows::{project_search_in, projects_section};
 use super::sections::{Section, TabQuery, section_tabs, settings_tab};
 use super::settings_panel::settings_panel;
+use super::share_dialog::{Outcome, ShareDialog, preview_modal, share_modal};
 use super::task_query::TaskQuery;
 use super::task_rows::{group_rows, search};
 use super::text::NO_PROJECTS;
@@ -115,7 +117,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
                 Some(&report.range.from.map(fmt_date).unwrap_or_default()),
                 Some(&fmt_date(report.range.to)),
             );
-            Some(ShareDialog::new(&page.org, &base, report, close))
+            Some(share_dialog_of(&page.org, &base, report, close))
         }
         _ => None,
     };

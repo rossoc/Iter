@@ -1,7 +1,7 @@
 //! The organization's Report tab (`/org/{id}?tab=report`): the period, the report from the function `iter org info` uses, and the view.
 
-use super::org_share::{Outcome, share_outcome};
 use super::session_lines::report_lines;
+use super::share_dialog::{Outcome, ShareDialog, ShareFormat, share_outcome};
 use super::ui::empty_line::empty_line;
 use super::ui::notice::notice;
 use super::ui::prose::description;
@@ -12,7 +12,7 @@ use super::ui::{SHARE, icon};
 use super::url::{page_url, project_url, task_url};
 use crate::db::Db;
 use crate::models::Project;
-use crate::reporting::{DateRange, ProjectReport, TaskReport, Total, fmt_date};
+use crate::reporting::{DateRange, ProjectReport, TaskReport, Total, fmt_date, worklog_text};
 use crate::utils::report::{parse_day, project_reports, total_minutes};
 use chrono::{Days, NaiveDate, NaiveDateTime};
 use topcoat::{
@@ -328,4 +328,30 @@ mod tests {
         };
         assert_eq!(neighbours(&all, today), (None, None));
     }
+}
+
+pub fn share_text(report: &super::org_report::Report, format: ShareFormat) -> String {
+    match format {
+        ShareFormat::Worklog => worklog_text(report.projects.iter().flat_map(|p| &p.tasks)),
+        ShareFormat::Status => super::org_report::status_list(report),
+    }
+}
+
+/// The Share pop-up of `report`, closing to `close`.
+pub fn share_dialog(
+    org: &crate::models::Organization,
+    base: &str,
+    report: &Report,
+    close: String,
+) -> ShareDialog {
+    ShareDialog::new(
+        org,
+        base,
+        &report.range,
+        (
+            share_text(report, ShareFormat::Worklog),
+            share_text(report, ShareFormat::Status),
+        ),
+        close,
+    )
 }

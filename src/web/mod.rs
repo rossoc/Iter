@@ -36,6 +36,7 @@ mod org;
 mod org_edit;
 mod org_report;
 mod org_share;
+mod share_dialog;
 mod create;
 mod pick;
 mod platform_pick;
