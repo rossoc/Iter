@@ -1,6 +1,7 @@
 //! The Agent tab of the task page: the plan, a step opened beside it, and the notes and sketches in the task's folder.
 
-use super::task_runs::{Compose, act, label_of, state_pill};
+use super::task_compose::Compose;
+use super::task_runs::{act, label_of, state_pill};
 use super::ui::button::post_button;
 use super::ui::prose::description;
 use super::ui::table::{AddRow, cell, data_table, row};

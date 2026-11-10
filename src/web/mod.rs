@@ -62,6 +62,7 @@ mod task_notes;
 mod task_panel;
 mod task_query;
 mod task_rows;
+mod task_compose;
 mod task_runs;
 mod task_sessions;
 mod task_wiki;

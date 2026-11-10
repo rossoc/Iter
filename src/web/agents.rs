@@ -2,7 +2,8 @@
 
 use super::instructions::{Use, usage};
 use super::sections::TabQuery;
-use super::task_runs::{Compose, act, compose_form, label_of, state_pill};
+use super::task_compose::{Compose, compose_form};
+use super::task_runs::{act, label_of, state_pill};
 use super::ui::breadcrumb::Crumb;
 use super::ui::empty_line::empty_line;
 use super::ui::frame::frame;
