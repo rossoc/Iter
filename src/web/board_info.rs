@@ -4,7 +4,7 @@ use super::Id;
 use super::board_header::{BoardSection, board_header};
 use super::load::board_of;
 use super::open_db;
-use super::project_new::{Home, ProjectCreate, project_modal};
+use super::create::{Home, ProjectCreate, project_modal};
 use super::project_rows::{project_search, projects_section};
 use super::sections::InfoQuery;
 use super::text::NO_PROJECTS;
