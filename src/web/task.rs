@@ -66,10 +66,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let agent = match section {
         TaskSection::Agent => {
             // the prompts of a new agent are made with the commands' own code, which wants an app
-            let app = crate::app::App {
-                db: open_db()?,
-                now: chrono::Local::now().naive_local(),
-            };
+            let app = crate::app::App::over(open_db()?, chrono::Local::now().naive_local());
             let open = task_agent::Open {
                 step: query.step.as_deref(),
                 run: query.run.as_deref(),

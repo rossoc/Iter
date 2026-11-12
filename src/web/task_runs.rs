@@ -135,10 +135,7 @@ fn world(id: i64) -> Result<(App, String, Task, Project)> {
     // a task without a place for its folder has no runs to act on
     taskdir::of(&db, &project, &task)?;
     let name = task_display(&project, &task);
-    let app = App {
-        db,
-        now: chrono::Local::now().naive_local(),
-    };
+    let app = App::over(db, chrono::Local::now().naive_local());
     Ok((app, name, task, project))
 }
 

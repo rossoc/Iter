@@ -605,10 +605,7 @@ mod tests {
             db.get::<Task>(task_id).unwrap().unwrap(),
         );
 
-        let app = App {
-            db,
-            now: chrono::Local::now().naive_local(),
-        };
+        let app = App::over(db, chrono::Local::now().naive_local());
         let db = &app.db;
         let bare = load(&app, &project, &task, &Open::default()).unwrap();
         assert!(bare.plan.items.is_empty());
@@ -641,10 +638,7 @@ mod tests {
             db.get::<Project>(project_id).unwrap().unwrap(),
             db.get::<Task>(task_id).unwrap().unwrap(),
         );
-        let app = App {
-            db,
-            now: chrono::Local::now().naive_local(),
-        };
+        let app = App::over(db, chrono::Local::now().naive_local());
         let tab = load(&app, &project, &task, &Open::default()).unwrap();
         assert!(!tab.in_notes && tab.plan.items.is_empty());
     }
