@@ -24,12 +24,12 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.route(act)
 }
 
-pub struct DiffLine {
+pub(super) struct DiffLine {
     pub class: &'static str,
     pub text: String,
 }
 
-pub struct FileChange {
+pub(super) struct FileChange {
     pub path: String,
     pub kind: &'static str,
     pub lines: Vec<DiffLine>,

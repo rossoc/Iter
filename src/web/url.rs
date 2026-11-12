@@ -210,10 +210,6 @@ pub fn agent_url(id: i64, n: u32) -> String {
     format!("/agent/{id}/{n}")
 }
 
-pub fn run_url(id: i64, n: u32) -> String {
-    agent_url(id, n)
-}
-
 pub fn run_post_url(id: i64, n: u32) -> String {
     format!("{}/{n}", runs_url(id))
 }
@@ -242,8 +238,48 @@ pub fn note_url(base: &str, day: NaiveDate) -> String {
     format!("{base}/notes/{}", fmt_date(day))
 }
 
-pub fn note_tab_url(base: &str, day: NaiveDate, tab: super::sections::NoteTab) -> String {
-    use super::sections::NoteTab;
+/// The one place the names are spelled: `url::note_tab_url` and the parser both go through here.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum NoteTab {
+    #[default]
+    Info,
+    Edit,
+}
+
+impl NoteTab {
+    pub const ALL: [NoteTab; 2] = [NoteTab::Info, NoteTab::Edit];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            NoteTab::Info => "info",
+            NoteTab::Edit => "edit",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            NoteTab::Info => "Info",
+            NoteTab::Edit => "Edit",
+        }
+    }
+
+    pub fn of(tab: Option<&str>) -> NoteTab {
+        tab.and_then(|t| t.parse().ok()).unwrap_or_default()
+    }
+}
+
+impl std::str::FromStr for NoteTab {
+    type Err = ();
+
+    fn from_str(text: &str) -> Result<NoteTab, ()> {
+        NoteTab::ALL
+            .into_iter()
+            .find(|t| t.as_str() == text)
+            .ok_or(())
+    }
+}
+
+pub fn note_tab_url(base: &str, day: NaiveDate, tab: NoteTab) -> String {
     let name = (tab != NoteTab::Info).then(|| tab.as_str());
     page_url(&note_url(base, day), &[("tab", name)])
 }
@@ -297,7 +333,7 @@ mod tests {
         );
         assert_eq!(projects_tab_url("/org/3"), "/org/3?tab=projects");
         assert_eq!(runs_url(5), "/task/5/runs");
-        assert_eq!(run_url(5, 2), "/agent/5/2");
+        assert_eq!(agent_url(5, 2), "/agent/5/2");
         assert_eq!(agents_url(), "/agents");
         assert_eq!(
             run_action_url(5, 2, RunAction::Cancel),
@@ -353,7 +389,6 @@ mod tests {
 
     #[test]
     fn note_tab_urls_name_the_tab() {
-        use super::super::sections::NoteTab;
         let d = NaiveDate::from_ymd_opt(2026, 10, 29).unwrap();
         assert_eq!(
             note_tab_url("/org/1", d, NoteTab::Info),
@@ -363,5 +398,15 @@ mod tests {
             note_tab_url("/org/1", d, NoteTab::Edit),
             "/org/1/notes/2026-10-29?tab=edit"
         );
+    }
+
+    #[test]
+    fn note_tab_names_round_trip() {
+        for tab in NoteTab::ALL {
+            assert_eq!(tab.as_str().parse(), Ok(tab));
+            assert_eq!(NoteTab::of(Some(tab.as_str())), tab);
+        }
+        assert_eq!(NoteTab::of(None), NoteTab::Info);
+        assert_eq!(NoteTab::of(Some("bogus")), NoteTab::Info);
     }
 }

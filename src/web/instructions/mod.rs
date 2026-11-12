@@ -15,7 +15,7 @@ use super::ui::panel::{Row, panel};
 use super::ui::prose::description;
 use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::tabs::{Tab, tabs};
-use super::url::{instruction_url, instructions_url, page_url, project_url, run_url, task_url};
+use super::url::{agent_url, instruction_url, instructions_url, page_url, project_url, task_url};
 use crate::agent::instruction::{self, Instruction, Layers, Source};
 use crate::agent::prompt::{Kind, PLACEHOLDERS};
 use crate::agent::run::Harness;

@@ -8,7 +8,7 @@ use super::session_lines::task_lines;
 use super::task_agent::{self, AgentTab, agent_tab, files_block, plan_block};
 use super::task_notes::note_modal;
 use super::task_panel::task_panel;
-use super::task_runs::compose_modal;
+use super::task_compose::compose_modal;
 use super::task_sessions::session_modal;
 use super::task_wiki::{self, WikiTab, wiki_tab};
 use super::ui::breadcrumb::Crumb;

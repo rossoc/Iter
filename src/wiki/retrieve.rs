@@ -9,7 +9,7 @@ use regex::RegexBuilder;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
 
-pub fn tokens(text: &str) -> usize {
+pub(super) fn tokens(text: &str) -> usize {
     text.len().div_ceil(4)
 }
 

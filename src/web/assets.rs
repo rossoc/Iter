@@ -1,5 +1,6 @@
 //! Static files are compiled in and served with an ETag and `no-cache`: the browser revalidates and gets a bodiless 304.
 
+use std::borrow::Cow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::OnceLock;
@@ -7,12 +8,70 @@ use topcoat::{
     Result,
     context::Cx,
     router::{
-        Body, HeaderValue, StatusCode,
+        Body, HeaderValue, Method, Methods, Path, Route, RouteFuture, RouteId, RouterBuilder,
+        StatusCode,
         header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, IF_NONE_MATCH},
         request::headers,
         response::{IntoResponse, Response},
     },
 };
+
+/// Registers one `GET` route per `(path, asset)`.
+pub fn serve(builder: RouterBuilder, table: &[(&'static str, &'static Asset)]) -> RouterBuilder {
+    table.iter().fold(builder, |builder, (path, asset)| {
+        builder.route(Static::new(path, asset))
+    })
+}
+
+/// A `GET` route that answers with a compiled-in file.
+struct Static {
+    id: RouteId,
+    path: Cow<'static, Path>,
+    asset: &'static Asset,
+}
+
+impl Static {
+    fn new(path: &'static str, asset: &'static Asset) -> Static {
+        Static {
+            id: RouteId::new(),
+            path: topcoat::router::IntoPath::into_path(path),
+            asset,
+        }
+    }
+}
+
+impl Route for Static {
+    fn id(&self) -> RouteId {
+        self.id
+    }
+
+    fn methods(&self) -> Methods<'_> {
+        Methods::Only(&[Method::GET])
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn handle<'cx>(&'cx self, cx: &'cx Cx, _body: Body) -> RouteFuture<'cx> {
+        Box::pin(async move { self.asset.respond(cx) })
+    }
+}
+
+/// A JSON body, with `Cache-Control: no-store` when `no_store`.
+pub fn json(cx: &Cx, body: String, no_store: bool) -> Result<Response> {
+    let content = [(CONTENT_TYPE, HeaderValue::from_static("application/json"))];
+    if !no_store {
+        (content, body).into_response(cx)
+    } else {
+        (
+            content,
+            [(CACHE_CONTROL, HeaderValue::from_static("no-store"))],
+            body,
+        )
+            .into_response(cx)
+    }
+}
 
 pub struct Asset {
     bytes: &'static [u8],

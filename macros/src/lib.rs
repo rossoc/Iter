@@ -5,7 +5,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input};
 
-/// Implements `crate::db::Table` for a struct. Columns are the fields in declaration order, minus
+/// Implements `crate::models::Table` for a struct. Columns are the fields in declaration order, minus
 /// the `id` primary key (assigned on insert; read from column 0). Other field types need
 /// `FromSql`/`ToSql`, or `#[table(with = "path")]` naming a `crate::db` module with
 /// `read(row, index)`/`write(&value)` (e.g. `datetime`). `order_by` sets `Db::list`'s trailing
@@ -141,7 +141,7 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         #named
 
-        impl crate::db::Table for #ty {
+        impl crate::models::Table for #ty {
             const NAME: &'static str = #name;
             const COLUMNS: &'static [&'static str] = &[#(#column_names),*];
             const LIST_TAIL: &'static str = #list_tail;

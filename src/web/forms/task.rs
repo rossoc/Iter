@@ -157,7 +157,7 @@ impl EditForm for TaskForm {
 mod tests {
     use super::*;
     use crate::fixtures;
-    use crate::web::forms::NAME;
+    use crate::web::edit::NAME;
 
     fn task_form(name: &str, issue: &str, status: &str) -> TaskForm {
         TaskForm {

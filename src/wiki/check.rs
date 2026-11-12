@@ -34,7 +34,7 @@ pub enum Dirty {
 }
 
 /// `updated` as a moment: a date means the end of that day, so a note written during it is not newer than a page updated that day.
-pub fn parse_updated(text: &str) -> Option<NaiveDateTime> {
+pub(super) fn parse_updated(text: &str) -> Option<NaiveDateTime> {
     let text = text.trim();
     if let Ok(t) = DateTime::parse_from_rfc3339(text) {
         return Some(t.with_timezone(&Local).naive_local());

@@ -2,24 +2,14 @@
 //! `aria-describedby`, `aria-invalid` and `aria-required` are needed.
 
 use super::empty_line::empty_line;
+use super::field_ids::{ERROR_ID, field_id, hint_id, invalid_cue};
 use super::form_error::{FormError, is_about};
 use super::group::group;
 use super::icons::{FOLDER, icon};
-use super::notice::ERROR_ID;
 use topcoat::{
     Result,
     view::{Child, View, component, view},
 };
-
-/// The `id` of the control named `name`.
-pub fn field_id(name: &str) -> String {
-    format!("f-{name}")
-}
-
-/// The `id` of the hint under the control `id`.
-pub(super) fn hint_id(id: &str) -> String {
-    format!("{id}-hint")
-}
 
 /// A control's `aria-describedby`: its hint and, if the error is about it, the error notice.
 fn described_by(id: &str, hint: &str, invalid: bool) -> String {
@@ -31,16 +21,6 @@ fn described_by(id: &str, hint: &str, invalid: bool) -> String {
         ids.push(ERROR_ID.to_string());
     }
     ids.join(" ")
-}
-
-/// Cue beside the label for the control the error is about, for those who
-/// cannot rely on the border colour. `aria-hidden` and outside the label, so
-/// screen readers get `aria-invalid` and the error notice instead.
-#[component]
-pub async fn invalid_cue() -> Result<impl View> {
-    Ok(view! {
-        <span class="bad" aria-hidden="true">"Fix this"</span>
-    })
 }
 
 /// A control's label (required marker, [`invalid_cue`]) and its hint; the control is the child.

@@ -76,7 +76,7 @@ impl Harness {
 }
 
 /// How one agent program is driven; `Harness::backend` dispatches here.
-pub trait AgentBackend {
+pub(super) trait AgentBackend {
     fn command(&self, job: &Invocation) -> (&'static str, Vec<String>);
 }
 
@@ -297,7 +297,7 @@ impl Proc {
 }
 
 impl TaskDir {
-    pub fn runs_dir(&self) -> PathBuf {
+    pub(super) fn runs_dir(&self) -> PathBuf {
         self.root().join("runs")
     }
 
@@ -314,7 +314,7 @@ impl TaskDir {
     }
 
     /// The next run number: one past the highest file in the folder.
-    pub fn next_run(&self) -> u32 {
+    pub(super) fn next_run(&self) -> u32 {
         let highest = std::fs::read_dir(self.runs_dir())
             .into_iter()
             .flatten()

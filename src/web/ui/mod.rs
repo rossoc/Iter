@@ -3,7 +3,6 @@
 //! sheet and `org.css`, concatenated at compile time (`web/layout.rs` links it).
 
 // A component shares its module's name (`frame::frame`): import it from the module.
-pub mod board_root;
 pub mod breadcrumb;
 pub mod button;
 pub mod count;
@@ -12,6 +11,7 @@ pub mod drop_zone;
 pub mod empty_line;
 pub mod empty_state;
 pub mod field;
+pub mod field_ids;
 pub mod filter_bar;
 pub mod folded_list;
 pub mod form;
@@ -50,12 +50,8 @@ pub mod unplaced_list;
 pub use breadcrumb::Crumb;
 pub use icons::*;
 
-use super::assets::Asset;
-use topcoat::{
-    Result,
-    context::Cx,
-    router::{RouterBuilder, response::Response, route},
-};
+use super::assets::{Asset, serve};
+use topcoat::router::RouterBuilder;
 
 // Order is the cascade: later sheets win, `org.css` last.
 static CSS: Asset = Asset::css(concat!(
@@ -84,7 +80,6 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("sessions_table.css"),
     include_str!("steps.css"),
     include_str!("filter_bar.css"),
-    include_str!("tasks_tab.css"),
     include_str!("panel.css"),
     include_str!("prose.css"),
     include_str!("labelled.css"),
@@ -113,47 +108,16 @@ static COMBOBOX_JS: Asset = Asset::js(include_str!("combobox.js"));
 static PATH_PICK_JS: Asset = Asset::js(include_str!("path_pick.js"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder
-        .route(stylesheet)
-        .route(notice_script)
-        .route(modal_script)
-        .route(filter_bar_script)
-        .route(search_script)
-        .route(combobox_script)
-        .route(path_pick_script)
-}
-
-#[route(GET "/style.css")]
-async fn stylesheet(cx: &Cx) -> Result<Response> {
-    CSS.respond(cx)
-}
-
-#[route(GET "/notice.js")]
-async fn notice_script(cx: &Cx) -> Result<Response> {
-    NOTICE_JS.respond(cx)
-}
-
-#[route(GET "/modal.js")]
-async fn modal_script(cx: &Cx) -> Result<Response> {
-    MODAL_JS.respond(cx)
-}
-
-#[route(GET "/filter_bar.js")]
-async fn filter_bar_script(cx: &Cx) -> Result<Response> {
-    FILTER_BAR_JS.respond(cx)
-}
-
-#[route(GET "/combobox.js")]
-async fn combobox_script(cx: &Cx) -> Result<Response> {
-    COMBOBOX_JS.respond(cx)
-}
-
-#[route(GET "/path_pick.js")]
-async fn path_pick_script(cx: &Cx) -> Result<Response> {
-    PATH_PICK_JS.respond(cx)
-}
-
-#[route(GET "/search.js")]
-async fn search_script(cx: &Cx) -> Result<Response> {
-    SEARCH_JS.respond(cx)
+    serve(
+        builder,
+        &[
+            ("/style.css", &CSS),
+            ("/notice.js", &NOTICE_JS),
+            ("/modal.js", &MODAL_JS),
+            ("/filter_bar.js", &FILTER_BAR_JS),
+            ("/search.js", &SEARCH_JS),
+            ("/combobox.js", &COMBOBOX_JS),
+            ("/path_pick.js", &PATH_PICK_JS),
+        ],
+    )
 }

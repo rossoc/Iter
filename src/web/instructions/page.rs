@@ -150,7 +150,7 @@ async fn agents_part(uses: &[Use]) -> Result<impl View> {
             for u in uses.iter() {
                 row(
                     cell(
-                        <a class="u" href=(run_url(u.task_id, u.run.n))>"#" (u.run.n.to_string())</a>
+                        <a class="u" href=(agent_url(u.task_id, u.run.n))>"#" (u.run.n.to_string())</a>
                         <span class="hint">(u.run.model.as_str()) ", " (u.run.effort.as_str())</span>
                     )
                     cell(<a class="u muted" href=(task_url(u.task_id))>(u.task.as_str())</a>)

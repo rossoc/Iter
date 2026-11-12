@@ -116,7 +116,7 @@ impl TaskQuery {
         q.unwrap_or("")
     }
 
-    pub fn needs_tags(&self) -> bool {
+    pub(super) fn needs_tags(&self) -> bool {
         self.terms.iter().any(|t| matches!(t.kind, Kind::Tag(_)))
     }
 

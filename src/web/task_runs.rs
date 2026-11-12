@@ -1,28 +1,21 @@
 //! The agents of a task at the top of its Agent tab: the table, the form that writes a new one, and the page of one that has begun.
 
+use super::assets::json;
 use super::errors::refused;
 use super::sections::TabQuery;
-use super::task_agent::{Open, step_panel};
-use super::ui::field::{field, select, textarea};
-use super::ui::modal::modal;
-use super::ui::table::{AddRow, cell, data_table, row};
-use super::ui::{PLAY, STOP, X, icon};
-use super::url::{
-    RunAction, agent_tab_url, agent_url, run_action_url, run_post_url, runs_url, task_url,
-};
+use super::ui::icon;
+use super::url::{agent_tab_url, agent_url, task_url};
 use super::{Id, open_db};
 use crate::agent::instruction::{self, Layers};
-use crate::agent::plan::Item;
 use crate::agent::prompt::Kind;
 use crate::agent::run::{Harness, RunRecord};
 use crate::agent::solve::{self, Launch, Spec};
-use crate::agent::taskdir::{self, TaskDir};
+use crate::agent::taskdir::{self};
 use crate::app::App;
 use crate::config::config;
 use crate::models::{Project, Task};
 use crate::utils::resolve::task_display;
 use serde::Deserialize;
-use topcoat::router::{HeaderValue, header::CONTENT_TYPE, response::IntoResponse};
 use topcoat::{
     Result,
     context::Cx,
@@ -48,112 +41,6 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         .route(prompt_of)
 }
 
-const RUNS: usize = 50;
-
-pub struct Compose {
-    pub instruction: String,
-    pub offered: Vec<(String, String)>,
-    pub run: Option<u32>,
-    pub model: String,
-    pub effort: String,
-    pub prompt: String,
-    pub error: Option<String>,
-}
-
-#[derive(Default)]
-pub struct Roster {
-    pub runs: Vec<RunRecord>,
-    pub compose: Option<Compose>,
-    pub current: Option<u32>,
-}
-
-fn defaults() -> (String, String) {
-    let models = Harness::Claude.models(&config().agent.models);
-    (
-        models.first().cloned().unwrap_or_default(),
-        "medium".to_string(),
-    )
-}
-
-fn offered(layers: &Layers, has_plan: bool) -> Vec<(String, String)> {
-    instruction::list(layers)
-        .into_iter()
-        .filter(|i| has_plan || i.name == "plan")
-        .map(|i| {
-            let label = label_of(&i.name);
-            (i.name, label)
-        })
-        .collect()
-}
-
-impl Roster {
-    pub fn load(
-        app: &App,
-        name: &str,
-        dir: Option<&TaskDir>,
-        open: &Open,
-        layers: &Layers,
-        has_plan: bool,
-    ) -> Roster {
-        let mut roster = Roster::default();
-        let Some(dir) = dir else {
-            return roster;
-        };
-        roster.runs = dir.runs().into_iter().rev().take(RUNS).collect();
-        let asked = open.run.and_then(|r| r.parse::<u32>().ok());
-        let found = asked.and_then(|n| roster.runs.iter().find(|r| r.n == n).cloned());
-        let (mut model, effort) = defaults();
-        if open.new == Some("agent") {
-            let chosen = open
-                .instruction
-                .unwrap_or(if has_plan { "develop" } else { "plan" });
-            let inst = instruction::find(chosen, layers)
-                .or_else(|| instruction::find("plan", layers))
-                .expect("the built-in instruction is always there");
-            let models = Harness::Claude.models(&config().agent.models);
-            if let Some(m) = instruction::preferred_model(&inst.front, &models) {
-                model = m;
-            }
-            let kind = inst.kind();
-            let (prompt, error) = match crate::agent::task_prompt::prompt_for(
-                app,
-                Some(name),
-                kind,
-                inst.path.as_deref(),
-                true,
-                None,
-                true,
-            ) {
-                Ok(text) => (text, None),
-                Err(e) => (String::new(), Some(e.to_string())),
-            };
-            roster.compose = Some(Compose {
-                instruction: inst.name.clone(),
-                offered: offered(layers, has_plan),
-                run: None,
-                model,
-                effort,
-                prompt,
-                error,
-            });
-        } else if let Some(run) = found {
-            roster.current = Some(run.n);
-            if run.is_queued() {
-                roster.compose = Some(Compose {
-                    instruction: run.instruction_name().to_string(),
-                    offered: offered(layers, has_plan),
-                    run: Some(run.n),
-                    model: run.model.clone(),
-                    effort: run.effort.clone(),
-                    prompt: std::fs::read_to_string(dir.run_prompt_path(run.n)).unwrap_or_default(),
-                    error: None,
-                });
-            }
-        }
-        roster
-    }
-}
-
 pub(super) fn label_of(name: &str) -> String {
     match name {
         "plan" => "Plan",
@@ -164,10 +51,6 @@ pub(super) fn label_of(name: &str) -> String {
         other => other,
     }
     .to_string()
-}
-
-fn options(values: &[String]) -> Vec<(String, String)> {
-    values.iter().map(|v| (v.clone(), v.clone())).collect()
 }
 
 /// Named for assistive technology and as a tooltip.
@@ -194,149 +77,6 @@ pub(super) async fn state_pill(run: &RunRecord) -> Result<impl View> {
             }
             (shown)
         </span>
-    })
-}
-
-#[component]
-async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl View> {
-    let shown = run.shown_status();
-    Ok(view! {
-        row(class: if current { "current" } else { "" },
-            cell(
-                <a class="u" href=(agent_url(task_id, run.n)) if current { aria-current="true" }>
-                    "#" (run.n.to_string()) " " (label_of(run.instruction_name()))
-                </a>
-                // what it was told to use: only on the row under the pointer
-                <span class="hint">(run.model.as_str()) ", " (run.effort.as_str())</span>
-            )
-            cell(state_pill(run: run))
-            cell(class: "acts",
-                if shown == "queued" {
-                    act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
-                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
-                } else if shown == "running" {
-                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop", svg: STOP)
-                }
-            )
-        )
-    })
-}
-
-#[component]
-async fn agents_table(task_id: i64, roster: &Roster) -> Result<impl View> {
-    let new = format!("{}&new=agent", agent_tab_url(&task_url(task_id)));
-    Ok(view! {
-        data_table(caption: "Agents of this task, the latest first", columns: &["Agent", "Status"], actions: true,
-            class: "tasks agents", add: Some(AddRow::link(&new, "New agent\u{2026}")),
-            empty: roster.runs.is_empty().then_some("No agent has worked on this task yet."),
-            for run in roster.runs.iter() {
-                agent_row(task_id: task_id, run: run, current: roster.current == Some(run.n))
-            }
-        )
-    })
-}
-
-#[component]
-pub async fn compose_modal(task_id: i64, c: &Compose) -> Result<impl View> {
-    let harness = Harness::Claude;
-    let agents = vec![(harness.key().to_string(), "Claude".to_string())];
-    let mut models = harness.models(&config().agent.models);
-    // a queued run keeps its model even if the list changed since
-    if !models.contains(&c.model) {
-        models.insert(0, c.model.clone());
-    }
-    let efforts: Vec<String> = harness.efforts().iter().map(|e| e.to_string()).collect();
-    let mut efforts = efforts;
-    if !efforts.contains(&c.effort) {
-        efforts.insert(0, c.effort.clone());
-    }
-    let efforts = options(&efforts);
-    let action = match c.run {
-        Some(n) => run_post_url(task_id, n),
-        None => runs_url(task_id),
-    };
-    let editing = c.run.is_some();
-    let close = agent_tab_url(&task_url(task_id));
-    let tab = close.split('?').next().unwrap_or_default().to_string();
-    let title = match c.run {
-        Some(n) => format!("Agent #{n}, waiting"),
-        None => "New agent".to_string(),
-    };
-    Ok(view! {
-        modal(id: "compose-title", title: &title, close: close.clone(),
-          <div class="compose">
-            if !editing {
-                // the prompt depends on the instruction: choosing one reloads the form
-                <form id="pick-instruction" method="get" action=(tab.as_str())>
-                    <input type="hidden" name="tab" value="agent">
-                    <input type="hidden" name="new" value="agent">
-                    // pressing Enter in the instruction field submits this form: without script it is how the prompt is loaded
-                </form>
-                <datalist id="instruction-list">
-                    for (name, label) in c.offered.iter() {
-                        <option value=(name.as_str())>(label.as_str())</option>
-                    }
-                </datalist>
-            }
-            <datalist id="model-list">
-                for m in models.iter() {
-                    <option value=(m.as_str())></option>
-                }
-            </datalist>
-            if let Some(e) = &c.error {
-                <p class="empty-line">"The prompt could not be made: " (e.as_str())</p>
-            }
-            <form method="post" action=(action.as_str())>
-                <input type="hidden" name="instruction" value=(c.instruction.as_str())>
-                if !editing {
-                    <div class="compose-instruction">
-                        field(name: "instruction", label: "Instruction", value: &c.instruction, identifier: true,
-                            list: "instruction-list", form: "pick-instruction", autoload: true)
-                    </div>
-                }
-                <div class="compose-pick">
-                    select(name: "agent", label: "Agent", options: &agents, current: harness.key())
-                    field(name: "model", label: "Model", value: &c.model, identifier: true, list: "model-list")
-                    select(name: "effort", label: "Effort", options: &efforts, current: &c.effort)
-                </div>
-                textarea(name: "prompt", label: "Prompt", value: &c.prompt, loaded: &c.prompt,
-                    hint: "What the agent is told. It starts as the instruction's prompt, filled in for the task; edit it freely.")
-                <div class="compose-actions">
-                    <button class="button primary" type="submit" name="do" value="run" title="Run now" aria-label="Run now">(icon(PLAY)) <span class="sr">"Run now"</span></button>
-                    if editing {
-                        <button class="button" type="submit" name="do" value="save">"Save"</button>
-                    }
-                    <button class="button" type="submit" name="do" value="queue">"Queue"</button>
-                    <a class="button" href=(close.as_str())>"Close"</a>
-                </div>
-            </form>
-            if let Some(n) = c.run {
-                <div class="compose-drop">
-                    act(action: run_action_url(task_id, n, RunAction::Cancel), label: "Remove from the queue", svg: X)
-                </div>
-            }
-          </div>
-        )
-    })
-}
-
-#[component]
-pub async fn roster_block(
-    task_id: i64,
-    roster: &Roster,
-    step: Option<&Item>,
-    note: Option<&str>,
-) -> Result<impl View> {
-    Ok(view! {
-        <div class="roster">
-            if let Some(item) = step {
-                step_panel(task_id: task_id, item: item)
-            }
-            agents_table(task_id: task_id, roster: roster)
-            if let Some(note) = note {
-                <p class="empty-line note">(note)</p>
-            }
-        </div>
     })
 }
 
@@ -450,11 +190,7 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
         "prompt": prompt,
         "model": instruction::preferred_model(&inst.front, &models),
     });
-    (
-        [(CONTENT_TYPE, HeaderValue::from_static("application/json"))],
-        body.to_string(),
-    )
-        .into_response(cx)
+    json(cx, body.to_string(), false)
 }
 
 fn follow_up(app: &App, name: &str, n: u32, action: RunButton) -> Result<()> {

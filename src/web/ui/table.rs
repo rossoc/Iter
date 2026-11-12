@@ -109,7 +109,7 @@ pub async fn section_row(label: &str, span: usize) -> Result<impl View> {
 }
 
 #[component]
-pub async fn col_head(child: Child<'_>) -> Result<impl View> {
+pub(super) async fn col_head(child: Child<'_>) -> Result<impl View> {
     Ok(view! { <th scope="col" role="columnheader">(child)</th> })
 }
 

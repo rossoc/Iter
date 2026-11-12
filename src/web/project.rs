@@ -8,7 +8,7 @@ use super::open_db;
 use super::sections::{Section, TabQuery};
 use super::sections::{section_tabs, settings_tab};
 use super::settings_panel::settings_panel;
-use super::task_new::{TaskCreate, TaskHome, task_modal};
+use super::create::{TaskCreate, TaskHome, task_modal};
 use super::task_query::TaskQuery;
 use super::task_rows::{project_rows, search};
 use super::ui::breadcrumb::Crumb;

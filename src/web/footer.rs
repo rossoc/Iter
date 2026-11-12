@@ -11,7 +11,7 @@ use topcoat::{
 };
 
 /// Bounded: the footer is on every page, so what it reads must stay small however large the database.
-pub const FOOTER_LIMIT: usize = 8;
+pub(super) const FOOTER_LIMIT: usize = 8;
 
 fn project_link(p: &Project) -> FooterLink {
     FooterLink {

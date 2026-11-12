@@ -100,7 +100,7 @@ pub fn fmt_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }
 
-pub fn round_to_half_hour(hours: f64) -> f64 {
+pub(super) fn round_to_half_hour(hours: f64) -> f64 {
     (hours * 2.0).round() / 2.0
 }
 

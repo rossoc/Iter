@@ -37,7 +37,7 @@ fn safe_url(url: &str) -> bool {
 }
 
 /// `text` as HTML: raw HTML escaped, unsafe links dropped to their text, headings shifted.
-pub fn markdown(text: &str) -> String {
+pub(super) fn markdown(text: &str) -> String {
     // whether each open link/image was kept, so its end matches
     let mut kept = Vec::new();
     let events = Parser::new_ext(text, options()).filter_map(|event| match event {

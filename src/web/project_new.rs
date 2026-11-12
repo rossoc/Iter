@@ -1,26 +1,17 @@
 //! New project: the pop-up over a project list (`?new=project`, `ui/modal.rs`) and its write (`POST /{org|board}/{id}/project/quick`).
 
 use super::board_info::{load as load_board, screen as board_screen};
+use super::create::{Home, ProjectCreate};
 use super::edit::create_to;
-use super::forms::{DESCRIPTION, NAME, ProjectForm, SettingsForm};
+use super::forms::{ProjectForm, SettingsForm};
 use super::org::{load as load_org, screen as org_screen};
 use super::sections::Section;
-use super::settings_fields::settings_fields;
-use super::ui::field::{field, path_field, textarea};
-use super::ui::form::form_shell;
-use super::ui::form_error::FormError;
-use super::ui::modal::modal;
-use super::url::{
-    board_info_url, org_url, page_url, projects_tab_url, quick_board_project_url, quick_project_url,
-};
 use super::{Id, now, open_db};
-use crate::config::config;
-use crate::models::{Board, Configured, Organization, Project, Settings};
 use serde::Deserialize;
 use topcoat::{
     Result,
     context::Cx,
-    router::{RouterBuilder, content::Form, error::RouterErrorExt, page, path_param},
+    router::{RouterBuilder, content::Form, page, path_param},
     view::{View, component, view},
 };
 
@@ -28,101 +19,8 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
     builder.page(quick_org).page(quick_board)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Home {
-    Org(i64),
-    Board(i64),
-}
-
-impl Home {
-    pub fn quick_url(self) -> String {
-        match self {
-            Home::Org(id) => quick_project_url(id),
-            Home::Board(id) => quick_board_project_url(id),
-        }
-    }
-
-    pub fn page_url(self) -> String {
-        match self {
-            Home::Org(id) => projects_tab_url(&org_url(id)),
-            Home::Board(id) => board_info_url(id),
-        }
-    }
-
-    pub fn open_url(self) -> String {
-        self.open_url_with("", "")
-    }
-
-    pub fn open_url_with(self, name: &str, base_path: &str) -> String {
-        let some = |v: &str| (!v.is_empty()).then(|| v.to_string());
-        let (name, base_path) = (some(name), some(base_path));
-        page_url(
-            &self.page_url(),
-            &[
-                ("new", Some("project")),
-                ("name", name.as_deref()),
-                ("base_path", base_path.as_deref()),
-            ],
-        )
-    }
-
-    pub fn create(self, name: Option<&str>, base_path: Option<&str>) -> Result<ProjectCreate> {
-        let template = self.template()?;
-        Ok(ProjectCreate {
-            home: self,
-            name: name.unwrap_or("").to_string(),
-            description: String::new(),
-            base_path: base_path.unwrap_or("").to_string(),
-            settings: template.settings(),
-            error: None,
-        })
-    }
-
-    fn template(self) -> Result<Project> {
-        let db = open_db()?;
-        let mut template = Project::template(&config().project);
-        match self {
-            Home::Org(id) => {
-                let org = db.get::<Organization>(id)?.ok_or_not_found()?;
-                template.inherit_from(&org);
-            }
-            Home::Board(id) => {
-                db.get::<Board>(id)?.ok_or_not_found()?;
-                template.board_id = Some(id);
-            }
-        }
-        Ok(template)
-    }
-}
-
-pub struct ProjectCreate {
-    pub home: Home,
-    pub name: String,
-    pub description: String,
-    pub base_path: String,
-    pub settings: Settings,
-    pub error: Option<FormError>,
-}
-
-#[component]
-pub async fn project_modal(create: &ProjectCreate) -> Result<impl View> {
-    let error = create.error.as_ref();
-    let close = create.home.page_url();
-    Ok(view! {
-        modal(id: "new-project-title", title: "New project", close: close.as_str(),
-            form_shell(action: create.home.quick_url(), error: error, cancel: close.as_str(), submit_label: "Create project",
-                field(name: NAME, label: "Name", value: &create.name, required: true, identifier: true, error: error, autofocus: error.is_none())
-                textarea(name: DESCRIPTION, label: "Description", value: &create.description)
-                path_field(name: ProjectForm::BASE_PATH, label: "Base path", value: &create.base_path, required: true, error: error,
-                    hint: "The project's directory on disk, such as ~/src/app. ~ is expanded and a relative path is made absolute.")
-                settings_fields(s: &create.settings)
-            )
-        )
-    })
-}
-
 #[derive(Deserialize)]
-pub struct NewProject {
+pub(super) struct NewProject {
     pub name: String,
     pub description: String,
     pub base_path: String,
@@ -197,19 +95,8 @@ async fn quick_board(cx: &Cx, Form(typed): Form<NewProject>) -> Result<impl View
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::{Configured, Organization, Project, Settings};
     use crate::web::edit::EditForm;
-
-    #[test]
-    fn a_home_knows_its_urls() {
-        assert_eq!(Home::Org(3).quick_url(), "/org/3/project/quick");
-        assert_eq!(Home::Board(7).quick_url(), "/board/7/project/quick");
-        assert_eq!(Home::Board(7).page_url(), "/board/7/info");
-        assert_eq!(Home::Org(3).open_url(), "/org/3?tab=projects&new=project");
-        assert_eq!(
-            Home::Board(7).open_url_with("my app", "/src"),
-            "/board/7/info?new=project&name=my%20app&base_path=%2Fsrc"
-        );
-    }
 
     fn settings_form(settings: &Settings) -> SettingsForm {
         SettingsForm {

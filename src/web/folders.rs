@@ -1,17 +1,13 @@
 //! `POST /folders/pick`: opens the system folder chooser (`folder_picker.rs`) for a path field (`ui/field.rs`).
 
+use super::assets::json;
 use super::folder_picker::{Picked, pick};
 use crate::config::expand_home;
 use std::path::{Component, Path, PathBuf};
 use topcoat::{
     Result,
     context::Cx,
-    router::{
-        RouterBuilder,
-        content::Form,
-        response::{IntoResponse, Response},
-        route,
-    },
+    router::{RouterBuilder, content::Form, response::Response, route},
 };
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
@@ -33,14 +29,7 @@ async fn pick_folder(cx: &Cx, Form(posted): Form<PickStart>) -> Result<Response>
         Picked::Cancelled => serde_json::json!({}),
         Picked::Unavailable => serde_json::json!({ "unavailable": true }),
     };
-    (
-        [(
-            topcoat::router::header::CONTENT_TYPE,
-            topcoat::router::HeaderValue::from_static("application/json"),
-        )],
-        body.to_string(),
-    )
-        .into_response(cx)
+    json(cx, body.to_string(), false)
 }
 
 /// A typed path cannot climb by `..` segments.

@@ -21,7 +21,7 @@ impl FormError {
 }
 
 /// `message` as a capitalised sentence with a period (the CLI prints fragments).
-pub fn sentence(message: &str) -> String {
+pub(super) fn sentence(message: &str) -> String {
     let message = message.trim().replace(" github ", " GitHub ");
     let mut chars = message.chars();
     let mut out: String = chars

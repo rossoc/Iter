@@ -6,7 +6,6 @@ use super::load::{board_of, unfinished};
 use super::open_db;
 use super::pick::{Picked, picked_in};
 use super::ui::KANBAN;
-use super::ui::board_root::board_root;
 use super::ui::empty_state::empty_state;
 use super::ui::frame::frame;
 use super::ui::layout::info_columns;
@@ -66,12 +65,20 @@ pub async fn board_screen(
             if empty {
                 empty_state(svg: KANBAN, (BOARD_EMPTY))
             } else {
-                board_root(post: post, style: style, note: note,
+                // `board.js` sends a drop to `data-post` and rewrites the notes region after load
+                // (a live region reads only changes); the page has the region and the script, or neither.
+                <div class="board-root" data-post=(post) if !style.is_empty() { style=(style) }>
+                    <div class="board-notes" role="status">
+                        if !note.is_empty() {
+                            <p class="notice">(note)</p>
+                        }
+                    </div>
                     info_columns(class: if folded { "side-folded" } else { "" },
                         <div>(child)</div>
                         (side)
                     )
-                )
+                </div>
+                <script src="/board.js" defer=""></script>
             }
         )
     })

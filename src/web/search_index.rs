@@ -1,5 +1,6 @@
 //! `GET /search?q=`: the palette's results as JSON, read from the database and notes folders on each request and ranked by `search.rs`.
 
+use super::assets::json;
 use super::open_db;
 use super::search::{Entry, Hit, Kind, search};
 use super::url::{board_url, note_url, org_url, project_url, task_url};
@@ -10,13 +11,7 @@ use std::collections::HashMap;
 use topcoat::{
     Result,
     context::Cx,
-    router::{
-        HeaderValue, RouterBuilder,
-        header::{CACHE_CONTROL, CONTENT_TYPE},
-        query_params,
-        response::{IntoResponse, Response},
-        route,
-    },
+    router::{RouterBuilder, query_params, response::Response, route},
 };
 
 const LIMIT: usize = 50;
@@ -159,14 +154,7 @@ async fn results(cx: &Cx) -> Result<Response> {
     let all = entries(&open_db()?)?;
     let hits = search(&all, query.q.as_deref().unwrap_or_default(), LIMIT);
     let body = to_json(&hits);
-    (
-        [
-            (CONTENT_TYPE, HeaderValue::from_static("application/json")),
-            (CACHE_CONTROL, HeaderValue::from_static("no-store")),
-        ],
-        body,
-    )
-        .into_response(cx)
+    json(cx, body, true)
 }
 
 #[cfg(test)]

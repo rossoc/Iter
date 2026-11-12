@@ -4,12 +4,11 @@ use super::Id;
 use super::board_header::{BoardSection, board_header};
 use super::load::board_of;
 use super::open_db;
-use super::project_new::{Home, ProjectCreate, project_modal};
+use super::create::{Home, ProjectCreate, project_modal};
 use super::project_rows::{project_search, projects_section};
 use super::sections::InfoQuery;
 use super::text::NO_PROJECTS;
 use super::ui::frame::frame;
-use super::ui::layout::info_body;
 use super::ui::prose::description;
 use super::url::{BOARDS, board_info_url};
 use crate::db::{Db, Table};
@@ -64,10 +63,10 @@ pub async fn screen(
             error: refused,
             dialog: dialog,
             board_header(board: board, section: BoardSection::Info)
-            info_body(
+            <div class="info-body">
                 description(text: &board.description)
                 projects_section(projects: projects, empty: NO_PROJECTS, search: Some(search), add: Some(add))
-            )
+            </div>
         )
     })
 }

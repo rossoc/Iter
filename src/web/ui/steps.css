@@ -1,5 +1,3 @@
-.plan-progress{display:flex;align-items:center;gap:12px;margin:0 0 16px;color:var(--muted);font-size:.875rem}
-.plan-progress progress{flex:0 1 16rem;height:8px;accent-color:var(--accent)}
 .plan-part{margin:0 0 18px}
 .plan-block{margin-top:44px;padding-top:20px;border-top:1px solid var(--line)}
 .plan-title{margin:0 0 16px;font-size:1.125rem;font-weight:600;letter-spacing:-.01em;color:var(--fg)}
@@ -28,7 +26,6 @@
 .agent-grid.bare{grid-template-columns:minmax(0,1fr)}
 .agent-main{min-width:0}
 .plan-rail{position:sticky;top:var(--stick-top)}
-.plan-rail .rail-sum{margin:6px 0 0;color:var(--muted);font-size:.8125rem}
 .plan-rail ol{list-style:none;margin:10px 0 0;padding:0}
 .plan-rail li+li{margin-top:2px}
 .toc a,.plan-rail a,.plan-rail .loose{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 12px;padding:8px 10px;border-radius:var(--r-md);
@@ -51,25 +48,15 @@
 .agents td.acts{width:1%;white-space:nowrap;text-align:right}
 .agents td.acts .post-form+.post-form{margin-left:6px}
 .button.icon-only{padding:3px 8px}
-.panel.compose,.panel.run-page{position:static;margin:0 0 20px}
-.compose .kinds{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 14px}
-.compose .kinds a{padding:4px 0;color:var(--muted);border-bottom:2px solid transparent}
-.compose .kinds a:hover{color:var(--fg)}
-.compose .kinds a[aria-current]{color:var(--fg);border-bottom-color:var(--accent)}
+.panel.compose{position:static;margin:0 0 20px}
 .compose form{display:grid;gap:14px;min-width:0}
 .compose form>*,.compose-pick>*{min-width:0}
 .compose-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:12px}
 .compose textarea.control{min-height:22rem;font:.8125rem/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .compose-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
 .compose-drop{margin-top:10px}
-.run-page dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:4px 0 14px}
-.run-page .told{margin-top:12px}
-.run-page h3.label{margin:16px 0 6px}
 .empty-line.note{margin-top:12px}
 .prompts-intro{margin:0 0 24px;max-width:var(--measure);color:var(--muted)}
-.prompt-form{display:grid;gap:12px}
-.prompt-from{margin:0 0 8px;overflow-wrap:anywhere}
-.prompt-form textarea.control{min-height:14rem;font:.8125rem/1.5 var(--mono)}
 .instructions .sub{display:block;margin-top:2px;font-size:.8125rem;color:var(--muted);overflow-wrap:anywhere}
 .instructions .hint,.tbl .hint{font:.75rem var(--mono);color:var(--muted)}
 .prompt-head{margin:20px 0 6px}
@@ -98,9 +85,6 @@
 .points .done .step-text{color:var(--muted)}
 .point-head{display:flex;justify-content:space-between;gap:12px;margin:14px 0 2px;font-size:.8125rem;font-weight:500;color:var(--muted);text-transform:capitalize}
 .point-head .state{font:.75rem var(--mono);color:var(--muted);font-weight:400}
-.plan-rail .rail-sum{display:none}
-.run-box{position:static}
-.run-box .compose-actions{margin-top:14px}
 .output-links{display:flex;gap:16px;margin:16px 0 0;font-size:.875rem}
 .settings-form{display:grid;gap:14px}
 .settings-form textarea.control{min-height:22rem;font:.8125rem/1.5 var(--mono)}

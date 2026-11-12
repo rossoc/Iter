@@ -1,11 +1,10 @@
 //! The document every page shares (`<html>`, stylesheet, footer) and the script the board pages load.
 
-use super::assets::Asset;
+use super::assets::{Asset, serve};
 use super::footer::site_footer_for;
 use topcoat::{
     Result,
-    context::Cx,
-    router::{RouterBuilder, Slot, layout, response::Response, route},
+    router::{RouterBuilder, Slot, layout},
     view::{View, view},
 };
 
@@ -13,7 +12,10 @@ static BOARD_JS: Asset = Asset::js(include_str!("board.js"));
 static FAVICON: Asset = Asset::icon(include_bytes!("favicon.ico"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
-    builder.layout(root).route(board_script).route(favicon)
+    serve(
+        builder.layout(root),
+        &[("/board.js", &BOARD_JS), ("/favicon.ico", &FAVICON)],
+    )
 }
 
 #[layout("/")]
@@ -30,14 +32,4 @@ async fn root(slot: Slot<'_>) -> Result<impl View> {
             <body>(slot) site_footer_for()</body>
         </html>
     })
-}
-
-#[route(GET "/board.js")]
-async fn board_script(cx: &Cx) -> Result<Response> {
-    BOARD_JS.respond(cx)
-}
-
-#[route(GET "/favicon.ico")]
-async fn favicon(cx: &Cx) -> Result<Response> {
-    FAVICON.respond(cx)
 }

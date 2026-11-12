@@ -1,16 +1,21 @@
 //! The Agent tab of the task page: the plan, a step opened beside it, and the notes and sketches in the task's folder.
 
-use super::task_runs::{Roster, roster_block};
+use super::task_compose::Compose;
+use super::task_runs::{act, label_of, state_pill};
 use super::ui::button::post_button;
 use super::ui::prose::description;
 use super::ui::table::{AddRow, cell, data_table, row};
-use super::ui::{CIRCLE, CIRCLE_CHECK, HALF, icon};
-use super::url::{plan_step_url, task_step_url};
+use super::ui::{CIRCLE, CIRCLE_CHECK, HALF, PLAY, STOP, X, icon};
+use super::url::{
+    RunAction, agent_tab_url, agent_url, plan_step_url, run_action_url, task_step_url, task_url,
+};
 use super::{Id, open_db};
-use crate::agent::instruction;
+use crate::agent::instruction::{self, Layers};
 use crate::agent::plan::{self, Item, Plan, State};
+use crate::agent::run::{Harness, RunRecord};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
+use crate::config::config;
 use crate::db::Db;
 use crate::error::{IterError, Result as Loaded};
 use crate::models::{Project, Task};
@@ -282,7 +287,7 @@ pub(super) async fn step_panel(task_id: i64, item: &Item) -> Result<impl View> {
                     post_button(action: plan_step_url(task_id, &item.id), fields: vec![("state", s.label().to_string())], small: true, (verb(*s)))
                 }
             </div>
-            <a class="step-close" href=(format!("/task/{task_id}?tab=agent"))>"Close"</a>
+            <a class="step-close" href=(agent_tab_url(&task_url(task_id)))>"Close"</a>
         </aside>
     })
 }
@@ -382,7 +387,7 @@ struct MarkForm {
 }
 
 #[derive(Debug)]
-pub enum Refusal {
+pub(super) enum Refusal {
     State(String),
     Missing,
     Io(std::io::Error),
@@ -422,6 +427,161 @@ async fn mark_step(cx: &Cx, Form(form): Form<MarkForm>) -> Result<Response> {
         Err(Refusal::Io(e)) => return Err(e.into()),
     }
     Err(see_other(task_step_url(id, &step)).into())
+}
+
+const RUNS: usize = 50;
+
+#[derive(Default)]
+pub struct Roster {
+    pub runs: Vec<RunRecord>,
+    pub compose: Option<Compose>,
+    pub current: Option<u32>,
+}
+
+fn defaults() -> (String, String) {
+    let models = Harness::Claude.models(&config().agent.models);
+    (
+        models.first().cloned().unwrap_or_default(),
+        "medium".to_string(),
+    )
+}
+
+fn offered(layers: &Layers, has_plan: bool) -> Vec<(String, String)> {
+    instruction::list(layers)
+        .into_iter()
+        .filter(|i| has_plan || i.name == "plan")
+        .map(|i| {
+            let label = label_of(&i.name);
+            (i.name, label)
+        })
+        .collect()
+}
+
+impl Roster {
+    pub fn load(
+        app: &App,
+        name: &str,
+        dir: Option<&TaskDir>,
+        open: &Open,
+        layers: &Layers,
+        has_plan: bool,
+    ) -> Roster {
+        let mut roster = Roster::default();
+        let Some(dir) = dir else {
+            return roster;
+        };
+        roster.runs = dir.runs().into_iter().rev().take(RUNS).collect();
+        let asked = open.run.and_then(|r| r.parse::<u32>().ok());
+        let found = asked.and_then(|n| roster.runs.iter().find(|r| r.n == n).cloned());
+        let (mut model, effort) = defaults();
+        if open.new == Some("agent") {
+            let chosen = open
+                .instruction
+                .unwrap_or(if has_plan { "develop" } else { "plan" });
+            let inst = instruction::find(chosen, layers)
+                .or_else(|| instruction::find("plan", layers))
+                .expect("the built-in instruction is always there");
+            let models = Harness::Claude.models(&config().agent.models);
+            if let Some(m) = instruction::preferred_model(&inst.front, &models) {
+                model = m;
+            }
+            let kind = inst.kind();
+            let (prompt, error) = match crate::agent::task_prompt::prompt_for(
+                app,
+                Some(name),
+                kind,
+                inst.path.as_deref(),
+                true,
+                None,
+                true,
+            ) {
+                Ok(text) => (text, None),
+                Err(e) => (String::new(), Some(e.to_string())),
+            };
+            roster.compose = Some(Compose {
+                instruction: inst.name.clone(),
+                offered: offered(layers, has_plan),
+                run: None,
+                model,
+                effort,
+                prompt,
+                error,
+            });
+        } else if let Some(run) = found {
+            roster.current = Some(run.n);
+            if run.is_queued() {
+                roster.compose = Some(Compose {
+                    instruction: run.instruction_name().to_string(),
+                    offered: offered(layers, has_plan),
+                    run: Some(run.n),
+                    model: run.model.clone(),
+                    effort: run.effort.clone(),
+                    prompt: std::fs::read_to_string(dir.run_prompt_path(run.n)).unwrap_or_default(),
+                    error: None,
+                });
+            }
+        }
+        roster
+    }
+}
+
+#[component]
+async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl View> {
+    let shown = run.shown_status();
+    Ok(view! {
+        row(class: if current { "current" } else { "" },
+            cell(
+                <a class="u" href=(agent_url(task_id, run.n)) if current { aria-current="true" }>
+                    "#" (run.n.to_string()) " " (label_of(run.instruction_name()))
+                </a>
+                // what it was told to use: only on the row under the pointer
+                <span class="hint">(run.model.as_str()) ", " (run.effort.as_str())</span>
+            )
+            cell(state_pill(run: run))
+            cell(class: "acts",
+                if shown == "queued" {
+                    act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
+                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
+                } else if shown == "running" {
+                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop", svg: STOP)
+                }
+            )
+        )
+    })
+}
+
+#[component]
+async fn agents_table(task_id: i64, roster: &Roster) -> Result<impl View> {
+    let new = format!("{}&new=agent", agent_tab_url(&task_url(task_id)));
+    Ok(view! {
+        data_table(caption: "Agents of this task, the latest first", columns: &["Agent", "Status"], actions: true,
+            class: "tasks agents", add: Some(AddRow::link(&new, "New agent\u{2026}")),
+            empty: roster.runs.is_empty().then_some("No agent has worked on this task yet."),
+            for run in roster.runs.iter() {
+                agent_row(task_id: task_id, run: run, current: roster.current == Some(run.n))
+            }
+        )
+    })
+}
+
+#[component]
+pub async fn roster_block(
+    task_id: i64,
+    roster: &Roster,
+    step: Option<&Item>,
+    note: Option<&str>,
+) -> Result<impl View> {
+    Ok(view! {
+        <div class="roster">
+            if let Some(item) = step {
+                step_panel(task_id: task_id, item: item)
+            }
+            agents_table(task_id: task_id, roster: roster)
+            if let Some(note) = note {
+                <p class="empty-line note">(note)</p>
+            }
+        </div>
+    })
 }
 
 #[cfg(test)]

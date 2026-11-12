@@ -1,4 +1,3 @@
-use crate::db::Table;
 use crate::error::{IterError, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -10,6 +9,7 @@ mod push;
 mod session;
 mod session_config;
 mod settings;
+mod table;
 mod tag;
 mod task;
 
@@ -21,6 +21,7 @@ pub use session::Session;
 pub use session_config::SessionConfig;
 pub(crate) use settings::Configured;
 pub use settings::Settings;
+pub(crate) use table::Table;
 #[cfg(feature = "web")]
 pub use tag::is_hex_color;
 pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};

@@ -76,7 +76,7 @@ pub struct PickWords {
 }
 
 impl PickWords {
-    pub const MOVING: PickWords = PickWords {
+    pub(super) const MOVING: PickWords = PickWords {
         verb: "Moving",
         action: "Move",
     };
