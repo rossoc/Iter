@@ -8,6 +8,7 @@ use super::ui::field::{field, select};
 use super::ui::modal::modal;
 use super::ui::notice::notice;
 use super::ui::{CLIPBOARD_CHECK, COPY, PUSH, icon};
+use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
 use crate::models::Organization;
 use crate::platform::PlatformItem;
@@ -195,6 +196,15 @@ pub enum Outcome {
     Copied(String),
     Preview(Box<Preview>),
     Done(Vec<Item>),
+    /// A push already made, read back from the ledger after the redirect (`?pushed=<hash>`): its result lines.
+    Recorded(Vec<String>),
+}
+
+/// The result of the push with this hash, as the ledger recorded it.
+pub fn recorded(db: &Db, id: i64, hash: &str) -> IterResult<Option<Outcome>> {
+    Ok(db
+        .find_push(id, hash)?
+        .map(|row| Outcome::Recorded(row.results.lines().map(String::from).collect())))
 }
 
 #[derive(Debug)]
@@ -303,6 +313,15 @@ pub async fn share_outcome(outcome: &Outcome) -> Result<impl View> {
             } else if let Outcome::Copied(text) = outcome {
                 notice(id: "share-result", focus: true, "Copy this text:")
                 <textarea class="control share-text" readonly="" rows="8" aria-label="Text to copy">(text.as_str())</textarea>
+            } else if let Outcome::Recorded(lines) = outcome {
+                notice(error: lines.iter().any(|l| l.starts_with("FAILED")), id: "share-result", focus: true,
+                    (if lines.iter().any(|l| l.starts_with("FAILED")) { "Pushed, but some steps failed." } else { "Pushed." })
+                )
+                <ul class="share-items">
+                    for line in lines.iter() {
+                        <li class=(if line.starts_with("FAILED") { "bad" } else { "" })>(line.as_str())</li>
+                    }
+                </ul>
             } else if let Outcome::Done(items) = outcome {
                 notice(error: items.iter().any(|i| i.error.is_some()), id: "share-result", focus: true,
                     (if items.iter().any(|i| i.error.is_some()) { "Pushed, but some steps failed." } else { "Pushed." })

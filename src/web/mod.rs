@@ -89,6 +89,7 @@ fn now() -> chrono::NaiveDateTime {
 fn router() -> Router {
     let builder = Router::builder()
         .layer(blocking::off_the_workers)
+        .layer(guard::security_headers)
         .layer(guard::local_only)
         .layer(LayerFn::new(None::<&'static str>, errors::error_pages));
     [

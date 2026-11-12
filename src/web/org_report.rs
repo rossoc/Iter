@@ -295,6 +295,32 @@ pub async fn report_view(
     })
 }
 
+pub fn share_text(report: &Report, format: ShareFormat) -> String {
+    match format {
+        ShareFormat::Worklog => worklog_text(report.projects.iter().flat_map(|p| &p.tasks)),
+        ShareFormat::Status => super::org_report::status_list(report),
+    }
+}
+
+/// The Share pop-up of `report`, closing to `close`.
+pub fn share_dialog(
+    org: &crate::models::Organization,
+    base: &str,
+    report: &Report,
+    close: String,
+) -> ShareDialog {
+    ShareDialog::new(
+        org,
+        base,
+        &report.range,
+        (
+            share_text(report, ShareFormat::Worklog),
+            share_text(report, ShareFormat::Status),
+        ),
+        close,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -328,30 +354,4 @@ mod tests {
         };
         assert_eq!(neighbours(&all, today), (None, None));
     }
-}
-
-pub fn share_text(report: &super::org_report::Report, format: ShareFormat) -> String {
-    match format {
-        ShareFormat::Worklog => worklog_text(report.projects.iter().flat_map(|p| &p.tasks)),
-        ShareFormat::Status => super::org_report::status_list(report),
-    }
-}
-
-/// The Share pop-up of `report`, closing to `close`.
-pub fn share_dialog(
-    org: &crate::models::Organization,
-    base: &str,
-    report: &Report,
-    close: String,
-) -> ShareDialog {
-    ShareDialog::new(
-        org,
-        base,
-        &report.range,
-        (
-            share_text(report, ShareFormat::Worklog),
-            share_text(report, ShareFormat::Status),
-        ),
-        close,
-    )
 }

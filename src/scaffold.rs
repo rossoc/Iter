@@ -13,6 +13,17 @@ pub fn absolute_path(path: &str) -> Result<String> {
     Ok(std::path::absolute(path)?.to_string_lossy().to_string())
 }
 
+/// Makes `project`'s `base_path` absolute (and `~` expanded) for every write path: a relative
+/// path names a different directory wherever `iter` later runs. An empty one stays empty, for
+/// `Project::validate` to refuse.
+pub fn absolutise_base_path(project: &mut crate::models::Project) -> Result<()> {
+    let path = project.base_path.trim();
+    if !path.is_empty() {
+        project.base_path = absolute_path(path)?;
+    }
+    Ok(())
+}
+
 /// The final component of `path` (the default project name); empty if none.
 pub fn dir_name(path: &str) -> String {
     Path::new(path)

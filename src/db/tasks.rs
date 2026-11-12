@@ -3,6 +3,18 @@
 use super::*;
 
 impl Db {
+    /// Points `task` (row `id`, in project `from`) at project `to`; nothing is written. A task
+    /// with a session cannot move: its worktree and branch live in `from`'s repo.
+    pub fn move_task(&self, id: i64, task: &mut Task, from: &Project, to: &Project) -> Result<()> {
+        if to.id() != from.id() {
+            if self.find_session_config_by_task(id)?.is_some() {
+                return Err(IterError::TaskHasSession(task_ref(&from.name, &task.name)));
+            }
+            task.project_id = to.id();
+        }
+        Ok(())
+    }
+
     /// Every task on board `id`'s projects as a [`Card`], by project then task; three queries.
     pub fn cards(&self, board_id: i64) -> Result<Vec<Card>> {
         let mut tasks = self.tasks_of::<Board>(board_id, false)?;

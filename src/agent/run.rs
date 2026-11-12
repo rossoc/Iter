@@ -3,6 +3,7 @@
 use crate::agent::error::AgentResult;
 use crate::agent::prompt::Kind;
 use crate::agent::taskdir::TaskDir;
+use crate::process::{Runner, SYSTEM};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -193,22 +194,106 @@ impl RunRecord {
     }
 }
 
-/// Whether `pid` exists and is not a zombie (`kill -0` answers for those).
+/// Whether `pid` exists and is not a zombie (`kill -0` answers for those). Pid 0 and 1 are
+/// never a run: `kill -0 0` answers for the caller's own group.
 pub fn alive(pid: u32) -> bool {
-    let pid = pid.to_string();
-    if !crate::process::succeeds("kill", None, &["-0".to_string(), pid.clone()]) {
-        return false;
-    }
-    crate::process::output_trimmed("ps", None, &["-o", "stat=", "-p", &pid])
-        .is_none_or(|stat| !stat.starts_with('Z'))
+    Procs::recent().alive(pid)
 }
 
-/// Asks a run's process to stop: its whole group when it leads one, else the process.
+/// Asks a run's process to stop: its whole group, when `pid` is a process iter can vouch for
+/// (see [`Procs::signalable`]). The record is a file the agent can write, so its `pid` is a
+/// claim; there is no fallback to a bare pid.
 pub fn interrupt(pid: u32) -> bool {
-    let pid = pid.to_string();
-    let args = |target: String| ["-TERM".to_string(), "--".to_string(), target];
-    crate::process::succeeds("kill", None, &args(format!("-{pid}")))
-        || crate::process::succeeds("kill", None, &args(pid))
+    interrupt_with(&SYSTEM, pid)
+}
+
+fn interrupt_with(runner: &dyn Runner, pid: u32) -> bool {
+    if !Procs::scan(runner).signalable(pid) {
+        return false;
+    }
+    runner.succeeds("kill", None, &["-TERM", "--", &format!("-{pid}")])
+}
+
+/// One `ps` of every process: `pid pgid stat comm`.
+struct Procs(Vec<Proc>);
+
+struct Proc {
+    pid: u32,
+    pgid: u32,
+    zombie: bool,
+    /// The program's file name (macOS prints a path).
+    comm: String,
+}
+
+impl Procs {
+    fn scan(runner: &dyn Runner) -> Procs {
+        let text = runner
+            .output("ps", None, &["-A", "-o", "pid=,pgid=,stat=,comm="])
+            .unwrap_or_default();
+        Procs(text.lines().filter_map(Proc::parse).collect())
+    }
+
+    /// The scan of the last second, or a new one: a page asks about every running record in
+    /// turn, and each used to cost two spawns.
+    fn recent() -> std::sync::Arc<Procs> {
+        use std::sync::{Arc, Mutex};
+        use std::time::{Duration, Instant};
+        static LAST: Mutex<Option<(Instant, Arc<Procs>)>> = Mutex::new(None);
+        let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+        match last.as_ref() {
+            Some((at, procs)) if at.elapsed() < Duration::from_secs(1) => procs.clone(),
+            _ => {
+                let procs = Arc::new(Procs::scan(&SYSTEM));
+                *last = Some((Instant::now(), procs.clone()));
+                procs
+            }
+        }
+    }
+
+    fn get(&self, pid: u32) -> Option<&Proc> {
+        self.0.iter().find(|p| p.pid == pid)
+    }
+
+    /// Exists and is not a zombie; pid 0 and 1 are never a run.
+    fn alive(&self, pid: u32) -> bool {
+        pid > 1 && self.get(pid).is_some_and(|p| !p.zombie)
+    }
+
+    /// Whether iter may signal `-pid`: a live process other than 0 and init that leads its own
+    /// group (what `spawn_detached` makes), whose program is iter or claude, and that is
+    /// neither this process nor in its group (the record could name the server).
+    fn signalable(&self, pid: u32) -> bool {
+        let me = std::process::id();
+        let my_group = self.get(me).map(|p| p.pgid);
+        pid > 1
+            && pid != me
+            && self.get(pid).is_some_and(|p| {
+                !p.zombie
+                    && p.pgid == pid
+                    && Some(p.pgid) != my_group
+                    && matches!(p.comm.as_str(), "iter" | "claude")
+            })
+    }
+}
+
+impl Proc {
+    fn parse(line: &str) -> Option<Proc> {
+        let mut fields = line.split_whitespace();
+        let pid = fields.next()?.parse().ok()?;
+        let pgid = fields.next()?.parse().ok()?;
+        let stat = fields.next()?;
+        // The program's path may hold spaces: it is the rest of the line.
+        let comm = (0..3).fold(line.trim_start(), |rest, _| {
+            rest.trim_start_matches(|c: char| !c.is_whitespace())
+                .trim_start()
+        });
+        Some(Proc {
+            pid,
+            pgid,
+            zombie: stat.starts_with('Z'),
+            comm: comm.rsplit('/').next().unwrap_or(comm).trim().to_string(),
+        })
+    }
 }
 
 impl TaskDir {
@@ -273,7 +358,7 @@ impl TaskDir {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(crate::agent::taskdir::write_whole(
+        Ok(crate::utils::fs::write_whole(
             &self.runs_dir(),
             &self.run_path(run.n),
             &text,
@@ -373,6 +458,80 @@ mod tests {
         assert_eq!(d.next_run(), 3);
         assert_eq!(d.runs(), vec![first, run(2)]);
         assert_eq!(d.read_run(9).unwrap(), None);
+    }
+
+    fn ps(rows: &[&str]) -> crate::process::fake::FakeRunner {
+        let runner = crate::process::fake::FakeRunner::default();
+        runner.reply("ps ", &rows.join("\n"));
+        runner
+    }
+
+    fn kills(runner: &crate::process::fake::FakeRunner) -> Vec<String> {
+        let calls = runner.calls();
+        calls
+            .into_iter()
+            .filter(|c| c.starts_with("kill"))
+            .collect()
+    }
+
+    #[test]
+    fn a_pid_below_two_is_never_signalled() {
+        let runner = ps(&["0 0 Ss kernel_task", "1 1 Ss /sbin/launchd", "2 2 S iter"]);
+        assert!(!interrupt_with(&runner, 0));
+        assert!(!interrupt_with(&runner, 1));
+        assert!(kills(&runner).is_empty());
+        assert!(!alive(0) && !alive(1));
+    }
+
+    #[test]
+    fn many_pids_cost_one_ps_and_zombies_are_not_alive() {
+        let runner = ps(&["10 10 S iter", "11 11 Z iter", "12 12 R claude"]);
+        let procs = Procs::scan(&runner);
+        assert_eq!(runner.calls().len(), 1);
+        assert!(procs.alive(10) && !procs.alive(11) && procs.alive(12));
+        assert!(!procs.alive(13) && !procs.alive(0) && !procs.alive(1));
+        assert_eq!(runner.calls().len(), 1, "asking again does not spawn");
+    }
+
+    #[test]
+    fn a_group_leader_that_is_iter_or_claude_is_signalled_by_group() {
+        let runner = ps(&["500 500 S /usr/local/bin/iter", "600 600 S+ claude"]);
+        assert!(interrupt_with(&runner, 500));
+        assert!(interrupt_with(&runner, 600));
+        assert_eq!(kills(&runner), ["kill -TERM -- -500", "kill -TERM -- -600"]);
+    }
+
+    #[test]
+    fn a_foreign_group_or_program_is_not_signalled() {
+        let runner = ps(&[
+            "500 1 S iter",
+            "501 501 S vim",
+            "502 502 Z iter",
+            "503 503 S Google Chrome Helper",
+        ]);
+        for pid in [500, 501, 502, 503, 999] {
+            assert!(!interrupt_with(&runner, pid), "{pid}");
+        }
+        assert!(kills(&runner).is_empty());
+    }
+
+    #[test]
+    fn this_process_and_its_group_are_not_signalled() {
+        let me = std::process::id();
+        let runner = ps(&[
+            &format!("{me} {me} S iter"),
+            &format!("{} {me} S claude", me + 1),
+        ]);
+        assert!(!interrupt_with(&runner, me));
+        assert!(!interrupt_with(&runner, me + 1));
+        assert!(kills(&runner).is_empty());
+    }
+
+    #[test]
+    fn a_program_path_with_spaces_is_read_whole() {
+        let p = Proc::parse(" 77  77 S  /Applications/My App/iter").unwrap();
+        assert_eq!((p.pid, p.pgid, p.comm.as_str()), (77, 77, "iter"));
+        assert!(Proc::parse("garbage").is_none());
     }
 
     #[test]

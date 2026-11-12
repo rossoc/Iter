@@ -2,9 +2,10 @@
 //! organization's time platform. The pop-up and its data are `share_dialog.rs`.
 
 use super::org::{Loaded, load as load_org, screen};
-use super::org_report::share_text;
+use super::org_report::{report_link, share_text};
 use super::sections::Section;
 use super::share_dialog::{Modality, Outcome, Preview, ShareForm, ShareFormat};
+use super::url::{org_url, page_url};
 use super::{Id, now, open_db};
 use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
@@ -18,7 +19,7 @@ use chrono::NaiveDateTime;
 use topcoat::{
     Result,
     context::Cx,
-    router::{RouterBuilder, content::Form, page, path_param},
+    router::{RouterBuilder, content::Form, error::see_other, page, path_param},
     view::{View, view},
 };
 
@@ -30,7 +31,7 @@ type Connect<'a> = &'a dyn Fn(&Organization) -> IterResult<Box<dyn TimePlatform>
 
 fn connect_real(org: &Organization) -> IterResult<Box<dyn TimePlatform>> {
     let key = secret::resolve_env(&Keychain, &org.name)?;
-    Ok(Box::new(JsonWebhook::new(&org.platform_url, key)))
+    Ok(Box::new(JsonWebhook::new(&org.platform_url, key)?))
 }
 
 pub fn handle(
@@ -94,15 +95,21 @@ fn push_step(
     if !form.activity.is_empty() {
         target.activity = form.activity.clone();
     }
-    let plan = push::plan(db, org, range, now, &target)?;
     let platform = connect(org)?;
-    let check = push::check(db, org, &plan, platform.as_ref())?;
+    let prepared = push::prepare(db, org, range, now, &target, platform.as_ref())?;
+    let push::Prepared {
+        plan,
+        check,
+        warnings,
+        ..
+    } = &prepared;
 
-    if form.confirm && form.hash == plan.hash {
-        let items = push::execute(db, org, &plan, &check, platform.as_ref(), gh, now)?;
+    // An identical worklog already pushed is previewed (flagged), never pushed twice.
+    if form.confirm && form.hash == plan.hash && !check.already_pushed {
+        let ids = prepared.resolved()?;
+        let items = push::execute(db, org, plan, check, ids, platform.as_ref(), gh, now)?;
         return Ok(Outcome::Done(items));
     }
-    let warnings = push::unknown_targets(platform.as_ref(), &target);
     let mut next = form.clone();
     next.hash = plan.hash.clone();
     next.organization = target.organization;
@@ -110,13 +117,23 @@ fn push_step(
     next.confirm = false;
     Ok(Outcome::Preview(Box::new(Preview {
         text: plan.preview(),
-        warnings,
+        warnings: warnings.clone(),
         conflicts: check.conflict_lines(),
         already: check.already_pushed,
         // asked to confirm a worklog that is no longer the one previewed
         changed: form.confirm,
         form: next,
     })))
+}
+
+/// Where a confirmed push goes on to (303): the report, naming the ledger row the push wrote.
+/// None for anything else, and for a push the platform took nothing of (no row to show).
+fn pushed_url(db: &Db, id: i64, form: &ShareForm, outcome: &Outcome) -> IterResult<Option<String>> {
+    if !matches!(outcome, Outcome::Done(_)) || db.find_push(id, &form.hash)?.is_none() {
+        return Ok(None);
+    }
+    let report = report_link(&org_url(id), Some(&form.from), Some(&form.to));
+    Ok(Some(page_url(&report, &[("pushed", Some(&form.hash))])))
 }
 
 #[page(POST "/org/{id}/share")]
@@ -126,6 +143,10 @@ async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl
     let db = open_db()?;
     let now = now();
     let outcome = handle(&db, id, &form, now, &connect_real, &GhCli::system());
+    // A push is answered with a redirect to the report, so a refresh repeats a GET, not the push.
+    if let Some(url) = pushed_url(&db, id, &form, &outcome)? {
+        return Err(see_other(url).into());
+    }
     // the Report tab of the period asked for, or the default when it was bad
     let valid = form.range(now).is_ok();
     let (from, to) = match valid {
@@ -146,6 +167,7 @@ mod tests {
     use crate::platform::fake::FakePlatform;
     use crate::secret::fake::MemoryKeys;
     use crate::secret::{KeyStore, Secret};
+    use crate::web::share_dialog::recorded;
 
     use crate::github::fake::Inert as NoGh;
 
@@ -285,6 +307,46 @@ mod tests {
             panic!("preview")
         };
         assert!(second.already && second.conflicts.is_empty());
+    }
+
+    /// A refresh of the confirming POST must not push again: one ledger row, and the second
+    /// answer is the flagged preview. The first is a redirect to the report naming the row.
+    #[test]
+    fn a_confirmed_push_is_redirected_and_cannot_be_repeated() {
+        let (db, id) = setup("http://x/log");
+        let Outcome::Preview(p) = handle(&db, id, &form("push"), now(), &fake, &NoGh) else {
+            panic!("preview")
+        };
+        let confirm = ShareForm {
+            confirm: true,
+            ..p.form.clone()
+        };
+        let first = handle(&db, id, &confirm, now(), &fake, &NoGh);
+        let url = pushed_url(&db, id, &confirm, &first).unwrap().unwrap();
+        assert_eq!(
+            url,
+            format!(
+                "/org/{id}?tab=report&from=2026-09-04&to=2026-09-04&pushed={}",
+                confirm.hash
+            )
+        );
+
+        let Outcome::Preview(again) = handle(&db, id, &confirm, now(), &fake, &NoGh) else {
+            panic!("a second confirm is previewed, not pushed")
+        };
+        assert!(again.already);
+        assert_eq!(db.list::<crate::models::Push>().unwrap().len(), 1);
+        assert!(
+            pushed_url(&db, id, &confirm, &Outcome::Error("x".into()))
+                .unwrap()
+                .is_none()
+        );
+
+        let Some(Outcome::Recorded(lines)) = recorded(&db, id, &confirm.hash).unwrap() else {
+            panic!("recorded")
+        };
+        assert!(lines[0].starts_with("ok: platform"));
+        assert!(recorded(&db, id, "nope").unwrap().is_none());
     }
 
     #[test]

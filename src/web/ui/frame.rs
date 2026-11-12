@@ -47,6 +47,7 @@ pub async fn frame(
         <script src="/search.js"></script>
         <script src="/combobox.js" defer=""></script>
         <script src="/path_pick.js" defer=""></script>
+        <script src="/notice.js" defer=""></script>
         <div class="page">
             <a class="skip" href="#main" if covered { inert="" }>"Skip to content"</a>
             <header class="bar" if covered { inert="" }>

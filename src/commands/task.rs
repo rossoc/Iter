@@ -4,13 +4,13 @@
 use crate::app::App;
 use crate::args::{ReportOpts, TaskCommand};
 use crate::commands::ingest;
-use crate::wiki::ingest_job::{self, Trigger};
 use crate::commands::sync::{task_pull, task_push};
 use crate::commands::{Run, agent, solve};
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::git;
+use crate::tmux::{Multiplexer, TmuxClient};
 use crate::github::{self, GhCli, IssueTracker};
 use crate::md_edit::edited;
 use crate::models::require_name;
@@ -26,6 +26,7 @@ use crate::utils::resolve::{
     task_display,
 };
 use crate::utils::workspace::teardown_and_kill;
+use crate::wiki::ingest_job::{self, Trigger};
 
 /// Bare `iter task` (unfinished work across projects) is handled in `main`: no `TaskCommand` variant expresses it.
 impl Run for TaskCommand {
@@ -33,7 +34,7 @@ impl Run for TaskCommand {
         match self {
             Self::New { project, issue } => task_new(app, project.as_deref(), *issue),
             Self::Edit { task } => task_edit(app, task.as_deref()),
-            Self::Delete { task } => task_delete(app, task.as_deref()),
+            Self::Delete { task } => task_delete(app, &TmuxClient::system(), task.as_deref()),
             Self::Info { task, report } => task_info(app, task.as_deref(), report),
             Self::List { project, status } => {
                 let statuses = match status {
@@ -101,7 +102,7 @@ impl Run for TaskCommand {
                 run,
                 extra,
             } => crate::agent::solve::worker(app, *task_id, *run, extra),
-            Self::Done { task, save } => task_done(app, task.as_deref(), *save),
+            Self::Done { task, save } => task_done(app, &TmuxClient::system(), task.as_deref(), *save),
             Self::Pull {
                 project,
                 task,
@@ -196,12 +197,7 @@ fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
     edited(&template, "task", "updated", |mut edit| {
         let tag_ids = checked_tags(db, &edit)?;
         let target = chosen_project(db, &project, &edit.project)?;
-        if target.id() != project.id() && db.find_session_config_by_task(id)?.is_some() {
-            return Err(IterError::TaskHasSession(task_display(
-                &project, &edit.task,
-            )));
-        }
-        edit.task.project_id = target.id();
+        db.move_task(id, &mut edit.task, &project, &target)?;
         db.update(id, &edit.task)?;
         db.set_task_tags(id, &tag_ids)?;
         Ok(format!(
@@ -211,7 +207,7 @@ fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
     })
 }
 
-fn task_delete(app: &App, task_ref: Option<&str>) -> Result<()> {
+fn task_delete(app: &App, mux: &dyn Multiplexer, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
     let (project, task) = resolve_task_or_current(db, task_ref)?;
     let task_id = task.id();
@@ -222,7 +218,7 @@ fn task_delete(app: &App, task_ref: Option<&str>) -> Result<()> {
     db.delete::<Task>(task_id)?;
 
     if let Some(session_config) = session_config {
-        teardown_and_kill(db, &project, &session_config);
+        teardown_and_kill(db, mux, &project, &session_config);
     }
     println!("deleted task '{display}'");
     Ok(())
@@ -258,7 +254,7 @@ pub(crate) fn task_list(
     print_yaml(&app.db.task_refs(project_filter, statuses)?)
 }
 
-fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
+fn task_done(app: &App, mux: &dyn Multiplexer, task_ref: Option<&str>, save: bool) -> Result<()> {
     let db = &app.db;
     let (project, mut task) = resolve_task_or_current(db, task_ref)?;
     let task_id = task.id();
@@ -305,7 +301,7 @@ fn task_done(app: &App, task_ref: Option<&str>, save: bool) -> Result<()> {
     ingest::auto(app, &project, &task, Trigger::TaskDone);
 
     if let Some(session_config) = session_config {
-        teardown_and_kill(db, &project, &session_config);
+        teardown_and_kill(db, mux, &project, &session_config);
     }
 
     println!("task '{display}' marked done");
@@ -372,6 +368,11 @@ mod tests {
     use super::*;
     use crate::models::{Project, TaskStatus};
 
+    fn mux() -> TmuxClient<'static> {
+        let runner: &'static crate::process::fake::FakeRunner = Box::leak(Box::default());
+        TmuxClient::new(runner, false)
+    }
+
     fn app() -> App {
         App::with_db(crate::fixtures::db())
     }
@@ -398,7 +399,7 @@ mod tests {
         let start = crate::fixtures::dt("2026-09-01 09:00");
         crate::fixtures::add_session(&app.db, task_id, start, None);
 
-        task_done(&app, Some("proj/a task"), false).expect("task done succeeds");
+        task_done(&app, &mux(), Some("proj/a task"), false).expect("task done succeeds");
 
         let task: Task = app.db.get(task_id).expect("reload").expect("task exists");
         assert_eq!(task.status, TaskStatus::Done);
@@ -417,7 +418,7 @@ mod tests {
         let app = app();
         let (_, task_id) = seed(&app);
 
-        let error = task_done(&app, Some("proj/a task"), true).expect_err("nothing to save");
+        let error = task_done(&app, &mux(), Some("proj/a task"), true).expect_err("nothing to save");
         assert!(error.to_string().contains("proj/a task"), "{error}");
 
         let task: Task = app.db.get(task_id).expect("reload").expect("task exists");
@@ -428,9 +429,9 @@ mod tests {
     fn an_unknown_task_ref_is_reported() {
         let app = app();
         seed(&app);
-        let error = task_done(&app, Some("proj/nope"), false).expect_err("no such task");
+        let error = task_done(&app, &mux(), Some("proj/nope"), false).expect_err("no such task");
         assert!(error.to_string().contains("nope"), "{error}");
-        let error = task_done(&app, Some("nosuch/a task"), false).expect_err("no such project");
+        let error = task_done(&app, &mux(), Some("nosuch/a task"), false).expect_err("no such project");
         assert!(error.to_string().contains("nosuch"), "{error}");
     }
 

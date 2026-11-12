@@ -1,6 +1,7 @@
 //! Bridging a task's own notes into the project's note of the day.
 
 use super::*;
+use std::fmt::Write as _;
 
 /// On `task done`: appends the task's notes to the project's note of today under `## Task: <name>`, one `###` per file.
 /// Returns how many files went in; none if there was nothing to add or the section exists.
@@ -14,16 +15,13 @@ pub fn bridge_task_notes(app: &App, project: &Project, task: &Task) -> Result<us
         if text.trim().is_empty() {
             continue;
         }
-        body.push_str(&format!("### {}\n\n{}\n\n", file.name, text.trim()));
+        let _ = write!(body, "### {}\n\n{}\n\n", file.name, text.trim());
         count += 1;
     }
     if count == 0 {
         return Ok(0);
     }
-    let org = match project.organization_id {
-        Some(id) => app.db.get::<crate::models::Organization>(id)?,
-        None => None,
-    };
+    let org = app.db.org_of(project)?;
     let notes_dir = crate::notes::project_dir(project, &org).ok_or(AgentError::NoNotesFolder)?;
     let today = chrono::Local::now().date_naive();
     let added =

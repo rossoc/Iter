@@ -15,7 +15,8 @@ use crate::utils::output::list_names;
 use crate::utils::report::{resolve_range, task_reports, total_minutes};
 use crate::utils::resolve::resolve_project_or_current;
 use crate::utils::workspace::teardown_session_config;
-use crate::{git, scaffold, tmux};
+use crate::tmux::{Multiplexer, TmuxClient};
+use crate::{git, scaffold};
 
 /// The one way a project is created: opens `template` in the editor, validates, lets `populate` make the directory the edited `base_path` names, and only then inserts the row;
 /// so no project names a directory that was never made, and none is made for a `base_path` the user changed. `cloned_from` only names the origin in the message.
@@ -26,7 +27,7 @@ fn create_project_interactively(
     populate: impl FnOnce(&str) -> Result<()>,
 ) -> Result<()> {
     edited(template, Project::KIND, "created", |mut project| {
-        // Also absolutises `base_path` -- see `Project::check`.
+        scaffold::absolutise_base_path(&mut project)?;
         project.validate()?;
         populate(&project.base_path)?;
         db.insert(&project)?;
@@ -149,7 +150,7 @@ impl Run for ProjectCommand {
                 board.as_deref(),
                 *no_board,
             ),
-            Self::Delete { name } => project_delete(app, name.as_deref()),
+            Self::Delete { name } => project_delete(app, &TmuxClient::system(), name.as_deref()),
             Self::Info { name, report } => project_info(app, name.as_deref(), report),
             Self::List => project_list(app),
         }
@@ -184,10 +185,10 @@ fn project_edit(
     // neither is in the buffer, so a move is saved even if the buffer is untouched
     let moved =
         (existing.organization_id, existing.board_id) != (stored.organization_id, stored.board_id);
-    update(db, &existing, moved, |_| Ok(()))
+    update(db, &existing, moved, scaffold::absolutise_base_path)
 }
 
-fn project_delete(app: &App, name: Option<&str>) -> Result<()> {
+fn project_delete(app: &App, mux: &dyn Multiplexer, name: Option<&str>) -> Result<()> {
     let db = &app.db;
     let project = resolve_project_or_current(db, name)?;
     let project_id = project.id();
@@ -205,7 +206,7 @@ fn project_delete(app: &App, name: Option<&str>) -> Result<()> {
 
     // killing goes last for the same reason: the first `kill-session` would take this process with it and strand later worktrees
     for name in tmux_sessions {
-        tmux::kill_session(name);
+        mux.kill_session(name);
     }
     Ok(())
 }
@@ -236,4 +237,33 @@ fn project_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> 
 
 fn project_list(app: &App) -> Result<()> {
     list_names::<Project>(&app.db)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fixtures;
+    use crate::models::{SessionConfig, Task};
+    use crate::process::fake::FakeRunner;
+
+    #[test]
+    fn deleting_a_project_removes_the_row_then_kills_its_tmux_sessions() {
+        let app = App::with_db(fixtures::db());
+        let project_id = app.db.insert(&fixtures::project("proj")).unwrap();
+        let task_id = app.db.insert(&fixtures::task(project_id, "t")).unwrap();
+        app.db
+            .insert(&SessionConfig {
+                id: None,
+                task_id,
+                tmux_session_name: Some("proj-t".into()),
+                github_branch: None,
+                worktree_path: None,
+            })
+            .unwrap();
+        let runner = FakeRunner::default();
+        project_delete(&app, &TmuxClient::new(&runner, false), Some("proj")).unwrap();
+        assert!(app.db.get::<Project>(project_id).unwrap().is_none());
+        assert!(app.db.get::<Task>(task_id).unwrap().is_none());
+        assert_eq!(runner.calls(), ["tmux kill-session -t =proj-t"]);
+    }
 }

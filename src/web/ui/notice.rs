@@ -4,13 +4,13 @@ use super::field_ids::{ERROR_ID, field_id};
 use super::form_error::FormError;
 use topcoat::{
     Result,
-    view::{Child, Unescaped, View, component, view},
+    view::{Child, View, component, view},
 };
 
-/// `focus` moves focus to the notice on load via an inline script (`autofocus`
-/// was skipped by Chromium on submit-back pages) and needs an `id`. An error is
-/// `role="alert"` so it is announced without script; the script drops the role
-/// before focusing, or it would be read twice.
+/// `focus` moves focus to the notice on load via `notice.js` (`autofocus`
+/// was skipped by Chromium on submit-back pages; an inline script would break the
+/// CSP) and needs an `id`. An error is `role="alert"` so it is announced without
+/// script; the script drops the role before focusing, or it would be read twice.
 #[component]
 pub async fn notice(
     #[default] error: bool,
@@ -23,22 +23,13 @@ pub async fn notice(
         id.bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
     );
-    // The id goes into an inline script unescaped: only characters that cannot end
-    // the string pass (`debug_assert!` alone would not hold in release).
-    let script_id: String = id
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
-        .collect();
     Ok(view! {
         <p class=(if error { "notice error" } else { "notice" })
             if error { role="alert" }
             if !id.is_empty() { id=(id) }
-            if focus { tabindex="-1" }>
+            if focus { tabindex="-1" data-focus="" }>
             (child)
         </p>
-        if focus {
-            <script>(Unescaped::new_unchecked(format!("{{const n=document.getElementById('{script_id}');n.removeAttribute('role');n.focus()}}")))</script>
-        }
     })
 }
 

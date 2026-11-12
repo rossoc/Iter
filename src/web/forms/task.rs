@@ -2,7 +2,6 @@
 
 use super::{names, optional, text};
 use crate::db::Db;
-use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::{Duration, Project, Tag, Task, TaskStatus, parse_start_time, require_name};
 use crate::web::edit::{EditForm, name_field};
@@ -137,10 +136,13 @@ impl EditForm for TaskForm {
                 kind: "project",
                 name: self.move_to.clone(),
             })?;
-            if db.find_session_config_by_task(id)?.is_some() {
-                return Err(IterError::TaskHasSession(task.name.clone()));
-            }
-            task.project_id = project.id();
+            let from = db
+                .get::<Project>(task.project_id)?
+                .ok_or(IterError::NotFound {
+                    kind: "project",
+                    name: task.project_id.to_string(),
+                })?;
+            db.move_task(id, &mut task, &from, &project)?;
         }
         db.save_task(Some(id), &task, &tag_ids)?;
         Ok(())

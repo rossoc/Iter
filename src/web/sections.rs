@@ -19,6 +19,8 @@ pub struct TabQuery {
     /// `project` (New project, on Info).
     pub new: Option<String>,
     pub share: Option<String>,
+    /// The Report after a push: the hash of the worklog pushed (its ledger row is shown).
+    pub pushed: Option<String>,
     pub name: Option<String>,
     pub base_path: Option<String>,
     pub step: Option<String>,

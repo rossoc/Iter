@@ -76,17 +76,14 @@ fn file_name(date: NaiveDate) -> String {
 /// sets a known key), so a note that starts with prose and has a `---` rule
 /// further down is left whole.
 fn split(content: &str) -> (FrontMatter, &str) {
-    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
-    let (opened, rest) = match content.strip_prefix("---\n") {
-        Some(rest) => (true, rest),
-        None => (false, content),
-    };
-    let Some((front, body)) = crate::md_edit::split_at_divider(rest) else {
+    let content = crate::md_edit::strip_bom(content);
+    let split = crate::md_edit::split_front(content);
+    let (opened, Some(front)) = (split.opened, split.front) else {
         return (FrontMatter::default(), content);
     };
     match serde_yaml::from_str::<FrontMatter>(front) {
-        Ok(fm) if opened || !fm.is_empty() => (fm, body),
-        _ if opened => (FrontMatter::default(), body),
+        Ok(fm) if opened || !fm.is_empty() => (fm, split.body),
+        _ if opened => (FrontMatter::default(), split.body),
         _ => (FrontMatter::default(), content),
     }
 }
@@ -166,13 +163,10 @@ pub fn check(content: &str) -> Result<()> {
     if content.contains('\0') {
         return bad("it contains a NUL character");
     }
-    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
-    let (opened, rest) = match content.strip_prefix("---\n") {
-        Some(rest) => (true, rest),
-        None => (false, content),
-    };
-    match crate::md_edit::split_at_divider(rest) {
-        Some((front, _)) => {
+    let split = crate::md_edit::split_front(content);
+    let opened = split.opened;
+    match split.front {
+        Some(front) => {
             let keyed = front.lines().any(|l| {
                 ["title:", "layout:", "date:"]
                     .iter()
@@ -201,7 +195,7 @@ pub fn save(dir: &Path, date: NaiveDate, content: &str) -> Result<()> {
     if !path.is_file() {
         return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no such note").into());
     }
-    crate::agent::taskdir::write_atomic(&path, content)?;
+    crate::utils::fs::write_atomic(&path, content)?;
     Ok(())
 }
 
@@ -246,7 +240,7 @@ pub fn append_section(dir: &Path, day: NaiveDate, heading: &str, body: &str) -> 
         text.push('\n');
     }
     text.push_str(&format!("{line}\n\n{}\n", body.trim_end()));
-    crate::agent::taskdir::write_atomic(&path, &text)?;
+    crate::utils::fs::write_atomic(&path, &text)?;
     Ok(true)
 }
 

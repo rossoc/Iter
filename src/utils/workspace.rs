@@ -10,7 +10,8 @@
 use crate::db::{Db, Table};
 use crate::error::Result;
 use crate::models::{Project, SessionConfig, Task};
-use crate::{git, tmux};
+use crate::git;
+use crate::tmux::Multiplexer;
 
 /// Makes the git worktree and the branch for `task` under the project's
 /// `.iter-worktrees`: `(branch, worktree path)`. `session new` and
@@ -83,9 +84,14 @@ pub(crate) fn remove_worktree_and_branch(
 }
 
 /// [`teardown_session_config`] for a lone session, killing at once; fine where nothing runs after.
-pub(crate) fn teardown_and_kill(db: &Db, project: &Project, session_config: &SessionConfig) {
+pub(crate) fn teardown_and_kill(
+    db: &Db,
+    mux: &dyn Multiplexer,
+    project: &Project,
+    session_config: &SessionConfig,
+) {
     if let Some(name) = teardown_session_config(db, project, session_config) {
-        tmux::kill_session(name);
+        mux.kill_session(name);
     }
 }
 
@@ -93,13 +99,14 @@ pub(crate) fn teardown_and_kill(db: &Db, project: &Project, session_config: &Ses
 /// later). Kills the tmux session first: it is detached and unattached, so this cannot take the
 /// running process with it.
 pub(crate) fn unwind_session_setup(
+    mux: &dyn Multiplexer,
     project: &Project,
     worktree: Option<&str>,
     branch: Option<&str>,
     tmux_session: Option<&str>,
 ) {
     if let Some(name) = tmux_session {
-        tmux::kill_session(name);
+        mux.kill_session(name);
     }
     remove_worktree_and_branch(project, worktree, branch);
 }

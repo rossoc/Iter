@@ -6,7 +6,7 @@ use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
 use crate::db::Table;
 use crate::error::Result;
-use crate::models::{Organization, Project, Task};
+use crate::models::{Project, Task};
 use crate::notes;
 use crate::utils::resolve::{resolve_task_or_current, task_display};
 use std::path::{Path, PathBuf};
@@ -69,10 +69,7 @@ fn keywords(name: &str, description: &str) -> String {
 
 /// Folders that may hold `instructions/<kind>.md`, nearest first.
 fn override_dirs(app: &App, project: &Project, dir: &TaskDir) -> Result<Vec<PathBuf>> {
-    let org = match project.organization_id {
-        Some(id) => app.db.get::<Organization>(id)?,
-        None => None,
-    };
+    let org = app.db.org_of(project)?;
     let mut dirs = vec![dir.root().to_path_buf()];
     dirs.extend(notes::project_dir(project, &org));
     dirs.extend(org.as_ref().and_then(notes::org_dir));

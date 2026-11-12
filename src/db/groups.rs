@@ -11,6 +11,14 @@ impl Db {
         )
     }
 
+    /// The organization `project` belongs to, if any. A database error is an error, not "none".
+    pub fn org_of(&self, project: &Project) -> Result<Option<crate::models::Organization>> {
+        match project.organization_id {
+            Some(id) => self.get::<crate::models::Organization>(id),
+            None => Ok(None),
+        }
+    }
+
     /// Every organization by name with its first `limit` projects and total project count; one
     /// query (window functions). Organizations with no projects are included.
     #[cfg(feature = "web")]

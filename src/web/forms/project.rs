@@ -45,7 +45,8 @@ impl EditForm for ProjectForm {
         project.notes_path = self.notes_path.trim().to_string();
         project.organization_id = self.organization.trim().parse().ok();
         project.set_settings(self.settings.settings());
-        let valid = project.validate();
+        let valid =
+            crate::scaffold::absolutise_base_path(&mut project).and_then(|()| project.validate());
         (project, valid)
     }
 }

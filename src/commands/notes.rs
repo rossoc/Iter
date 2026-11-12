@@ -16,11 +16,7 @@ fn dir(app: &App, scope: &NotesScope) -> Result<PathBuf> {
         Some(name) => notes::org_dir(&db.resolve::<Organization>(name)?),
         None => {
             let project = resolve_project_or_current(db, scope.project.as_deref())?;
-            let org = match project.organization_id {
-                Some(id) => db.get::<Organization>(id)?,
-                None => None,
-            };
-            notes::project_dir(&project, &org)
+            notes::project_dir(&project, &db.org_of(&project)?)
         }
     };
     found.ok_or_else(|| {

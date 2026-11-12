@@ -100,6 +100,7 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("../org.css"),
 ));
 
+static NOTICE_JS: Asset = Asset::js(include_str!("notice.js"));
 static MODAL_JS: Asset = Asset::js(include_str!("modal.js"));
 static FILTER_BAR_JS: Asset = Asset::js(include_str!("filter_bar.js"));
 static SEARCH_JS: Asset = Asset::js(include_str!("search.js"));
@@ -111,6 +112,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
         builder,
         &[
             ("/style.css", &CSS),
+            ("/notice.js", &NOTICE_JS),
             ("/modal.js", &MODAL_JS),
             ("/filter_bar.js", &FILTER_BAR_JS),
             ("/search.js", &SEARCH_JS),

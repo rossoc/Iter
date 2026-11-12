@@ -23,3 +23,13 @@ main:focus{outline:none}  /* the skip link's target, not a control */
 main h1{margin:10px 0 6px;font-size:clamp(2rem,1.4rem + 2vw,3rem);font-weight:650;line-height:1.1;
   letter-spacing:-.035em;text-wrap:balance}
 @media (max-width:900px){main{padding-top:32px}}
+/* narrow (700px: the bar is 664px of content, so it overflowed from 600 up to there): the bar wraps (brand and Search on the first line, the nav under them) rather than push
+   the page wider than the screen (WCAG 1.4.10). Its height is --bar-h (base.css sets it for this
+   width), so sticky offsets and scroll-padding keep clearing it; `height:auto` lets larger
+   text grow it further. Below 420px the nav icons go, the labels stay. */
+@media (max-width:700px){
+  .bar{flex-wrap:wrap;align-content:center;height:auto;min-height:var(--bar-h);gap:4px 12px;padding:6px 12px}
+  .bar nav{order:1;flex:1 1 100%;flex-wrap:wrap;gap:0}
+  .bar nav a{padding:5px 9px}
+}
+@media (max-width:420px){.bar nav a svg{display:none}}

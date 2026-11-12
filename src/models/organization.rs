@@ -58,25 +58,12 @@ pub struct Organization {
 }
 
 impl Organization {
-    /// Beyond a name: a platform URL must be `https` (calls carry the API key as a bearer token) or
-    /// `http` to this machine (local platform, test server).
+    /// Beyond a name: a platform URL passes [`crate::platform::check_url`].
     fn check(&mut self) -> crate::error::Result<()> {
         self.platform_url = self.platform_url.trim().to_string();
-        let url = self.platform_url.as_str();
-        if url.is_empty() || url.starts_with("https://") {
-            return Ok(());
-        }
-        let local = ["http://localhost", "http://127.0.0.1", "http://[::1]"]
-            .iter()
-            .any(|prefix| {
-                url.strip_prefix(prefix)
-                    .is_some_and(|rest| rest.is_empty() || rest.starts_with([':', '/']))
-            });
-        match local {
-            true => Ok(()),
-            false => Err(crate::error::IterError::Platform(format!(
-                "platform_url '{url}' must start with https:// (the API key is sent with every request)"
-            ))),
+        match self.platform_url.as_str() {
+            "" => Ok(()),
+            url => crate::platform::check_url(url),
         }
     }
 
@@ -121,5 +108,10 @@ mod tests {
         assert!(!checked("http://time.example.com"));
         assert!(!checked("http://localhost.evil.com"));
         assert!(!checked("ftp://x"));
+        assert!(!checked("http://localhost:1@evil.com"));
+        assert!(!checked("http://localhost@evil.com/"));
+        assert!(!checked("http://127.0.0.1.evil.com"));
+        assert!(!checked("https://user:pw@time.example.com"));
+        assert!(!checked("localhost"));
     }
 }

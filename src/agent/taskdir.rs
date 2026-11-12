@@ -4,8 +4,9 @@ use crate::agent::error::{AgentError, AgentResult};
 use crate::agent::plan::{self, Progress, State};
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::models::{Organization, Project, Task};
+use crate::models::{Project, Task};
 use crate::notes;
+use crate::utils::fs::write_whole;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -107,29 +108,9 @@ impl TaskDir {
     }
 }
 
-/// Writes through a uniquely named file beside `target`, then renames it over.
-pub(crate) fn write_whole(dir: &Path, target: &Path, text: &str) -> std::io::Result<()> {
-    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = dir.join(format!(".write.{}.{n}.tmp", std::process::id()));
-    std::fs::write(&tmp, text)?;
-    std::fs::rename(&tmp, target).inspect_err(|_| {
-        let _ = std::fs::remove_file(&tmp);
-    })
-}
-
-/// [`write_whole`] for any `target`: a crash or a concurrent reader sees the old or the new text, never half.
-pub(crate) fn write_atomic(target: &Path, text: &str) -> std::io::Result<()> {
-    let dir = target.parent().filter(|d| !d.as_os_str().is_empty());
-    write_whole(dir.unwrap_or(Path::new(".")), target, text)
-}
-
 /// The folder of `task`: in the project's notes, else (no notes anywhere) iter's config directory `tasks/<id>/`.
 pub fn of(db: &Db, project: &Project, task: &Task) -> Result<TaskDir> {
-    let org = match project.organization_id {
-        Some(id) => db.get::<Organization>(id)?,
-        None => None,
-    };
+    let org = db.org_of(project)?;
     Ok(TaskDir::new(match notes::project_dir(project, &org) {
         Some(dir) => notes::task_dir(&dir, task.id()),
         None => notes::task_dir(&crate::config::config_dir()?, task.id()),
@@ -137,11 +118,8 @@ pub fn of(db: &Db, project: &Project, task: &Task) -> Result<TaskDir> {
 }
 
 /// Whether the task's folder is in the project's notes (part of its wiki), not the config fallback.
-pub fn in_notes(db: &Db, project: &Project) -> bool {
-    let org = project
-        .organization_id
-        .and_then(|id| db.get::<Organization>(id).ok().flatten());
-    notes::project_dir(project, &org).is_some()
+pub fn in_notes(db: &Db, project: &Project) -> Result<bool> {
+    Ok(notes::project_dir(project, &db.org_of(project)?).is_some())
 }
 
 pub struct Saved {

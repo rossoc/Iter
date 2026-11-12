@@ -188,17 +188,12 @@ fn step(line: &str) -> Option<Step<'_>> {
 }
 
 fn body_start(content: &str) -> usize {
-    let Some(rest) = content.strip_prefix("---\n") else {
+    let Some((_, body)) = crate::md_edit::split_closed(content) else {
         return 0;
     };
-    let mut lines = 1;
-    for line in rest.split_inclusive('\n') {
-        lines += 1;
-        if line.trim_end_matches('\n') == "---" {
-            return lines;
-        }
-    }
-    0
+    let head = &content[..content.len() - body.len()];
+    // A closing `---` at the end of the text has no newline of its own.
+    head.matches('\n').count() + usize::from(!head.ends_with('\n'))
 }
 
 pub fn parse(content: &str) -> Plan {

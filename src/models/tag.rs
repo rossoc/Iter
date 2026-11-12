@@ -126,6 +126,7 @@ mod tests {
         let mut p = Project::template(&Settings::default());
         p.name = "p".to_string();
         p.base_path = " work/p ".to_string();
+        crate::scaffold::absolutise_base_path(&mut p).expect("resolves");
         p.validate().expect("valid");
         assert!(
             std::path::Path::new(&p.base_path).is_absolute(),

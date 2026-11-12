@@ -2,9 +2,9 @@
 //! each keeping its spelling. Raw notes are never rewritten.
 
 use super::graph::Wiki;
-use crate::agent::taskdir::write_atomic;
 use crate::error::{Result, failed};
-use crate::md_edit::split_at_divider;
+use crate::md_edit::split_closed;
+use crate::utils::fs::write_atomic;
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -90,9 +90,15 @@ fn replace_links(body: &str, old: &str, new: &str) -> (String, usize) {
 }
 
 fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
-    let (head, yaml, body) = match content.strip_prefix("---\n").and_then(split_at_divider) {
+    // The byte-order mark, if any, is kept as it was.
+    let bom = &content[..content.len() - crate::md_edit::strip_bom(content).len()];
+    let (head, yaml, body) = match split_closed(content) {
         Some((yaml, body)) => ("---\n", yaml.to_string(), body.to_string()),
-        None => ("", String::new(), content.to_string()),
+        None => (
+            "",
+            String::new(),
+            crate::md_edit::strip_bom(content).to_string(),
+        ),
     };
     let (mut yaml, mut body, mut total) = (yaml, body, 0);
     for (old, new) in renames {
@@ -101,9 +107,9 @@ fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
         (yaml, body, total) = (y, b, total + a + c);
     }
     if head.is_empty() {
-        (body, total)
+        (format!("{bom}{body}"), total)
     } else {
-        (format!("{head}{yaml}---\n{body}"), total)
+        (format!("{bom}{head}{yaml}---\n{body}"), total)
     }
 }
 
@@ -280,7 +286,7 @@ mod tests {
     fn moving_a_page_rewrites_what_points_at_it() {
         let root = fixture("mv");
         let w = build(&root);
-        let backoff = w.node(1, "concepts/backoff").expect("concept");
+        let backoff = w.resolve(1, "concepts/backoff").expect("concept");
         let moved = mv(&w, backoff, "wiki/syntheses/backoff", false).expect("moves");
         assert_eq!(moved.to, "wiki/syntheses/backoff");
         let mut ids: Vec<_> = moved.rewrites.iter().map(|r| r.id.as_str()).collect();
@@ -310,7 +316,7 @@ mod tests {
         let again = build(&root);
         assert_eq!(again.dangling.len(), 1);
         assert_eq!(again.dangling[0].target, "missing");
-        let moved = again.node(1, "syntheses/backoff").expect("moved");
+        let moved = again.resolve(1, "syntheses/backoff").expect("moved");
         assert_eq!(again.nodes[moved].class.as_str(), "urn:iter:ns:Synthesis");
     }
 
@@ -318,7 +324,7 @@ mod tests {
     fn a_dry_run_changes_nothing() {
         let root = fixture("dry");
         let w = build(&root);
-        let idea = w.node(1, "ideas/retry").expect("idea");
+        let idea = w.resolve(1, "ideas/retry").expect("idea");
         let moved = mv(&w, idea, "wiki/ideas/retry-budget", true).expect("plans");
         assert!(!moved.rewrites.is_empty());
         assert!(root.join("acme/app/wiki/ideas/retry.md").exists());
@@ -329,7 +335,7 @@ mod tests {
     fn bad_targets_are_refused() {
         let root = fixture("refuse");
         let w = build(&root);
-        let idea = w.node(1, "ideas/retry").expect("idea");
+        let idea = w.resolve(1, "ideas/retry").expect("idea");
         for bad in [
             "",
             "../x",
