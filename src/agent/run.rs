@@ -38,6 +38,7 @@ impl Harness {
         }
     }
 
+    #[cfg(feature = "web")]
     /// The models a form offers: the harness's aliases, unless `configured` (`agent.models`) overrides.
     pub fn models(self, configured: &[String]) -> Vec<String> {
         if !configured.is_empty() {
@@ -58,6 +59,7 @@ impl Harness {
         }
     }
 
+    #[cfg(feature = "web")]
     pub fn efforts(self) -> &'static [&'static str] {
         match self {
             Harness::Claude => &["low", "medium", "high", "xhigh", "max"],
@@ -175,6 +177,7 @@ impl RunRecord {
         }
     }
 
+    #[cfg(feature = "web")]
     pub fn instruction_name(&self) -> &str {
         self.instruction.as_deref().unwrap_or(self.kind.key())
     }
@@ -200,6 +203,7 @@ pub fn alive(pid: u32) -> bool {
     Procs::recent().alive(pid)
 }
 
+#[cfg(feature = "web")]
 /// Asks a run's process to stop: its whole group, when `pid` is a process iter can vouch for
 /// (see [`Procs::signalable`]). The record is a file the agent can write, so its `pid` is a
 /// claim; there is no fallback to a bare pid.
@@ -207,6 +211,7 @@ pub fn interrupt(pid: u32) -> bool {
     interrupt_with(&SYSTEM, pid)
 }
 
+#[cfg(any(feature = "web", test))]
 fn interrupt_with(runner: &dyn Runner, pid: u32) -> bool {
     if !Procs::scan(runner).signalable(pid) {
         return false;
@@ -219,9 +224,11 @@ struct Procs(Vec<Proc>);
 
 struct Proc {
     pid: u32,
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pgid: u32,
     zombie: bool,
     /// The program's file name (macOS prints a path).
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     comm: String,
 }
 
@@ -259,6 +266,7 @@ impl Procs {
         pid > 1 && self.get(pid).is_some_and(|p| !p.zombie)
     }
 
+    #[cfg(any(feature = "web", test))]
     /// Whether iter may signal `-pid`: a live process other than 0 and init that leads its own
     /// group (what `spawn_detached` makes), whose program is iter or claude, and that is
     /// neither this process nor in its group (the record could name the server).

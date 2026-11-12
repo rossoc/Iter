@@ -6,7 +6,9 @@ use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::github::IssueTracker;
 use crate::models::{Organization, Project, Push, Task, TaskStatus};
-use crate::platform::{PlatformItem, TimePlatform};
+#[cfg(any(feature = "web", test))]
+use crate::platform::PlatformItem;
+use crate::platform::TimePlatform;
 use crate::reporting::{DateRange, Worklog, WorklogEntry, fmt_date, worklog_line};
 use crate::utils::report::project_reports;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -287,6 +289,7 @@ pub fn prepare(
     })
 }
 
+#[cfg(any(feature = "web", test))]
 /// What the platform offers for the settings form: projects, and the activities of `project`; whatever cannot be fetched is an empty list (free text).
 pub fn choices(
     platform: &dyn TimePlatform,
@@ -835,7 +838,7 @@ mod tests {
     #[test]
     fn names_are_sent_as_the_platforms_ids() {
         let (db, org) = setup();
-        let plan = the_plan(&db, &org);
+        let _plan = the_plan(&db, &org);
         let platform = FakePlatform {
             projects: vec![PlatformItem::new("p1", "ACME")],
             activities: vec![PlatformItem::new("a1", "Dev")],

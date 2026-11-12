@@ -53,6 +53,7 @@ pub fn spawn_ingest(
     Ok(())
 }
 
+#[cfg(feature = "web")]
 /// Starts an ingest of the project (and `task`'s sketches) in the background.
 pub fn ingest_in_background(db: &Db, project: &Project, task: &Task) -> Result<()> {
     let target = Target::new(db, project.clone())?;

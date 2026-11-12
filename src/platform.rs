@@ -186,6 +186,7 @@ impl JsonWebhook {
         })
     }
 
+    #[cfg(feature = "web")]
     pub fn with_timeout(mut self, seconds: u64) -> Self {
         self.agent = agent(seconds);
         self

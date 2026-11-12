@@ -117,6 +117,7 @@ pub fn of(db: &Db, project: &Project, task: &Task) -> Result<TaskDir> {
     }))
 }
 
+#[cfg(feature = "web")]
 /// Whether the task's folder is in the project's notes (part of its wiki), not the config fallback.
 pub fn in_notes(db: &Db, project: &Project) -> Result<bool> {
     Ok(notes::project_dir(project, &db.org_of(project)?).is_some())

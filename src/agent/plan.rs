@@ -90,6 +90,7 @@ impl Plan {
         p
     }
 
+    #[cfg(any(feature = "web", test))]
     pub fn phase_progress(&self, phase: usize) -> (usize, usize) {
         let mine = self.items.iter().filter(|i| i.phase == Some(phase));
         let (mut done, mut total) = (0, 0);

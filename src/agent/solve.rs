@@ -389,6 +389,7 @@ mod tests {
         App::with_db(crate::fixtures::world(&format!("solve-{name}")).db)
     }
 
+    #[cfg(feature = "web")]
     fn spec(model: &str) -> Spec {
         Spec {
             agent: Harness::Claude,

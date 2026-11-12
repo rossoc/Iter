@@ -125,7 +125,7 @@ pub fn list(dir: &Path) -> Vec<Note> {
     notes
 }
 
-#[cfg(any(feature = "web", test))]
+#[cfg(feature = "web")]
 pub fn count(dir: &Path) -> usize {
     std::fs::read_dir(dir).map_or(0, |entries| {
         entries
@@ -139,7 +139,7 @@ fn note_day(path: &Path) -> Option<NaiveDate> {
     parse_date(path.file_stem()?.to_str()?).filter(|_| path.extension().is_some_and(|e| e == "md"))
 }
 
-#[cfg(any(feature = "web", test))]
+#[cfg(feature = "web")]
 fn is_note_file(path: &Path) -> bool {
     note_day(path).is_some()
 }

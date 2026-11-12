@@ -1,11 +1,16 @@
 //! Instructions: markdown files (opencode agent format, front matter over the prompt) saying what an agent is told for a kind of work.
 //! Looked up nearest first: project notes, organization notes, config folder, then the built-in ones; see [`Source`].
 
+#[cfg(feature = "web")]
 use crate::agent::error::{AgentError, AgentResult};
+#[cfg(feature = "web")]
 use crate::agent::prompt::{self, Context, Kind};
+#[cfg(feature = "web")]
 use serde_yaml::Value;
+#[cfg(feature = "web")]
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "web")]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Source {
     Task,
@@ -15,6 +20,7 @@ pub enum Source {
     BuiltIn,
 }
 
+#[cfg(feature = "web")]
 impl Source {
     pub fn label(self) -> &'static str {
         match self {
@@ -27,8 +33,10 @@ impl Source {
     }
 }
 
+#[cfg(feature = "web")]
 pub type Layers = Vec<(Source, PathBuf)>;
 
+#[cfg(feature = "web")]
 /// The layers that apply to `project`, nearest first (those that exist).
 pub fn layers_of(
     db: &crate::db::Db,
@@ -46,10 +54,12 @@ pub fn layers_of(
     Ok(layers)
 }
 
+#[cfg(feature = "web")]
 pub fn global() -> Option<PathBuf> {
     crate::config::config_dir().ok()
 }
 
+#[cfg(feature = "web")]
 pub use crate::agent::prompt::file;
 
 /// The front matter (between a first line `---` and the next) and the prompt; no `---` means all prompt.
@@ -60,6 +70,7 @@ pub fn split(raw: &str) -> (Option<&str>, &str) {
     }
 }
 
+#[cfg(feature = "web")]
 /// The front matter keys iter reads; others stay in the file.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Front {
@@ -72,6 +83,7 @@ pub struct Front {
     pub permission: Option<String>,
 }
 
+#[cfg(feature = "web")]
 fn scalar(v: &Value) -> Option<String> {
     match v {
         Value::String(s) => Some(s.clone()),
@@ -81,6 +93,7 @@ fn scalar(v: &Value) -> Option<String> {
     }
 }
 
+#[cfg(feature = "web")]
 pub fn parse_front(yaml: &str) -> AgentResult<Front> {
     let value: Value = serde_yaml::from_str(yaml).map_err(AgentError::FrontMatterUnreadable)?;
     let map = match value {
@@ -118,11 +131,13 @@ pub fn parse_front(yaml: &str) -> AgentResult<Front> {
     Ok(front)
 }
 
+#[cfg(feature = "web")]
 fn kind_of_key(key: &str) -> Option<Kind> {
     use clap::ValueEnum;
     Kind::from_str(key, true).ok()
 }
 
+#[cfg(feature = "web")]
 #[derive(Clone, Debug)]
 pub struct Instruction {
     pub name: String,
@@ -134,6 +149,7 @@ pub struct Instruction {
     pub problem: Option<String>,
 }
 
+#[cfg(feature = "web")]
 impl Instruction {
     fn new(name: &str, raw: String, source: Source, path: Option<PathBuf>) -> Instruction {
         let (yaml, body) = split(&raw);
@@ -161,6 +177,7 @@ impl Instruction {
     }
 }
 
+#[cfg(feature = "web")]
 /// Whether `name` can be a file name: lowercase letters, digits and dashes, starting with a letter or digit.
 pub fn valid_name(name: &str) -> bool {
     !name.is_empty()
@@ -171,11 +188,13 @@ pub fn valid_name(name: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
+#[cfg(feature = "web")]
 /// Whether `name` is a built-in instruction; those keep their names.
 pub fn is_builtin(name: &str) -> bool {
     kind_of_key(name).is_some()
 }
 
+#[cfg(feature = "web")]
 /// The name to save under when the form asks for `wanted`: none if unchanged; an error if built-in or named like one.
 pub fn rename_target(old: &str, wanted: &str) -> AgentResult<Option<String>> {
     let wanted = wanted.trim();
@@ -194,6 +213,7 @@ pub fn rename_target(old: &str, wanted: &str) -> AgentResult<Option<String>> {
     Ok(Some(wanted.to_string()))
 }
 
+#[cfg(feature = "web")]
 const KINDS: [Kind; 5] = [
     Kind::Plan,
     Kind::Develop,
@@ -202,6 +222,7 @@ const KINDS: [Kind; 5] = [
     Kind::Fix,
 ];
 
+#[cfg(feature = "web")]
 fn builtin(kind: Kind) -> Instruction {
     Instruction::new(
         kind.key(),
@@ -211,6 +232,7 @@ fn builtin(kind: Kind) -> Instruction {
     )
 }
 
+#[cfg(feature = "web")]
 /// The instruction `name` under these layers: nearest file, else built-in.
 pub fn find(name: &str, layers: &Layers) -> Option<Instruction> {
     if !valid_name(name) {
@@ -225,6 +247,7 @@ pub fn find(name: &str, layers: &Layers) -> Option<Instruction> {
     kind_of_key(name).map(builtin)
 }
 
+#[cfg(feature = "web")]
 /// Every instruction under these layers, by name: built-in and files.
 pub fn list(layers: &Layers) -> Vec<Instruction> {
     let mut names: Vec<String> = KINDS.iter().map(|k| k.key().to_string()).collect();
@@ -248,6 +271,7 @@ pub fn list(layers: &Layers) -> Vec<Instruction> {
     names.iter().filter_map(|n| find(n, layers)).collect()
 }
 
+#[cfg(feature = "web")]
 /// Whether `raw` can be kept: front matter reads, has a prompt, and no unknown placeholder (an agent must never see a literal `{{taks}}`).
 pub fn check(name: &str, raw: &str) -> AgentResult<()> {
     let (yaml, body) = split(raw);
@@ -278,6 +302,7 @@ pub fn check(name: &str, raw: &str) -> AgentResult<()> {
     prompt::render(body, kind, &ctx).map(|_| ())
 }
 
+#[cfg(feature = "web")]
 /// `model` of the front matter if the harness offers it (opencode's `anthropic/claude-sonnet-5-5` loses the provider), else none.
 pub fn preferred_model(front: &Front, offered: &[String]) -> Option<String> {
     let model = front.model.as_deref()?;
@@ -285,6 +310,7 @@ pub fn preferred_model(front: &Front, offered: &[String]) -> Option<String> {
     offered.iter().find(|m| m.as_str() == bare).cloned()
 }
 
+#[cfg(feature = "web")]
 pub fn starter_prompt() -> String {
     split(Kind::Develop.builtin())
         .1
@@ -292,6 +318,7 @@ pub fn starter_prompt() -> String {
         .to_string()
 }
 
+#[cfg(feature = "web")]
 #[derive(Clone, Debug, Default)]
 pub struct Fields<'a> {
     pub description: &'a str,
@@ -304,6 +331,7 @@ pub struct Fields<'a> {
     pub prompt: &'a str,
 }
 
+#[cfg(feature = "web")]
 /// Sets `key` to `value` in `map`, or removes it when the field is empty.
 fn put(map: &mut serde_yaml::Mapping, key: &str, value: Option<Value>) {
     match value {
@@ -316,11 +344,13 @@ fn put(map: &mut serde_yaml::Mapping, key: &str, value: Option<Value>) {
     }
 }
 
+#[cfg(feature = "web")]
 fn text_value(text: &str) -> Option<Value> {
     let text = text.trim();
     (!text.is_empty()).then(|| Value::String(text.replace('\n', " ")))
 }
 
+#[cfg(feature = "web")]
 /// An instruction file from its fields: `existing`'s front matter with the fields written over it (empty removes a key, unknown keys stay), a blank line, the prompt.
 pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
     let mut map = existing
@@ -372,6 +402,7 @@ pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
     Ok(format!("---\n{yaml}---\n\n{prompt}\n"))
 }
 
+#[cfg(feature = "web")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -7,6 +7,7 @@ use thiserror::Error;
 pub type AgentResult<T> = std::result::Result<T, AgentError>;
 
 #[derive(Debug, Error)]
+#[cfg_attr(not(feature = "web"), allow(dead_code))] // the instruction editor (web only) raises most variants
 pub enum AgentError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

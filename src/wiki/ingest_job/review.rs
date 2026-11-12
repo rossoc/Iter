@@ -74,6 +74,8 @@ pub fn changes(target: &Target) -> Result<Vec<Change>> {
     Ok(out)
 }
 
+#[cfg(any(feature = "web", test))]
+#[cfg_attr(not(feature = "web"), allow(dead_code))]
 pub struct Review {
     pub changes: Vec<Change>,
     pub waiting: Vec<ingest::Waiting>,
@@ -84,6 +86,7 @@ pub struct Review {
     pub notes_dir: PathBuf,
 }
 
+#[cfg(any(feature = "web", test))]
 pub fn review(db: &Db, project: &Project) -> Result<Review> {
     let target = Target::new(db, project.clone())?;
     let in_git = target.in_git();

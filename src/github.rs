@@ -187,6 +187,7 @@ pub mod fake {
     use super::*;
 
     /// A tracker with nothing in it: writes succeed and are forgotten.
+    #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub struct Inert;
 
     impl IssueTracker for Inert {
