@@ -10,7 +10,6 @@ use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::git;
-use crate::tmux::{Multiplexer, TmuxClient};
 use crate::github::{self, GhCli, IssueTracker};
 use crate::md_edit::edited;
 use crate::models::require_name;
@@ -18,6 +17,7 @@ use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
 use crate::reporting::{
     Header, TaskInfo, WeekdayReport, print_report, session_rows, weekday_averages,
 };
+use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::close_open_session;
 use crate::utils::output::print_yaml;
 use crate::utils::report::{resolve_range, total_minutes};
@@ -102,7 +102,9 @@ impl Run for TaskCommand {
                 run,
                 extra,
             } => crate::agent::solve::worker(app, *task_id, *run, extra),
-            Self::Done { task, save } => task_done(app, &TmuxClient::system(), task.as_deref(), *save),
+            Self::Done { task, save } => {
+                task_done(app, &TmuxClient::system(), task.as_deref(), *save)
+            }
             Self::Pull {
                 project,
                 task,
@@ -418,7 +420,8 @@ mod tests {
         let app = app();
         let (_, task_id) = seed(&app);
 
-        let error = task_done(&app, &mux(), Some("proj/a task"), true).expect_err("nothing to save");
+        let error =
+            task_done(&app, &mux(), Some("proj/a task"), true).expect_err("nothing to save");
         assert!(error.to_string().contains("proj/a task"), "{error}");
 
         let task: Task = app.db.get(task_id).expect("reload").expect("task exists");
@@ -431,7 +434,8 @@ mod tests {
         seed(&app);
         let error = task_done(&app, &mux(), Some("proj/nope"), false).expect_err("no such task");
         assert!(error.to_string().contains("nope"), "{error}");
-        let error = task_done(&app, &mux(), Some("nosuch/a task"), false).expect_err("no such project");
+        let error =
+            task_done(&app, &mux(), Some("nosuch/a task"), false).expect_err("no such project");
         assert!(error.to_string().contains("nosuch"), "{error}");
     }
 

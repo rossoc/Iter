@@ -5,7 +5,6 @@ use crate::app::App;
 use crate::args::SessionCommand;
 use crate::commands::Run;
 use crate::commands::ingest;
-use crate::wiki::ingest_job::Trigger;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
@@ -15,6 +14,7 @@ use crate::utils::resolve::{
     current_session_task, require_git_repo, resolve_task, resolve_task_or_current, task_display,
 };
 use crate::utils::workspace::{self, unwind_session_setup};
+use crate::wiki::ingest_job::Trigger;
 
 impl Run for SessionCommand {
     fn run(&self, app: &App) -> Result<()> {

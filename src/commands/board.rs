@@ -71,11 +71,7 @@ fn render_agenda(cards: &[Card]) -> String {
         if let Some(end) = card.task.end_time() {
             let _ = write!(slot, "-{}", end_text(start, end));
         }
-        let _ = write!(out, 
-            "  {slot}  {}{}\n",
-            card.label,
-            markers(card.priority)
-        );
+        let _ = write!(out, "  {slot}  {}{}\n", card.label, markers(card.priority));
     }
     if !unscheduled.is_empty() {
         out.push_str("\nunscheduled:\n");

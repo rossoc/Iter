@@ -11,9 +11,9 @@ use oxigraph::model::{GraphName, GraphNameRef, Literal, NamedNode, NamedOrBlankN
 use oxigraph::sparql::{QueryResults, SparqlEvaluator};
 use oxigraph::store::Store;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use std::fmt::Write as _;
 
 #[derive(Clone, Debug)]
 pub struct Level {

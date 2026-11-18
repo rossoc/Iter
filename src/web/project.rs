@@ -1,6 +1,7 @@
 //! The project page (`/project/{id}`): route, loading and view, built from shared components.
 
 use super::Id;
+use super::create::{TaskCreate, TaskHome, task_modal};
 use super::crumbs::trail;
 use super::daily_notes::{NotesTab, notes_section};
 use super::load::{Parents, parents_of, tasks_or_count};
@@ -8,7 +9,6 @@ use super::open_db;
 use super::sections::{Section, TabQuery};
 use super::sections::{section_tabs, settings_tab};
 use super::settings_panel::settings_panel;
-use super::create::{TaskCreate, TaskHome, task_modal};
 use super::task_query::TaskQuery;
 use super::task_rows::{project_rows, search};
 use super::ui::breadcrumb::Crumb;

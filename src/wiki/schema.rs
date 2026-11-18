@@ -30,7 +30,8 @@ pub fn render(onto: &Ontology) -> String {
             format!("`{}`", p.folder)
         };
         let what = comment(onto, &p.class).unwrap_or_default();
-        let _ = write!(places, 
+        let _ = write!(
+            places,
             "| {class} | {folder} | {} level. {what} |\n",
             p.kind.key()
         );

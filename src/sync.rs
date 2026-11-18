@@ -54,7 +54,9 @@ impl Index<usize> for Tasks {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Pull {
     /// Nothing tracks this issue and no task shares its title: it becomes a new task at `status`, taking the issue body as description.
-    Create { status: TaskStatus },
+    Create {
+        status: TaskStatus,
+    },
 
     /// An existing task to write back; at least one of the three is set, else `Unchanged`.
     Update {
@@ -70,7 +72,9 @@ pub enum Pull {
     Unchanged,
 
     /// A task has this issue's title but tracks a different issue: reported and left alone (two issues sharing a title land here too).
-    Conflict { task: usize },
+    Conflict {
+        task: usize,
+    },
 }
 
 /// What `pull` should do about `issue`. The issue number is the identity (names and titles are editable), so a link survives renames; the title is consulted only for an issue no task has claimed.
@@ -109,7 +113,9 @@ fn plan_update(tasks: &Tasks, index: usize, issue: &Issue, link: bool, body: boo
 #[derive(Debug, PartialEq, Eq)]
 pub enum PushAction {
     /// The task tracks no issue: open one, ending in `state` (a `done` task's new issue is opened then closed), with the task's description as body.
-    Create { state: IssueState },
+    Create {
+        state: IssueState,
+    },
 
     /// An existing issue to edit; at least one of the two is set, else `Unchanged`.
     Update {
@@ -122,7 +128,9 @@ pub enum PushAction {
     Unchanged,
 
     /// The task names an issue the repo lacks (deleted, transferred, a pull request, beyond the fetch limit): reported and left alone, not re-created.
-    Missing { number: i64 },
+    Missing {
+        number: i64,
+    },
 }
 
 pub fn plan_push(task: &Task, issues: &HashMap<i64, Issue>, body: bool) -> PushAction {
@@ -175,7 +183,6 @@ mod tests {
             description: false,
         }
     }
-
 
     #[test]
     fn an_unknown_open_issue_becomes_a_queued_task() {
@@ -294,7 +301,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn a_differing_body_is_ignored_unless_asked_for() {
         let tasks = Tasks::new(vec![task("login", Some(4), TaskStatus::Wip)]);
@@ -336,7 +342,6 @@ mod tests {
             }
         );
     }
-
 
     #[test]
     fn an_unlinked_task_wants_an_issue_opening() {
@@ -412,7 +417,6 @@ mod tests {
             PushAction::Missing { number: 99 }
         );
     }
-
 
     #[test]
     fn a_differing_issue_body_is_only_rewritten_when_asked_for() {

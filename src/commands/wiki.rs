@@ -10,8 +10,8 @@ use crate::wiki::graph::{Answer, Wiki};
 use crate::wiki::retrieve::{self, Shown};
 use crate::wiki::scope::{self, Spec};
 use crate::wiki::{mv, schema};
-use std::io::Read;
 use std::fmt::Write as _;
+use std::io::Read;
 
 fn spec(s: &WikiScope) -> Spec {
     Spec {
@@ -85,7 +85,8 @@ impl Run for WikiCommand {
                     let mut out = String::new();
                     for n in &near {
                         let said = n.description.as_deref().unwrap_or("");
-                        let _ = write!(out, 
+                        let _ = write!(
+                            out,
                             "{} {:<13} {}  [{}]  {said}\n",
                             n.hop,
                             n.via.join(","),
@@ -112,14 +113,10 @@ impl Run for WikiCommand {
                     let mut out = String::new();
                     for i in &issues {
                         let severity = format!("{:?}", i.severity).to_lowercase();
-                        let _ = write!(out, 
-                            "{severity:<8}{:<16} {}: {}\n",
-                            i.code, i.id, i.message
-                        );
+                        let _ =
+                            write!(out, "{severity:<8}{:<16} {}: {}\n", i.code, i.id, i.message);
                     }
-                    let _ = write!(out, 
-                        "{errors} errors, {warnings} warnings, {infos} to do\n"
-                    );
+                    let _ = write!(out, "{errors} errors, {warnings} warnings, {infos} to do\n");
                     out
                 })?;
                 match errors {

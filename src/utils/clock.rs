@@ -243,7 +243,12 @@ mod tests {
         runner.replies.borrow_mut().clear();
         client_left_tmux_session(&db, &mux, "s").expect("hook");
         assert!(!db.sessions_for_task(task_id).expect("lookup")[0].is_ongoing());
-        assert!(runner.calls().iter().any(|c| c.starts_with("tmux show-options")));
+        assert!(
+            runner
+                .calls()
+                .iter()
+                .any(|c| c.starts_with("tmux show-options"))
+        );
     }
 
     #[test]

@@ -37,7 +37,6 @@ pub use worklog::*;
 
 const NO_SESSIONS: &str = "_No sessions in this period._";
 
-
 /// A model's YAML fields minus `id` and `name`, in declaration order, for the front matter; taken from `Serialize` so a new field needs no second list.
 pub fn settings_of<T: Serialize>(item: &T) -> Result<Mapping> {
     let map = match serde_yaml::to_value(item)? {
@@ -217,7 +216,6 @@ pub struct WeekdayReport {
     pub name: String,
     pub weekdays: Vec<WeekdayAverage>,
 }
-
 
 /// A report that can be printed: a shared header and a body only this kind knows.
 /// `Yaml` is the serialized struct, `Text` the fenced front matter plus [`Self::body`]; a new report kind implements two methods and gets both.

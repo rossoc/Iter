@@ -10,12 +10,12 @@ use crate::error::Result;
 use crate::md_edit::edited;
 use crate::models::{Board, Named, Organization, Project};
 use crate::reporting::{Header, ProjectInfo, print_report};
+use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::crud::update;
 use crate::utils::output::list_names;
 use crate::utils::report::{resolve_range, task_reports, total_minutes};
 use crate::utils::resolve::resolve_project_or_current;
 use crate::utils::workspace::teardown_session_config;
-use crate::tmux::{Multiplexer, TmuxClient};
 use crate::{git, scaffold};
 
 /// The one way a project is created: opens `template` in the editor, validates, lets `populate` make the directory the edited `base_path` names, and only then inserts the row;

@@ -11,9 +11,9 @@ use crate::md_edit::edit_text;
 use crate::utils::output::{Format as DataFormat, emit};
 use crate::utils::resolve::task_display;
 use serde::Serialize;
+use std::fmt::Write as _;
 use std::io::Read;
 use std::path::Path;
-use std::fmt::Write as _;
 
 #[derive(Serialize)]
 struct PlanView {

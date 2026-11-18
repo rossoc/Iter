@@ -52,7 +52,6 @@ fn round_to_half_hour_above_three_quarters_rounds_up_to_next_int() {
     assert_eq!(round_to_half_hour(3.9), 4.0);
 }
 
-
 #[test]
 fn a_single_day_range_reports_that_day() {
     let range = DateRange::day(day("2026-09-04"));
@@ -79,7 +78,6 @@ fn an_open_start_reaches_back_indefinitely() {
     assert_eq!(range.single_day(), None);
     assert_eq!(range.label(), "up to 2026-09-04");
 }
-
 
 #[test]
 fn merged_total_bridges_gaps_under_threshold() {
@@ -151,7 +149,6 @@ fn weekday_averages_no_data_is_zero_filled() {
     assert_eq!(averages[0].weekday, "Monday");
     assert_eq!(averages[6].weekday, "Sunday");
 }
-
 
 #[test]
 fn session_rows_omit_the_date_on_a_single_day_report() {
@@ -229,7 +226,6 @@ fn message_bullets_does_not_double_an_existing_leading_dash() {
         Some("- already bulleted".to_string())
     );
 }
-
 
 fn settings(pairs: &[(&str, &str)]) -> Mapping {
     let mut map = Mapping::new();
@@ -504,7 +500,6 @@ fn settings_of_drops_the_fields_the_report_prints_itself() {
     let keys: Vec<&str> = settings.keys().filter_map(Value::as_str).collect();
     assert_eq!(keys, vec!["github", "branch_template"]);
 }
-
 
 fn project_of(tasks: Vec<(&str, TaskStatus, Vec<Session>)>) -> (Vec<ProjectReport>, Vec<Session>) {
     let mut all = Vec::new();

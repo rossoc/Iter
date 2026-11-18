@@ -44,7 +44,6 @@ pub fn weekday_averages(sessions: &[Session], now: NaiveDateTime) -> Vec<Weekday
         .collect()
 }
 
-
 /// The days an `info` report covers: a single day (`--date`, default today) or an interval (`--from`/`--to`), never both; `from: None` is an open start.
 /// Serialized as `date:` for a single day, `from:`/`to:` for an interval.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
