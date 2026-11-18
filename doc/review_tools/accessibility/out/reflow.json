@@ -1,0 +1,1870 @@
+[
+ {
+  "width": 320,
+  "name": "home",
+  "url": "/",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "settings",
+  "url": "/settings",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-info",
+  "url": "/org/1",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-projects",
+  "url": "/org/1?tab=projects",
+  "vw": 320,
+  "sw": 1119,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter projects",
+   "span.sr text=Search syntax",
+   "caption.sr text=Projects"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-projects-new",
+  "url": "/org/1?tab=projects&new=project",
+  "vw": 320,
+  "sw": 1119,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter projects",
+   "span.sr text=Search syntax",
+   "caption.sr text=Projects",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-tasks",
+  "url": "/org/1?tab=tasks",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this organization",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-tasks-new",
+  "url": "/org/1?tab=tasks&new=task",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this organization",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-notes",
+  "url": "/org/1?tab=notes",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-report",
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.button.small text=Apply",
+   "caption.sr text=Sessions of task-1",
+   "caption.sr text=Sessions of task-61"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-report-bad",
+  "url": "/org/1?tab=report&from=nonsense&to=2026-11-02",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.button.small text=Apply",
+   "caption.sr text=Sessions of task-1",
+   "caption.sr text=Sessions of task-61"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-share",
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02&share=1",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.button.small text=Apply",
+   "caption.sr text=Sessions of task-1",
+   "caption.sr text=Sessions of task-61",
+   "span.sr text=Close",
+   "legend.sr text=How to share"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-edit",
+  "url": "/org/1/edit",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-note",
+  "url": "/org/1/notes/2026-11-02",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "org-note-edit",
+  "url": "/org/1/notes/2026-11-02?tab=edit",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Note"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "project-info",
+  "url": "/project/1",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "project-loose",
+  "url": "/project/5",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "project-tasks",
+  "url": "/project/1?tab=tasks",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this project",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "project-tasks-new",
+  "url": "/project/1?tab=tasks&new=task",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this project",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "project-notes",
+  "url": "/project/1?tab=notes",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "project-edit",
+  "url": "/project/1/edit",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "project-note",
+  "url": "/project/1/notes/2026-11-02",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-info",
+  "url": "/task/1",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-sessions",
+  "url": "/task/1?tab=sessions",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Sessions of task-1"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-sessions-new",
+  "url": "/task/1?tab=sessions&new=session",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Sessions of task-1",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-notes",
+  "url": "/task/1?tab=notes",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-notes-new",
+  "url": "/task/1?tab=notes&new=note",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-agent",
+  "url": "/task/1?tab=agent",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Agents of this task, the lates",
+   "span.sr text=Actions"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-agent-new",
+  "url": "/task/1?tab=agent&new=agent",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Agents of this task, the lates",
+   "span.sr text=Actions",
+   "span.sr text=Close",
+   "span.sr text=Run now"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-wiki",
+  "url": "/task/1?tab=wiki",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 files)",
+   "span.sr text=(1 note)",
+   "caption.sr text=Sketches"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "task-edit",
+  "url": "/task/1/edit",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "agents",
+  "url": "/agents",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Agents of every task, the late"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "boards",
+  "url": "/boards",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-agenda",
+  "url": "/board/2?date=2026-11-02",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-agenda-folded",
+  "url": "/board/2?date=2026-11-02&side=off",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-agenda-pick",
+  "url": "/board/2?date=2026-11-02&pick=2",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-agenda-moved",
+  "url": "/board/2?date=2026-11-02&moved=2",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-matrix",
+  "url": "/board/2/matrix",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 tasks)",
+   "span.sr text=(2 tasks)",
+   "span.sr text=project-8/task-108",
+   "span.sr text=project-8/task-48",
+   "span.sr text=(0 tasks)",
+   "span.sr text=(8 tasks)"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-matrix-pick",
+  "url": "/board/2/matrix?pick=24",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 tasks)",
+   "span.sr text=at Do first",
+   "span.sr text=(2 tasks)",
+   "span.sr text=at Plan",
+   "span.sr text=project-8/task-108",
+   "span.sr text=project-8/task-48"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-matrix-moved",
+  "url": "/board/2/matrix?moved=24",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 tasks)",
+   "span.sr text=(2 tasks)",
+   "span.sr text=project-8/task-108",
+   "span.sr text=project-8/task-48",
+   "span.sr text=(0 tasks)",
+   "span.sr text=(8 tasks)"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-info",
+  "url": "/board/1/info",
+  "vw": 320,
+  "sw": 1119,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter projects",
+   "span.sr text=Search syntax",
+   "caption.sr text=Projects"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "board-edit",
+  "url": "/board/1/edit",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "instructions",
+  "url": "/instructions",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Instructions"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "instructions-new",
+  "url": "/instructions?new=instruction",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Instructions",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "instruction",
+  "url": "/instruction/develop",
+  "vw": 320,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 320,
+  "name": "error-400",
+  "url": "/org/x",
+  "vw": 320,
+  "sw": 320,
+  "over": [],
+  "clipped": [],
+  "bad": 0
+ },
+ {
+  "width": 320,
+  "name": "error-404",
+  "url": "/org/99999",
+  "vw": 320,
+  "sw": 320,
+  "over": [],
+  "clipped": [],
+  "bad": 0
+ },
+ {
+  "width": 320,
+  "name": "error-404-unmatched",
+  "url": "/nope",
+  "vw": 320,
+  "sw": 320,
+  "over": [],
+  "clipped": [],
+  "bad": 0
+ },
+ {
+  "width": 400,
+  "name": "home",
+  "url": "/",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "settings",
+  "url": "/settings",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-info",
+  "url": "/org/1",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-projects",
+  "url": "/org/1?tab=projects",
+  "vw": 400,
+  "sw": 1119,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter projects",
+   "span.sr text=Search syntax",
+   "caption.sr text=Projects"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-projects-new",
+  "url": "/org/1?tab=projects&new=project",
+  "vw": 400,
+  "sw": 1119,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter projects",
+   "span.sr text=Search syntax",
+   "caption.sr text=Projects",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-tasks",
+  "url": "/org/1?tab=tasks",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this organization",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-tasks-new",
+  "url": "/org/1?tab=tasks&new=task",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this organization",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-notes",
+  "url": "/org/1?tab=notes",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-report",
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.button.small text=Apply",
+   "caption.sr text=Sessions of task-1",
+   "caption.sr text=Sessions of task-61"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-report-bad",
+  "url": "/org/1?tab=report&from=nonsense&to=2026-11-02",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.button.small text=Apply",
+   "caption.sr text=Sessions of task-1",
+   "caption.sr text=Sessions of task-61"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-share",
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02&share=1",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.button.small text=Apply",
+   "caption.sr text=Sessions of task-1",
+   "caption.sr text=Sessions of task-61",
+   "span.sr text=Close",
+   "legend.sr text=How to share"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-edit",
+  "url": "/org/1/edit",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-note",
+  "url": "/org/1/notes/2026-11-02",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "org-note-edit",
+  "url": "/org/1/notes/2026-11-02?tab=edit",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Note"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "project-info",
+  "url": "/project/1",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "project-loose",
+  "url": "/project/5",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "project-tasks",
+  "url": "/project/1?tab=tasks",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this project",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "project-tasks-new",
+  "url": "/project/1?tab=tasks&new=task",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter tasks",
+   "span.sr text=Search syntax",
+   "caption.sr text=Tasks in this project",
+   "span.sr text=No issue",
+   "span.sr text=No issue",
+   "span.sr text=No issue"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "project-notes",
+  "url": "/project/1?tab=notes",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "project-edit",
+  "url": "/project/1/edit",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "project-note",
+  "url": "/project/1/notes/2026-11-02",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-info",
+  "url": "/task/1",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-sessions",
+  "url": "/task/1?tab=sessions",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Sessions of task-1"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-sessions-new",
+  "url": "/task/1?tab=sessions&new=session",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Sessions of task-1",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-notes",
+  "url": "/task/1?tab=notes",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-notes-new",
+  "url": "/task/1?tab=notes&new=note",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Notes",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-agent",
+  "url": "/task/1?tab=agent",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Agents of this task, the lates",
+   "span.sr text=Actions"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-agent-new",
+  "url": "/task/1?tab=agent&new=agent",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Agents of this task, the lates",
+   "span.sr text=Actions",
+   "span.sr text=Close",
+   "span.sr text=Run now"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-wiki",
+  "url": "/task/1?tab=wiki",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 files)",
+   "span.sr text=(1 note)",
+   "caption.sr text=Sketches"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "task-edit",
+  "url": "/task/1/edit",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "agents",
+  "url": "/agents",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Agents of every task, the late"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "boards",
+  "url": "/boards",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-agenda",
+  "url": "/board/2?date=2026-11-02",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-agenda-folded",
+  "url": "/board/2?date=2026-11-02&side=off",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-agenda-pick",
+  "url": "/board/2?date=2026-11-02&pick=2",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-agenda-moved",
+  "url": "/board/2?date=2026-11-02&moved=2",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "button.sr text=Go to this date",
+   "span.sr text=project-2/A task with a rather",
+   "span.sr text=project-2/task-102",
+   "span.sr text=project-2/task-2",
+   "span.sr text=project-2/task-22",
+   "span.sr text=project-2/task-62"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-matrix",
+  "url": "/board/2/matrix",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 tasks)",
+   "span.sr text=(2 tasks)",
+   "span.sr text=project-8/task-108",
+   "span.sr text=project-8/task-48",
+   "span.sr text=(0 tasks)",
+   "span.sr text=(8 tasks)"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-matrix-pick",
+  "url": "/board/2/matrix?pick=24",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 tasks)",
+   "span.sr text=at Do first",
+   "span.sr text=(2 tasks)",
+   "span.sr text=at Plan",
+   "span.sr text=project-8/task-108",
+   "span.sr text=project-8/task-48"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-matrix-moved",
+  "url": "/board/2/matrix?moved=24",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=(0 tasks)",
+   "span.sr text=(2 tasks)",
+   "span.sr text=project-8/task-108",
+   "span.sr text=project-8/task-48",
+   "span.sr text=(0 tasks)",
+   "span.sr text=(8 tasks)"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-info",
+  "url": "/board/1/info",
+  "vw": 400,
+  "sw": 1119,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "label.sr text=Filter projects",
+   "span.sr text=Search syntax",
+   "caption.sr text=Projects"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "board-edit",
+  "url": "/board/1/edit",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "instructions",
+  "url": "/instructions",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Instructions"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "instructions-new",
+  "url": "/instructions?new=instruction",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "caption.sr text=Instructions",
+   "span.sr text=Close"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "instruction",
+  "url": "/instruction/develop",
+  "vw": 400,
+  "sw": 654,
+  "over": [
+   "nav right=513",
+   "a right=409",
+   "a right=513",
+   "svg right=439",
+   "path right=431",
+   "path right=432"
+  ],
+  "clipped": [
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set",
+   "span.sr text=Not set"
+  ],
+  "bad": true
+ },
+ {
+  "width": 400,
+  "name": "error-400",
+  "url": "/org/x",
+  "vw": 400,
+  "sw": 400,
+  "over": [],
+  "clipped": [],
+  "bad": 0
+ },
+ {
+  "width": 400,
+  "name": "error-404",
+  "url": "/org/99999",
+  "vw": 400,
+  "sw": 400,
+  "over": [],
+  "clipped": [],
+  "bad": 0
+ },
+ {
+  "width": 400,
+  "name": "error-404-unmatched",
+  "url": "/nope",
+  "vw": 400,
+  "sw": 400,
+  "over": [],
+  "clipped": [],
+  "bad": 0
+ }
+]

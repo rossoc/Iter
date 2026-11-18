@@ -1,0 +1,30 @@
+    |
+132 | pub fn count(dir: &Path) -> usize {
+    |        ^^^^^
+
+warning: function `is_note_file` is never used
+   --> src/notes.rs:146:4
+    |
+146 | fn is_note_file(path: &Path) -> bool {
+    |    ^^^^^^^^^^^^
+
+warning: fields `waiting`, `mode`, `in_git`, `busy`, and `notes_dir` are never read
+  --> src/wiki/ingest_job/review.rs:79:9
+   |
+77 | pub struct Review {
+   |            ------ fields in this struct
+78 |     pub changes: Vec<Change>,
+79 |     pub waiting: Vec<ingest::Waiting>,
+   |         ^^^^^^^
+80 |     pub mode: Mode,
+   |         ^^^^
+81 |     /// Whether the notes folder is in a git repository (else nothing to review against and an ingest is refused).
+82 |     pub in_git: bool,
+   |         ^^^^^^
+83 |     pub busy: bool,
+   |         ^^^^
+84 |     pub notes_dir: PathBuf,
+   |         ^^^^^^^^^
+
+warning: `Iter` (bin "Iter" test) generated 17 warnings (9 duplicates)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.27s

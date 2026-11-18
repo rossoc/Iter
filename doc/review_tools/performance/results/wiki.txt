@@ -1,0 +1,39 @@
+== pages=0 (2 md files)
+  wiki find --org org-1                        31.1 ms
+  wiki find --task p1/t1                       31.1 ms
+  wiki show --org org-1                        31.5 ms
+  wiki check --org org-1                       30.7 ms
+  wiki check --task p1/t1                      30.4 ms
+  wiki pending --project p1                    64.6 ms
+  wiki export --org org-1                      31.6 ms
+  session start+stop p1/t2 (ingest::auto)      38.1 ms
+  /task/1?tab=agent                             1.6 ms  (200 7071)
+  /task/1?tab=agent&new=agent                   2.6 ms  (200 14337)
+  /task/1?tab=wiki                             36.0 ms  (200 7401)
+  /task/1                                       1.4 ms  (200 7162)
+== pages=200 (200 md files)
+  wiki find --org org-1                        39.1 ms
+  wiki find --task p1/t1                       39.1 ms
+  wiki show --org org-1                        38.5 ms
+  wiki check --org org-1                       42.2 ms
+  wiki check --task p1/t1                      41.0 ms
+  wiki pending --project p1                    76.6 ms
+  wiki export --org org-1                      38.7 ms
+  session start+stop p1/t2 (ingest::auto)      38.9 ms
+  /task/1?tab=agent                             1.6 ms  (200 7071)
+  /task/1?tab=agent&new=agent                   9.9 ms  (200 14337)
+  /task/1?tab=wiki                             43.2 ms  (200 7401)
+  /task/1                                       1.4 ms  (200 7162)
+== pages=2000 (2000 md files)
+  wiki find --org org-1                       120.7 ms
+  wiki find --task p1/t1                      121.9 ms
+  wiki show --org org-1                       122.5 ms
+  wiki check --org org-1                      164.0 ms
+  wiki check --task p1/t1                     163.1 ms
+  wiki pending --project p1                   165.0 ms
+  wiki export --org org-1                     132.0 ms
+  session start+stop p1/t2 (ingest::auto)      38.4 ms
+  /task/1?tab=agent                             1.7 ms  (200 7071)
+  /task/1?tab=agent&new=agent                  93.6 ms  (200 14337)
+  /task/1?tab=wiki                            122.5 ms  (200 7401)
+  /task/1                                       1.4 ms  (200 7162)

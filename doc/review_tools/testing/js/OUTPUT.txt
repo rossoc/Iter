@@ -1,0 +1,12 @@
+# Run on 2026-11-02 with: doc/review_tools/testing/js/run.sh $SCRATCH/jsproof   (node v26.5.0)
+✔ a full date from 1970 on is ready; partial years and old years are not (0.580667ms)
+✔ only the report form treats an empty field as ready (open-ended range) (0.081541ms)
+✔ Escape dismisses the filter tip and focusing the ? button brings it back (35.879041ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 341.1865

@@ -1,0 +1,14 @@
+# Run on 2026-11-02 with: cd <this dir> && CARGO_TARGET_DIR=$SCRATCH/testproof-target cargo test -- --nocapture
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.05s
+     Running unittests src/main.rs (/private/tmp/claude-501/-Users-carlorosso--config-iter--iter-worktrees-review/f9634ce8-ea6d-484c-8703-6013688875b7/scratchpad/testproof-target/debug/deps/testproof-9ead936e4123a01e)
+
+running 4 tests
+test tests::an_unmatched_path_is_a_404_and_the_guard_does_not_run_there ... ok
+GET / => 200 OK
+<h1>&lt;b&gt;x&lt;/b&gt; &amp; "q"</h1>
+test tests::a_foreign_host_is_forbidden_by_the_guard_alone ... ok
+test tests::a_get_renders_html_with_user_text_escaped ... ok
+test tests::a_cross_origin_post_is_forbidden_by_the_guard_with_the_framework_check_off ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

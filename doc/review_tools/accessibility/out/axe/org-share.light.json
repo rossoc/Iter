@@ -1,0 +1,65 @@
+{
+ "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02&share=1",
+ "scheme": "light",
+ "violations": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "tags": [
+    "cat.color",
+    "wcag2aa",
+    "wcag143",
+    "TTv5",
+    "TT13.c",
+    "EN-301-549",
+    "EN-9.1.4.3",
+    "ACT"
+   ],
+   "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+   "help": "Elements must meet minimum color contrast ratio thresholds",
+   "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+   "nodes": [
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#4a67d6",
+        "bgColor": "#e4eaf6",
+        "contrastRatio": 4.14,
+        "fontSize": "10.5pt (14px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<label class=\"mode\"><input type=\"radio\" name=\"mode\" value=\"copy\" checked=\"\"><svg class=\"i\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"></rect><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"></path></svg>Copy</label>",
+         "target": [
+          ".mode:nth-child(2)"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 4.14 (foreground color: #4a67d6, background color: #e4eaf6, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<label class=\"mode\"><input type=\"radio\" name=\"mode\" value=\"copy\" checked=\"\"><svg class=\"i\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"></rect><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"></path></svg>Copy</label>",
+     "target": [
+      ".mode:nth-child(2)"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.14 (foreground color: #4a67d6, background color: #e4eaf6, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+    }
+   ]
+  }
+ ],
+ "incomplete": [
+  {
+   "id": "color-contrast",
+   "nodes": 2
+  }
+ ]
+}

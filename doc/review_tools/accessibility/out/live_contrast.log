@@ -1,0 +1,120 @@
+### light
+body text --fg: #1d1c1a on #fbfaf8 = 16.32
+.label (eyebrow, --muted 11px uppercase): #6f6b64 on #fbfaf8 = 5.08
+.tabs a (inactive tab --muted): #6f6b64 on #fbfaf8 = 5.08
+.bar nav a (--muted): #6f6b64 on #fbfaf7 = 5.08
+.status.wip text on tint: #3b5bd3 on #e2e8f6 = 4.72
+.status.wip (border): #a5b2e7 on #fbfaf8 = 1.99
+.status.done text: #14783a on #fbfaf8 = 5.33
+.status.done (border): #93bfa2 on #fbfaf8 = 1.97
+.status.queue text: #6f6b64 on #fbfaf8 = 5.08
+th (--muted): #6f6b64 on #fbfaf8 = 5.08
+.search-btn text: #6f6b64 on #fbfaf7 = 5.08
+.search-btn (border): #d3cec4 on #fbfaf7 = 1.50
+kbd text: #6f6b64 on #f4f2ee = 4.74
+.button (control-line) (border): #857f76 on #fbfaf8 = 3.80
+input.control (border): #857f76 on #fbfaf8 = 3.80
+.filter-help-btn ?: #6f6b64 on #fbfaf8 = 5.08
+.foot-note: #6f6b64 on #f4f2ee = 4.74
+.foot-sub a (project links in footer): #6f6b64 on #f4f2ee = 4.74
+.crumbs separator (--faint, decorative): MISSING
+.button:hover text (accent on bg-3): #1d1c1a on #f4f2ee = 15.23
+.palette-sub of the selected result (--muted on tint): #6f6b64 on #e2e8f6 = 4.32
+.palette-sub of another result: #6f6b64 on #fbfaf8 = 5.08
+.palette-title of the selected result: #1d1c1a on #e2e8f6 = 13.87
+.palette-title mark (accent): MISSING
+.palette-hint: #6f6b64 on #fbfaf8 = 5.08
+.palette-input placeholder: #1d1c1a on #fbfaf8 = 16.32
+.hour-label: #6f6b64 on #fbfaf8 = 5.08
+.tcard-meta text on card: #6f6b64 on #f4f2ee = 4.74
+.tcard-prio text: #1d1c1a on #f4f2ee = 15.23
+.tcard-prio (border): #d3cec4 on #f4f2ee = 1.40
+.tcard[aria-current] .tcard-meta (fg on bg-3): #1d1c1a on #ebe8e2 = 13.93
+.tcard[aria-current] dashed accent (border): #3b5bd3 on #fbfaf8 = 5.56
+.post-form.slot .button (accent text): #3b5bd3 on #fbfaf8 = 5.56
+.post-form.slot .button dashed accent (border): #3b5bd3 on #fbfaf8 = 5.56
+.pickbar text: #1d1c1a on #e2e8f6 = 13.87
+.day-nav .button[aria-current] Today: #3b5bd3 on #e2e8f6 = 4.72
+.button.small Cancel text: #1d1c1a on #f4f2ee = 15.23
+.drop.over .empty-line (A6 of the Oct review): #6f6b64 on #e2e8f6 = 4.32
+.empty-line at rest: #6f6b64 on #e2e8f6 = 4.32
+summary .label (collapsible heading): #6f6b64 on #fbfaf8 = 5.08
+.count badge: #1d1c1a on #ebe8e2 = 13.93
+.tcard edge default Urgent (--urgent) vs card: MISSING
+board root style: --urgent:#facc15;--important:#3b82f6
+edge: no urgent card on the page
+.cb-pop li.cb-active text: #1d1c1a on #e2e8f6 = 13.87
+.cb-pop li.cb-active .cb-hint (--muted on tint): #6f6b64 on #e2e8f6 = 4.32
+.cb-pop li (rest) text: #1d1c1a on #f4f2ee = 15.23
+.hint under a field: #6f6b64 on #f4f2ee = 4.74
+.required-note: MISSING
+.req asterisk (--muted): MISSING
+.notice.error text: #1d1c1a on #f4e4e2 = 13.82
+.notice.error (border): #b42318 on #fbfaf8 = 6.30
+.presets a current (accent on bg): #3b5bd3 on #f4f2ee = 5.18
+.presets a other (--muted on bg-2): #6f6b64 on #f4f2ee = 4.74
+.range label (--muted): #6f6b64 on #fbfaf8 = 5.08
+.summary text: #6f6b64 on #fbfaf8 = 5.08
+.time: #6f6b64 on #fbfaf8 = 5.08
+.sessions td.mono: #6f6b64 on #fbfaf8 = 5.08
+.button.primary text: #ffffff on #3b5bd3 = 5.80
+### dark
+body text --fg: #a9b1d6 on #24283b = 6.90
+.label (eyebrow, --muted 11px uppercase): #9699a8 on #24283b = 5.15
+.tabs a (inactive tab --muted): #9699a8 on #24283b = 5.15
+.bar nav a (--muted): #9699a8 on #24283b = 5.15
+.status.wip text on tint: #ff9e64 on #3b3642 = 5.76
+.status.wip (border): #875d4d on #24283b = 2.57
+.status.done text: #9ece6a on #24283b = 7.97
+.status.done (border): #5b7350 on #24283b = 2.78
+.status.queue text: #9699a8 on #24283b = 5.15
+th (--muted): #9699a8 on #24283b = 5.15
+.search-btn text: #9699a8 on #24283b = 5.15
+.search-btn (border): #444b6a on #24283b = 1.71
+kbd text: #9699a8 on #1f2335 = 5.50
+.button (control-line) (border): #737aa2 on #24283b = 3.49
+input.control (border): #737aa2 on #24283b = 3.49
+.filter-help-btn ?: #9699a8 on #24283b = 5.15
+.foot-note: #9699a8 on #1f2335 = 5.50
+.foot-sub a (project links in footer): #9699a8 on #1f2335 = 5.50
+.crumbs separator (--faint, decorative): MISSING
+.button:hover text (accent on bg-3): #a9b1d6 on #1f2335 = 7.37
+.palette-sub of the selected result (--muted on tint): #9699a8 on #3b3642 = 4.14
+.palette-sub of another result: #9699a8 on #24283b = 5.15
+.palette-title of the selected result: #a9b1d6 on #3b3642 = 5.55
+.palette-title mark (accent): MISSING
+.palette-hint: #9699a8 on #24283b = 5.15
+.palette-input placeholder: #a9b1d6 on #24283b = 6.90
+.hour-label: #9699a8 on #24283b = 5.15
+.tcard-meta text on card: #9699a8 on #1f2335 = 5.50
+.tcard-prio text: #a9b1d6 on #1f2335 = 7.37
+.tcard-prio (border): #444b6a on #1f2335 = 1.82
+.tcard[aria-current] .tcard-meta (fg on bg-3): #a9b1d6 on #292e42 = 6.36
+.tcard[aria-current] dashed accent (border): #ff9e64 on #24283b = 7.16
+.post-form.slot .button (accent text): #ff9e64 on #24283b = 7.16
+.post-form.slot .button dashed accent (border): #ff9e64 on #24283b = 7.16
+.pickbar text: #a9b1d6 on #3b3642 = 5.55
+.day-nav .button[aria-current] Today: #ff9e64 on #3b3642 = 5.76
+.button.small Cancel text: #a9b1d6 on #1f2335 = 7.37
+.drop.over .empty-line (A6 of the Oct review): #9699a8 on #3b3642 = 4.14
+.empty-line at rest: #9699a8 on #3b3642 = 4.14
+summary .label (collapsible heading): #9699a8 on #24283b = 5.15
+.count badge: #a9b1d6 on #292e42 = 6.36
+.tcard edge default Urgent (--urgent) vs card: MISSING
+board root style: --urgent:#facc15;--important:#3b82f6
+edge: no urgent card on the page
+.cb-pop li.cb-active text: #a9b1d6 on #3b3642 = 5.55
+.cb-pop li.cb-active .cb-hint (--muted on tint): #9699a8 on #3b3642 = 4.14
+.cb-pop li (rest) text: #a9b1d6 on #1f2335 = 7.37
+.hint under a field: #9699a8 on #1f2335 = 5.50
+.required-note: MISSING
+.req asterisk (--muted): MISSING
+.notice.error text: #a9b1d6 on #393043 = 5.93
+.notice.error (border): #f7768e on #24283b = 5.51
+.presets a current (accent on bg): #ff9e64 on #1f2335 = 7.65
+.presets a other (--muted on bg-2): #9699a8 on #1f2335 = 5.50
+.range label (--muted): #9699a8 on #24283b = 5.15
+.summary text: #9699a8 on #24283b = 5.15
+.time: #9699a8 on #24283b = 5.15
+.sessions td.mono: #9699a8 on #24283b = 5.15
+.button.primary text: #24283b on #ff9e64 = 7.16

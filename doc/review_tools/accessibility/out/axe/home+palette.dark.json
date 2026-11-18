@@ -1,0 +1,1391 @@
+{
+ "url": "/",
+ "scheme": "dark",
+ "violations": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "tags": [
+    "cat.color",
+    "wcag2aa",
+    "wcag143",
+    "TTv5",
+    "TT13.c",
+    "EN-301-549",
+    "EN-9.1.4.3",
+    "ACT"
+   ],
+   "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+   "help": "Elements must meet minimum color contrast ratio thresholds",
+   "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+   "nodes": [
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#9699a8",
+        "bgColor": "#3b3642",
+        "contrastRatio": 4.13,
+        "fontSize": "9.8pt (13px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/1\">",
+         "target": [
+          "a[href$=\"task/1\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 4.13 (foreground color: #9699a8, background color: #3b3642, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<span class=\"palette-sub\">org-1 / project-1 · wip</span>",
+     "target": [
+      "a[href$=\"task/1\"] > .palette-sub"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.13 (foreground color: #9699a8, background color: #3b3642, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+    }
+   ]
+  },
+  {
+   "id": "nested-interactive",
+   "impact": "serious",
+   "tags": [
+    "cat.keyboard",
+    "wcag2a",
+    "wcag412",
+    "TTv5",
+    "TT6.a",
+    "EN-301-549",
+    "EN-9.4.1.2"
+   ],
+   "description": "Ensure interactive controls are not nested as they are not always announced by screen readers or can cause focus problems for assistive technologies",
+   "help": "Interactive controls must not be nested",
+   "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/nested-interactive?application=axeAPI",
+   "nodes": [
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/1\">",
+         "target": [
+          "a[href$=\"task/1\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-0\" role=\"option\" aria-selected=\"true\">",
+     "target": [
+      "#palette-opt-0"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/10\">",
+         "target": [
+          "a[href=\"/task/10\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-1\" role=\"option\">",
+     "target": [
+      "#palette-opt-1"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/100\">",
+         "target": [
+          "a[href=\"/task/100\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-2\" role=\"option\">",
+     "target": [
+      "#palette-opt-2"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/101\">",
+         "target": [
+          "a[href=\"/task/101\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-3\" role=\"option\">",
+     "target": [
+      "#palette-opt-3"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/102\">",
+         "target": [
+          "a[href=\"/task/102\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-4\" role=\"option\">",
+     "target": [
+      "#palette-opt-4"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/103\">",
+         "target": [
+          "a[href=\"/task/103\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-5\" role=\"option\">",
+     "target": [
+      "#palette-opt-5"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/104\">",
+         "target": [
+          "a[href=\"/task/104\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-6\" role=\"option\">",
+     "target": [
+      "#palette-opt-6"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/106\">",
+         "target": [
+          "a[href=\"/task/106\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-7\" role=\"option\">",
+     "target": [
+      "#palette-opt-7"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/107\">",
+         "target": [
+          "a[href=\"/task/107\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-8\" role=\"option\">",
+     "target": [
+      "#palette-opt-8"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/108\">",
+         "target": [
+          "a[href=\"/task/108\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-9\" role=\"option\">",
+     "target": [
+      "#palette-opt-9"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/109\">",
+         "target": [
+          "a[href=\"/task/109\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-10\" role=\"option\">",
+     "target": [
+      "#palette-opt-10"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/11\">",
+         "target": [
+          "a[href=\"/task/11\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-11\" role=\"option\">",
+     "target": [
+      "#palette-opt-11"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/110\">",
+         "target": [
+          "a[href=\"/task/110\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-12\" role=\"option\">",
+     "target": [
+      "#palette-opt-12"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/111\">",
+         "target": [
+          "a[href=\"/task/111\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-13\" role=\"option\">",
+     "target": [
+      "#palette-opt-13"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/113\">",
+         "target": [
+          "a[href=\"/task/113\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-14\" role=\"option\">",
+     "target": [
+      "#palette-opt-14"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/114\">",
+         "target": [
+          "a[href=\"/task/114\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-15\" role=\"option\">",
+     "target": [
+      "#palette-opt-15"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/115\">",
+         "target": [
+          "a[href=\"/task/115\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-16\" role=\"option\">",
+     "target": [
+      "#palette-opt-16"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/116\">",
+         "target": [
+          "a[href=\"/task/116\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-17\" role=\"option\">",
+     "target": [
+      "#palette-opt-17"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/117\">",
+         "target": [
+          "a[href=\"/task/117\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-18\" role=\"option\">",
+     "target": [
+      "#palette-opt-18"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/118\">",
+         "target": [
+          "a[href=\"/task/118\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-19\" role=\"option\">",
+     "target": [
+      "#palette-opt-19"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/12\">",
+         "target": [
+          "a[href=\"/task/12\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-20\" role=\"option\">",
+     "target": [
+      "#palette-opt-20"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/120\">",
+         "target": [
+          "a[href=\"/task/120\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-21\" role=\"option\">",
+     "target": [
+      "#palette-opt-21"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/13\">",
+         "target": [
+          "a[href=\"/task/13\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-22\" role=\"option\">",
+     "target": [
+      "#palette-opt-22"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/15\">",
+         "target": [
+          "a[href=\"/task/15\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-23\" role=\"option\">",
+     "target": [
+      "#palette-opt-23"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/16\">",
+         "target": [
+          "a[href=\"/task/16\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-24\" role=\"option\">",
+     "target": [
+      "#palette-opt-24"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/17\">",
+         "target": [
+          "a[href=\"/task/17\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-25\" role=\"option\">",
+     "target": [
+      "#palette-opt-25"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/18\">",
+         "target": [
+          "a[href=\"/task/18\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-26\" role=\"option\">",
+     "target": [
+      "#palette-opt-26"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/19\">",
+         "target": [
+          "a[href=\"/task/19\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-27\" role=\"option\">",
+     "target": [
+      "#palette-opt-27"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/2\">",
+         "target": [
+          "a[href$=\"task/2\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-28\" role=\"option\">",
+     "target": [
+      "#palette-opt-28"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/20\">",
+         "target": [
+          "a[href=\"/task/20\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-29\" role=\"option\">",
+     "target": [
+      "#palette-opt-29"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/22\">",
+         "target": [
+          "a[href=\"/task/22\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-30\" role=\"option\">",
+     "target": [
+      "#palette-opt-30"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/23\">",
+         "target": [
+          "a[href=\"/task/23\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-31\" role=\"option\">",
+     "target": [
+      "#palette-opt-31"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/24\">",
+         "target": [
+          "a[href=\"/task/24\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-32\" role=\"option\">",
+     "target": [
+      "#palette-opt-32"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/25\">",
+         "target": [
+          "a[href=\"/task/25\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-33\" role=\"option\">",
+     "target": [
+      "#palette-opt-33"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/26\">",
+         "target": [
+          "a[href=\"/task/26\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-34\" role=\"option\">",
+     "target": [
+      "#palette-opt-34"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/27\">",
+         "target": [
+          "a[href=\"/task/27\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-35\" role=\"option\">",
+     "target": [
+      "#palette-opt-35"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/29\">",
+         "target": [
+          "a[href=\"/task/29\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-36\" role=\"option\">",
+     "target": [
+      "#palette-opt-36"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/3\">",
+         "target": [
+          "a[href$=\"task/3\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-37\" role=\"option\">",
+     "target": [
+      "#palette-opt-37"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/30\">",
+         "target": [
+          "a[href=\"/task/30\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-38\" role=\"option\">",
+     "target": [
+      "#palette-opt-38"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/31\">",
+         "target": [
+          "a[href=\"/task/31\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-39\" role=\"option\">",
+     "target": [
+      "#palette-opt-39"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/32\">",
+         "target": [
+          "a[href=\"/task/32\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-40\" role=\"option\">",
+     "target": [
+      "#palette-opt-40"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/33\">",
+         "target": [
+          "a[href=\"/task/33\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-41\" role=\"option\">",
+     "target": [
+      "#palette-opt-41"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/34\">",
+         "target": [
+          "a[href=\"/task/34\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-42\" role=\"option\">",
+     "target": [
+      "#palette-opt-42"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/36\">",
+         "target": [
+          "a[href=\"/task/36\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-43\" role=\"option\">",
+     "target": [
+      "#palette-opt-43"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/37\">",
+         "target": [
+          "a[href=\"/task/37\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-44\" role=\"option\">",
+     "target": [
+      "#palette-opt-44"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/38\">",
+         "target": [
+          "a[href=\"/task/38\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-45\" role=\"option\">",
+     "target": [
+      "#palette-opt-45"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/39\">",
+         "target": [
+          "a[href=\"/task/39\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-46\" role=\"option\">",
+     "target": [
+      "#palette-opt-46"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/4\">",
+         "target": [
+          "a[href$=\"task/4\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-47\" role=\"option\">",
+     "target": [
+      "#palette-opt-47"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/40\">",
+         "target": [
+          "a[href=\"/task/40\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-48\" role=\"option\">",
+     "target": [
+      "#palette-opt-48"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    },
+    {
+     "any": [
+      {
+       "id": "no-focusable-content",
+       "data": null,
+       "relatedNodes": [
+        {
+         "html": "<a href=\"/task/41\">",
+         "target": [
+          "a[href=\"/task/41\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has focusable descendants"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<li id=\"palette-opt-49\" role=\"option\">",
+     "target": [
+      "#palette-opt-49"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has focusable descendants"
+    }
+   ]
+  }
+ ],
+ "incomplete": [
+  {
+   "id": "color-contrast",
+   "nodes": 70
+  },
+  {
+   "id": "frame-tested",
+   "nodes": 1
+  },
+  {
+   "id": "skip-link",
+   "nodes": 1
+  }
+ ]
+}

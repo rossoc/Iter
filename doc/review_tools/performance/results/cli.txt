@@ -1,0 +1,57 @@
+== perf1
+baseline python-spawn            23.6 ms
+--version                        29.8 ms
+project list                     29.6 ms
+task list                        29.6 ms
+project info (today)             30.6 ms
+project info (30 days)           32.1 ms
+org info (today)                 30.3 ms
+org info (30 days)               30.2 ms
+org info worklog (30 days)       30.2 ms
+session start+stop               38.3 ms
+notes list --org org-1           36.8 ms
+notes list --project             30.0 ms
+wiki find --org org-1            35.9 ms
+wiki find --task                 35.9 ms
+wiki show --org org-1            34.2 ms
+wiki check --org org-1           35.1 ms
+wiki check --task                36.8 ms
+wiki pending --project           46.3 ms
+== perf4
+baseline python-spawn            22.8 ms
+--version                        29.4 ms
+project list                     29.3 ms
+task list                        29.0 ms
+project info (today)             29.9 ms
+project info (30 days)           29.2 ms
+org info (today)                 29.1 ms
+org info (30 days)               30.5 ms
+org info worklog (30 days)       30.7 ms
+session start+stop               40.7 ms
+notes list --org org-1           40.6 ms
+notes list --project             30.8 ms
+wiki find --org org-1            35.7 ms
+wiki find --task                 36.7 ms
+wiki show --org org-1            34.6 ms
+wiki check --org org-1           35.3 ms
+wiki check --task                37.3 ms
+wiki pending --project           49.6 ms
+== perf16
+baseline python-spawn            23.1 ms
+--version                        28.7 ms
+project list                     29.2 ms
+task list                        30.3 ms
+project info (today)             29.4 ms
+project info (30 days)           29.7 ms
+org info (today)                 29.8 ms
+org info (30 days)               31.4 ms
+org info worklog (30 days)       30.2 ms
+session start+stop               38.4 ms
+notes list --org org-1           36.8 ms
+notes list --project             32.1 ms
+wiki find --org org-1            34.0 ms
+wiki find --task                 36.0 ms
+wiki show --org org-1            35.0 ms
+wiki check --org org-1           36.5 ms
+wiki check --task                40.3 ms
+wiki pending --project           46.8 ms

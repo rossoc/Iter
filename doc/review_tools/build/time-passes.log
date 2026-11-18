@@ -1,0 +1,97 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling thiserror v2.0.20
+   Compiling quote v1.0.47
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling peg-macros v0.8.6
+   Compiling peg v0.8.6
+   Compiling iter-macros v0.1.0 (/private/tmp/claude-501/-Users-carlorosso--config-iter--iter-worktrees-review/f9634ce8-ea6d-484c-8703-6013688875b7/scratchpad/build-copy/macros)
+   Compiling topcoat-core-grammar v0.9.0
+   Compiling topcoat-router-grammar v0.9.0
+   Compiling thiserror-impl v2.0.20
+   Compiling tokio-macros v2.7.2
+   Compiling futures-macro v0.3.34
+   Compiling serde_derive v1.0.229
+   Compiling ref-cast-impl v1.0.27
+   Compiling clap_derive v4.6.4
+   Compiling topcoat-core-macro v0.9.0
+   Compiling topcoat-router-macro v0.9.0
+   Compiling ref-cast v1.0.27
+   Compiling tokio v1.53.1
+   Compiling futures-util v0.3.34
+   Compiling clap v4.6.6
+   Compiling oxsdatatypes v0.2.4
+   Compiling topcoat-core v0.9.0
+   Compiling tungstenite v0.29.0
+   Compiling clap_complete v4.6.9
+   Compiling serde v1.0.229
+   Compiling oxrdf v0.3.5
+   Compiling topcoat-view v0.9.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling spargebra v0.4.8
+   Compiling sparesults v0.3.5
+   Compiling oxttl v0.2.5
+   Compiling topcoat-view-grammar v0.9.0
+   Compiling oxrdfxml v0.2.5
+   Compiling oxjsonld v0.2.7
+   Compiling tokio-util v0.7.19
+   Compiling h2 v0.4.19
+   Compiling sparopt v0.3.9
+   Compiling spareval v0.2.9
+   Compiling hyper v1.11.1
+   Compiling oxrdfio v0.2.7
+   Compiling tokio-tungstenite v0.29.0
+   Compiling hyper-util v0.1.21
+   Compiling topcoat-router v0.9.0
+   Compiling topcoat-view-macro v0.9.0
+   Compiling oxigraph v0.5.13
+   Compiling serde_yaml v0.9.34+deprecated
+   Compiling topcoat v0.9.0
+   Compiling Iter v0.1.0 (/private/tmp/claude-501/-Users-carlorosso--config-iter--iter-worktrees-review/f9634ce8-ea6d-484c-8703-6013688875b7/scratchpad/build-copy)
+time:   0.000; rss:   40MB ->   41MB (   +1MB)	parse_crate
+time:   0.000; rss:   46MB ->   46MB (   +0MB)	crate_injection
+time:   1.187; rss:   46MB ->  210MB ( +164MB)	expand_crate
+time:   1.188; rss:   46MB ->  210MB ( +165MB)	macro_expand_crate
+time:   0.006; rss:  210MB ->  211MB (   +0MB)	AST_validation
+time:   0.003; rss:  211MB ->  211MB (   +0MB)	finalize_imports
+time:   0.002; rss:  211MB ->  211MB (   +0MB)	compute_effective_visibilities
+time:   0.000; rss:  211MB ->  211MB (   +0MB)	lint_reexports
+time:   0.003; rss:  211MB ->  211MB (   +0MB)	finalize_macro_resolutions
+time:   0.095; rss:  211MB ->  250MB (  +38MB)	late_resolve_crate
+time:   0.000; rss:  250MB ->  250MB (   +0MB)	resolve_main
+time:   0.005; rss:  250MB ->  250MB (   +0MB)	resolve_postprocess
+time:   0.109; rss:  211MB ->  250MB (  +39MB)	resolve_crate
+time:   0.003; rss:  250MB ->  251MB (   +0MB)	write_dep_info
+time:   0.001; rss:  310MB ->  310MB (   +0MB)	looking_for_entry_point
+time:   0.000; rss:  310MB ->  310MB (   +0MB)	check_externally_implementable_items
+time:   0.000; rss:  310MB ->  310MB (   +0MB)	looking_for_derive_registrar
+time:   0.000; rss:  311MB ->  311MB (   +0MB)	unused_lib_feature_checking
+time:   0.030; rss:  310MB ->  315MB (   +4MB)	misc_checking_1
+time:   0.001; rss:  315MB ->  315MB (   +0MB)	emit_ast_lowering_delayed_lints
+time:   5.120; rss:  315MB ->  668MB ( +353MB)	coherence_checking
+time:   5.991; rss:  315MB ->  705MB ( +390MB)	type_check_crate
+time:   2.110; rss:  705MB ->  869MB ( +164MB)	MIR_borrow_checking
+time:   0.000; rss:  876MB ->  876MB (   +0MB)	crate_lints
+time:   0.046; rss:  876MB ->  867MB (   -9MB)	module_lints
+time:   0.046; rss:  876MB ->  867MB (   -9MB)	lint_checking
+time:   0.059; rss:  867MB ->  867MB (   +0MB)	privacy_checking_modules
+time:   0.139; rss:  869MB ->  867MB (   -2MB)	misc_checking_3
+time:   0.607; rss:  867MB ->  940MB (  +73MB)	monomorphization_collector_root_collections
+time:   6.453; rss:  940MB -> 1089MB ( +149MB)	monomorphization_collector_graph_walk
+time:   0.579; rss: 1091MB -> 1191MB ( +100MB)	partition_and_assert_distinct_symbols
+time:   0.000; rss: 1177MB -> 1178MB (   +1MB)	write_allocator_module
+time:   4.793; rss: 1178MB -> 1229MB (  +50MB)	codegen_to_LLVM_IR
+time:  20.450; rss:  867MB -> 1229MB ( +362MB)	codegen_crate
+time:  17.549; rss: 1263MB ->  422MB ( -841MB)	LLVM_passes
+time:  25.148; rss:  415MB ->  638MB ( +223MB)	LLVM_thinlto
+time:   0.000; rss:  357MB ->  337MB (  -20MB)	join_worker_thread
+time:  29.961; rss: 1178MB ->  295MB ( -883MB)	finish_ongoing_codegen
+time:   0.000; rss:  278MB ->  251MB (  -27MB)	serialize_work_products
+time:   0.000; rss:  227MB ->  223MB (   -3MB)	link_binary_check_files_are_writeable
+time:   0.051; rss:   53MB ->   53MB (   +0MB)	get_apple_sdk_root
+time:   0.425; rss:   55MB ->   55MB (   +1MB)	run_linker
+time:   0.705; rss:  227MB ->   56MB ( -171MB)	link_binary
+time:   0.705; rss:  241MB ->   56MB ( -186MB)	link_crate
+time:   0.706; rss:  294MB ->   56MB ( -238MB)	link
+time:  61.351; rss:   28MB ->   58MB (  +30MB)	total
+    Finished `release` profile [optimized] target(s) in 1m 30s

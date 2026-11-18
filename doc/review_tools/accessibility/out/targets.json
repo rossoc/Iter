@@ -1,0 +1,7420 @@
+[
+ {
+  "width": 1280,
+  "url": "/",
+  "total": 68,
+  "small": [
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/org/1?tab=tasks",
+  "total": 86,
+  "small": [
+   {
+    "what": "a.u \"A task with a rather long na\"",
+    "w": 564,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 61,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-1\"",
+    "w": 42,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 61,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-101\"",
+    "w": 58,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 61,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-41\"",
+    "w": 51,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 61,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-61\"",
+    "w": 51,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 61,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-81\"",
+    "w": 51,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 61,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"A task with a rather long na\"",
+    "w": 566,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-117\"",
+    "w": 57,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-17\"",
+    "w": 50,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-37\"",
+    "w": 52,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-57\"",
+    "w": 52,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-97\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"A task with a rather long na\"",
+    "w": 568,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-109\"",
+    "w": 60,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-29\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-69\"",
+    "w": 54,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-89\"",
+    "w": 54,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-9\"",
+    "w": 44,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02",
+  "total": 59,
+  "small": [
+   {
+    "what": "button.button.small \"Apply\"",
+    "w": 22,
+    "h": 8,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-1\"",
+    "w": 47,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-61\"",
+    "w": 57,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/org/1?tab=tasks&new=task",
+  "total": 15,
+  "small": [
+   {
+    "what": "select.control.cb-native \"project-1project-17project-9\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.modal-backdrop \"\""
+   },
+   {
+    "what": "select.control.cb-native \"queuedwork in progressdone\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.modal-backdrop \"\""
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/task/1?tab=sessions",
+  "total": 49,
+  "small": [
+   {
+    "what": "a \"org-1\"",
+    "w": 40,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 71,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/board/2?date=2026-11-02",
+  "total": 115,
+  "small": [
+   {
+    "what": "a \"Boards\"",
+    "w": 53,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input.day-input \"2026-11-02\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "button.sr \"Go to this date\""
+   },
+   {
+    "what": "button.sr \"Go to this date\"",
+    "w": 16,
+    "h": 6,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "input.day-input \"2026-11-02\""
+   },
+   {
+    "what": "a.jump \"Skip to unscheduled tasks\"",
+    "w": 1,
+    "h": 8,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-102\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-2\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-22\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-62\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-82\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-114\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-34\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-54\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-74\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-94\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-108\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-48\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-68\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-8\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-88\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-116\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-16\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-36\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-76\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-96\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-104\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-24\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-4\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-44\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-64\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/board/2?date=2026-11-02&pick=2",
+  "total": 141,
+  "small": [
+   {
+    "what": "a \"Boards\"",
+    "w": 53,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input.day-input \"2026-11-02\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "button.sr \"Go to this date\""
+   },
+   {
+    "what": "button.sr \"Go to this date\"",
+    "w": 16,
+    "h": 6,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "input.day-input \"2026-11-02\""
+   },
+   {
+    "what": "a.jump \"Skip to unscheduled tasks\"",
+    "w": 1,
+    "h": 8,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-102\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-2\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-22\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-62\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-82\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-114\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-34\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-54\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-74\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-94\"",
+    "w": 208,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-108\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-48\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-68\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-8\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-88\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-116\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-16\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-36\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-76\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-96\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-104\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-24\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-4\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-44\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-64\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/board/2/matrix?pick=24",
+  "total": 112,
+  "small": [
+   {
+    "what": "a \"Boards\"",
+    "w": 53,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.jump \"Skip to the backlog\"",
+    "w": 1,
+    "h": 8,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-108\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-48\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-114\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-54\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-36\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-96\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-102\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-24\"",
+    "w": 266,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-116\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-16\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-76\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-34\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-74\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-94\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-2\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-22\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-62\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-82\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-104\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-4\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-44\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-64\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-68\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-8\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-88\"",
+    "w": 260,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.tcard-title \"project-8/A task with a rath\""
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.tcard-title \"project-8/A task with a rath\""
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/instructions",
+  "total": 46,
+  "small": [
+   {
+    "what": "a.u \"Plan\"",
+    "w": 29,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Develop\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Test\"",
+    "w": 29,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Check\"",
+    "w": 44,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Fix\"",
+    "w": 19,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/agents",
+  "total": 40,
+  "small": [
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 1280,
+  "url": "/settings",
+  "total": 52,
+  "small": [
+   {
+    "what": "select.control.cb-native \"queuedwork in progressdone\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input \"on\"",
+    "w": 16,
+    "h": 16,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input \"on\"",
+    "w": 16,
+    "h": 16,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input \"on\"",
+    "w": 16,
+    "h": 16,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/",
+  "total": 68,
+  "small": [
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/org/1?tab=tasks",
+  "total": 86,
+  "small": [
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 58,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-1\"",
+    "w": 42,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 58,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-101\"",
+    "w": 58,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 58,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-41\"",
+    "w": 51,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 58,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-61\"",
+    "w": 51,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 58,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-81\"",
+    "w": 51,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-1\"",
+    "w": 58,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 66,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-117\"",
+    "w": 57,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 66,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-17\"",
+    "w": 50,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 66,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-37\"",
+    "w": 52,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 66,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-57\"",
+    "w": 52,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 66,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-97\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-17\"",
+    "w": 66,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 61,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-109\"",
+    "w": 60,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 61,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-29\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 61,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-69\"",
+    "w": 54,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 61,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-89\"",
+    "w": 54,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 61,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-9\"",
+    "w": 44,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u.muted \"project-9\"",
+    "w": 61,
+    "h": 19,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02",
+  "total": 59,
+  "small": [
+   {
+    "what": "button.button.small \"Apply\"",
+    "w": 22,
+    "h": 8,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-1\"",
+    "w": 47,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"task-61\"",
+    "w": 57,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/org/1?tab=tasks&new=task",
+  "total": 15,
+  "small": [
+   {
+    "what": "select.control.cb-native \"project-1project-17project-9\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.modal-backdrop \"\""
+   },
+   {
+    "what": "select.control.cb-native \"queuedwork in progressdone\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.modal-backdrop \"\""
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/task/1?tab=sessions",
+  "total": 49,
+  "small": [
+   {
+    "what": "a \"org-1\"",
+    "w": 40,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 71,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/board/2?date=2026-11-02",
+  "total": 115,
+  "small": [
+   {
+    "what": "a \"Boards\"",
+    "w": 53,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input.day-input \"2026-11-02\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "button.sr \"Go to this date\""
+   },
+   {
+    "what": "button.sr \"Go to this date\"",
+    "w": 16,
+    "h": 6,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "input.day-input \"2026-11-02\""
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-102\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-2\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-22\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-62\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-82\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-114\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-34\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-54\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-74\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-94\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-108\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-48\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-68\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-8\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-88\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-116\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-16\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-36\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-76\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-96\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-104\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-24\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-4\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-44\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-64\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/board/2?date=2026-11-02&pick=2",
+  "total": 141,
+  "small": [
+   {
+    "what": "a \"Boards\"",
+    "w": 53,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input.day-input \"2026-11-02\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "button.sr \"Go to this date\""
+   },
+   {
+    "what": "button.sr \"Go to this date\"",
+    "w": 16,
+    "h": 6,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "input.day-input \"2026-11-02\""
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-102\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-2\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-22\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-62\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-82\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-114\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-34\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-54\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-74\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-94\"",
+    "w": 268,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-108\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-48\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-68\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-8\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-88\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-116\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-16\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-36\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-76\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-96\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-104\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-24\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-4\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-44\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-64\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/board/2/matrix?pick=24",
+  "total": 112,
+  "small": [
+   {
+    "what": "a \"Boards\"",
+    "w": 53,
+    "h": 13,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-108\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-48\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-114\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-54\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-36\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-96\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-102\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-24\"",
+    "w": 292,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-116\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-16\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-16/task-76\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-34\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-74\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-14/task-94\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-2\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-22\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-62\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-2/task-82\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-104\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-4\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-44\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-4/task-64\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-68\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-8\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.tcard-title \"project-8/task-88\"",
+    "w": 300,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/instructions",
+  "total": 46,
+  "small": [
+   {
+    "what": "a.u \"Plan\"",
+    "w": 29,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Develop\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Test\"",
+    "w": 29,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Check\"",
+    "w": 44,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Fix\"",
+    "w": 19,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/agents",
+  "total": 40,
+  "small": [
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ },
+ {
+  "width": 400,
+  "url": "/settings",
+  "total": 52,
+  "small": [
+   {
+    "what": "select.control.cb-native \"queuedwork in progressdone\"",
+    "w": 1,
+    "h": 1,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input \"on\"",
+    "w": 16,
+    "h": 16,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input \"on\"",
+    "w": 16,
+    "h": 16,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "input \"on\"",
+    "w": 16,
+    "h": 16,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-1\"",
+    "w": 36,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-1\"",
+    "w": 58,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-1\""
+   },
+   {
+    "what": "a \"project-17\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-9\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-2\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-18\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-2\""
+   },
+   {
+    "what": "a \"project-2\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-3\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-11\"",
+    "w": 64,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-3\""
+   },
+   {
+    "what": "a \"project-19\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-3\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-4\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-12\"",
+    "w": 66,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-4\""
+   },
+   {
+    "what": "a \"project-4\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-5\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-13\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-5\""
+   },
+   {
+    "what": "a.u \"org-6\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-14\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-6\""
+   },
+   {
+    "what": "a \"project-6\"",
+    "w": 61,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"org-7\"",
+    "w": 38,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-7\"",
+    "w": 59,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-7\""
+   },
+   {
+    "what": "a.u \"org-8\"",
+    "w": 39,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a \"project-16\"",
+    "w": 67,
+    "h": 17,
+    "inline": false,
+    "spacingOk": false,
+    "hit": "a.u \"org-8\""
+   },
+   {
+    "what": "a \"project-8\"",
+    "w": 60,
+    "h": 17,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-1\"",
+    "w": 53,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"board-2\"",
+    "w": 56,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-10\"",
+    "w": 71,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-15\"",
+    "w": 70,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-20\"",
+    "w": 73,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"project-5\"",
+    "w": 64,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"Global settings\"",
+    "w": 103,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   },
+   {
+    "what": "a.u \"GitHub\"",
+    "w": 48,
+    "h": 20,
+    "inline": false,
+    "spacingOk": true,
+    "hit": null
+   }
+  ]
+ }
+]

@@ -1,0 +1,8 @@
+  Tab x1: input.control "" 144x36 ring pos=static clip=none
+  Tab x2: input.control "" 144x36 ring pos=static clip=none
+  Tab x3: input.control "" 144x36 no-ring pos=static clip=none
+  Tab x4: button.button.small.apply "Apply" 58x36 ring pos=static clip=none
+  agenda Tab x1: input#day-input.day-input "" 1x1 ring pos=absolute clip=none visible-ring=true
+  agenda Tab x2: input#day-input.day-input "" 1x1 ring pos=absolute clip=none visible-ring=true
+  agenda Tab x3: input#day-input.day-input "" 1x1 no-ring pos=absolute clip=none visible-ring=false
+  agenda Tab x4: button.sr "Go to this date" 16x6 ring pos=absolute clip=inset(50%) visible-ring=false

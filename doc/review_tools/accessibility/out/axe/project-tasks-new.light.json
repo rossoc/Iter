@@ -1,0 +1,295 @@
+{
+ "url": "/project/1?tab=tasks&new=task",
+ "scheme": "light",
+ "violations": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "tags": [
+    "cat.color",
+    "wcag2aa",
+    "wcag143",
+    "TTv5",
+    "TT13.c",
+    "EN-301-549",
+    "EN-9.1.4.3",
+    "ACT"
+   ],
+   "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+   "help": "Elements must meet minimum color contrast ratio thresholds",
+   "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+   "nodes": [
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#817e78",
+        "bgColor": "#fbfaf8",
+        "contrastRatio": 3.87,
+        "fontSize": "9.8pt (13px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<section class=\"modal-box\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"new-task-title\">",
+         "target": [
+          ".modal-box"
+         ]
+        },
+        {
+         "html": "<a class=\"modal-backdrop\" href=\"/project/1?tab=tasks\" tabindex=\"-1\" aria-hidden=\"true\"></a>",
+         "target": [
+          ".modal-backdrop"
+         ]
+        },
+        {
+         "html": "<body>",
+         "target": [
+          "body"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<p class=\"required-note\"><span aria-hidden=\"true\">*</span> Required</p>",
+     "target": [
+      ".required-note"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+    },
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#817e78",
+        "bgColor": "#fbfaf8",
+        "contrastRatio": 3.87,
+        "fontSize": "9.8pt (13px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<section class=\"modal-box\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"new-task-title\">",
+         "target": [
+          ".modal-box"
+         ]
+        },
+        {
+         "html": "<a class=\"modal-backdrop\" href=\"/project/1?tab=tasks\" tabindex=\"-1\" aria-hidden=\"true\"></a>",
+         "target": [
+          ".modal-backdrop"
+         ]
+        },
+        {
+         "html": "<body>",
+         "target": [
+          "body"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<p class=\"hint\" id=\"f-tags-hint\">The task's tags, comma-separated. Urgent and Important flag the task. Leave empty for none.</p>",
+     "target": [
+      "#f-tags-hint"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+    },
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#817e78",
+        "bgColor": "#fbfaf8",
+        "contrastRatio": 3.87,
+        "fontSize": "9.8pt (13px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<section class=\"modal-box\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"new-task-title\">",
+         "target": [
+          ".modal-box"
+         ]
+        },
+        {
+         "html": "<a class=\"modal-backdrop\" href=\"/project/1?tab=tasks\" tabindex=\"-1\" aria-hidden=\"true\"></a>",
+         "target": [
+          ".modal-backdrop"
+         ]
+        },
+        {
+         "html": "<body>",
+         "target": [
+          "body"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<legend class=\"label\">Schedule</legend>",
+     "target": [
+      "fieldset:nth-child(7) > legend"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+    },
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#817e78",
+        "bgColor": "#fbfaf8",
+        "contrastRatio": 3.87,
+        "fontSize": "9.8pt (13px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<section class=\"modal-box\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"new-task-title\">",
+         "target": [
+          ".modal-box"
+         ]
+        },
+        {
+         "html": "<a class=\"modal-backdrop\" href=\"/project/1?tab=tasks\" tabindex=\"-1\" aria-hidden=\"true\"></a>",
+         "target": [
+          ".modal-backdrop"
+         ]
+        },
+        {
+         "html": "<body>",
+         "target": [
+          "body"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<p class=\"hint\" id=\"f-start_time-hint\">When the task starts, as year-month-day hours:minutes, for example 2026-09-29 14:30. Leave empty for none.</p>",
+     "target": [
+      "#f-start_time-hint"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+    },
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#817e78",
+        "bgColor": "#fbfaf8",
+        "contrastRatio": 3.87,
+        "fontSize": "9.8pt (13px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<section class=\"modal-box\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"new-task-title\">",
+         "target": [
+          ".modal-box"
+         ]
+        },
+        {
+         "html": "<a class=\"modal-backdrop\" href=\"/project/1?tab=tasks\" tabindex=\"-1\" aria-hidden=\"true\"></a>",
+         "target": [
+          ".modal-backdrop"
+         ]
+        },
+        {
+         "html": "<body>",
+         "target": [
+          "body"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<p class=\"hint\" id=\"f-duration-hint\">How long the task takes, as hours:minutes, for example 01:30. Leave empty for none.</p>",
+     "target": [
+      "#f-duration-hint"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #817e78, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+    },
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#f2f4fc",
+        "bgColor": "#5470d8",
+        "contrastRatio": 4.08,
+        "fontSize": "10.5pt (14px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<button type=\"submit\" class=\"button primary\">Create task</button>",
+         "target": [
+          ".primary"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 4.08 (foreground color: #f2f4fc, background color: #5470d8, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<button type=\"submit\" class=\"button primary\">Create task</button>",
+     "target": [
+      ".primary"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.08 (foreground color: #f2f4fc, background color: #5470d8, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+    }
+   ]
+  }
+ ],
+ "incomplete": [
+  {
+   "id": "color-contrast",
+   "nodes": 7
+  }
+ ]
+}

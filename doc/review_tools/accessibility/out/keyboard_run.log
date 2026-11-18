@@ -1,0 +1,109 @@
+### A. Home Tab order (shared)
+  1. a.skip "Skip to content" 134x39 ring
+  2. a.brand "iter" 58x26 ring
+  3. a "Board" 84x32 ring
+  4. a "Agents" 91x32 ring
+  5. a "Instructions" 124x32 ring
+  6. a "Settings" 100x32 ring
+  7. button.search-btn "Search/" 117x34 ring
+  8. a "org-1" 62x28 ring
+  9. a.u "project-1" 61x25 ring
+  10. a.u "project-17" 70x25 ring
+  11. a.u "project-9" 64x25 ring
+  12. a "org-2" 64x28 ring
+
+### B. Agenda: card action -> pick -> hour -> moved -> cancel (own store)
+  title: Mon 2 Nov - Agenda - board-1 - iter
+  first card action reached after 23 tabs: a.tcard-act "Move project-1/task-6" 49x28 ring
+  its opacity while focused: 1
+  day input reached after 13 tabs: input#day-input.day-input "" 1x1 ring
+  ArrowUp on the date: url changed? false (F2 of the Oct review)
+  Tab x1 after the date input: input#day-input.day-input "" 1x1 ring
+  Tab x2 after the date input: input#day-input.day-input "" 1x1 ring
+  Tab x3 after the date input: input#day-input.day-input "" 1x1 no-ring
+  Tab x4 after the date input: button.sr "Go to this date" 16x6 ring
+  that element: clip-path=inset(50%) outline=solid 2px size=16x6
+  card 6 on the page: true
+  focused: a.tcard-act "Move project-1/task-6" 49x28 ring
+  after Enter: url=?date=2026-11-02&pick=6#pick title="Moving project-1/task-6 - Mon 2 Nov - Agenda - board-1 - iter"
+  active element on the pick page: div#pick.notice.pickbar "Moving project-1/task-6 (now Mon 2 Nov, 00:00). Ch" 684x48 ring
+    tab 1: button.button.small "Unschedule" 95x26 ring
+    tab 2: a.button.small "Cancel" 65x26 ring
+    tab 3: input#day-input.day-input "" 1x1 ring
+    tab 4: input#day-input.day-input "" 1x1 ring
+    tab 5: input#day-input.day-input "" 1x1 ring
+    tab 6: input#day-input.day-input "" 1x1 no-ring
+  slot button text: "Move here · 00:00"
+  after choosing the hour: ?date=2026-11-02#card-6 title="Mon 2 Nov - Agenda - board-1 - iter"
+  active element: article#card-6.tcard.edge "project-1/task-6work in progressMove project-1/tas" 240x76 no-ring
+  status region: role=status ""
+  status text after 300ms (board.js rewrites it): "Moved project-1/task-6 to Mon 2 Nov, 00:00" url now ?date=2026-11-02
+  Cancel reached after 2 tabs from the pick banner: a.button.small "Cancel" 65x26 ring
+  after Cancel: #card-6 active=article#card-6.tcard.edge "project-1/task-6work in progressMove project-1/tas" 240x76 no-ring
+  focus indicator on the card: card-6 outline=none focus-visible=true
+  Unschedule button in the banner: true
+
+### C. Matrix pick mode (own store)
+  card 1 action: Place project-1/task-1
+  pick page: ?pick=1#pick active=div#pick.notice.pickbar "Placing project-1/task-1. Choose a quadrant.Cancel" 684x48 ring title="Placing project-1/task-1 - Eisenhower matrix - board-1 - iter"
+  quadrant buttons: 4: Place here at Do first | Place here at Plan | Place here at Delegate | Place here at Eliminate
+  after Place: #card-1 active=article#card-1.tcard.edge.edge-important "project-1/task-1Importantwork in progressMove proj" 298x109 no-ring note=""
+  unplaced again: ?pick=1
+
+### D. New task pop-up (shared, GET only)
+  on load active: input#f-name.control "" 574x40 ring title="Tasks - project-1 - iter"
+  inert: a.skip=true header.bar=true main=true footer.site-foot=true
+  tab 1: textarea#f-description.control "" 578x142 ring
+  tab 2: button.control.cb-button "queued" 578x41 ring
+  tab 3: input#f-tags.control "" 578x41 ring
+  tab 4: input#f-start_time.control "" 580x41 ring
+  tab 5: input#f-duration.control "" 582x41 ring
+  tab 6: input#f-github_issue.control "" 584x41 ring
+  tab 7: input#f-branch_prefix.control "" 585x41 ring
+  tab 8: button.button.primary "Create task" 114x36 ring
+  tab 9: a.u "Cancel" 47x25 ring
+  shift+tab x2: button.button.primary "Create task" 114x36 ring | input#f-branch_prefix.control "" 586x41 ring
+  close ✕: name="Close" 36x36
+  backdrop: tabindex=-1 aria-hidden=true href=/project/1?tab=tasks
+  Escape: url=?tab=tasks active=BODY (focus return to the opener?)
+  opener link present on the page after close: true "New task…"
+
+### E. Search palette (shared)
+  opened: active=input.palette-input "Search pages" 1016x53 no-ring inert=true,true,true
+  results: 42 status="42 results" activedescendant=palette-opt-0
+  ArrowDown: activedescendant=palette-opt-1 selected="task: task-10project-10 · done"
+  Tab from the input: active=iframe.palette-frame "" 659x545 no-ring (iframe focus?) frameFocused=true
+  Escape from the frame: palette hidden=true active=button.search-btn "Search/" 117x34 ring
+  Enter on a result navigates to: /task/1
+  "/" typed inside a text field opens the palette? false (should be false)
+  "/" on the page opens it: true; any setting to turn the single-key shortcut off? none found in the source (2.1.4)
+
+### F. Combobox: enhanced <select> in the New task pop-up, input[list] on an instruction (shared)
+  select replaced by a button: true role=combobox haspopup=listbox labelledby=cb-label-1 name="Project*" value="project-1"
+  ArrowDown: expanded=true controls=cb-2 active=cb-2-0 listbox visible=true options=3
+  ArrowDown+Enter: value="project-17" native="17" expanded=false
+  Escape with the list open: closed=true modal still here=true url=?tab=tasks&new=task
+  second Escape: url=?tab=tasks (closes the pop-up)
+  model input: role=combobox list attr=null autocomplete=list
+  ArrowDown: expanded=true options=7 active=cb-1-0
+  Escape: expanded=false
+
+### G. Filter bar (shared)
+  field: input#filter-q.control "" 566x38 ring label="Filter tasks"
+  Tab: button.filter-help-btn "?Search syntax" 26x26 ring tip display=block describedby=filter-syntax
+  Escape: tip display=none (F6 of the Oct review)
+  Tab: button.button "Filter" 64x38 ring
+  Enter in the field: ?tab=tasks&q=is%3Adone status="0 of 18 tasks match" clear link=true
+
+### H. Report date form (shared)
+  To focused: input.control "" 144x36 ring
+  Tab: input.control "" 144x36 ring type=date (A3b: Apply reachable and visible?)
+  ArrowUp on From: navigated=false value=2026-10-28
+  Enter: ?tab=report&from=2026-10-28&to=2026-11-02
+  bad date: alert="Dates are YYYY-MM-DD; showing the last 7 days." (A3)
+  aria-current on the report page: page:Report true:7 days (A1)
+
+### I. Drag-and-drop alternative: every card has an action link, every hour a slot button in pick mode (shared)
+  cards=30 action links=30 draggable set by script=30
+  pick mode: slot buttons=24 picked card aria-current=card-2 words="Being moved" banner role=group labelledby ok=true
+  pick slot button accessible name: "Move here · 00:00" small button name: "Unschedule"

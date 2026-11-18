@@ -1,0 +1,123 @@
+flowchart LR
+  agent[agent]
+  app[app]
+  args[args]
+  commands[commands]
+  completion[completion]
+  config[config]
+  crate[crate]
+  db[db]
+  error[error]
+  git[git]
+  github[github]
+  md_edit[md_edit]
+  models[models]
+  notes[notes]
+  platform[platform]
+  process[process]
+  push[push]
+  reporting[reporting]
+  scaffold[scaffold]
+  secret[secret]
+  sync[sync]
+  tmux[tmux]
+  utils[utils]
+  web[web]
+  wiki[wiki]
+  %% edges into `error` and `config` omitted (every module); see fan-in table
+  agent --> app
+  agent --> db
+  agent --> git
+  agent --> models
+  agent -.-> notes
+  agent --> process
+  agent --> utils
+  agent -.-> wiki
+  app --> db
+  args --> agent
+  args --> completion
+  args --> reporting
+  args -.-> utils
+  args --> wiki
+  commands --> agent
+  commands --> app
+  commands --> args
+  commands --> db
+  commands --> git
+  commands --> github
+  commands --> md_edit
+  commands --> models
+  commands --> notes
+  commands --> platform
+  commands --> process
+  commands --> push
+  commands --> reporting
+  commands --> scaffold
+  commands --> secret
+  commands --> sync
+  commands --> tmux
+  commands --> utils
+  commands --> wiki
+  completion --> db
+  completion --> models
+  config -.-> agent
+  config --> models
+  crate --> app
+  crate --> args
+  crate --> commands
+  crate --> models
+  db -.-> models
+  error -.-> agent
+  git --> process
+  github --> models
+  github --> process
+  md_edit --> models
+  md_edit --> process
+  models -.-> db
+  models --> scaffold
+  notes -.-> agent
+  notes --> git
+  notes --> md_edit
+  notes --> models
+  platform --> reporting
+  platform --> secret
+  push --> db
+  push --> github
+  push --> models
+  push --> platform
+  push --> reporting
+  push --> utils
+  reporting --> models
+  sync --> github
+  sync --> models
+  tmux --> agent
+  tmux --> process
+  utils -.-> args
+  utils --> db
+  utils --> git
+  utils --> md_edit
+  utils --> models
+  utils --> reporting
+  utils --> tmux
+  web --> agent
+  web --> app
+  web --> db
+  web --> git
+  web --> github
+  web --> models
+  web --> notes
+  web --> platform
+  web --> push
+  web --> reporting
+  web --> secret
+  web --> utils
+  web --> wiki
+  wiki -.-> agent
+  wiki --> app
+  wiki --> db
+  wiki --> git
+  wiki --> md_edit
+  wiki --> models
+  wiki --> notes
+  wiki --> process
+  wiki --> utils

@@ -1,0 +1,65 @@
+flowchart LR
+  subgraph SCC3[cycle 3: 2 modules]
+    web_sections[sections]
+    web_url[url]
+  end
+  web_sections -->|agent_tab_url, notes_tab_url, projects_tab_url …| web_url
+  web_url -->|NoteTab, NoteTab| web_sections
+  subgraph SCC4[cycle 4: 3 modules]
+    web_ui_field[ui/field]
+    web_ui_group[ui/group]
+    web_ui_notice[ui/notice]
+  end
+  web_ui_field -->|group| web_ui_group
+  web_ui_field -->|ERROR_ID| web_ui_notice
+  web_ui_group -->|hint_id, invalid_cue| web_ui_field
+  web_ui_notice -->|field_id| web_ui_field
+  subgraph SCC5[cycle 5: 2 modules]
+    web_task_agent[task_agent]
+    web_task_runs[task_runs]
+  end
+  web_task_agent -->|Roster, roster_block| web_task_runs
+  web_task_runs -->|Open, step_panel| web_task_agent
+  subgraph SCC6[cycle 6: 6 modules]
+    web_edit[edit]
+    web_forms[forms]
+    web_forms_board[forms/board]
+    web_forms_org[forms/org]
+    web_forms_project[forms/project]
+    web_forms_task[forms/task]
+  end
+  web_edit -->|NAME| web_forms
+  web_forms -->|BoardForm| web_forms_board
+  web_forms -->|OrgForm| web_forms_org
+  web_forms -->|ProjectForm| web_forms_project
+  web_forms -->|TaskForm| web_forms_task
+  web_forms_board -->|DESCRIPTION, NAME, PROJECTS …| web_forms
+  web_forms_board -->|EditForm| web_edit
+  web_forms_org -->|DESCRIPTION, NAME, PROJECTS …| web_forms
+  web_forms_org -->|EditForm| web_edit
+  web_forms_project -->|SettingsForm, text| web_forms
+  web_forms_project -->|EditForm, name_field| web_edit
+  web_forms_task -->|names, optional, text| web_forms
+  web_forms_task -->|EditForm, name_field| web_edit
+  subgraph SCC7[cycle 7: 7 modules]
+    web_board_info[board_info]
+    web_org[org]
+    web_org_report[org_report]
+    web_org_share[org_share]
+    web_project[project]
+    web_project_new[project_new]
+    web_task_new[task_new]
+  end
+  web_board_info -->|Home, ProjectCreate, project_modal| web_project_new
+  web_org -->|Report, load, report_link …| web_org_report
+  web_org -->|Outcome, ShareDialog, preview_modal …| web_org_share
+  web_org -->|Home, ProjectCreate, project_modal| web_project_new
+  web_org -->|TaskCreate, TaskHome, task_modal| web_task_new
+  web_org_report -->|Outcome, share_outcome| web_org_share
+  web_org_share -->|Loaded, load, screen| web_org
+  web_org_share -->|Report, load, status_list| web_org_report
+  web_project -->|TaskCreate, TaskHome, task_modal| web_task_new
+  web_project_new -->|load, screen| web_board_info
+  web_project_new -->|load, screen| web_org
+  web_task_new -->|load, screen| web_org
+  web_task_new -->|load, screen| web_project

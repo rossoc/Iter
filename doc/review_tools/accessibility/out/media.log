@@ -1,0 +1,35 @@
+### prefers-reduced-motion: reduce
+  .group transition-duration: {"transition-duration":"0s"}
+  .group:hover transform: {"transform":"none"}
+  .bar nav a::before transition: {"transition-duration":"0s"}
+  .modal-box animation-name: {"animation-name":"none","animation-duration":"0s"}
+  .live animation-name: {"animation-name":"none"}
+  .tcard transition/transform: {"transition-duration":"0s","transform":"none"}
+  html scroll-behavior: {"scroll-behavior":"auto"}
+  .tabs a::after transition: {"transition-duration":"0s"}
+
+### prefers-reduced-motion: no-preference (the baseline)
+  .modal-box animation: {"animation-name":"modal-in","animation-duration":"0.25s"}
+  .live animation: {"animation-name":"breathe","animation-iteration-count":"3"}
+
+### forced-colors: active
+  nav current (.bar nav a[aria-current]) on /settings: {"text-decoration-line":"underline","outline-style":"solid","outline-width":"2px","outline-color":"rgba(5, 0, 73, 0.8)"}
+  nav current (.bar nav a[aria-current]): MISSING
+  tab current (.tabs a[aria-current]): {"text-decoration-line":"underline","color":"rgb(0, 0, 159)"} ::after {"border-bottom-width":"2px","border-bottom-color":"rgba(5, 0, 73, 0.8)","opacity":"1"}
+  tab other ::after opacity: {"opacity":"0"}
+  preset current (.presets a[aria-current]): {"outline-style":"solid","outline-width":"2px","outline-color":"rgba(5, 0, 73, 0.8)"}
+  .u link underline: {"text-decoration-line":"underline"}
+  .status.wip / .count borders: {"border-color":"rgb(0, 0, 0)","border-style":"solid"} {"border-color":"rgb(0, 0, 0)"}
+  focused tab outline: {"outline-style":"solid","outline-width":"2px","outline-color":"rgba(5, 0, 73, 0.8)"}
+  card: {"border-style":"solid","border-color":"rgb(0, 0, 0)","background-color":"rgb(255, 255, 255)"} ::before(edge) {"background-image":"none","background-color":"rgba(255, 255, 255, 0)"}
+  picked card: {"border-style":"dashed","border-color":"rgba(5, 0, 73, 0.8)"} words="Being moved"
+  priority chip (.tcard-prio): {"border-color":"rgb(0, 0, 0)","border-style":"solid"}
+  pick slot: {"border-style":"dashed","border-color":"rgba(5, 0, 73, 0.8)"}
+  pickbar notice: {"border-left-width":"1px","border-style":"solid"}
+  now line: {"background-color":"rgba(5, 0, 73, 0.8)"}
+  drop zone (static): {"border-style":"dashed","border-color":"rgb(0, 0, 0)"}
+  drop zone .over: {"border-style":"solid","outline-style":"solid","outline-color":"rgba(5, 0, 73, 0.8)"}
+  modal box: {"border-width":"2px","border-color":"rgb(0, 0, 0)"} backdrop bg={"background-color":"rgba(255, 255, 255, 0.55)"}
+  invalid cue / error notice left border: MISSING (none on this page unless refused)
+  focused input: {"outline-style":"solid","outline-width":"2px","outline-color":"rgba(5, 0, 73, 0.8)","border-color":"rgba(5, 0, 73, 0.8)"}
+  filter tip: {"border-width":"2px","border-color":"rgb(0, 0, 0)","display":"block"}

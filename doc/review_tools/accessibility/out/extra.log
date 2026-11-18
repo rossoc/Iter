@@ -1,0 +1,84 @@
+### Overflow at 320px: widest elements by right edge, excluding .sr (shared)
+  /: scrollWidth=654 bar width=320 bar overflow-x=visible flex-wrap=nowrap nav wrap=nowrap search-btn right=654
+     right=654 w=117 button.search-btn "Search/"
+     right=643 w=19 kbd "/"
+     right=564 w=14 svg ""
+     right=562 w=3 path ""
+     right=561 w=9 circle ""
+     right=513 w=411 nav "BoardAgentsInstructionsSetting"
+     right=513 w=100 a "Settings"
+     right=439 w=14 svg ""
+  /org/1?tab=projects: scrollWidth=1119 bar width=320 bar overflow-x=visible flex-wrap=nowrap nav wrap=nowrap search-btn right=654
+     right=1119 w=1099 table.tbl.projects "ProjectsNew project…project-1/"
+     right=1119 w=1099 tbody "New project…project-1/private/"
+     right=1119 w=1099 tr.add "New project…"
+     right=1119 w=1099 td "New project…"
+     right=1119 w=1099 a.add-link "New project…"
+     right=1119 w=1099 tr "project-1/private/tmp/claude-5"
+     right=1119 w=1099 tr "project-17/private/tmp/claude-"
+     right=1119 w=1099 tr "project-9/private/tmp/claude-5"
+  /board/1/info: scrollWidth=1119 bar width=320 bar overflow-x=visible flex-wrap=nowrap nav wrap=nowrap search-btn right=654
+     right=1119 w=1099 table.tbl.projects "ProjectsNew project…project-1/"
+     right=1119 w=1099 tbody "New project…project-1/private/"
+     right=1119 w=1099 tr.add "New project…"
+     right=1119 w=1099 td "New project…"
+     right=1119 w=1099 a.add-link "New project…"
+     right=1119 w=1099 tr "project-1/private/tmp/claude-5"
+     right=1119 w=1099 tr "project-11/private/tmp/claude-"
+     right=1119 w=1099 tr "project-13/private/tmp/claude-"
+  /board/2?date=2026-11-02: scrollWidth=654 bar width=320 bar overflow-x=visible flex-wrap=nowrap nav wrap=nowrap search-btn right=654
+     right=654 w=117 button.search-btn "Search/"
+     right=643 w=19 kbd "/"
+     right=564 w=14 svg ""
+     right=562 w=3 path ""
+     right=561 w=9 circle ""
+     right=513 w=411 nav "BoardAgentsInstructionsSetting"
+     right=513 w=100 a "Settings"
+     right=439 w=14 svg ""
+  /task/1: scrollWidth=654 bar width=320 bar overflow-x=visible flex-wrap=nowrap nav wrap=nowrap search-btn right=654
+     right=654 w=117 button.search-btn "Search/"
+     right=643 w=19 kbd "/"
+     right=564 w=14 svg ""
+     right=562 w=3 path ""
+     right=561 w=9 circle ""
+     right=513 w=411 nav "BoardAgentsInstructionsSetting"
+     right=513 w=100 a "Settings"
+     right=439 w=14 svg ""
+  /settings: scrollWidth=654 bar width=320 bar overflow-x=visible flex-wrap=nowrap nav wrap=nowrap search-btn right=654
+     right=654 w=117 button.search-btn "Search/"
+     right=643 w=19 kbd "/"
+     right=564 w=14 svg ""
+     right=562 w=3 path ""
+     right=561 w=9 circle ""
+     right=513 w=411 nav "BoardAgentsInstructionsSetting"
+     right=513 w=100 a "Settings"
+     right=439 w=14 svg ""
+  Settings nav link at 320px: left=413 right=513 viewport=320 (off-screen until the page is scrolled sideways)
+
+### 400px: same
+  {"settingsRight":513,"searchRight":654,"vw":400,"sw":654}
+  projects table at 400: {"tableWidth":1099,"pathWidth":1018,"pathScroll":1084,"cellMaxWidth":"none","sw":1119}
+
+### Footer link spacing (1280px): vertical gap between stacked links in .foot-sub and .foot-orgs
+  {"orgLink":{"h":20},"firstSub":{"h":17,"gapFromOrg":3},"subGaps":[8,8],"subFont":"14px","subLineHeight":"21.7px","colGaps":[90,66],"colH":[20,20,20]}
+  rule: a 24px circle centred on a 17px-tall link reaches 3.5px above and below it; a neighbour closer than that fails the spacing exception
+
+### Pick banner edge: .pickbar border-left-width in normal colours (pick_bar.css says 4px)
+  border-left-width=1px border-left-color=rgb(20, 120, 58) data-mode=moving
+
+### Instruction page headings
+  H1:Develop | H2:Prompt | H4:The task | H4:What the project already knows | H4:The plan | H4:How to work | H2:Details
+
+### Agent compose dialog (/task/1?tab=agent&new=agent)
+  {"title":"New agent","fields":["f-instruction","Claude","f-agent","f-model","medium","f-effort","f-prompt","do","do"],"autofocus":null,"active":"","cbButtons":2}
+
+### Day input accessible name and role (agenda)
+  null
+
+### Pick banner and card accessibility snapshot (agenda pick)
+  pickbar: {"role":"group","name":"Moving project-2/task-2 (now Mon 2 Nov, 10:00). Choose an hour.","children":[{"role":"text","name":"Moving "},{"role":"text","name":"project-2/task-2"},{"role":"text","name":" (now Mon 2 Nov, 10:00). Choose an hour."},{"role":"button","name":"Unschedule"},{"role":"link","name":"Cancel"}]}
+  picked card: {"role":"article","name":"project-2/task-2","children":[{"role":"link","name":"project-2/task-2"},{"role":"text","name":"Being moved"},{"role":"link","name":"Move project-2/task-2"}]}
+  side lists (headings inside summary?): {"role":"complementary","name":"Unscheduled","children":[{"role":"link","name":"Hide Unscheduled","description":"Hide Unscheduled"},{"role":"DisclosureTriangle","name":"IMPORTANT, NOT SCHEDULED (6 TASKS)","expanded":true},{"role":"article","name":"project-8/A task with a rather long name to see how the layout wraps when names get big 28","children":[{"role":"link","name":"project-8/A task with a rather long name to see how the layout wraps when names get big 28"},{"role":"text","name":"Important"},{"role":"link","name":"Schedule project-8/A task with a rather long name to see how the layout wraps when names get big 28"}]},{"role":"article","name":"project-8/task-108","children":[{"role":"link","name":"project-8/task-108"},{"role":"text","name":"Important"},{"role":"link","name":"Schedule project-8/task-108"}]},{"role":"article","name":"project-8/task-48","children":[{"role":"link","name"
+
+### Search palette option snapshot
+  {"role":"listbox","name":"Results","orientation":"vertical","children":[{"role":"link","name":"task: task-1 org-1 / project-1 · wip"},{"role":"link","name":"task: task-10 project-10 · done"},{"role":"link","name":"task: task-100 project-20 · done"},{"role":"link","name":"task: task-101 org-1 / project-1 · wip"},{"role":"link","name":"task: task-102 org-2 / project-2 · queue"},{"role":"link","name":"task: task-103 org-3 / project-3 · queue"},{"role":"link","name":"task: task-104 org-4 / project-4 · queue"},{"role":"link","name":"task: task-106 org-6 / project-6 · wip"},{"role":"link","name":"task: task-107 org-7 / project-7 · queue"},{"role":"link","name":"task: task-108 org-8 / project-8 · q

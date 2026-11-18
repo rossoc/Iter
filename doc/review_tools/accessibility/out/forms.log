@@ -1,0 +1,34 @@
+### 1. New task, empty name (POST /task/new)
+  before: active=input#f-name.control "" 574x40 ring required attr on name=false aria-required=true
+  after: {"url":"http://127.0.0.1:4020/task/new","title":"Error: Tasks - project-1 - iter","contentType":"text/html","h1":["project-1"],"main":1,"alerts":[],"errorBox":{"text":"Error: Task name cannot be empty.","role":null,"focused":true,"tabindex":"-1","link":"#f-name"},"invalid":["f-name describedby=form-error"],"cue":["Fix this"],"dialog":true,"bodyText":"Skip to content\niter\nBoard\nAgents\nInstructions\nSettings\nSearch\n/\nORG-1\nPROJECT\nproject-1\nInfo\nTasks\n6\nNotes\nSettings\nFilter tasks\n?\nSearch syntax\nFilter\nTasks i","links":33,"kept":"kept?"}
+  active element: p#form-error.notice.error "Error: Task name cannot be empty." 586x44 ring
+
+### 2. New note, empty name (POST /task/{id}/notes)
+  before: active=input#f-name.control "" 574x40 ring required attr=false
+  after: {"url":"http://127.0.0.1:4020/task/1/notes","title":"","contentType":"text/plain","h1":[],"main":0,"alerts":[],"errorBox":null,"invalid":[],"cue":[],"dialog":false,"bodyText":"bad request: a note needs a name","links":0,"kept":null}
+  Back: url=?tab=notes&new=note text kept="some text I typed"
+
+### 3. New session, empty (POST /task/{id}/sessions)
+  before: active=input#f-start.control "" 281x42 ring required attr=false
+  after: {"url":"http://127.0.0.1:4020/task/1/sessions","title":"","contentType":"text/plain","h1":[],"main":0,"alerts":[],"errorBox":null,"invalid":[],"cue":[],"dialog":false,"bodyText":"bad request: '' is not a date and time","links":0,"kept":null}
+
+### 3b. New session, end before start
+  after: {"url":"http://127.0.0.1:4020/task/1/sessions","title":"","contentType":"text/plain","h1":[],"main":0,"alerts":[],"errorBox":null,"invalid":[],"cue":[],"dialog":false,"bodyText":"bad request: a session must end after it starts","links":0,"kept":null}
+
+### 4. New instruction, empty name (POST /instructions)
+  before: active=input#f-name.control "" 574x40 ring required attr=false
+  after: {"url":"http://127.0.0.1:4020/instructions","title":"","contentType":"text/plain","h1":[],"main":0,"alerts":[],"errorBox":null,"invalid":[],"cue":[],"dialog":false,"bodyText":"bad request: '' is not a name: lowercase letters, digits and dashes","links":0,"kept":null}
+
+### 5. New instruction, name with a space
+  after: {"url":"http://127.0.0.1:4020/instructions","title":"","contentType":"text/plain","h1":[],"main":0,"alerts":[],"errorBox":null,"invalid":[],"cue":[],"dialog":false,"bodyText":"bad request: 'Bad Name' is not a name: lowercase letters, digits and dashes","links":0,"kept":null}
+
+### 6. Instruction save with an empty prompt (POST /instruction/{name})
+  after: {"url":"http://127.0.0.1:4020/instruction/develop","title":"","contentType":"text/plain","h1":[],"main":0,"alerts":[],"errorBox":null,"invalid":[],"cue":[],"dialog":false,"bodyText":"bad request: an instruction needs a prompt under its front matter","links":0,"kept":null}
+
+### 7. New project pop-up with an empty name (POST, rendered in place?)
+  before: active=input#f-name.control "" 574x40 ring
+  after: {"url":"http://127.0.0.1:4020/org/1/project/quick","title":"Error: Projects - org-1 - iter","contentType":"text/html","h1":["org-1"],"main":1,"alerts":[],"errorBox":{"text":"Error: Project name cannot be empty.","role":null,"focused":true,"tabindex":"-1","link":"#f-name"},"invalid":["f-name describedby=form-error"],"cue":["Fix this"],"dialog":true,"bodyText":"Skip to content\niter\nBoard\nAgents\nInstructions\nSettings\nSearch\n/\n\nORGANIZATION\n\norg-1\nInfo\nProjects\n2\nTasks\n12\nNotes\n4\nReport\nSettings\nFilter projects\n?\nSearch ","links":30,"kept":""}
+
+### 8. Task edit with an empty name (POST /task/{id}/edit)
+  after: {"url":"http://127.0.0.1:4020/task/1/edit","title":"Error: Settings - task-1 - iter","contentType":"text/html","h1":["task-1"],"main":1,"alerts":[],"errorBox":{"text":"Error: Task name cannot be empty.","role":null,"focused":true,"tabindex":"-1","link":"#f-name"},"invalid":["f-name describedby=form-error"],"cue":["Fix this"],"dialog":true,"bodyText":"Skip to content\niter\nBoard\nAgents\nInstructions\nSettings\nSearch\n/\nORG-1\nPROJECT-1\nTASK\ntask-1\nInfo\nSessions\n7\nAgents\n0\nNotes\nWiki\nSettings\n\nError:\nTask name cann","links":27,"kept":"Task 1: do the thing.\n\n- step one\n- step two"}
+  active: p#form-error.notice.error "Error: Task name cannot be empty." 640x44 ring

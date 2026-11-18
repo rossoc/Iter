@@ -1,0 +1,25 @@
+flowchart LR
+  agent[agent]
+  config[config]
+  db[db]
+  md_edit[md_edit]
+  models[models]
+  notes[notes]
+  scaffold[scaffold]
+  agent -->|Db, Table| db
+  agent -->|Organization| models
+  agent -->|*| notes
+  agent -->|config_dir| config
+  config -->|Settings| models
+  config -->|write_atomic| agent
+  db -->|config| config
+  db -->|Organization| models
+  md_edit -->|config| config
+  md_edit -->|MarkdownBody| models
+  models -->|Table| db
+  models -->|absolute_path| scaffold
+  notes -->|expand_home| config
+  notes -->|Organization| models
+  notes -->|split_at_divider| md_edit
+  notes -->|write_atomic| agent
+  scaffold -->|expand_home| config

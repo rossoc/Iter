@@ -1,0 +1,3530 @@
+{
+ "home": {
+  "url": "/",
+  "title": "iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Where to next?",
+   "2:org-1",
+   "2:org-2",
+   "2:org-3",
+   "2:org-4",
+   "2:org-5",
+   "2:org-6",
+   "2:org-7",
+   "2:org-8",
+   "2:No organization",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "settings": {
+  "url": "/settings",
+  "title": "Settings - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Settings",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "true:a.:Settings"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "f-editor",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": "f-editor-hint"
+   },
+   {
+    "id": "f-pause_gap_minutes",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": "f-pause_gap_minutes-hint"
+   },
+   {
+    "id": "f-status",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-github",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-tmux",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-auto_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-branch_template",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-branch_template-hint"
+   },
+   {
+    "id": "f-default_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-default_branch-hint"
+   },
+   {
+    "id": "f-github_project",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-github_project-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-info": {
+  "url": "/org/1",
+  "title": "Organization - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:Notes path",
+   "2:Settings",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections"
+  ],
+  "asides": [
+   "by:settings-title"
+  ],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-projects": {
+  "url": "/org/1?tab=projects",
+  "title": "Projects - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 1,
+  "current": [
+   "page:a.:Projects3"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Projects",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "filter-q",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-projects-new": {
+  "url": "/org/1?tab=projects&new=project",
+  "title": "Projects - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:New project",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 1,
+  "current": [
+   "page:a.:Projects3"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "INPUT#f-name"
+  },
+  "tables": [
+   {
+    "caption": "Projects",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "filter-q",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-base_path",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": "f-base_path-hint"
+   },
+   {
+    "id": "f-github",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-tmux",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-auto_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-branch_template",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-branch_template-hint"
+   },
+   {
+    "id": "f-default_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-default_branch-hint"
+   },
+   {
+    "id": "f-github_project",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-github_project-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-tasks": {
+  "url": "/org/1?tab=tasks",
+  "title": "Tasks - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 1,
+  "current": [
+   "page:a.:Tasks18"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Tasks in this organization",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "filter-q",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-tasks-new": {
+  "url": "/org/1?tab=tasks&new=task",
+  "title": "Tasks - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:New task",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 1,
+  "current": [
+   "page:a.:Tasks18"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "INPUT#f-name"
+  },
+  "tables": [
+   {
+    "caption": "Tasks in this organization",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "filter-q",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-status",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-tags",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-tags-hint"
+   },
+   {
+    "id": "f-start_time",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-start_time-hint"
+   },
+   {
+    "id": "f-duration",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-duration-hint"
+   },
+   {
+    "id": "f-github_issue",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-github_issue-hint"
+   },
+   {
+    "id": "f-branch_prefix",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-branch_prefix-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-notes": {
+  "url": "/org/1?tab=notes",
+  "title": "Notes - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:November 2026",
+   "2:October 2026",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Notes4"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Notes",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-report": {
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02",
+  "title": "Report - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:Contents",
+   "2:project-1",
+   "3:task-1",
+   "3:task-61",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections",
+   "Change period",
+   "Period",
+   "toc-title"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Report",
+   "true:a.:7 days"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Sessions of task-1",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   },
+   {
+    "caption": "Sessions of task-61",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "from",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "to",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-report-bad": {
+  "url": "/org/1?tab=report&from=nonsense&to=2026-11-02",
+  "title": "Report - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:Contents",
+   "2:project-1",
+   "3:task-1",
+   "3:task-61",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections",
+   "Change period",
+   "Period",
+   "toc-title"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Report",
+   "true:a.:7 days"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [
+   "Dates are YYYY-MM-DD; showing the last 7 days."
+  ],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Sessions of task-1",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   },
+   {
+    "caption": "Sessions of task-61",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "from",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "to",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-share": {
+  "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02&share=1",
+  "title": "Report - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:Contents",
+   "2:project-1",
+   "3:task-1",
+   "3:task-61",
+   "2:Share this period",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections",
+   "Change period",
+   "Period",
+   "toc-title"
+  ],
+  "asides": [],
+  "regions": 7,
+  "search": 0,
+  "current": [
+   "page:a.:Report",
+   "true:a.:7 days"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Sessions of task-1",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   },
+   {
+    "caption": "Sessions of task-61",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "from",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "to",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "mode",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "mode",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-format",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-edit": {
+  "url": "/org/1/edit",
+  "title": "Settings - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:org-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Settings"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-notes_path",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-notes_path-hint"
+   },
+   {
+    "id": "f-platform_url",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-platform_url-hint"
+   },
+   {
+    "id": "f-platform_project",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-platform_project-hint"
+   },
+   {
+    "id": "f-platform_activity",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-platform_activity-hint"
+   },
+   {
+    "id": "f-project-0",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-1",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-2",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-3",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-4",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-5",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-6",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-7",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-8",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-9",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-10",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-11",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-12",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-13",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-14",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-15",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-16",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-17",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-18",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-19",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-github",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-tmux",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-auto_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-branch_template",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-branch_template-hint"
+   },
+   {
+    "id": "f-default_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-default_branch-hint"
+   },
+   {
+    "id": "f-github_project",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-github_project-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-note": {
+  "url": "/org/1/notes/2026-11-02",
+  "title": "02/11 - Notes - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:02/11",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Note sections",
+   "Notes"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:span.:2 November 2026",
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "org-note-edit": {
+  "url": "/org/1/notes/2026-11-02?tab=edit",
+  "title": "02/11 - Notes - org-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:02/11",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Note sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:span.:2 November 2026",
+   "page:a.:Edit"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "f-text",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "project-info": {
+  "url": "/project/1",
+  "title": "Project - project-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:project-1",
+   "2:Base path",
+   "2:Settings",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [
+   "by:settings-title"
+  ],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "project-loose": {
+  "url": "/project/5",
+  "title": "Project - project-5 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:project-5",
+   "2:Base path",
+   "2:Settings",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Sections"
+  ],
+  "asides": [
+   "by:settings-title"
+  ],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "project-tasks": {
+  "url": "/project/1?tab=tasks",
+  "title": "Tasks - project-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:project-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 1,
+  "current": [
+   "page:a.:Tasks6"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Tasks in this project",
+    "srCaption": true,
+    "ths": 3,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "filter-q",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "project-tasks-new": {
+  "url": "/project/1?tab=tasks&new=task",
+  "title": "Tasks - project-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:project-1",
+   "2:New task",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 1,
+  "current": [
+   "page:a.:Tasks6"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "INPUT#f-name"
+  },
+  "tables": [
+   {
+    "caption": "Tasks in this project",
+    "srCaption": true,
+    "ths": 3,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "filter-q",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-status",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-tags",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-tags-hint"
+   },
+   {
+    "id": "f-start_time",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-start_time-hint"
+   },
+   {
+    "id": "f-duration",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-duration-hint"
+   },
+   {
+    "id": "f-github_issue",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-github_issue-hint"
+   },
+   {
+    "id": "f-branch_prefix",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-branch_prefix-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "project-notes": {
+  "url": "/project/1?tab=notes",
+  "title": "Notes - project-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:project-1",
+   "2:November 2026",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Notes1"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Notes",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "project-edit": {
+  "url": "/project/1/edit",
+  "title": "Settings - project-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:project-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Settings"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-base_path",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": "f-base_path-hint"
+   },
+   {
+    "id": "f-notes_path",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-notes_path-hint"
+   },
+   {
+    "id": "f-organization",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-organization-hint"
+   },
+   {
+    "id": "f-github",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-tmux",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-auto_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-branch_template",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-branch_template-hint"
+   },
+   {
+    "id": "f-default_branch",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-default_branch-hint"
+   },
+   {
+    "id": "f-github_project",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-github_project-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "project-note": {
+  "url": "/project/1/notes/2026-11-02",
+  "title": "today - Notes - project-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:today",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Note sections",
+   "Notes"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:span.:2 November 2026",
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-info": {
+  "url": "/task/1",
+  "title": "Task - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:Details",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [
+   "by:details-title"
+  ],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-sessions": {
+  "url": "/task/1?tab=sessions",
+  "title": "Sessions - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Sessions7"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Sessions of task-1",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-sessions-new": {
+  "url": "/task/1?tab=sessions&new=session",
+  "title": "Sessions - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:New session",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Sessions7"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "INPUT#f-start"
+  },
+  "tables": [
+   {
+    "caption": "Sessions of task-1",
+    "srCaption": true,
+    "ths": 4,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "f-start",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-end",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-message",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-notes": {
+  "url": "/task/1?tab=notes",
+  "title": "Notes - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Notes"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Notes",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-notes-new": {
+  "url": "/task/1?tab=notes&new=note",
+  "title": "Notes - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:New note",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Notes"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "INPUT#f-name"
+  },
+  "tables": [
+   {
+    "caption": "Notes",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-text",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-agent": {
+  "url": "/task/1?tab=agent",
+  "title": "Agent - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Agents0"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Agents of this task, the latest first",
+    "srCaption": true,
+    "ths": 3,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-agent-new": {
+  "url": "/task/1?tab=agent&new=agent",
+  "title": "Agent - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:New agent",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "page:a.:Agents0"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Agents of this task, the latest first",
+    "srCaption": true,
+    "ths": 3,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "f-instruction",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-agent",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-model",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-effort",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-prompt",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-prompt-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-wiki": {
+  "url": "/task/1?tab=wiki",
+  "title": "Wiki - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:Pending changes0 (0 files)",
+   "2:Waiting to be ingested1 (1 note)",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 7,
+  "search": 0,
+  "current": [
+   "page:a.:Wiki"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Sketches",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "task-edit": {
+  "url": "/task/1/edit",
+  "title": "Settings - task-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:task-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "page:a.:Settings"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-move_to",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": "f-move_to-hint"
+   },
+   {
+    "id": "f-status",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-tags",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-tags-hint"
+   },
+   {
+    "id": "f-start_time",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-start_time-hint"
+   },
+   {
+    "id": "f-duration",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-duration-hint"
+   },
+   {
+    "id": "f-github_issue",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-github_issue-hint"
+   },
+   {
+    "id": "f-branch_prefix",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-branch_prefix-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "agents": {
+  "url": "/agents",
+  "title": "Agents - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Agents",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "true:a.:Agents"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Agents of every task, the latest first",
+    "srCaption": true,
+    "ths": 3,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "boards": {
+  "url": "/boards",
+  "title": "Boards - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Boards",
+   "2:board-1",
+   "2:board-2",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "true:a.:Board"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-agenda": {
+  "url": "/board/2?date=2026-11-02",
+  "title": "Mon 2 Nov - Agenda - board-2 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-2",
+   "2:Monday 2 November 2026",
+   "2:Important, not scheduled6 (6 tas[in summary]",
+   "2:Urgent, not scheduled0 (0 tasks)[in summary]",
+   "2:Backlog12 (12 tasks)[in summary]",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections",
+   "Change day"
+  ],
+  "asides": [
+   "Unscheduled"
+  ],
+  "regions": 8,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Agenda",
+   "date:a.button:Today",
+   "time:li.hour:19:00Now, 19:34"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "day-input",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-agenda-folded": {
+  "url": "/board/2?date=2026-11-02&side=off",
+  "title": "Mon 2 Nov - Agenda - board-2 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-2",
+   "2:Monday 2 November 2026",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections",
+   "Change day"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Agenda",
+   "date:a.button:Today",
+   "time:li.hour:19:00Now, 19:34"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "day-input",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-agenda-pick": {
+  "url": "/board/2?date=2026-11-02&pick=2",
+  "title": "Moving project-2/task-2 - Mon 2 Nov - Agenda - board-2 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-2",
+   "2:Monday 2 November 2026",
+   "2:Important, not scheduled6 (6 tas[in summary]",
+   "2:Urgent, not scheduled0 (0 tasks)[in summary]",
+   "2:Backlog12 (12 tasks)[in summary]",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections",
+   "Change day"
+  ],
+  "asides": [
+   "Unscheduled"
+  ],
+  "regions": 8,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Agenda",
+   "date:a.button:Today",
+   "true:article.tcard:project-2/task-2Be",
+   "time:li.hour:19:00Move here · 1"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "day-input",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-agenda-moved": {
+  "url": "/board/2?date=2026-11-02&moved=2",
+  "title": "Mon 2 Nov - Agenda - board-2 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-2",
+   "2:Monday 2 November 2026",
+   "2:Important, not scheduled6 (6 tas[in summary]",
+   "2:Urgent, not scheduled0 (0 tasks)[in summary]",
+   "2:Backlog12 (12 tasks)[in summary]",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections",
+   "Change day"
+  ],
+  "asides": [
+   "Unscheduled"
+  ],
+  "regions": 8,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Agenda",
+   "date:a.button:Today",
+   "time:li.hour:19:00Now, 19:34"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "day-input",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-matrix": {
+  "url": "/board/2/matrix",
+  "title": "Eisenhower matrix - board-2 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-2",
+   "2:1Do first0 (0 tasks)",
+   "2:2Plan2 (2 tasks)",
+   "2:3Delegate0 (0 tasks)",
+   "2:4Eliminate8 (8 tasks)",
+   "2:Backlog20 (20 tasks)",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections"
+  ],
+  "asides": [
+   "Backlog"
+  ],
+  "regions": 9,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Eisenhower matrix"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-matrix-pick": {
+  "url": "/board/2/matrix?pick=24",
+  "title": "Moving project-4/task-24 - Eisenhower matrix - board-2 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-2",
+   "2:1Do first0 (0 tasks)",
+   "2:2Plan2 (2 tasks)",
+   "2:3Delegate0 (0 tasks)",
+   "2:4Eliminate8 (8 tasks)",
+   "2:Backlog20 (20 tasks)",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections"
+  ],
+  "asides": [
+   "Backlog"
+  ],
+  "regions": 9,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Eisenhower matrix",
+   "true:article.tcard:project-4/task-24B"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-matrix-moved": {
+  "url": "/board/2/matrix?moved=24",
+  "title": "Eisenhower matrix - board-2 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-2",
+   "2:1Do first0 (0 tasks)",
+   "2:2Plan2 (2 tasks)",
+   "2:3Delegate0 (0 tasks)",
+   "2:4Eliminate8 (8 tasks)",
+   "2:Backlog20 (20 tasks)",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections"
+  ],
+  "asides": [
+   "Backlog"
+  ],
+  "regions": 9,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Eisenhower matrix"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [
+   "status"
+  ],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-info": {
+  "url": "/board/1/info",
+  "title": "Info - board-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-1",
+   "2:Projects7",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Board sections"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 1,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Projects",
+    "srCaption": true,
+    "ths": 0,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "filter-q",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "board-edit": {
+  "url": "/board/1/edit",
+  "title": "Settings - board-1 - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:board-1",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "true:a.:Board",
+   "page:a.:Settings"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-0",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-1",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-2",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-3",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-4",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-5",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-6",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-7",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-8",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-9",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-10",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-11",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-12",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-13",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-14",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-15",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-16",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-17",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-18",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   },
+   {
+    "id": "f-project-19",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": null
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "instructions": {
+  "url": "/instructions",
+  "title": "Instructions - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Instructions",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main"
+  ],
+  "asides": [],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "true:a.:Instructions"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [
+   {
+    "caption": "Instructions",
+    "srCaption": true,
+    "ths": 2,
+    "roles": "table"
+   }
+  ],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "instructions-new": {
+  "url": "/instructions?new=instruction",
+  "title": "Instructions - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Instructions",
+   "2:New instruction",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [
+   "Main"
+  ],
+  "asides": [],
+  "regions": 6,
+  "search": 0,
+  "current": [
+   "true:a.:Instructions"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": true,
+   "main": true,
+   "skip": true,
+   "foot": true,
+   "modalJs": true,
+   "labelled": null,
+   "autofocus": false,
+   "active": "INPUT#f-name"
+  },
+  "tables": [
+   {
+    "caption": "Instructions",
+    "srCaption": true,
+    "ths": 2,
+    "roles": "table"
+   }
+  ],
+  "controls": [
+   {
+    "id": "f-name",
+    "lab": "label",
+    "req": true,
+    "invalid": null,
+    "desc": "f-name-hint"
+   },
+   {
+    "id": "f-description",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-description-hint"
+   },
+   {
+    "id": "f-prompt",
+    "lab": "label",
+    "req": false,
+    "invalid": null,
+    "desc": "f-prompt-hint"
+   }
+  ],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "instruction": {
+  "url": "/instruction/develop",
+  "title": "develop - Instruction - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Develop",
+   "2:Prompt",
+   "4:The task",
+   "4:What the project already knows",
+   "4:The plan",
+   "4:How to work",
+   "2:Details",
+   "2:Organizations[foot]",
+   "2:Boards[foot]",
+   "2:Projects without organization[foot]",
+   "2:Settings[foot]",
+   "2:About[foot]"
+  ],
+  "skips": 1,
+  "main": 1,
+  "navs": [
+   "Main",
+   "Breadcrumb",
+   "Sections"
+  ],
+  "asides": [
+   "by:details-title"
+  ],
+  "regions": 5,
+  "search": 0,
+  "current": [
+   "true:a.:Instructions",
+   "page:a.:Info"
+  ],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": {
+   "bar": false,
+   "main": false,
+   "skip": false,
+   "foot": false,
+   "modalJs": false,
+   "labelled": null,
+   "autofocus": false,
+   "active": "body"
+  },
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": true
+ },
+ "error-400": {
+  "url": "/org/x",
+  "title": "Bad request - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Bad request"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [],
+  "asides": [],
+  "regions": 0,
+  "search": 0,
+  "current": [],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": null,
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": false
+ },
+ "error-404": {
+  "url": "/org/99999",
+  "title": "Not found - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Not found"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [],
+  "asides": [],
+  "regions": 0,
+  "search": 0,
+  "current": [],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": null,
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": false
+ },
+ "error-404-unmatched": {
+  "url": "/nope",
+  "title": "Not found - iter",
+  "lang": "en",
+  "h1": 1,
+  "headings": [
+   "1:Not found"
+  ],
+  "skips": 0,
+  "main": 1,
+  "navs": [],
+  "asides": [],
+  "regions": 0,
+  "search": 0,
+  "current": [],
+  "dup": [],
+  "missingRefs": [],
+  "alerts": [],
+  "status": [],
+  "dialog": null,
+  "tables": [],
+  "controls": [],
+  "unlabelledControls": 0,
+  "imgs": 0,
+  "svgNoHidden": 0,
+  "skipLink": true,
+  "titleInBody": false
+ }
+}

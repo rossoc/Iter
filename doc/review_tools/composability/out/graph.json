@@ -1,0 +1,10293 @@
+{
+ "graph": {
+  "agent": {},
+  "agent/error": {
+   "agent/plan": [
+    "MarkError"
+   ]
+  },
+  "agent/exec": {
+   "error": [
+    "IterError",
+    "Result"
+   ]
+  },
+  "agent/instruction": {
+   "agent/error": [
+    "AgentError",
+    "AgentResult"
+   ],
+   "agent/prompt": [
+    "Context",
+    "Kind",
+    "self"
+   ],
+   "config": [
+    "q:config_dir"
+   ],
+   "db": [
+    "q:Db"
+   ],
+   "models/organization": [
+    "q:Organization"
+   ],
+   "models/project": [
+    "q:Project"
+   ],
+   "notes": [
+    "q:org_dir",
+    "q:project_dir"
+   ]
+  },
+  "agent/plan": {},
+  "agent/prompt": {
+   "agent/error": [
+    "AgentError",
+    "AgentResult"
+   ],
+   "agent/instruction": [
+    "q:file",
+    "q:split"
+   ]
+  },
+  "agent/run": {
+   "agent/error": [
+    "AgentResult"
+   ],
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "q:write_whole"
+   ],
+   "process": [
+    "q:output_trimmed",
+    "q:succeeds"
+   ]
+  },
+  "agent/solve": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/exec": [
+    "*"
+   ],
+   "agent/plan": [
+    "q:normalize"
+   ],
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/run": [
+    "Harness",
+    "Invocation",
+    "RunRecord",
+    "Status",
+    "q:interrupt"
+   ],
+   "agent/task_prompt": [
+    "locate",
+    "prompt_for"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "q:of"
+   ],
+   "app": [
+    "App"
+   ],
+   "config": [
+    "q:config"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "utils/workspace": [
+    "create_task_worktree",
+    "q:remove_worktree_and_branch"
+   ],
+   "wiki/ingest_job": [
+    "Auto",
+    "Trigger",
+    "auto"
+   ]
+  },
+  "agent/task_prompt": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/instruction": [
+    "q:split"
+   ],
+   "agent/prompt": [
+    "Context",
+    "Kind",
+    "self"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "self"
+   ],
+   "app": [
+    "App"
+   ],
+   "config": [
+    "q:config_dir"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ],
+   "utils/resolve": [
+    "resolve_task_or_current",
+    "task_display"
+   ],
+   "wiki/retrieve": [
+    "*"
+   ],
+   "wiki/scope": [
+    "*"
+   ]
+  },
+  "agent/taskdir": {
+   "agent/error": [
+    "AgentError",
+    "AgentResult"
+   ],
+   "agent/plan": [
+    "Progress",
+    "State",
+    "self"
+   ],
+   "config": [
+    "q:config_dir"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ]
+  },
+  "app": {
+   "db": [
+    "Db",
+    "open_db"
+   ]
+  },
+  "args": {
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/run": [
+    "Harness"
+   ],
+   "args/board": [
+    "*"
+   ],
+   "args/internal": [
+    "*"
+   ],
+   "args/notes": [
+    "*"
+   ],
+   "args/organization": [
+    "*"
+   ],
+   "args/project": [
+    "*"
+   ],
+   "args/session": [
+    "*"
+   ],
+   "args/tag": [
+    "*"
+   ],
+   "args/task": [
+    "*"
+   ],
+   "args/wiki": [
+    "*"
+   ],
+   "completion": [
+    "board_completer",
+    "organization_completer",
+    "project_completer",
+    "queued_task_completer",
+    "tag_completer",
+    "task_completer",
+    "task_name_completer"
+   ],
+   "reporting": [
+    "Format"
+   ],
+   "utils/output": [
+    "Format"
+   ],
+   "wiki/retrieve": [
+    "Depth"
+   ]
+  },
+  "args/board": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/internal": {},
+  "args/notes": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/organization": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/project": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/session": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/tag": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/task": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/wiki": {},
+  "commands": {
+   "app": [
+    "App"
+   ],
+   "error": [
+    "Result"
+   ]
+  },
+  "commands/agent": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/plan": [
+    "Plan",
+    "Progress",
+    "State",
+    "self"
+   ],
+   "agent/prompt": [
+    "Kind",
+    "self"
+   ],
+   "agent/task_prompt": [
+    "locate",
+    "prompt_text"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "mark_step",
+    "save_plan"
+   ],
+   "app": [
+    "App"
+   ],
+   "error": [
+    "Result"
+   ],
+   "md_edit": [
+    "edit_text"
+   ],
+   "utils/output": [
+    "Format",
+    "emit"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ]
+  },
+  "commands/board": {
+   "app": [
+    "App"
+   ],
+   "args/board": [
+    "BoardCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "START_TIME_FMT",
+    "TaskStatus",
+    "end_text"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ],
+   "utils/crud": [
+    "create",
+    "delete_group",
+    "update_group"
+   ],
+   "utils/output": [
+    "list_names"
+   ],
+   "utils/resolve": [
+    "resolve_group_or_current"
+   ]
+  },
+  "commands/ingest": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/taskdir": [
+    "q:of"
+   ],
+   "app": [
+    "App"
+   ],
+   "args/wiki": [
+    "HarnessOpts"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "utils/resolve": [
+    "resolve_project_or_current",
+    "resolve_task"
+   ],
+   "wiki/ingest": [
+    "Job",
+    "self"
+   ],
+   "wiki/ingest_job": [
+    "Auto",
+    "HarnessChoice",
+    "Target",
+    "Trigger",
+    "auto",
+    "now"
+   ],
+   "wiki/ingest_job/lock": [
+    "busy"
+   ],
+   "wiki/ingest_job/review": [
+    "changes",
+    "settle"
+   ],
+   "wiki/ingest_job/spawn": [
+    "run_agent",
+    "spawn_ingest"
+   ],
+   "wiki/schema": [
+    "*"
+   ]
+  },
+  "commands/misc": {
+   "app": [
+    "App"
+   ],
+   "args/internal": [
+    "HookEvent",
+    "InternalCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "error": [
+    "Result"
+   ],
+   "github": [
+    "GhCli",
+    "IssueTracker"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "tmux": [
+    "Multiplexer",
+    "TmuxClient"
+   ],
+   "utils/clock": [
+    "client_left_tmux_session",
+    "close_stale_session",
+    "start_for_tmux_session",
+    "stop_for_tmux_session"
+   ],
+   "utils/resolve": [
+    "current_session_task",
+    "linked_issue",
+    "require_github",
+    "resolve_task_or_current",
+    "task_display"
+   ]
+  },
+  "commands/notes": {
+   "app": [
+    "App"
+   ],
+   "args/notes": [
+    "NotesCommand",
+    "NotesScope"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "notes": [
+    "*"
+   ],
+   "utils/resolve": [
+    "resolve_project_or_current"
+   ]
+  },
+  "commands/organization": {
+   "app": [
+    "App"
+   ],
+   "args": [
+    "ReportOpts"
+   ],
+   "args/organization": [
+    "OrganizationCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "github": [
+    "GhCli"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "platform": [
+    "JsonWebhook"
+   ],
+   "process": [
+    "run_status"
+   ],
+   "push": [
+    "Target",
+    "self"
+   ],
+   "reporting": [
+    "Header",
+    "OrganizationInfo",
+    "print_report"
+   ],
+   "secret": [
+    "KeyStore",
+    "Keychain",
+    "Secret",
+    "self"
+   ],
+   "utils/crud": [
+    "create",
+    "delete_group",
+    "update_group"
+   ],
+   "utils/output": [
+    "list_names"
+   ],
+   "utils/report": [
+    "project_reports",
+    "resolve_range",
+    "total_minutes"
+   ],
+   "utils/resolve": [
+    "resolve_group_or_current"
+   ]
+  },
+  "commands/project": {
+   "app": [
+    "App"
+   ],
+   "args": [
+    "ReportOpts"
+   ],
+   "args/project": [
+    "ProjectCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "md_edit": [
+    "edited"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "reporting": [
+    "Header",
+    "ProjectInfo",
+    "print_report"
+   ],
+   "scaffold": [
+    "*"
+   ],
+   "tmux": [
+    "*"
+   ],
+   "utils/crud": [
+    "update"
+   ],
+   "utils/output": [
+    "list_names"
+   ],
+   "utils/report": [
+    "resolve_range",
+    "task_reports",
+    "total_minutes"
+   ],
+   "utils/resolve": [
+    "resolve_project_or_current"
+   ],
+   "utils/workspace": [
+    "teardown_session_config"
+   ]
+  },
+  "commands/session": {
+   "app": [
+    "App"
+   ],
+   "args/session": [
+    "SessionCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "commands/ingest": [
+    "*"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "TaskStatus"
+   ],
+   "tmux": [
+    "Multiplexer",
+    "TmuxClient"
+   ],
+   "utils/clock": [
+    "Closed",
+    "close_open_session",
+    "start_session"
+   ],
+   "utils/resolve": [
+    "current_session_task",
+    "require_git_repo",
+    "resolve_task",
+    "resolve_task_or_current",
+    "task_display"
+   ],
+   "utils/workspace": [
+    "self",
+    "unwind_session_setup"
+   ],
+   "wiki/ingest_job": [
+    "Trigger"
+   ]
+  },
+  "commands/solve": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/prompt": [
+    "Kind",
+    "q:shell_word"
+   ],
+   "agent/run": [
+    "Harness",
+    "RunRecord"
+   ],
+   "agent/solve": [
+    "Launch",
+    "Observer",
+    "Spec",
+    "start"
+   ],
+   "agent/task_prompt": [
+    "locate"
+   ],
+   "app": [
+    "App"
+   ],
+   "commands/ingest": [
+    "say_auto"
+   ],
+   "error": [
+    "Result"
+   ],
+   "md_edit": [
+    "edit_text",
+    "split_at_divider"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "wiki/ingest_job": [
+    "Auto"
+   ]
+  },
+  "commands/sync": {
+   "app": [
+    "App"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "github": [
+    "IssueTracker",
+    "self"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "sync": [
+    "*"
+   ],
+   "utils/resolve": [
+    "find_task_or_err",
+    "github_project",
+    "linked_issue",
+    "task_display"
+   ]
+  },
+  "commands/tag": {
+   "app": [
+    "App"
+   ],
+   "args/tag": [
+    "TagCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ],
+   "utils/crud": [
+    "create",
+    "update"
+   ],
+   "utils/output": [
+    "list_names"
+   ]
+  },
+  "commands/task": {
+   "agent/solve": [
+    "q:worker"
+   ],
+   "agent/taskdir": [
+    "q:of"
+   ],
+   "app": [
+    "App"
+   ],
+   "args": [
+    "ReportOpts"
+   ],
+   "args/task": [
+    "TaskCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "commands/agent": [
+    "*"
+   ],
+   "commands/ingest": [
+    "*"
+   ],
+   "commands/solve": [
+    "*"
+   ],
+   "commands/sync": [
+    "task_pull",
+    "task_push"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "github": [
+    "GhCli",
+    "IssueTracker",
+    "self"
+   ],
+   "md_edit": [
+    "edited"
+   ],
+   "models": [
+    "require_name"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task",
+    "TaskEdit",
+    "TaskStatus"
+   ],
+   "reporting": [
+    "Header",
+    "TaskInfo",
+    "WeekdayReport",
+    "print_report",
+    "session_rows"
+   ],
+   "reporting/merge": [
+    "weekday_averages"
+   ],
+   "utils/clock": [
+    "close_open_session"
+   ],
+   "utils/output": [
+    "print_yaml"
+   ],
+   "utils/report": [
+    "resolve_range",
+    "total_minutes"
+   ],
+   "utils/resolve": [
+    "require_git_repo",
+    "require_github",
+    "resolve_project_or_current",
+    "resolve_task_or_current",
+    "task_display"
+   ],
+   "utils/workspace": [
+    "teardown_and_kill"
+   ],
+   "wiki/ingest_job": [
+    "Trigger",
+    "self"
+   ]
+  },
+  "commands/wiki": {
+   "app": [
+    "App"
+   ],
+   "args/wiki": [
+    "WikiCommand",
+    "WikiScope"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "commands/ingest": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "utils/output": [
+    "emit"
+   ],
+   "wiki/check": [
+    "Severity",
+    "self"
+   ],
+   "wiki/graph": [
+    "Answer",
+    "Wiki"
+   ],
+   "wiki/mv": [
+    "*"
+   ],
+   "wiki/retrieve": [
+    "Shown",
+    "self"
+   ],
+   "wiki/schema": [
+    "*"
+   ],
+   "wiki/scope": [
+    "Spec",
+    "self"
+   ]
+  },
+  "completion": {
+   "db": [
+    "Db",
+    "open_db"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ]
+  },
+  "config": {
+   "agent/taskdir": [
+    "q:write_atomic"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ]
+  },
+  "crate": {
+   "app": [
+    "App"
+   ],
+   "args": [
+    "Args",
+    "Command"
+   ],
+   "args/project": [
+    "ProjectCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "commands/misc": [
+    "*"
+   ],
+   "commands/project": [
+    "*"
+   ],
+   "commands/task": [
+    "*"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ]
+  },
+  "db": {
+   "config": [
+    "config"
+   ],
+   "db/sqltypes": [
+    "datetime"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "Named",
+    "ProjectGroup",
+    "task_ref"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/push": [
+    "Push"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/tag": [
+    "IMPORTANT_TAG",
+    "Priority",
+    "Tag",
+    "URGENT_TAG"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "TaskStatus"
+   ]
+  },
+  "db/groups": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/migrate": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/pushes": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/reporting": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/sessions": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/sqltypes": {
+   "db": [
+    "*",
+    "q:read",
+    "q:write"
+   ]
+  },
+  "db/tasks": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/tests": {},
+  "error": {
+   "agent/error": [
+    "q:AgentError"
+   ]
+  },
+  "fixtures": {},
+  "git": {
+   "error": [
+    "Result",
+    "q:IterError::CommandFailed"
+   ],
+   "process": [
+    "Git",
+    "Tool"
+   ]
+  },
+  "github": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "process": [
+    "Runner",
+    "SYSTEM"
+   ]
+  },
+  "md_edit": {
+   "config": [
+    "config"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "MarkdownBody"
+   ],
+   "process": [
+    "*"
+   ]
+  },
+  "models": {
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/push": [
+    "Push"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "models/tag": [
+    "IMPORTANT_TAG",
+    "Priority",
+    "Tag",
+    "URGENT_TAG",
+    "is_hex_color"
+   ],
+   "models/task": [
+    "Duration",
+    "START_TIME_FMT",
+    "Task",
+    "TaskEdit",
+    "TaskStatus",
+    "end_text",
+    "parse_start_time"
+   ]
+  },
+  "models/board": {
+   "models": [
+    "q:ProjectGroup"
+   ],
+   "models/project": [
+    "q:Project"
+   ],
+   "models/tag": [
+    "q:Priority"
+   ],
+   "models/task": [
+    "q:Task"
+   ]
+  },
+  "models/organization": {
+   "error": [
+    "q:IterError::Platform",
+    "q:Result"
+   ],
+   "models": [
+    "default_branch_template",
+    "default_true",
+    "main_branch",
+    "q:ProjectGroup"
+   ],
+   "models/project": [
+    "q:Project"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ]
+  },
+  "models/project": {
+   "error": [
+    "q:IterError::EmptyBasePath",
+    "q:IterError::SlashInName",
+    "q:Result"
+   ],
+   "models": [
+    "Named",
+    "default_branch_template",
+    "default_true",
+    "main_branch",
+    "require_no_comma"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "scaffold": [
+    "q:absolute_path"
+   ]
+  },
+  "models/push": {},
+  "models/session": {
+   "models/task": [
+    "Duration"
+   ]
+  },
+  "models/session_config": {},
+  "models/settings": {
+   "models": [
+    "default_branch_template",
+    "default_true",
+    "main_branch"
+   ],
+   "models/organization": [
+    "q:Organization"
+   ],
+   "models/project": [
+    "q:Project"
+   ]
+  },
+  "models/tag": {
+   "error": [
+    "q:IterError::InvalidTagColor",
+    "q:Result"
+   ],
+   "models": [
+    "q:require_no_comma"
+   ]
+  },
+  "models/task": {
+   "models": [
+    "q:MarkdownBody",
+    "q:read_wrapped"
+   ]
+  },
+  "notes": {
+   "agent/taskdir": [
+    "q:write_atomic"
+   ],
+   "config": [
+    "expand_home"
+   ],
+   "error": [
+    "Result",
+    "q:IterError::InvalidNote"
+   ],
+   "git": [
+    "slugify"
+   ],
+   "md_edit": [
+    "q:split_at_divider"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ]
+  },
+  "platform": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "reporting/worklog": [
+    "Worklog",
+    "WorklogEntry"
+   ],
+   "secret": [
+    "Secret"
+   ]
+  },
+  "process": {
+   "error": [
+    "IterError",
+    "Result"
+   ]
+  },
+  "push": {
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "github": [
+    "IssueTracker"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/push": [
+    "Push"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "platform": [
+    "PlatformItem",
+    "TimePlatform"
+   ],
+   "reporting": [
+    "q:SessionRow"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "fmt_date"
+   ],
+   "reporting/worklog": [
+    "Worklog",
+    "WorklogEntry",
+    "worklog_line"
+   ],
+   "utils/report": [
+    "project_reports"
+   ]
+  },
+  "reporting": {
+   "error": [
+    "Result",
+    "q:IterError::CommandFailed"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "Duration",
+    "TaskStatus"
+   ],
+   "reporting/merge": [
+    "*"
+   ],
+   "reporting/render": [
+    "Md",
+    "cell",
+    "document",
+    "message_bullets",
+    "non_empty",
+    "summary_line"
+   ],
+   "reporting/worklog": [
+    "*"
+   ]
+  },
+  "reporting/merge": {
+   "reporting/worklog": [
+    "*"
+   ]
+  },
+  "reporting/render": {
+   "reporting/worklog": [
+    "*"
+   ]
+  },
+  "reporting/tests": {},
+  "reporting/worklog": {
+   "error": [
+    "q:IterError::CommandFailed"
+   ]
+  },
+  "scaffold": {
+   "config": [
+    "q:expand_home"
+   ],
+   "error": [
+    "Result"
+   ]
+  },
+  "secret": {
+   "error": [
+    "IterError",
+    "Result"
+   ]
+  },
+  "sync": {
+   "github": [
+    "Issue",
+    "IssueState",
+    "status_for_issue_state"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ]
+  },
+  "tmux": {
+   "agent/prompt": [
+    "q:shell_word"
+   ],
+   "config": [
+    "q:expand_home"
+   ],
+   "error": [
+    "Result",
+    "q:IterError::CommandFailed"
+   ],
+   "process": [
+    "Runner",
+    "SYSTEM",
+    "fake::FakeRunner"
+   ]
+  },
+  "utils": {},
+  "utils/clock": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "tmux": [
+    "*"
+   ]
+  },
+  "utils/crud": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "md_edit": [
+    "edit_in_editor",
+    "edited",
+    "no_changes"
+   ],
+   "models": [
+    "Editable",
+    "GroupEdit",
+    "Named",
+    "ProjectGroup"
+   ],
+   "models/project": [
+    "Project"
+   ]
+  },
+  "utils/output": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "Named"
+   ]
+  },
+  "utils/report": {
+   "args": [
+    "ReportOpts"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "reporting": [
+    "ProjectReport",
+    "TaskReport",
+    "session_rows"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "merged_total_minutes",
+    "q:Total::new"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ]
+  },
+  "utils/resolve": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "models": [
+    "ProjectGroup",
+    "split_task_ref",
+    "task_ref"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "tmux": [
+    "*"
+   ]
+  },
+  "utils/workspace": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "tmux": [
+    "*"
+   ]
+  },
+  "web": {
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "Result"
+   ]
+  },
+  "web/agenda": {
+   "db": [
+    "Table"
+   ],
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "utils/report": [
+    "parse_day"
+   ],
+   "web": [
+    "Id",
+    "now"
+   ],
+   "web/agenda_cards": [
+    "Cards",
+    "Fold",
+    "NOT_SCHEDULED",
+    "side"
+   ],
+   "web/agenda_day": [
+    "Day",
+    "hour_label",
+    "hour_target",
+    "neighbours",
+    "split"
+   ],
+   "web/agenda_pick": [
+    "day_url",
+    "links"
+   ],
+   "web/board_cards": [
+    "CLOCK_FMT",
+    "CardCtx"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "title_parts"
+   ],
+   "web/board_page": [
+    "BoardPage",
+    "board_screen",
+    "load_board"
+   ],
+   "web/pick": [
+    "Picked",
+    "moved_note",
+    "pick_fields"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/day_nav": [
+    "DayLink",
+    "day_nav"
+   ],
+   "web/ui/hour_grid": [
+    "Now",
+    "hour_grid",
+    "hour_slot"
+   ],
+   "web/ui/layout": [
+    "jump_link",
+    "sticky_head"
+   ],
+   "web/ui/pick_bar": [
+    "pick_bar"
+   ],
+   "web/ui/pick_here": [
+    "pick_here"
+   ],
+   "web/ui/task_card": [
+    "task_card"
+   ],
+   "web/url": [
+    "board_day_url",
+    "board_schedule_url",
+    "board_url",
+    "with_side"
+   ]
+  },
+  "web/agenda_cards": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Card"
+   ],
+   "web/agenda_day": [
+    "Day"
+   ],
+   "web/agenda_pick": [
+    "links"
+   ],
+   "web/board_cards": [
+    "BOARD_EMPTY",
+    "CardCtx"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/folded_list": [
+    "folded_list"
+   ],
+   "web/ui/icons": [
+    "KANBAN"
+   ],
+   "web/ui/layout": [
+    "side_lists"
+   ],
+   "web/ui/side_rail": [
+    "side_fold",
+    "side_rail"
+   ],
+   "web/ui/task_card": [
+    "CardView",
+    "task_card"
+   ],
+   "web/ui/unplaced_list": [
+    "unplaced_list"
+   ],
+   "web/url": [
+    "with_side"
+   ]
+  },
+  "web/agenda_day": {
+   "models/board": [
+    "Card"
+   ],
+   "models/task": [
+    "START_TIME_FMT",
+    "TaskStatus"
+   ]
+  },
+  "web/agenda_drop": {
+   "models/task": [
+    "Duration",
+    "Task",
+    "parse_start_time"
+   ],
+   "utils/report": [
+    "parse_day"
+   ],
+   "web": [
+    "Id"
+   ],
+   "web/agenda_pick": [
+    "links"
+   ],
+   "web/drop": [
+    "Drop",
+    "back_or",
+    "drop_on"
+   ]
+  },
+  "web/agenda_pick": {
+   "web/pick": [
+    "PickLinks",
+    "PickWords",
+    "Picked"
+   ],
+   "web/url": [
+    "board_day_url"
+   ]
+  },
+  "web/agents": {
+   "agent/run": [
+    "RunRecord"
+   ],
+   "agent/taskdir": [
+    "*"
+   ],
+   "config": [
+    "config"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/instructions": [
+    "Use",
+    "usage"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/sections": [
+    "TabQuery"
+   ],
+   "web/task_runs": [
+    "act",
+    "label_of",
+    "state_pill"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/icons": [
+    "PLAY",
+    "STOP",
+    "X",
+    "icon"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/table": [
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "RunAction",
+    "agent_tab_url",
+    "agent_url",
+    "agents_url",
+    "page_url",
+    "run_action_url",
+    "run_post_url",
+    "task_url"
+   ]
+  },
+  "web/assets": {},
+  "web/blocking": {},
+  "web/board_cards": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/board": [
+    "Card"
+   ],
+   "models/tag": [
+    "is_hex_color"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/task_card": [
+    "CardAction",
+    "CardView",
+    "Edge"
+   ],
+   "web/url": [
+    "task_url"
+   ]
+  },
+  "web/board_edit": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "web": [
+    "Id"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "board_tabs"
+   ],
+   "web/crumbs": [
+    "boards_crumb"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load_among",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page"
+   ],
+   "web/forms/board": [
+    "BoardForm"
+   ],
+   "web/project_options": [
+    "group_options",
+    "project_checklist",
+    "project_options"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "CheckOption"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "BOARDS",
+    "board_edit_url",
+    "board_info_url"
+   ]
+  },
+  "web/board_header": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "web/crumbs": [
+    "boards_crumb"
+   ],
+   "web/sections": [
+    "tabs_for"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "board_edit_url",
+    "board_info_url",
+    "board_matrix_url",
+    "board_url"
+   ]
+  },
+  "web/board_info": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "board_header"
+   ],
+   "web/load": [
+    "board_of"
+   ],
+   "web/project_new": [
+    "Home",
+    "ProjectCreate",
+    "project_modal"
+   ],
+   "web/project_rows": [
+    "project_search",
+    "projects_section"
+   ],
+   "web/sections": [
+    "InfoQuery"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/layout": [
+    "info_body"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/url": [
+    "BOARDS",
+    "board_info_url"
+   ]
+  },
+  "web/board_page": {
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/board_cards": [
+    "BOARD_EMPTY",
+    "Colors"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "board_header"
+   ],
+   "web/load": [
+    "board_of",
+    "unfinished"
+   ],
+   "web/pick": [
+    "Picked",
+    "picked_in"
+   ],
+   "web/ui/board_root": [
+    "board_root"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/icons": [
+    "KANBAN"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/url": [
+    "BOARDS"
+   ]
+  },
+  "web/boards": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/load": [
+    "grouped"
+   ],
+   "web/notes": [
+    "first_line"
+   ],
+   "web/project_rows": [
+    "project_items"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/group_card": [
+    "card_grid",
+    "group_card"
+   ],
+   "web/ui/icons": [
+    "KANBAN"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "lede",
+    "page_header"
+   ],
+   "web/url": [
+    "BOARDS",
+    "board_url"
+   ]
+  },
+  "web/crumbs": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/url": [
+    "BOARDS",
+    "org_url",
+    "project_tasks_url"
+   ]
+  },
+  "web/daily_notes": {
+   "db": [
+    "Db"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "notes": [
+    "Note",
+    "self"
+   ],
+   "reporting/merge": [
+    "q:fmt_date"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/forms": [
+    "*"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of"
+   ],
+   "web/notes": [
+    "q:first_line"
+   ],
+   "web/sections": [
+    "NoteTab",
+    "q:tabs_for"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/field": [
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/notes": [
+    "Month",
+    "NoteItem",
+    "NoteLink",
+    "note_nav",
+    "notes_tab"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "edit_url",
+    "note_tab_url",
+    "note_url",
+    "notes_tab_url",
+    "notes_today_url",
+    "org_url",
+    "project_url"
+   ]
+  },
+  "web/drop": {
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ]
+  },
+  "web/edit": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError::CommaInName",
+    "IterError::EmptyName",
+    "IterError::NameTaken",
+    "IterError::SlashInName",
+    "q:IterError",
+    "q:Result"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/forms": [
+    "NAME"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ]
+  },
+  "web/edit_page": {
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME"
+   ],
+   "web/sections": [
+    "q:settings_tab"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ]
+  },
+  "web/errors": {
+   "error": [
+    "IterError::Db",
+    "IterError::Io",
+    "IterError::Spawn",
+    "q:IterError"
+   ]
+  },
+  "web/folder_picker": {},
+  "web/folders": {
+   "config": [
+    "expand_home"
+   ],
+   "web/folder_picker": [
+    "Picked",
+    "pick"
+   ]
+  },
+  "web/footer": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/ui/site_footer": [
+    "FooterData",
+    "FooterGroup",
+    "FooterLink",
+    "site_footer"
+   ],
+   "web/url": [
+    "BOARDS",
+    "SETTINGS",
+    "board_url",
+    "org_url",
+    "project_url"
+   ]
+  },
+  "web/forms": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "web/forms/board": [
+    "BoardForm"
+   ],
+   "web/forms/org": [
+    "OrgForm"
+   ],
+   "web/forms/project": [
+    "ProjectForm"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ]
+  },
+  "web/forms/board": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "web/edit": [
+    "EditForm"
+   ],
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME",
+    "PROJECTS",
+    "Pairs",
+    "text"
+   ],
+   "web/url": [
+    "board_info_url"
+   ]
+  },
+  "web/forms/org": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "secret": [
+    "q:Keychain",
+    "q:rename_key"
+   ],
+   "web/edit": [
+    "EditForm"
+   ],
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME",
+    "PROJECTS",
+    "Pairs",
+    "SettingsForm",
+    "text"
+   ],
+   "web/url": [
+    "org_url"
+   ]
+  },
+  "web/forms/project": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "web/edit": [
+    "EditForm",
+    "name_field"
+   ],
+   "web/forms": [
+    "SettingsForm",
+    "text"
+   ],
+   "web/url": [
+    "project_url"
+   ]
+  },
+  "web/forms/task": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "require_name"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "TaskStatus",
+    "parse_start_time"
+   ],
+   "web/edit": [
+    "EditForm",
+    "name_field"
+   ],
+   "web/forms": [
+    "names",
+    "optional",
+    "text"
+   ],
+   "web/url": [
+    "task_url"
+   ]
+  },
+  "web/guard": {},
+  "web/home": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/load": [
+    "Grouped",
+    "grouped"
+   ],
+   "web/notes": [
+    "first_line"
+   ],
+   "web/project_rows": [
+    "project_items"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/group_card": [
+    "card_grid",
+    "group_card"
+   ],
+   "web/ui/icons": [
+    "FOLDER"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "lede",
+    "page_header"
+   ],
+   "web/url": [
+    "org_url"
+   ]
+  },
+  "web/instructions": {
+   "agent/instruction": [
+    "Instruction",
+    "Layers",
+    "Source",
+    "self"
+   ],
+   "agent/prompt": [
+    "Kind",
+    "PLACEHOLDERS"
+   ],
+   "agent/run": [
+    "Harness",
+    "RunRecord"
+   ],
+   "agent/taskdir": [
+    "*"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "q:project_dir"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/instructions/list": [
+    "*"
+   ],
+   "web/instructions/page": [
+    "*"
+   ],
+   "web/instructions/save": [
+    "*"
+   ],
+   "web/sections": [
+    "TabQuery"
+   ],
+   "web/task_runs": [
+    "label_of",
+    "state_pill"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/panel": [
+    "Row",
+    "panel"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "instruction_url",
+    "instructions_url",
+    "page_url",
+    "project_url",
+    "run_url",
+    "task_url"
+   ]
+  },
+  "web/instructions/list": {
+   "web/instructions/save": [
+    "*"
+   ]
+  },
+  "web/instructions/page": {
+   "web/instructions/save": [
+    "*"
+   ]
+  },
+  "web/instructions/save": {
+   "agent/taskdir": [
+    "q:write_atomic"
+   ]
+  },
+  "web/instructions/tests": {},
+  "web/layout": {
+   "web/assets": [
+    "Asset"
+   ],
+   "web/footer": [
+    "site_footer_for"
+   ]
+  },
+  "web/load": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models": [
+    "ProjectGroup"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ]
+  },
+  "web/matrix": {
+   "db": [
+    "Table"
+   ],
+   "web": [
+    "Id"
+   ],
+   "web/board_cards": [
+    "CardCtx"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "title_parts"
+   ],
+   "web/board_page": [
+    "BoardPage",
+    "board_screen",
+    "load_board"
+   ],
+   "web/drop": [
+    "Drop",
+    "back_or",
+    "drop_on"
+   ],
+   "web/pick": [
+    "PickLinks",
+    "PickWords",
+    "Picked",
+    "moved_note",
+    "pick_fields"
+   ],
+   "web/quadrants": [
+    "Matrix",
+    "QUADRANTS",
+    "place",
+    "quadrant_index",
+    "split"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/layout": [
+    "jump_link",
+    "matrix_grid",
+    "side_lists",
+    "sticky_head"
+   ],
+   "web/ui/pick_bar": [
+    "pick_bar"
+   ],
+   "web/ui/pick_here": [
+    "pick_here"
+   ],
+   "web/ui/quadrant": [
+    "quadrant"
+   ],
+   "web/ui/side_rail": [
+    "side_fold",
+    "side_rail"
+   ],
+   "web/ui/task_card": [
+    "Edge",
+    "task_card"
+   ],
+   "web/ui/unplaced_list": [
+    "unplaced_list"
+   ],
+   "web/url": [
+    "board_matrix_url",
+    "with_side"
+   ]
+  },
+  "web/notes": {},
+  "web/org": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "q:org_dir"
+   ],
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/assets": [
+    "Asset"
+   ],
+   "web/daily_notes": [
+    "NotesTab",
+    "notes_section"
+   ],
+   "web/load": [
+    "tasks_or_count"
+   ],
+   "web/org_report": [
+    "Report",
+    "q:load",
+    "report_link",
+    "report_view",
+    "tab_url"
+   ],
+   "web/org_share": [
+    "Outcome",
+    "ShareDialog",
+    "preview_modal",
+    "share_modal"
+   ],
+   "web/project_new": [
+    "Home",
+    "ProjectCreate",
+    "project_modal"
+   ],
+   "web/project_rows": [
+    "project_search_in",
+    "projects_section"
+   ],
+   "web/sections": [
+    "Section",
+    "TabQuery",
+    "section_tabs",
+    "settings_tab"
+   ],
+   "web/settings_panel": [
+    "settings_panel"
+   ],
+   "web/task_new": [
+    "TaskCreate",
+    "TaskHome",
+    "task_modal"
+   ],
+   "web/task_query": [
+    "TaskQuery"
+   ],
+   "web/task_rows": [
+    "group_rows",
+    "search"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/labelled": [
+    "mono_value"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/tabs": [
+    "tabs"
+   ],
+   "web/ui/tasks_tab": [
+    "tasks_tab"
+   ],
+   "web/url": [
+    "org_url"
+   ]
+  },
+  "web/org_edit": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "notes": [
+    "q:org_dir"
+   ],
+   "secret": [
+    "q:Keychain",
+    "q:is_set"
+   ],
+   "web": [
+    "Id",
+    "open_db",
+    "q:now"
+   ],
+   "web/daily_notes": [
+    "NotesTab"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page",
+    "settings_row"
+   ],
+   "web/forms/org": [
+    "OrgForm"
+   ],
+   "web/org_report": [
+    "tab_url"
+   ],
+   "web/platform_pick": [
+    "platform_lists",
+    "self"
+   ],
+   "web/project_options": [
+    "group_options",
+    "project_checklist"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "CheckOption",
+    "field",
+    "path_field"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "org_edit_url",
+    "org_url",
+    "projects_tab_url",
+    "tasks_tab_url"
+   ]
+  },
+  "web/org_report": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "reporting": [
+    "ProjectReport",
+    "TaskReport"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "Total",
+    "fmt_date"
+   ],
+   "utils/report": [
+    "parse_day",
+    "project_reports",
+    "total_minutes"
+   ],
+   "web/org_share": [
+    "Outcome",
+    "share_outcome"
+   ],
+   "web/session_lines": [
+    "report_lines"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/icons": [
+    "CHEVRON_LEFT",
+    "CHEVRON_RIGHT",
+    "SHARE",
+    "icon"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/sessions_table": [
+    "sessions_table"
+   ],
+   "web/ui/status": [
+    "status"
+   ],
+   "web/url": [
+    "page_url",
+    "project_url",
+    "task_url"
+   ]
+  },
+  "web/org_share": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "github": [
+    "GhCli",
+    "IssueTracker"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "platform": [
+    "JsonWebhook",
+    "PlatformItem",
+    "TimePlatform"
+   ],
+   "push": [
+    "Item",
+    "Target",
+    "self"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "fmt_date"
+   ],
+   "reporting/worklog": [
+    "worklog_text"
+   ],
+   "secret": [
+    "Keychain",
+    "self"
+   ],
+   "utils/report": [
+    "parse_day"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/forms": [
+    "text"
+   ],
+   "web/org": [
+    "Loaded",
+    "load",
+    "screen"
+   ],
+   "web/org_report": [
+    "q:Report",
+    "q:load",
+    "q:status_list"
+   ],
+   "web/platform_pick": [
+    "platform_lists",
+    "self"
+   ],
+   "web/sections": [
+    "Section"
+   ],
+   "web/ui/field": [
+    "field",
+    "select"
+   ],
+   "web/ui/icons": [
+    "CLIPBOARD_CHECK",
+    "COPY",
+    "PUSH",
+    "icon"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ]
+  },
+  "web/pick": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Card"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "web/ui/pick_bar": [
+    "PICK_ANCHOR"
+   ],
+   "web/ui/task_card": [
+    "card_id"
+   ],
+   "web/url": [
+    "page_url"
+   ]
+  },
+  "web/platform_pick": {
+   "models/organization": [
+    "Organization"
+   ],
+   "platform": [
+    "JsonWebhook",
+    "PlatformItem"
+   ],
+   "push": [
+    "*"
+   ],
+   "secret": [
+    "Keychain",
+    "self"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/assets": [
+    "Asset"
+   ]
+  },
+  "web/project": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "q:project_dir"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/daily_notes": [
+    "NotesTab",
+    "notes_section"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of",
+    "tasks_or_count"
+   ],
+   "web/sections": [
+    "Section",
+    "TabQuery",
+    "section_tabs",
+    "settings_tab"
+   ],
+   "web/settings_panel": [
+    "settings_panel"
+   ],
+   "web/task_new": [
+    "TaskCreate",
+    "TaskHome",
+    "task_modal"
+   ],
+   "web/task_query": [
+    "TaskQuery"
+   ],
+   "web/task_rows": [
+    "project_rows",
+    "search"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/labelled": [
+    "mono_value"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/tabs": [
+    "tabs"
+   ],
+   "web/ui/tasks_tab": [
+    "tasks_tab"
+   ],
+   "web/url": [
+    "project_url"
+   ]
+  },
+  "web/project_edit": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "notes": [
+    "q:project_dir"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/daily_notes": [
+    "NotesTab"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page",
+    "settings_row"
+   ],
+   "web/forms/project": [
+    "ProjectForm"
+   ],
+   "web/load": [
+    "org_in"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "id_text",
+    "optional_options",
+    "path_field",
+    "select"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "project_edit_url",
+    "project_url",
+    "tasks_tab_url"
+   ]
+  },
+  "web/project_new": {
+   "config": [
+    "config"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/board_info": [
+    "load",
+    "screen"
+   ],
+   "web/edit": [
+    "create_to"
+   ],
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME",
+    "SettingsForm"
+   ],
+   "web/forms/project": [
+    "ProjectForm"
+   ],
+   "web/org": [
+    "load",
+    "screen"
+   ],
+   "web/sections": [
+    "Section"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/field": [
+    "field",
+    "path_field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "board_info_url",
+    "org_url",
+    "page_url",
+    "projects_tab_url",
+    "quick_board_project_url",
+    "quick_project_url"
+   ]
+  },
+  "web/project_options": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models": [
+    "ProjectGroup"
+   ],
+   "web/forms": [
+    "PROJECTS"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/field": [
+    "CheckOption",
+    "checklist"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ]
+  },
+  "web/project_rows": {
+   "db": [
+    "Table"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web/ui/filter_bar": [
+    "Search",
+    "filter_bar"
+   ],
+   "web/ui/labelled": [
+    "labelled_section"
+   ],
+   "web/ui/project_list": [
+    "ProjectItem",
+    "project_list"
+   ],
+   "web/url": [
+    "page_url",
+    "project_url"
+   ]
+  },
+  "web/quadrants": {
+   "models/board": [
+    "Card"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "Task",
+    "q:TaskStatus::Wip"
+   ]
+  },
+  "web/search": {},
+  "web/search_index": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/search": [
+    "Entry",
+    "Hit",
+    "Kind",
+    "search"
+   ],
+   "web/url": [
+    "board_url",
+    "note_url",
+    "org_url",
+    "project_url",
+    "task_url"
+   ]
+  },
+  "web/sections": {
+   "web/ui/tabs": [
+    "Tab"
+   ],
+   "web/url": [
+    "agent_tab_url",
+    "notes_tab_url",
+    "projects_tab_url",
+    "sessions_tab_url",
+    "tasks_tab_url",
+    "wiki_tab_url"
+   ]
+  },
+  "web/session_lines": {
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "START_TIME_FMT",
+    "end_text"
+   ],
+   "reporting": [
+    "SessionRow"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ],
+   "web/ui/sessions_table": [
+    "Moment",
+    "SessionLine"
+   ]
+  },
+  "web/settings": {
+   "config": [
+    "Config",
+    "config_file",
+    "replace"
+   ],
+   "error": [
+    "IterError"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/forms": [
+    "SettingsForm"
+   ],
+   "web/project_rows": [
+    "q:tilde"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/field": [
+    "field",
+    "select"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/url": [
+    "SETTINGS",
+    "settings_saved_url"
+   ]
+  },
+  "web/settings_fields": {
+   "models/settings": [
+    "Settings"
+   ],
+   "web/forms": [
+    "SettingsForm"
+   ],
+   "web/ui/field": [
+    "checkbox",
+    "field"
+   ],
+   "web/ui/group": [
+    "group"
+   ]
+  },
+  "web/settings_panel": {
+   "models/settings": [
+    "Settings"
+   ],
+   "web/ui/panel": [
+    "Row",
+    "panel"
+   ]
+  },
+  "web/task": {
+   "agent/plan": [
+    "q:Plan"
+   ],
+   "agent/taskdir": [
+    "*"
+   ],
+   "app": [
+    "q:App"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of"
+   ],
+   "web/sections": [
+    "TabQuery",
+    "TaskSection",
+    "task_tabs"
+   ],
+   "web/session_lines": [
+    "task_lines"
+   ],
+   "web/task_agent": [
+    "AgentTab",
+    "agent_tab",
+    "files_block",
+    "plan_block",
+    "self"
+   ],
+   "web/task_notes": [
+    "note_modal"
+   ],
+   "web/task_panel": [
+    "task_panel"
+   ],
+   "web/task_runs": [
+    "compose_modal"
+   ],
+   "web/task_sessions": [
+    "session_modal"
+   ],
+   "web/task_wiki": [
+    "WikiTab",
+    "self",
+    "wiki_tab"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/sessions_table": [
+    "sessions_table"
+   ],
+   "web/ui/table": [
+    "AddRow"
+   ],
+   "web/ui/tabs": [
+    "tabs"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "page_url",
+    "sessions_tab_url",
+    "task_url"
+   ]
+  },
+  "web/task_agent": {
+   "agent/instruction": [
+    "*"
+   ],
+   "agent/plan": [
+    "Item",
+    "Plan",
+    "State",
+    "self"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "self"
+   ],
+   "app": [
+    "App"
+   ],
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/task_runs": [
+    "Roster",
+    "roster_block"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/icons": [
+    "CIRCLE",
+    "CIRCLE_CHECK",
+    "HALF",
+    "icon"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/url": [
+    "plan_step_url",
+    "task_step_url"
+   ]
+  },
+  "web/task_edit": {
+   "agent/taskdir": [
+    "*"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page",
+    "settings_row"
+   ],
+   "web/forms": [
+    "joined"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of"
+   ],
+   "web/task_fields": [
+    "task_fields"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "select"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "agent_tab_url",
+    "notes_tab_url",
+    "sessions_tab_url",
+    "task_edit_url",
+    "task_url",
+    "wiki_tab_url"
+   ]
+  },
+  "web/task_fields": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ],
+   "web/ui/field": [
+    "field",
+    "select"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/group": [
+    "group"
+   ]
+  },
+  "web/task_new": {
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Table"
+   ],
+   "git": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/edit": [
+    "create_to"
+   ],
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ],
+   "web/load": [
+    "project_of"
+   ],
+   "web/org": [
+    "load",
+    "screen"
+   ],
+   "web/project": [
+    "load",
+    "screen"
+   ],
+   "web/sections": [
+    "Section"
+   ],
+   "web/task_fields": [
+    "task_fields"
+   ],
+   "web/task_query": [
+    "DEFAULT"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "NEW_TASK",
+    "org_url",
+    "page_url",
+    "project_url",
+    "tasks_list_url"
+   ]
+  },
+  "web/task_notes": {
+   "agent/taskdir": [
+    "*"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/forms": [
+    "q:text"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/ui/field": [
+    "field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "task_url"
+   ]
+  },
+  "web/task_panel": {
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web/task_rows": [
+    "chips",
+    "issue_label"
+   ],
+   "web/ui/panel": [
+    "Row",
+    "panel"
+   ]
+  },
+  "web/task_query": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ]
+  },
+  "web/task_rows": {
+   "db": [
+    "Table"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web/task_query": [
+    "TaskQuery"
+   ],
+   "web/ui/filter_bar": [
+    "Search"
+   ],
+   "web/ui/tag_chips": [
+    "Chip"
+   ],
+   "web/ui/task_table": [
+    "ProjectLink",
+    "TaskRow"
+   ],
+   "web/url": [
+    "project_url",
+    "task_url",
+    "tasks_list_url"
+   ]
+  },
+  "web/task_runs": {
+   "agent/instruction": [
+    "Layers",
+    "self"
+   ],
+   "agent/plan": [
+    "Item"
+   ],
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/run": [
+    "Harness",
+    "RunRecord"
+   ],
+   "agent/solve": [
+    "Launch",
+    "Spec",
+    "self"
+   ],
+   "agent/task_prompt": [
+    "q:prompt_for"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "self"
+   ],
+   "app": [
+    "App"
+   ],
+   "config": [
+    "config"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/errors": [
+    "refused"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/sections": [
+    "TabQuery"
+   ],
+   "web/task_agent": [
+    "Open",
+    "step_panel"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/icons": [
+    "PLAY",
+    "STOP",
+    "X",
+    "icon"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/url": [
+    "RunAction",
+    "agent_tab_url",
+    "agent_url",
+    "run_action_url",
+    "run_post_url",
+    "runs_url",
+    "task_url"
+   ]
+  },
+  "web/task_sessions": {
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/ui/field": [
+    "field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "sessions_tab_url",
+    "task_url"
+   ]
+  },
+  "web/task_wiki": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/errors": [
+    "q:refused"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/task_agent": [
+    "Doc",
+    "files_block"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/labelled": [
+    "labelled_section"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ],
+   "web/url": [
+    "WikiAction",
+    "task_url",
+    "wiki_action_url",
+    "wiki_tab_url"
+   ],
+   "wiki/ingest": [
+    "Mode"
+   ],
+   "wiki/ingest_job": [
+    "self"
+   ],
+   "wiki/ingest_job/review": [
+    "Review"
+   ]
+  },
+  "web/text": {},
+  "web/ui": {
+   "web/assets": [
+    "Asset"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/icons": [
+    "*"
+   ]
+  },
+  "web/ui/board_root": {},
+  "web/ui/breadcrumb": {},
+  "web/ui/button": {
+   "web/ui/icons": [
+    "PLUS",
+    "icon"
+   ]
+  },
+  "web/ui/count": {},
+  "web/ui/day_nav": {
+   "web/ui/icons": [
+    "CALENDAR",
+    "CHEVRON_LEFT",
+    "CHEVRON_RIGHT",
+    "icon"
+   ]
+  },
+  "web/ui/drop_zone": {},
+  "web/ui/empty_line": {},
+  "web/ui/empty_state": {
+   "web/ui/icons": [
+    "icon"
+   ]
+  },
+  "web/ui/field": {
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/form_error": [
+    "FormError",
+    "is_about"
+   ],
+   "web/ui/group": [
+    "group"
+   ],
+   "web/ui/icons": [
+    "FOLDER",
+    "icon"
+   ],
+   "web/ui/notice": [
+    "ERROR_ID"
+   ]
+  },
+  "web/ui/filter_bar": {},
+  "web/ui/folded_list": {
+   "web/ui/count": [
+    "count_badge"
+   ]
+  },
+  "web/ui/form": {
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/notice": [
+    "error_box"
+   ]
+  },
+  "web/ui/form_error": {
+   "error": [
+    "IterError"
+   ]
+  },
+  "web/ui/frame": {
+   "web/ui/icons": [
+    "BOT",
+    "FILE_TEXT",
+    "KANBAN",
+    "MARK",
+    "SLIDERS",
+    "icon"
+   ],
+   "web/ui/search": [
+    "palette",
+    "search_button"
+   ]
+  },
+  "web/ui/group": {
+   "web/ui/field": [
+    "hint_id",
+    "invalid_cue"
+   ]
+  },
+  "web/ui/group_card": {
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/icons": [
+    "ARROW",
+    "icon"
+   ],
+   "web/ui/project_list": [
+    "ProjectItem",
+    "project_list"
+   ]
+  },
+  "web/ui/hour_grid": {
+   "web/ui/drop_zone": [
+    "drop_zone"
+   ]
+  },
+  "web/ui/icons": {},
+  "web/ui/ink": {
+   "models/tag": [
+    "is_hex_color"
+   ]
+  },
+  "web/ui/labelled": {
+   "web/ui/count": [
+    "count_badge"
+   ]
+  },
+  "web/ui/layout": {},
+  "web/ui/modal": {
+   "web/ui/icons": [
+    "X",
+    "icon"
+   ]
+  },
+  "web/ui/notes": {
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row",
+    "section_row"
+   ]
+  },
+  "web/ui/notice": {
+   "web/ui/field": [
+    "field_id"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ]
+  },
+  "web/ui/page_header": {
+   "web/ui/breadcrumb": [
+    "Crumb",
+    "breadcrumb"
+   ]
+  },
+  "web/ui/panel": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/icons": [
+    "CHECK",
+    "MINUS",
+    "icon"
+   ],
+   "web/ui/status": [
+    "status"
+   ],
+   "web/ui/tag_chips": [
+    "Chip",
+    "tag_chips"
+   ]
+  },
+  "web/ui/pick_bar": {},
+  "web/ui/pick_here": {
+   "web/ui/button": [
+    "post_button"
+   ]
+  },
+  "web/ui/project_list": {
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ]
+  },
+  "web/ui/prose": {},
+  "web/ui/quadrant": {
+   "web/ui/count": [
+    "count_badge"
+   ],
+   "web/ui/drop_zone": [
+    "drop_zone"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/task_card": [
+    "Edge"
+   ]
+  },
+  "web/ui/search": {
+   "web/ui/icons": [
+    "BUILDING",
+    "FILE_TEXT",
+    "FOLDER",
+    "KANBAN",
+    "SEARCH",
+    "SQUARE_CHECK",
+    "icon"
+   ]
+  },
+  "web/ui/sessions_table": {
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ]
+  },
+  "web/ui/side_rail": {
+   "web/ui/icons": [
+    "PANEL_RIGHT",
+    "icon"
+   ]
+  },
+  "web/ui/site_footer": {},
+  "web/ui/status": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/icons": [
+    "CIRCLE",
+    "CIRCLE_CHECK",
+    "HALF",
+    "icon"
+   ]
+  },
+  "web/ui/table": {
+   "web/ui/button": [
+    "add_link",
+    "add_post"
+   ]
+  },
+  "web/ui/tabs": {},
+  "web/ui/tag_chips": {
+   "web/ui/ink": [
+    "chip_style"
+   ]
+  },
+  "web/ui/task_card": {
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/status": [
+    "status"
+   ]
+  },
+  "web/ui/task_table": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/status": [
+    "status"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ]
+  },
+  "web/ui/tasks_tab": {
+   "web/ui/filter_bar": [
+    "Search",
+    "filter_bar"
+   ],
+   "web/ui/task_table": [
+    "TaskRow",
+    "task_table"
+   ]
+  },
+  "web/ui/unplaced_list": {
+   "web/ui/count": [
+    "count_badge"
+   ],
+   "web/ui/drop_zone": [
+    "drop_zone"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ]
+  },
+  "web/url": {
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "web/sections": [
+    "NoteTab",
+    "q:NoteTab"
+   ],
+   "web/task_query": [
+    "DEFAULT"
+   ]
+  },
+  "wiki": {},
+  "wiki/check": {
+   "wiki/graph": [
+    "Wiki",
+    "md_files"
+   ],
+   "wiki/ontology": [
+    "LevelKind",
+    "NS",
+    "ns"
+   ]
+  },
+  "wiki/frontmatter": {
+   "md_edit": [
+    "split_at_divider"
+   ]
+  },
+  "wiki/graph": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "notes": [
+    "parse_date"
+   ],
+   "wiki/frontmatter": [
+    "Front",
+    "self"
+   ],
+   "wiki/ontology": [
+    "LevelKind",
+    "NODE",
+    "NS",
+    "Ontology",
+    "Place",
+    "Rules",
+    "ns"
+   ]
+  },
+  "wiki/ingest": {
+   "wiki/check": [
+    "Dirty",
+    "dirty_notes"
+   ],
+   "wiki/graph": [
+    "Level",
+    "Wiki"
+   ]
+  },
+  "wiki/ingest_job": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/exec": [
+    "*"
+   ],
+   "agent/prompt": [
+    "q:shell_word"
+   ],
+   "agent/run": [
+    "Harness",
+    "Invocation",
+    "alive"
+   ],
+   "app": [
+    "App"
+   ],
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "process": [
+    "*"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "wiki/graph": [
+    "Wiki"
+   ],
+   "wiki/ingest": [
+    "Mode",
+    "self"
+   ],
+   "wiki/ingest_job/bridge": [
+    "bridge_task_notes"
+   ],
+   "wiki/ingest_job/lock": [
+    "busy",
+    "lock"
+   ],
+   "wiki/ingest_job/review": [
+    "*"
+   ],
+   "wiki/ingest_job/spawn": [
+    "ingest_in_background",
+    "run_agent",
+    "spawn_ingest"
+   ],
+   "wiki/scope": [
+    "Spec",
+    "self"
+   ]
+  },
+  "wiki/ingest_job/bridge": {
+   "agent/taskdir": [
+    "q:TaskDir::files",
+    "q:of"
+   ],
+   "models/organization": [
+    "q:Organization"
+   ],
+   "notes": [
+    "q:append_section",
+    "q:project_dir"
+   ],
+   "wiki/ingest_job/review": [
+    "*"
+   ]
+  },
+  "wiki/ingest_job/lock": {
+   "wiki/ingest_job/review": [
+    "*"
+   ]
+  },
+  "wiki/ingest_job/review": {},
+  "wiki/ingest_job/spawn": {
+   "config": [
+    "q:config"
+   ],
+   "wiki/ingest_job/review": [
+    "*"
+   ]
+  },
+  "wiki/ingest_job/tests": {},
+  "wiki/mv": {
+   "agent/taskdir": [
+    "write_atomic"
+   ],
+   "error": [
+    "Result",
+    "failed"
+   ],
+   "md_edit": [
+    "split_at_divider"
+   ],
+   "wiki/graph": [
+    "Wiki",
+    "q:Node"
+   ]
+  },
+  "wiki/ontology": {
+   "error": [
+    "IterError",
+    "Result"
+   ]
+  },
+  "wiki/retrieve": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "wiki/frontmatter": [
+    "*"
+   ],
+   "wiki/graph": [
+    "Node",
+    "Wiki"
+   ],
+   "wiki/ontology": [
+    "NS"
+   ]
+  },
+  "wiki/schema": {
+   "wiki/ontology": [
+    "NS",
+    "Ontology",
+    "ns"
+   ]
+  },
+  "wiki/scope": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "git": [
+    "slugify"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ],
+   "utils/resolve": [
+    "current_session_task",
+    "resolve_task"
+   ],
+   "wiki/graph": [
+    "Level",
+    "Wiki"
+   ],
+   "wiki/ontology": [
+    "LevelKind",
+    "Ontology"
+   ]
+  },
+  "wiki/testutil": {}
+ },
+ "graph_with_tests": {
+  "agent": {},
+  "agent/error": {
+   "agent": [
+    "*"
+   ],
+   "agent/plan": [
+    "MarkError"
+   ],
+   "error": [
+    "IterError"
+   ]
+  },
+  "agent/exec": {
+   "agent": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "q:scratch"
+   ]
+  },
+  "agent/instruction": {
+   "agent": [
+    "*"
+   ],
+   "agent/error": [
+    "AgentError",
+    "AgentResult"
+   ],
+   "agent/prompt": [
+    "Context",
+    "Kind",
+    "self"
+   ],
+   "config": [
+    "q:config_dir"
+   ],
+   "db": [
+    "q:Db"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/organization": [
+    "q:Organization"
+   ],
+   "models/project": [
+    "q:Project"
+   ],
+   "notes": [
+    "q:org_dir",
+    "q:project_dir"
+   ]
+  },
+  "agent/plan": {
+   "agent": [
+    "*"
+   ]
+  },
+  "agent/prompt": {
+   "agent": [
+    "*"
+   ],
+   "agent/error": [
+    "AgentError",
+    "AgentResult"
+   ],
+   "agent/instruction": [
+    "q:file",
+    "q:split"
+   ],
+   "fixtures": [
+    "q:scratch"
+   ]
+  },
+  "agent/run": {
+   "agent": [
+    "*"
+   ],
+   "agent/error": [
+    "AgentResult"
+   ],
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "q:write_whole"
+   ],
+   "fixtures": [
+    "q:scratch"
+   ],
+   "process": [
+    "q:output_trimmed",
+    "q:succeeds"
+   ]
+  },
+  "agent/solve": {
+   "agent": [
+    "*"
+   ],
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/exec": [
+    "*"
+   ],
+   "agent/plan": [
+    "q:normalize"
+   ],
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/run": [
+    "Harness",
+    "Invocation",
+    "RunRecord",
+    "Status",
+    "q:interrupt"
+   ],
+   "agent/task_prompt": [
+    "locate",
+    "prompt_for"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "q:of"
+   ],
+   "app": [
+    "App"
+   ],
+   "config": [
+    "q:config"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "q:world"
+   ],
+   "git": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "utils/workspace": [
+    "create_task_worktree",
+    "q:remove_worktree_and_branch"
+   ],
+   "wiki/ingest_job": [
+    "Auto",
+    "Trigger",
+    "auto"
+   ]
+  },
+  "agent/task_prompt": {
+   "agent": [
+    "*"
+   ],
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/instruction": [
+    "q:split"
+   ],
+   "agent/prompt": [
+    "Context",
+    "Kind",
+    "self"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "save_plan",
+    "self"
+   ],
+   "app": [
+    "App"
+   ],
+   "config": [
+    "q:config_dir"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ],
+   "utils/resolve": [
+    "resolve_task_or_current",
+    "task_display"
+   ],
+   "wiki/retrieve": [
+    "*"
+   ],
+   "wiki/scope": [
+    "*"
+   ]
+  },
+  "agent/taskdir": {
+   "agent": [
+    "*"
+   ],
+   "agent/error": [
+    "AgentError",
+    "AgentResult"
+   ],
+   "agent/plan": [
+    "Progress",
+    "State",
+    "self"
+   ],
+   "config": [
+    "q:config_dir"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ]
+  },
+  "app": {
+   "db": [
+    "Db",
+    "open_db"
+   ]
+  },
+  "args": {
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/run": [
+    "Harness"
+   ],
+   "args/board": [
+    "*"
+   ],
+   "args/internal": [
+    "*"
+   ],
+   "args/notes": [
+    "*"
+   ],
+   "args/organization": [
+    "*"
+   ],
+   "args/project": [
+    "*"
+   ],
+   "args/session": [
+    "*"
+   ],
+   "args/tag": [
+    "*"
+   ],
+   "args/task": [
+    "*"
+   ],
+   "args/wiki": [
+    "*"
+   ],
+   "completion": [
+    "board_completer",
+    "organization_completer",
+    "project_completer",
+    "queued_task_completer",
+    "tag_completer",
+    "task_completer",
+    "task_name_completer"
+   ],
+   "reporting": [
+    "Format"
+   ],
+   "utils/output": [
+    "Format"
+   ],
+   "wiki/retrieve": [
+    "Depth"
+   ]
+  },
+  "args/board": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/internal": {},
+  "args/notes": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/organization": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/project": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/session": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/tag": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/task": {
+   "args/wiki": [
+    "*"
+   ]
+  },
+  "args/wiki": {},
+  "commands": {
+   "app": [
+    "App"
+   ],
+   "error": [
+    "Result"
+   ]
+  },
+  "commands/agent": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/plan": [
+    "Plan",
+    "Progress",
+    "State",
+    "self"
+   ],
+   "agent/prompt": [
+    "Kind",
+    "self"
+   ],
+   "agent/task_prompt": [
+    "locate",
+    "prompt_text"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "mark_step",
+    "save_plan"
+   ],
+   "app": [
+    "App"
+   ],
+   "commands": [
+    "*"
+   ],
+   "error": [
+    "Result"
+   ],
+   "md_edit": [
+    "edit_text"
+   ],
+   "utils/output": [
+    "Format",
+    "emit"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ]
+  },
+  "commands/board": {
+   "app": [
+    "App"
+   ],
+   "args/board": [
+    "BoardCommand"
+   ],
+   "commands": [
+    "*",
+    "Run"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "Duration",
+    "START_TIME_FMT",
+    "Task",
+    "TaskStatus",
+    "end_text"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ],
+   "utils/crud": [
+    "create",
+    "delete_group",
+    "update_group"
+   ],
+   "utils/output": [
+    "list_names"
+   ],
+   "utils/resolve": [
+    "resolve_group_or_current"
+   ]
+  },
+  "commands/ingest": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/taskdir": [
+    "q:of"
+   ],
+   "app": [
+    "App"
+   ],
+   "args/wiki": [
+    "HarnessOpts"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "utils/resolve": [
+    "resolve_project_or_current",
+    "resolve_task"
+   ],
+   "wiki/ingest": [
+    "Job",
+    "self"
+   ],
+   "wiki/ingest_job": [
+    "Auto",
+    "HarnessChoice",
+    "Target",
+    "Trigger",
+    "auto",
+    "now"
+   ],
+   "wiki/ingest_job/lock": [
+    "busy"
+   ],
+   "wiki/ingest_job/review": [
+    "changes",
+    "settle"
+   ],
+   "wiki/ingest_job/spawn": [
+    "run_agent",
+    "spawn_ingest"
+   ],
+   "wiki/schema": [
+    "*"
+   ]
+  },
+  "commands/misc": {
+   "app": [
+    "App"
+   ],
+   "args/internal": [
+    "HookEvent",
+    "InternalCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "error": [
+    "Result"
+   ],
+   "github": [
+    "GhCli",
+    "IssueTracker"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "tmux": [
+    "Multiplexer",
+    "TmuxClient"
+   ],
+   "utils/clock": [
+    "client_left_tmux_session",
+    "close_stale_session",
+    "start_for_tmux_session",
+    "stop_for_tmux_session"
+   ],
+   "utils/resolve": [
+    "current_session_task",
+    "linked_issue",
+    "require_github",
+    "resolve_task_or_current",
+    "task_display"
+   ]
+  },
+  "commands/notes": {
+   "app": [
+    "App"
+   ],
+   "args/notes": [
+    "NotesCommand",
+    "NotesScope"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "notes": [
+    "*"
+   ],
+   "utils/resolve": [
+    "resolve_project_or_current"
+   ]
+  },
+  "commands/organization": {
+   "app": [
+    "App"
+   ],
+   "args": [
+    "ReportOpts"
+   ],
+   "args/organization": [
+    "OrganizationCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "github": [
+    "GhCli"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "platform": [
+    "JsonWebhook"
+   ],
+   "process": [
+    "run_status"
+   ],
+   "push": [
+    "Target",
+    "self"
+   ],
+   "reporting": [
+    "Header",
+    "OrganizationInfo",
+    "print_report"
+   ],
+   "secret": [
+    "KeyStore",
+    "Keychain",
+    "Secret",
+    "self"
+   ],
+   "utils/crud": [
+    "create",
+    "delete_group",
+    "update_group"
+   ],
+   "utils/output": [
+    "list_names"
+   ],
+   "utils/report": [
+    "project_reports",
+    "resolve_range",
+    "total_minutes"
+   ],
+   "utils/resolve": [
+    "resolve_group_or_current"
+   ]
+  },
+  "commands/project": {
+   "app": [
+    "App"
+   ],
+   "args": [
+    "ReportOpts"
+   ],
+   "args/project": [
+    "ProjectCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "md_edit": [
+    "edited"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "reporting": [
+    "Header",
+    "ProjectInfo",
+    "print_report"
+   ],
+   "scaffold": [
+    "*"
+   ],
+   "tmux": [
+    "*"
+   ],
+   "utils/crud": [
+    "update"
+   ],
+   "utils/output": [
+    "list_names"
+   ],
+   "utils/report": [
+    "resolve_range",
+    "task_reports",
+    "total_minutes"
+   ],
+   "utils/resolve": [
+    "resolve_project_or_current"
+   ],
+   "utils/workspace": [
+    "teardown_session_config"
+   ]
+  },
+  "commands/session": {
+   "app": [
+    "App"
+   ],
+   "args/session": [
+    "SessionCommand"
+   ],
+   "commands": [
+    "*",
+    "Run"
+   ],
+   "commands/ingest": [
+    "*"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "TaskStatus"
+   ],
+   "tmux": [
+    "Multiplexer",
+    "TmuxClient"
+   ],
+   "utils/clock": [
+    "Closed",
+    "close_open_session",
+    "start_session"
+   ],
+   "utils/resolve": [
+    "current_session_task",
+    "require_git_repo",
+    "resolve_task",
+    "resolve_task_or_current",
+    "task_display"
+   ],
+   "utils/workspace": [
+    "self",
+    "unwind_session_setup"
+   ],
+   "wiki/ingest_job": [
+    "Trigger"
+   ]
+  },
+  "commands/solve": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/prompt": [
+    "Kind",
+    "q:shell_word"
+   ],
+   "agent/run": [
+    "Harness",
+    "RunRecord"
+   ],
+   "agent/solve": [
+    "Launch",
+    "Observer",
+    "Spec",
+    "start"
+   ],
+   "agent/task_prompt": [
+    "locate"
+   ],
+   "app": [
+    "App"
+   ],
+   "commands": [
+    "*"
+   ],
+   "commands/ingest": [
+    "say_auto"
+   ],
+   "error": [
+    "Result"
+   ],
+   "md_edit": [
+    "edit_text",
+    "split_at_divider"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "wiki/ingest_job": [
+    "Auto"
+   ]
+  },
+  "commands/sync": {
+   "app": [
+    "App"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "github": [
+    "IssueTracker",
+    "self"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "sync": [
+    "*"
+   ],
+   "utils/resolve": [
+    "find_task_or_err",
+    "github_project",
+    "linked_issue",
+    "task_display"
+   ]
+  },
+  "commands/tag": {
+   "app": [
+    "App"
+   ],
+   "args/tag": [
+    "TagCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ],
+   "utils/crud": [
+    "create",
+    "update"
+   ],
+   "utils/output": [
+    "list_names"
+   ]
+  },
+  "commands/task": {
+   "agent/solve": [
+    "q:worker"
+   ],
+   "agent/taskdir": [
+    "q:of"
+   ],
+   "app": [
+    "App"
+   ],
+   "args": [
+    "ReportOpts"
+   ],
+   "args/task": [
+    "TaskCommand"
+   ],
+   "commands": [
+    "*",
+    "Run"
+   ],
+   "commands/agent": [
+    "*"
+   ],
+   "commands/ingest": [
+    "*"
+   ],
+   "commands/solve": [
+    "*"
+   ],
+   "commands/sync": [
+    "task_pull",
+    "task_push"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "q:add_session",
+    "q:db",
+    "q:dt",
+    "q:project",
+    "q:task"
+   ],
+   "git": [
+    "*"
+   ],
+   "github": [
+    "GhCli",
+    "IssueTracker",
+    "self"
+   ],
+   "md_edit": [
+    "edited"
+   ],
+   "models": [
+    "require_name"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task",
+    "TaskEdit",
+    "TaskStatus"
+   ],
+   "reporting": [
+    "Header",
+    "TaskInfo",
+    "WeekdayReport",
+    "print_report",
+    "session_rows"
+   ],
+   "reporting/merge": [
+    "weekday_averages"
+   ],
+   "utils/clock": [
+    "close_open_session"
+   ],
+   "utils/output": [
+    "print_yaml"
+   ],
+   "utils/report": [
+    "resolve_range",
+    "total_minutes"
+   ],
+   "utils/resolve": [
+    "require_git_repo",
+    "require_github",
+    "resolve_project_or_current",
+    "resolve_task_or_current",
+    "task_display"
+   ],
+   "utils/workspace": [
+    "teardown_and_kill"
+   ],
+   "wiki/ingest_job": [
+    "Trigger",
+    "self"
+   ]
+  },
+  "commands/wiki": {
+   "app": [
+    "App"
+   ],
+   "args/wiki": [
+    "WikiCommand",
+    "WikiScope"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "commands/ingest": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "utils/output": [
+    "emit"
+   ],
+   "wiki/check": [
+    "Severity",
+    "self"
+   ],
+   "wiki/graph": [
+    "Answer",
+    "Wiki"
+   ],
+   "wiki/mv": [
+    "*"
+   ],
+   "wiki/retrieve": [
+    "Shown",
+    "self"
+   ],
+   "wiki/schema": [
+    "*"
+   ],
+   "wiki/scope": [
+    "Spec",
+    "self"
+   ]
+  },
+  "completion": {
+   "db": [
+    "Db",
+    "open_db"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ]
+  },
+  "config": {
+   "agent/taskdir": [
+    "q:write_atomic"
+   ],
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/project": [
+    "q:Project::template"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ]
+  },
+  "crate": {
+   "app": [
+    "App"
+   ],
+   "args": [
+    "Args",
+    "Command"
+   ],
+   "args/project": [
+    "ProjectCommand"
+   ],
+   "commands": [
+    "Run"
+   ],
+   "commands/misc": [
+    "*"
+   ],
+   "commands/project": [
+    "*"
+   ],
+   "commands/task": [
+    "*"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ]
+  },
+  "db": {
+   "config": [
+    "config"
+   ],
+   "db/sqltypes": [
+    "datetime"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "Named",
+    "ProjectGroup",
+    "task_ref"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/push": [
+    "Push"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/tag": [
+    "IMPORTANT_TAG",
+    "Priority",
+    "Tag",
+    "URGENT_TAG"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "TaskStatus"
+   ]
+  },
+  "db/groups": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/migrate": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/pushes": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/reporting": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/sessions": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/sqltypes": {
+   "db": [
+    "*",
+    "q:read",
+    "q:write"
+   ]
+  },
+  "db/tasks": {
+   "db": [
+    "*"
+   ]
+  },
+  "db/tests": {
+   "db": [
+    "*"
+   ],
+   "fixtures": [
+    "board",
+    "day",
+    "db",
+    "dt",
+    "self"
+   ],
+   "models/board": [
+    "q:Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Settings"
+   ]
+  },
+  "error": {
+   "agent/error": [
+    "q:AgentError"
+   ],
+   "crate": [
+    "*"
+   ]
+  },
+  "fixtures": {
+   "db": [
+    "Db"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ]
+  },
+  "git": {
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "Result",
+    "q:IterError::CommandFailed"
+   ],
+   "process": [
+    "Git",
+    "Tool"
+   ]
+  },
+  "github": {
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "process": [
+    "Runner",
+    "SYSTEM",
+    "fake::FakeRunner"
+   ]
+  },
+  "md_edit": {
+   "config": [
+    "config"
+   ],
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "GroupEdit",
+    "MarkdownBody"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/task": [
+    "Task",
+    "TaskEdit",
+    "TaskStatus"
+   ],
+   "process": [
+    "*"
+   ]
+  },
+  "models": {
+   "db": [
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/push": [
+    "Push"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "models/tag": [
+    "IMPORTANT_TAG",
+    "Priority",
+    "Tag",
+    "URGENT_TAG",
+    "is_hex_color"
+   ],
+   "models/task": [
+    "Duration",
+    "START_TIME_FMT",
+    "Task",
+    "TaskEdit",
+    "TaskStatus",
+    "end_text",
+    "parse_start_time"
+   ]
+  },
+  "models/board": {
+   "models": [
+    "q:ProjectGroup"
+   ],
+   "models/project": [
+    "q:Project"
+   ],
+   "models/tag": [
+    "q:Priority"
+   ],
+   "models/task": [
+    "q:Task"
+   ]
+  },
+  "models/organization": {
+   "error": [
+    "q:IterError::Platform",
+    "q:Result"
+   ],
+   "models": [
+    "*",
+    "Named",
+    "default_branch_template",
+    "default_true",
+    "main_branch",
+    "q:ProjectGroup"
+   ],
+   "models/project": [
+    "q:Project"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ]
+  },
+  "models/project": {
+   "error": [
+    "q:IterError::EmptyBasePath",
+    "q:IterError::SlashInName",
+    "q:Result"
+   ],
+   "models": [
+    "Named",
+    "default_branch_template",
+    "default_true",
+    "main_branch",
+    "require_no_comma"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "scaffold": [
+    "q:absolute_path"
+   ]
+  },
+  "models/push": {},
+  "models/session": {
+   "fixtures": [
+    "dt"
+   ],
+   "models": [
+    "*"
+   ],
+   "models/task": [
+    "Duration"
+   ]
+  },
+  "models/session_config": {},
+  "models/settings": {
+   "models": [
+    "default_branch_template",
+    "default_true",
+    "main_branch"
+   ],
+   "models/organization": [
+    "q:Organization"
+   ],
+   "models/project": [
+    "q:Project"
+   ]
+  },
+  "models/tag": {
+   "error": [
+    "IterError",
+    "q:IterError::InvalidTagColor",
+    "q:Result"
+   ],
+   "models": [
+    "*",
+    "Named",
+    "q:require_no_comma"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Settings"
+   ]
+  },
+  "models/task": {
+   "models": [
+    "*",
+    "q:MarkdownBody",
+    "q:read_wrapped"
+   ]
+  },
+  "notes": {
+   "agent/taskdir": [
+    "q:write_atomic"
+   ],
+   "config": [
+    "expand_home"
+   ],
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "Result",
+    "q:IterError::InvalidNote"
+   ],
+   "fixtures": [
+    "day",
+    "self"
+   ],
+   "git": [
+    "slugify"
+   ],
+   "md_edit": [
+    "q:split_at_divider"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ]
+  },
+  "platform": {
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "reporting/worklog": [
+    "Worklog",
+    "WorklogEntry"
+   ],
+   "secret": [
+    "Secret"
+   ]
+  },
+  "process": {
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ]
+  },
+  "push": {
+   "config": [
+    "config"
+   ],
+   "crate": [
+    "*"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "dt",
+    "self"
+   ],
+   "github": [
+    "Issue",
+    "IssueState",
+    "IssueTracker"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/push": [
+    "Push"
+   ],
+   "models/settings": [
+    "q:Settings::default"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "platform": [
+    "PlatformItem",
+    "TimePlatform",
+    "fake::FakePlatform"
+   ],
+   "reporting": [
+    "q:SessionRow"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "fmt_date"
+   ],
+   "reporting/worklog": [
+    "Worklog",
+    "WorklogEntry",
+    "worklog_line"
+   ],
+   "utils/report": [
+    "project_reports"
+   ]
+  },
+  "reporting": {
+   "error": [
+    "Result",
+    "q:IterError::CommandFailed"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "Duration",
+    "TaskStatus"
+   ],
+   "reporting/merge": [
+    "*"
+   ],
+   "reporting/render": [
+    "Md",
+    "cell",
+    "document",
+    "message_bullets",
+    "non_empty",
+    "summary_line"
+   ],
+   "reporting/worklog": [
+    "*"
+   ]
+  },
+  "reporting/merge": {
+   "reporting/worklog": [
+    "*"
+   ]
+  },
+  "reporting/render": {
+   "reporting/worklog": [
+    "*"
+   ]
+  },
+  "reporting/tests": {
+   "fixtures": [
+    "day",
+    "dt",
+    "self"
+   ],
+   "reporting/worklog": [
+    "*"
+   ]
+  },
+  "reporting/worklog": {
+   "error": [
+    "q:IterError::CommandFailed"
+   ]
+  },
+  "scaffold": {
+   "config": [
+    "q:expand_home"
+   ],
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "Result"
+   ],
+   "fixtures": [
+    "q:scratch"
+   ]
+  },
+  "secret": {
+   "crate": [
+    "*",
+    "fake::MemoryKeys"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ]
+  },
+  "sync": {
+   "crate": [
+    "*"
+   ],
+   "fixtures": [
+    "q:task"
+   ],
+   "github": [
+    "Issue",
+    "IssueState",
+    "status_for_issue_state"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ]
+  },
+  "tmux": {
+   "agent/prompt": [
+    "q:shell_word"
+   ],
+   "config": [
+    "q:expand_home"
+   ],
+   "crate": [
+    "*"
+   ],
+   "error": [
+    "Result",
+    "q:IterError::CommandFailed"
+   ],
+   "process": [
+    "Runner",
+    "SYSTEM",
+    "fake::FakeRunner"
+   ]
+  },
+  "utils": {},
+  "utils/clock": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "tmux": [
+    "*"
+   ],
+   "utils": [
+    "*"
+   ]
+  },
+  "utils/crud": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "md_edit": [
+    "edit_in_editor",
+    "edited",
+    "no_changes"
+   ],
+   "models": [
+    "Editable",
+    "GroupEdit",
+    "Named",
+    "ProjectGroup"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "utils": [
+    "*"
+   ]
+  },
+  "utils/output": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "models": [
+    "Named"
+   ],
+   "utils": [
+    "*"
+   ]
+  },
+  "utils/report": {
+   "args": [
+    "ReportOpts"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*",
+    "dt"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "reporting": [
+    "ProjectReport",
+    "TaskReport",
+    "session_rows"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "merged_total_minutes",
+    "q:Total::new"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ],
+   "utils": [
+    "*"
+   ]
+  },
+  "utils/resolve": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "models": [
+    "ProjectGroup",
+    "split_task_ref",
+    "task_ref"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "tmux": [
+    "*"
+   ]
+  },
+  "utils/workspace": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "git": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/session_config": [
+    "SessionConfig"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "tmux": [
+    "*"
+   ]
+  },
+  "web": {
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "Result"
+   ]
+  },
+  "web/agenda": {
+   "db": [
+    "Table"
+   ],
+   "fixtures": [
+    "dt"
+   ],
+   "models/task": [
+    "parse_start_time"
+   ],
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "utils/report": [
+    "parse_day"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "now"
+   ],
+   "web/agenda_cards": [
+    "Cards",
+    "Fold",
+    "NOT_SCHEDULED",
+    "side"
+   ],
+   "web/agenda_day": [
+    "Day",
+    "hour_label",
+    "hour_target",
+    "neighbours",
+    "split"
+   ],
+   "web/agenda_pick": [
+    "day_url",
+    "links"
+   ],
+   "web/board_cards": [
+    "CLOCK_FMT",
+    "CardCtx"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "title_parts"
+   ],
+   "web/board_page": [
+    "BoardPage",
+    "board_screen",
+    "load_board"
+   ],
+   "web/pick": [
+    "Picked",
+    "moved_note",
+    "pick_fields"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/day_nav": [
+    "DayLink",
+    "day_nav"
+   ],
+   "web/ui/hour_grid": [
+    "Now",
+    "hour_grid",
+    "hour_slot"
+   ],
+   "web/ui/layout": [
+    "jump_link",
+    "sticky_head"
+   ],
+   "web/ui/pick_bar": [
+    "pick_bar"
+   ],
+   "web/ui/pick_here": [
+    "pick_here"
+   ],
+   "web/ui/task_card": [
+    "task_card"
+   ],
+   "web/url": [
+    "board_day_url",
+    "board_schedule_url",
+    "board_url",
+    "with_side"
+   ]
+  },
+  "web/agenda_cards": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Card"
+   ],
+   "web/agenda_day": [
+    "Day"
+   ],
+   "web/agenda_pick": [
+    "links"
+   ],
+   "web/board_cards": [
+    "BOARD_EMPTY",
+    "CardCtx"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/folded_list": [
+    "folded_list"
+   ],
+   "web/ui/icons": [
+    "KANBAN"
+   ],
+   "web/ui/layout": [
+    "side_lists"
+   ],
+   "web/ui/side_rail": [
+    "side_fold",
+    "side_rail"
+   ],
+   "web/ui/task_card": [
+    "CardView",
+    "task_card"
+   ],
+   "web/ui/unplaced_list": [
+    "unplaced_list"
+   ],
+   "web/url": [
+    "with_side"
+   ]
+  },
+  "web/agenda_day": {
+   "models/board": [
+    "Card"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "START_TIME_FMT",
+    "Task",
+    "TaskStatus",
+    "parse_start_time"
+   ],
+   "web": [
+    "*"
+   ]
+  },
+  "web/agenda_drop": {
+   "fixtures": [
+    "q:task"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "parse_start_time"
+   ],
+   "utils/report": [
+    "parse_day"
+   ],
+   "web": [
+    "*",
+    "Id"
+   ],
+   "web/agenda_pick": [
+    "links"
+   ],
+   "web/drop": [
+    "Drop",
+    "back_or",
+    "drop_on"
+   ]
+  },
+  "web/agenda_pick": {
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "parse_start_time"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/pick": [
+    "PickLinks",
+    "PickWords",
+    "Picked"
+   ],
+   "web/url": [
+    "board_day_url",
+    "with_side"
+   ]
+  },
+  "web/agents": {
+   "agent/prompt": [
+    "q:Kind::Develop"
+   ],
+   "agent/run": [
+    "RunRecord",
+    "q:Harness::Claude",
+    "q:Status::Done"
+   ],
+   "agent/taskdir": [
+    "*"
+   ],
+   "config": [
+    "config"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "open_db"
+   ],
+   "web/instructions": [
+    "Use",
+    "usage"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/sections": [
+    "TabQuery"
+   ],
+   "web/task_runs": [
+    "act",
+    "label_of",
+    "state_pill"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/icons": [
+    "PLAY",
+    "STOP",
+    "X",
+    "icon"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/table": [
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "RunAction",
+    "agent_tab_url",
+    "agent_url",
+    "agents_url",
+    "page_url",
+    "run_action_url",
+    "run_post_url",
+    "task_url"
+   ]
+  },
+  "web/assets": {
+   "web": [
+    "*"
+   ]
+  },
+  "web/blocking": {},
+  "web/board_cards": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "fixtures": [
+    "q:task"
+   ],
+   "models/board": [
+    "Card"
+   ],
+   "models/tag": [
+    "Priority",
+    "is_hex_color"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "TaskStatus",
+    "parse_start_time"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/ui/task_card": [
+    "CardAction",
+    "CardView",
+    "Edge"
+   ],
+   "web/url": [
+    "task_url"
+   ]
+  },
+  "web/board_edit": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "web": [
+    "Id"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "board_tabs"
+   ],
+   "web/crumbs": [
+    "boards_crumb"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load_among",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page"
+   ],
+   "web/forms/board": [
+    "BoardForm"
+   ],
+   "web/project_options": [
+    "group_options",
+    "project_checklist",
+    "project_options"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "CheckOption"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "BOARDS",
+    "board_edit_url",
+    "board_info_url"
+   ]
+  },
+  "web/board_header": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/crumbs": [
+    "boards_crumb"
+   ],
+   "web/sections": [
+    "tabs_for"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "board_edit_url",
+    "board_info_url",
+    "board_matrix_url",
+    "board_url"
+   ]
+  },
+  "web/board_info": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "board_header"
+   ],
+   "web/load": [
+    "board_of"
+   ],
+   "web/project_new": [
+    "Home",
+    "ProjectCreate",
+    "project_modal"
+   ],
+   "web/project_rows": [
+    "project_search",
+    "projects_section"
+   ],
+   "web/sections": [
+    "InfoQuery"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/layout": [
+    "info_body"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/url": [
+    "BOARDS",
+    "board_info_url"
+   ]
+  },
+  "web/board_page": {
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/board_cards": [
+    "BOARD_EMPTY",
+    "Colors"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "board_header"
+   ],
+   "web/load": [
+    "board_of",
+    "unfinished"
+   ],
+   "web/pick": [
+    "Picked",
+    "picked_in"
+   ],
+   "web/ui/board_root": [
+    "board_root"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/icons": [
+    "KANBAN"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/url": [
+    "BOARDS"
+   ]
+  },
+  "web/boards": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/load": [
+    "grouped"
+   ],
+   "web/notes": [
+    "first_line"
+   ],
+   "web/project_rows": [
+    "project_items"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/group_card": [
+    "card_grid",
+    "group_card"
+   ],
+   "web/ui/icons": [
+    "KANBAN"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "lede",
+    "page_header"
+   ],
+   "web/url": [
+    "BOARDS",
+    "board_url"
+   ]
+  },
+  "web/crumbs": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/url": [
+    "BOARDS",
+    "org_url",
+    "project_tasks_url"
+   ]
+  },
+  "web/daily_notes": {
+   "db": [
+    "Db"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "notes": [
+    "Note",
+    "self"
+   ],
+   "reporting/merge": [
+    "q:fmt_date"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/forms": [
+    "*"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of"
+   ],
+   "web/notes": [
+    "q:first_line"
+   ],
+   "web/sections": [
+    "NoteTab",
+    "q:tabs_for"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/field": [
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/notes": [
+    "Month",
+    "NoteItem",
+    "NoteLink",
+    "note_nav",
+    "notes_tab"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "edit_url",
+    "note_tab_url",
+    "note_url",
+    "notes_tab_url",
+    "notes_today_url",
+    "org_url",
+    "project_url"
+   ]
+  },
+  "web/drop": {
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "*",
+    "open_db"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ]
+  },
+  "web/edit": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError::CommaInName",
+    "IterError::EmptyName",
+    "IterError::NameTaken",
+    "IterError::SlashInName",
+    "q:IterError",
+    "q:Result"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/forms": [
+    "NAME"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ]
+  },
+  "web/edit_page": {
+   "web": [
+    "*"
+   ],
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME"
+   ],
+   "web/sections": [
+    "q:settings_tab"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ]
+  },
+  "web/errors": {
+   "error": [
+    "IterError::Db",
+    "IterError::Io",
+    "IterError::Spawn",
+    "q:IterError"
+   ]
+  },
+  "web/folder_picker": {
+   "web": [
+    "*"
+   ]
+  },
+  "web/folders": {
+   "config": [
+    "expand_home"
+   ],
+   "fixtures": [
+    "q:scratch"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/folder_picker": [
+    "Picked",
+    "pick"
+   ]
+  },
+  "web/footer": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "*",
+    "open_db"
+   ],
+   "web/ui/site_footer": [
+    "FooterData",
+    "FooterGroup",
+    "FooterLink",
+    "site_footer"
+   ],
+   "web/url": [
+    "BOARDS",
+    "SETTINGS",
+    "board_url",
+    "org_url",
+    "project_url"
+   ]
+  },
+  "web/forms": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/tag": [
+    "q:Tag::defaults"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/edit": [
+    "EditForm"
+   ],
+   "web/forms/board": [
+    "BoardForm"
+   ],
+   "web/forms/org": [
+    "OrgForm"
+   ],
+   "web/forms/project": [
+    "ProjectForm"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ]
+  },
+  "web/forms/board": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "web/edit": [
+    "EditForm"
+   ],
+   "web/forms": [
+    "*",
+    "DESCRIPTION",
+    "NAME",
+    "PROJECTS",
+    "Pairs",
+    "text"
+   ],
+   "web/url": [
+    "board_info_url"
+   ]
+  },
+  "web/forms/org": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "secret": [
+    "q:Keychain",
+    "q:rename_key"
+   ],
+   "web/edit": [
+    "EditForm"
+   ],
+   "web/forms": [
+    "*",
+    "DESCRIPTION",
+    "NAME",
+    "PROJECTS",
+    "Pairs",
+    "SettingsForm",
+    "text"
+   ],
+   "web/url": [
+    "org_url"
+   ]
+  },
+  "web/forms/project": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models": [
+    "Named"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "web/edit": [
+    "EditForm",
+    "name_field"
+   ],
+   "web/forms": [
+    "*",
+    "NAME",
+    "SettingsForm",
+    "text"
+   ],
+   "web/url": [
+    "project_url"
+   ]
+  },
+  "web/forms/task": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*",
+    "q:task"
+   ],
+   "models": [
+    "require_name"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Duration",
+    "Task",
+    "TaskStatus",
+    "parse_start_time"
+   ],
+   "web/edit": [
+    "EditForm",
+    "name_field"
+   ],
+   "web/forms": [
+    "*",
+    "NAME",
+    "names",
+    "optional",
+    "text"
+   ],
+   "web/url": [
+    "task_url"
+   ]
+  },
+  "web/guard": {
+   "web": [
+    "allowed"
+   ]
+  },
+  "web/home": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/load": [
+    "Grouped",
+    "grouped"
+   ],
+   "web/notes": [
+    "first_line"
+   ],
+   "web/project_rows": [
+    "project_items"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/empty_state": [
+    "empty_state"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/group_card": [
+    "card_grid",
+    "group_card"
+   ],
+   "web/ui/icons": [
+    "FOLDER"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "lede",
+    "page_header"
+   ],
+   "web/url": [
+    "org_url"
+   ]
+  },
+  "web/instructions": {
+   "agent/instruction": [
+    "Instruction",
+    "Layers",
+    "Source",
+    "self"
+   ],
+   "agent/prompt": [
+    "Kind",
+    "PLACEHOLDERS"
+   ],
+   "agent/run": [
+    "Harness",
+    "RunRecord"
+   ],
+   "agent/taskdir": [
+    "*"
+   ],
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "q:project_dir"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/instructions/list": [
+    "*"
+   ],
+   "web/instructions/page": [
+    "*"
+   ],
+   "web/instructions/save": [
+    "*"
+   ],
+   "web/sections": [
+    "TabQuery"
+   ],
+   "web/task_runs": [
+    "label_of",
+    "state_pill"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/panel": [
+    "Row",
+    "panel"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/ui/tabs": [
+    "Tab",
+    "tabs"
+   ],
+   "web/url": [
+    "instruction_url",
+    "instructions_url",
+    "page_url",
+    "project_url",
+    "run_url",
+    "task_url"
+   ]
+  },
+  "web/instructions/list": {
+   "web/instructions/save": [
+    "*"
+   ]
+  },
+  "web/instructions/page": {
+   "web/instructions/save": [
+    "*"
+   ]
+  },
+  "web/instructions/save": {
+   "agent/taskdir": [
+    "q:write_atomic"
+   ]
+  },
+  "web/instructions/tests": {
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/run": [
+    "q:Harness::Claude",
+    "q:Status::Done"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/task": [
+    "q:TaskStatus::Queue"
+   ],
+   "web/instructions/save": [
+    "*"
+   ]
+  },
+  "web/layout": {
+   "web/assets": [
+    "Asset"
+   ],
+   "web/footer": [
+    "site_footer_for"
+   ]
+  },
+  "web/load": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models": [
+    "ProjectGroup"
+   ],
+   "models/board": [
+    "Board",
+    "Card"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "web": [
+    "*"
+   ]
+  },
+  "web/matrix": {
+   "db": [
+    "Table"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "web": [
+    "*",
+    "Id"
+   ],
+   "web/board_cards": [
+    "CardCtx"
+   ],
+   "web/board_header": [
+    "BoardSection",
+    "title_parts"
+   ],
+   "web/board_page": [
+    "BoardPage",
+    "board_screen",
+    "load_board"
+   ],
+   "web/drop": [
+    "Drop",
+    "back_or",
+    "drop_on"
+   ],
+   "web/pick": [
+    "PickLinks",
+    "PickWords",
+    "Picked",
+    "moved_note",
+    "pick_fields"
+   ],
+   "web/quadrants": [
+    "Matrix",
+    "QUADRANTS",
+    "place",
+    "quadrant_index",
+    "split"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/layout": [
+    "jump_link",
+    "matrix_grid",
+    "side_lists",
+    "sticky_head"
+   ],
+   "web/ui/pick_bar": [
+    "pick_bar"
+   ],
+   "web/ui/pick_here": [
+    "pick_here"
+   ],
+   "web/ui/quadrant": [
+    "quadrant"
+   ],
+   "web/ui/side_rail": [
+    "side_fold",
+    "side_rail"
+   ],
+   "web/ui/task_card": [
+    "Edge",
+    "task_card"
+   ],
+   "web/ui/unplaced_list": [
+    "unplaced_list"
+   ],
+   "web/url": [
+    "board_matrix_url",
+    "with_side"
+   ]
+  },
+  "web/notes": {
+   "web": [
+    "*"
+   ]
+  },
+  "web/org": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "q:org_dir"
+   ],
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/assets": [
+    "Asset"
+   ],
+   "web/daily_notes": [
+    "NotesTab",
+    "notes_section"
+   ],
+   "web/load": [
+    "tasks_or_count"
+   ],
+   "web/org_report": [
+    "Report",
+    "q:load",
+    "report_link",
+    "report_view",
+    "tab_url"
+   ],
+   "web/org_share": [
+    "Outcome",
+    "ShareDialog",
+    "preview_modal",
+    "share_modal"
+   ],
+   "web/project_new": [
+    "Home",
+    "ProjectCreate",
+    "project_modal"
+   ],
+   "web/project_rows": [
+    "project_search_in",
+    "projects_section"
+   ],
+   "web/sections": [
+    "Section",
+    "TabQuery",
+    "section_tabs",
+    "settings_tab"
+   ],
+   "web/settings_panel": [
+    "settings_panel"
+   ],
+   "web/task_new": [
+    "TaskCreate",
+    "TaskHome",
+    "task_modal"
+   ],
+   "web/task_query": [
+    "TaskQuery"
+   ],
+   "web/task_rows": [
+    "group_rows",
+    "search"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/labelled": [
+    "mono_value"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/tabs": [
+    "tabs"
+   ],
+   "web/ui/tasks_tab": [
+    "tasks_tab"
+   ],
+   "web/url": [
+    "org_url"
+   ]
+  },
+  "web/org_edit": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "notes": [
+    "q:org_dir"
+   ],
+   "secret": [
+    "q:Keychain",
+    "q:is_set"
+   ],
+   "web": [
+    "Id",
+    "open_db",
+    "q:now"
+   ],
+   "web/daily_notes": [
+    "NotesTab"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page",
+    "settings_row"
+   ],
+   "web/forms/org": [
+    "OrgForm"
+   ],
+   "web/org_report": [
+    "tab_url"
+   ],
+   "web/platform_pick": [
+    "platform_lists",
+    "self"
+   ],
+   "web/project_options": [
+    "group_options",
+    "project_checklist"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "CheckOption",
+    "field",
+    "path_field"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "org_edit_url",
+    "org_url",
+    "projects_tab_url",
+    "tasks_tab_url"
+   ]
+  },
+  "web/org_report": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "reporting": [
+    "ProjectReport",
+    "TaskReport"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "Total",
+    "fmt_date"
+   ],
+   "utils/report": [
+    "parse_day",
+    "project_reports",
+    "total_minutes"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/org_share": [
+    "Outcome",
+    "share_outcome"
+   ],
+   "web/session_lines": [
+    "report_lines"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/icons": [
+    "CHEVRON_LEFT",
+    "CHEVRON_RIGHT",
+    "SHARE",
+    "icon"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/sessions_table": [
+    "sessions_table"
+   ],
+   "web/ui/status": [
+    "status"
+   ],
+   "web/url": [
+    "page_url",
+    "project_url",
+    "task_url"
+   ]
+  },
+  "web/org_share": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "dt",
+    "self"
+   ],
+   "github": [
+    "GhCli",
+    "IssueTracker",
+    "fake::Inert"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "platform": [
+    "JsonWebhook",
+    "PlatformItem",
+    "TimePlatform",
+    "fake::FakePlatform"
+   ],
+   "push": [
+    "Item",
+    "Target",
+    "self"
+   ],
+   "reporting/merge": [
+    "DateRange",
+    "fmt_date"
+   ],
+   "reporting/worklog": [
+    "q:WorklogEntry",
+    "worklog_text"
+   ],
+   "secret": [
+    "KeyStore",
+    "Keychain",
+    "Secret",
+    "fake::MemoryKeys",
+    "self"
+   ],
+   "utils/report": [
+    "parse_day"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/forms": [
+    "text"
+   ],
+   "web/org": [
+    "Loaded",
+    "load",
+    "screen"
+   ],
+   "web/org_report": [
+    "q:Report",
+    "q:load",
+    "q:status_list"
+   ],
+   "web/platform_pick": [
+    "platform_lists",
+    "self"
+   ],
+   "web/sections": [
+    "Section"
+   ],
+   "web/ui/field": [
+    "field",
+    "select"
+   ],
+   "web/ui/icons": [
+    "CLIPBOARD_CHECK",
+    "COPY",
+    "PUSH",
+    "icon"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ]
+  },
+  "web/pick": {
+   "db": [
+    "Table"
+   ],
+   "models/board": [
+    "Card"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus",
+    "parse_start_time"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/ui/pick_bar": [
+    "PICK_ANCHOR"
+   ],
+   "web/ui/task_card": [
+    "card_id"
+   ],
+   "web/url": [
+    "page_url"
+   ]
+  },
+  "web/platform_pick": {
+   "models/organization": [
+    "Organization"
+   ],
+   "platform": [
+    "JsonWebhook",
+    "PlatformItem"
+   ],
+   "push": [
+    "*"
+   ],
+   "secret": [
+    "Keychain",
+    "self"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/assets": [
+    "Asset"
+   ]
+  },
+  "web/project": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "q:project_dir"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/daily_notes": [
+    "NotesTab",
+    "notes_section"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of",
+    "tasks_or_count"
+   ],
+   "web/sections": [
+    "Section",
+    "TabQuery",
+    "section_tabs",
+    "settings_tab"
+   ],
+   "web/settings_panel": [
+    "settings_panel"
+   ],
+   "web/task_new": [
+    "TaskCreate",
+    "TaskHome",
+    "task_modal"
+   ],
+   "web/task_query": [
+    "TaskQuery"
+   ],
+   "web/task_rows": [
+    "project_rows",
+    "search"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/labelled": [
+    "mono_value"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/tabs": [
+    "tabs"
+   ],
+   "web/ui/tasks_tab": [
+    "tasks_tab"
+   ],
+   "web/url": [
+    "project_url"
+   ]
+  },
+  "web/project_edit": {
+   "db": [
+    "Table"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured"
+   ],
+   "notes": [
+    "q:project_dir"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/daily_notes": [
+    "NotesTab"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page",
+    "settings_row"
+   ],
+   "web/forms/project": [
+    "ProjectForm"
+   ],
+   "web/load": [
+    "org_in"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "id_text",
+    "optional_options",
+    "path_field",
+    "select"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "project_edit_url",
+    "project_url",
+    "tasks_tab_url"
+   ]
+  },
+  "web/project_new": {
+   "config": [
+    "config"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/settings": [
+    "Configured",
+    "Settings"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/board_info": [
+    "load",
+    "screen"
+   ],
+   "web/edit": [
+    "EditForm",
+    "create_to"
+   ],
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME",
+    "SettingsForm"
+   ],
+   "web/forms/project": [
+    "ProjectForm"
+   ],
+   "web/org": [
+    "load",
+    "screen"
+   ],
+   "web/sections": [
+    "Section"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/field": [
+    "field",
+    "path_field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "board_info_url",
+    "org_url",
+    "page_url",
+    "projects_tab_url",
+    "quick_board_project_url",
+    "quick_project_url"
+   ]
+  },
+  "web/project_options": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models": [
+    "ProjectGroup"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/forms": [
+    "PROJECTS"
+   ],
+   "web/text": [
+    "NO_PROJECTS"
+   ],
+   "web/ui/field": [
+    "CheckOption",
+    "checklist"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ]
+  },
+  "web/project_rows": {
+   "db": [
+    "Table"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/ui/filter_bar": [
+    "Search",
+    "filter_bar"
+   ],
+   "web/ui/labelled": [
+    "labelled_section"
+   ],
+   "web/ui/project_list": [
+    "ProjectItem",
+    "project_list"
+   ],
+   "web/url": [
+    "page_url",
+    "project_url"
+   ]
+  },
+  "web/quadrants": {
+   "models/board": [
+    "Card"
+   ],
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus",
+    "q:TaskStatus::Wip"
+   ],
+   "web": [
+    "*"
+   ]
+  },
+  "web/search": {
+   "web": [
+    "*"
+   ]
+  },
+  "web/search_index": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "models/board": [
+    "Board"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ],
+   "web": [
+    "*",
+    "open_db"
+   ],
+   "web/search": [
+    "Entry",
+    "Hit",
+    "Kind",
+    "search"
+   ],
+   "web/url": [
+    "board_url",
+    "note_url",
+    "org_url",
+    "project_url",
+    "task_url"
+   ]
+  },
+  "web/sections": {
+   "web": [
+    "*"
+   ],
+   "web/ui/tabs": [
+    "Tab"
+   ],
+   "web/url": [
+    "agent_tab_url",
+    "notes_tab_url",
+    "projects_tab_url",
+    "sessions_tab_url",
+    "tasks_tab_url",
+    "wiki_tab_url"
+   ]
+  },
+  "web/session_lines": {
+   "fixtures": [
+    "dt",
+    "q:session"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "START_TIME_FMT",
+    "end_text"
+   ],
+   "reporting": [
+    "SessionRow"
+   ],
+   "reporting/render": [
+    "non_empty"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/ui/sessions_table": [
+    "Moment",
+    "SessionLine"
+   ]
+  },
+  "web/settings": {
+   "config": [
+    "Config",
+    "config_file",
+    "replace"
+   ],
+   "error": [
+    "IterError"
+   ],
+   "models/settings": [
+    "Settings"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/forms": [
+    "SettingsForm"
+   ],
+   "web/project_rows": [
+    "q:tilde"
+   ],
+   "web/settings_fields": [
+    "settings_fields"
+   ],
+   "web/ui/field": [
+    "field",
+    "select"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/url": [
+    "SETTINGS",
+    "settings_saved_url"
+   ]
+  },
+  "web/settings_fields": {
+   "models/settings": [
+    "Settings"
+   ],
+   "web/forms": [
+    "SettingsForm"
+   ],
+   "web/ui/field": [
+    "checkbox",
+    "field"
+   ],
+   "web/ui/group": [
+    "group"
+   ]
+  },
+  "web/settings_panel": {
+   "models/settings": [
+    "Settings"
+   ],
+   "web/ui/panel": [
+    "Row",
+    "panel"
+   ]
+  },
+  "web/task": {
+   "agent/plan": [
+    "q:Plan"
+   ],
+   "agent/taskdir": [
+    "*"
+   ],
+   "app": [
+    "q:App"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/session": [
+    "Session"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of"
+   ],
+   "web/sections": [
+    "TabQuery",
+    "TaskSection",
+    "task_tabs"
+   ],
+   "web/session_lines": [
+    "task_lines"
+   ],
+   "web/task_agent": [
+    "AgentTab",
+    "agent_tab",
+    "files_block",
+    "plan_block",
+    "self"
+   ],
+   "web/task_notes": [
+    "note_modal"
+   ],
+   "web/task_panel": [
+    "task_panel"
+   ],
+   "web/task_runs": [
+    "compose_modal"
+   ],
+   "web/task_sessions": [
+    "session_modal"
+   ],
+   "web/task_wiki": [
+    "WikiTab",
+    "self",
+    "wiki_tab"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/frame": [
+    "frame"
+   ],
+   "web/ui/layout": [
+    "info_columns"
+   ],
+   "web/ui/page_header": [
+    "Kicker",
+    "page_header"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/sessions_table": [
+    "sessions_table"
+   ],
+   "web/ui/table": [
+    "AddRow"
+   ],
+   "web/ui/tabs": [
+    "tabs"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "page_url",
+    "sessions_tab_url",
+    "task_url"
+   ]
+  },
+  "web/task_agent": {
+   "agent/instruction": [
+    "*"
+   ],
+   "agent/plan": [
+    "Item",
+    "Plan",
+    "State",
+    "self"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "self"
+   ],
+   "app": [
+    "App"
+   ],
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "open_db"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/task_runs": [
+    "Roster",
+    "roster_block"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/icons": [
+    "CIRCLE",
+    "CIRCLE_CHECK",
+    "HALF",
+    "icon"
+   ],
+   "web/ui/prose": [
+    "description"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/url": [
+    "plan_step_url",
+    "task_step_url"
+   ]
+  },
+  "web/task_edit": {
+   "agent/taskdir": [
+    "*"
+   ],
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "Id",
+    "open_db"
+   ],
+   "web/crumbs": [
+    "trail"
+   ],
+   "web/edit": [
+    "Loaded",
+    "load",
+    "submit"
+   ],
+   "web/edit_page": [
+    "edit_page",
+    "settings_row"
+   ],
+   "web/forms": [
+    "joined"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ],
+   "web/load": [
+    "Parents",
+    "parents_of"
+   ],
+   "web/task_fields": [
+    "task_fields"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/field": [
+    "select"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/url": [
+    "agent_tab_url",
+    "notes_tab_url",
+    "sessions_tab_url",
+    "task_edit_url",
+    "task_url",
+    "wiki_tab_url"
+   ]
+  },
+  "web/task_fields": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ],
+   "web/ui/field": [
+    "field",
+    "select"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/group": [
+    "group"
+   ]
+  },
+  "web/task_new": {
+   "config": [
+    "config"
+   ],
+   "db": [
+    "Table"
+   ],
+   "git": [
+    "*"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task",
+    "q:TaskStatus::Queue"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "now",
+    "open_db"
+   ],
+   "web/edit": [
+    "create_to"
+   ],
+   "web/forms": [
+    "DESCRIPTION",
+    "NAME"
+   ],
+   "web/forms/task": [
+    "TaskForm"
+   ],
+   "web/load": [
+    "project_of"
+   ],
+   "web/org": [
+    "load",
+    "screen"
+   ],
+   "web/project": [
+    "load",
+    "screen"
+   ],
+   "web/sections": [
+    "Section"
+   ],
+   "web/task_fields": [
+    "task_fields"
+   ],
+   "web/task_query": [
+    "DEFAULT"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "NEW_TASK",
+    "org_url",
+    "page_url",
+    "project_url",
+    "tasks_list_url"
+   ]
+  },
+  "web/task_notes": {
+   "agent/taskdir": [
+    "*"
+   ],
+   "fixtures": [
+    "q:scratch"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "open_db"
+   ],
+   "web/forms": [
+    "q:text"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/ui/field": [
+    "field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "notes_tab_url",
+    "task_url"
+   ]
+  },
+  "web/task_panel": {
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web/task_rows": [
+    "chips",
+    "issue_label"
+   ],
+   "web/ui/panel": [
+    "Row",
+    "panel"
+   ]
+  },
+  "web/task_query": {
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "q:Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/tag": [
+    "q:Tag"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "web": [
+    "*"
+   ]
+  },
+  "web/task_rows": {
+   "db": [
+    "Table"
+   ],
+   "fixtures": [
+    "q:task"
+   ],
+   "models/tag": [
+    "Tag"
+   ],
+   "models/task": [
+    "Task",
+    "TaskStatus"
+   ],
+   "web": [
+    "*",
+    "q:chips"
+   ],
+   "web/task_query": [
+    "TaskQuery"
+   ],
+   "web/ui/filter_bar": [
+    "Search"
+   ],
+   "web/ui/tag_chips": [
+    "Chip"
+   ],
+   "web/ui/task_table": [
+    "ProjectLink",
+    "TaskRow"
+   ],
+   "web/url": [
+    "project_url",
+    "task_url",
+    "tasks_list_url"
+   ]
+  },
+  "web/task_runs": {
+   "agent/instruction": [
+    "Layers",
+    "self"
+   ],
+   "agent/plan": [
+    "Item"
+   ],
+   "agent/prompt": [
+    "Kind"
+   ],
+   "agent/run": [
+    "Harness",
+    "RunRecord"
+   ],
+   "agent/solve": [
+    "Launch",
+    "Spec",
+    "self"
+   ],
+   "agent/task_prompt": [
+    "q:prompt_for"
+   ],
+   "agent/taskdir": [
+    "TaskDir",
+    "self"
+   ],
+   "app": [
+    "App"
+   ],
+   "config": [
+    "config"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "open_db"
+   ],
+   "web/errors": [
+    "refused"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/sections": [
+    "TabQuery"
+   ],
+   "web/task_agent": [
+    "Open",
+    "step_panel"
+   ],
+   "web/ui/field": [
+    "field",
+    "select",
+    "textarea"
+   ],
+   "web/ui/icons": [
+    "PLAY",
+    "STOP",
+    "X",
+    "icon"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ],
+   "web/url": [
+    "RunAction",
+    "agent_tab_url",
+    "agent_url",
+    "run_action_url",
+    "run_post_url",
+    "runs_url",
+    "task_url"
+   ]
+  },
+  "web/task_sessions": {
+   "models/session": [
+    "Session"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "open_db"
+   ],
+   "web/ui/field": [
+    "field",
+    "textarea"
+   ],
+   "web/ui/form": [
+    "form_shell"
+   ],
+   "web/ui/modal": [
+    "modal"
+   ],
+   "web/url": [
+    "sessions_tab_url",
+    "task_url"
+   ]
+  },
+  "web/task_wiki": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "web": [
+    "*",
+    "Id",
+    "open_db"
+   ],
+   "web/errors": [
+    "q:refused"
+   ],
+   "web/load": [
+    "q:task_with_project"
+   ],
+   "web/task_agent": [
+    "Doc",
+    "files_block"
+   ],
+   "web/ui/button": [
+    "post_button"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/labelled": [
+    "labelled_section"
+   ],
+   "web/ui/notice": [
+    "notice"
+   ],
+   "web/url": [
+    "WikiAction",
+    "task_url",
+    "wiki_action_url",
+    "wiki_tab_url"
+   ],
+   "wiki/ingest": [
+    "Mode"
+   ],
+   "wiki/ingest_job": [
+    "self"
+   ],
+   "wiki/ingest_job/review": [
+    "Review"
+   ]
+  },
+  "web/text": {},
+  "web/ui": {
+   "web/assets": [
+    "Asset"
+   ],
+   "web/ui/breadcrumb": [
+    "Crumb"
+   ],
+   "web/ui/icons": [
+    "*"
+   ]
+  },
+  "web/ui/board_root": {},
+  "web/ui/breadcrumb": {},
+  "web/ui/button": {
+   "web/ui/icons": [
+    "PLUS",
+    "icon"
+   ]
+  },
+  "web/ui/count": {
+   "web/ui/icons": [
+    "*"
+   ]
+  },
+  "web/ui/day_nav": {
+   "web/ui/icons": [
+    "CALENDAR",
+    "CHEVRON_LEFT",
+    "CHEVRON_RIGHT",
+    "icon"
+   ]
+  },
+  "web/ui/drop_zone": {},
+  "web/ui/empty_line": {},
+  "web/ui/empty_state": {
+   "web/ui/icons": [
+    "icon"
+   ]
+  },
+  "web/ui/field": {
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/form_error": [
+    "FormError",
+    "is_about"
+   ],
+   "web/ui/group": [
+    "group"
+   ],
+   "web/ui/icons": [
+    "*",
+    "FOLDER",
+    "icon"
+   ],
+   "web/ui/notice": [
+    "ERROR_ID"
+   ]
+  },
+  "web/ui/filter_bar": {},
+  "web/ui/folded_list": {
+   "web/ui/count": [
+    "count_badge"
+   ]
+  },
+  "web/ui/form": {
+   "web/ui/form_error": [
+    "FormError"
+   ],
+   "web/ui/notice": [
+    "error_box"
+   ]
+  },
+  "web/ui/form_error": {
+   "error": [
+    "IterError"
+   ],
+   "web/ui/icons": [
+    "*"
+   ]
+  },
+  "web/ui/frame": {
+   "web/ui/icons": [
+    "*",
+    "BOT",
+    "FILE_TEXT",
+    "KANBAN",
+    "MARK",
+    "SLIDERS",
+    "icon"
+   ],
+   "web/ui/search": [
+    "palette",
+    "search_button"
+   ]
+  },
+  "web/ui/group": {
+   "web/ui/field": [
+    "hint_id",
+    "invalid_cue"
+   ]
+  },
+  "web/ui/group_card": {
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/icons": [
+    "ARROW",
+    "icon"
+   ],
+   "web/ui/project_list": [
+    "ProjectItem",
+    "project_list"
+   ]
+  },
+  "web/ui/hour_grid": {
+   "web/ui/drop_zone": [
+    "drop_zone"
+   ]
+  },
+  "web/ui/icons": {},
+  "web/ui/ink": {
+   "models/tag": [
+    "is_hex_color"
+   ],
+   "web/ui/icons": [
+    "*"
+   ]
+  },
+  "web/ui/labelled": {
+   "web/ui/count": [
+    "count_badge"
+   ]
+  },
+  "web/ui/layout": {},
+  "web/ui/modal": {
+   "web/ui/icons": [
+    "X",
+    "icon"
+   ]
+  },
+  "web/ui/notes": {
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row",
+    "section_row"
+   ]
+  },
+  "web/ui/notice": {
+   "web/ui/field": [
+    "field_id"
+   ],
+   "web/ui/form_error": [
+    "FormError"
+   ]
+  },
+  "web/ui/page_header": {
+   "web/ui/breadcrumb": [
+    "Crumb",
+    "breadcrumb"
+   ]
+  },
+  "web/ui/panel": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/icons": [
+    "CHECK",
+    "MINUS",
+    "icon"
+   ],
+   "web/ui/status": [
+    "status"
+   ],
+   "web/ui/tag_chips": [
+    "Chip",
+    "tag_chips"
+   ]
+  },
+  "web/ui/pick_bar": {},
+  "web/ui/pick_here": {
+   "web/ui/button": [
+    "post_button"
+   ]
+  },
+  "web/ui/project_list": {
+   "web/ui": [
+    "split_leaf"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ]
+  },
+  "web/ui/prose": {
+   "web/ui/icons": [
+    "*"
+   ]
+  },
+  "web/ui/quadrant": {
+   "web/ui/count": [
+    "count_badge"
+   ],
+   "web/ui/drop_zone": [
+    "drop_zone"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ],
+   "web/ui/task_card": [
+    "Edge"
+   ]
+  },
+  "web/ui/search": {
+   "web/ui/icons": [
+    "BUILDING",
+    "FILE_TEXT",
+    "FOLDER",
+    "KANBAN",
+    "SEARCH",
+    "SQUARE_CHECK",
+    "icon"
+   ]
+  },
+  "web/ui/sessions_table": {
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ]
+  },
+  "web/ui/side_rail": {
+   "web/ui/icons": [
+    "*",
+    "PANEL_RIGHT",
+    "icon"
+   ]
+  },
+  "web/ui/site_footer": {},
+  "web/ui/status": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/icons": [
+    "CIRCLE",
+    "CIRCLE_CHECK",
+    "HALF",
+    "icon"
+   ]
+  },
+  "web/ui/table": {
+   "web/ui/button": [
+    "add_link",
+    "add_post"
+   ]
+  },
+  "web/ui/tabs": {},
+  "web/ui/tag_chips": {
+   "web/ui/ink": [
+    "chip_style"
+   ]
+  },
+  "web/ui/task_card": {
+   "models/tag": [
+    "Priority"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/icons": [
+    "*"
+   ],
+   "web/ui/status": [
+    "status"
+   ]
+  },
+  "web/ui/task_table": {
+   "models/task": [
+    "TaskStatus"
+   ],
+   "web/ui/status": [
+    "status"
+   ],
+   "web/ui/table": [
+    "AddRow",
+    "cell",
+    "data_table",
+    "row"
+   ]
+  },
+  "web/ui/tasks_tab": {
+   "web/ui/filter_bar": [
+    "Search",
+    "filter_bar"
+   ],
+   "web/ui/task_table": [
+    "TaskRow",
+    "task_table"
+   ]
+  },
+  "web/ui/unplaced_list": {
+   "web/ui/count": [
+    "count_badge"
+   ],
+   "web/ui/drop_zone": [
+    "drop_zone"
+   ],
+   "web/ui/empty_line": [
+    "empty_line"
+   ]
+  },
+  "web/url": {
+   "crate": [
+    "q:ui::frame::NAV",
+    "sections::NoteTab"
+   ],
+   "reporting/merge": [
+    "fmt_date"
+   ],
+   "web": [
+    "*"
+   ],
+   "web/sections": [
+    "NoteTab",
+    "q:NoteTab"
+   ],
+   "web/task_query": [
+    "DEFAULT"
+   ]
+  },
+  "wiki": {},
+  "wiki/check": {
+   "wiki": [
+    "*"
+   ],
+   "wiki/graph": [
+    "Wiki",
+    "md_files"
+   ],
+   "wiki/ontology": [
+    "LevelKind",
+    "NS",
+    "ns"
+   ],
+   "wiki/testutil": [
+    "*"
+   ]
+  },
+  "wiki/frontmatter": {
+   "md_edit": [
+    "split_at_divider"
+   ],
+   "wiki": [
+    "*"
+   ]
+  },
+  "wiki/graph": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "notes": [
+    "parse_date"
+   ],
+   "wiki": [
+    "*"
+   ],
+   "wiki/check": [
+    "q:check"
+   ],
+   "wiki/frontmatter": [
+    "Front",
+    "self"
+   ],
+   "wiki/ontology": [
+    "LevelKind",
+    "NODE",
+    "NS",
+    "Ontology",
+    "Place",
+    "Rules",
+    "ns"
+   ],
+   "wiki/retrieve": [
+    "q:find",
+    "q:neighbors"
+   ],
+   "wiki/testutil": [
+    "*"
+   ]
+  },
+  "wiki/ingest": {
+   "fixtures": [
+    "q:scratch"
+   ],
+   "wiki": [
+    "*"
+   ],
+   "wiki/check": [
+    "Dirty",
+    "dirty_notes"
+   ],
+   "wiki/graph": [
+    "Level",
+    "Wiki"
+   ],
+   "wiki/ontology": [
+    "LevelKind"
+   ]
+  },
+  "wiki/ingest_job": {
+   "agent/error": [
+    "AgentError"
+   ],
+   "agent/exec": [
+    "*"
+   ],
+   "agent/prompt": [
+    "q:shell_word"
+   ],
+   "agent/run": [
+    "Harness",
+    "Invocation",
+    "alive"
+   ],
+   "app": [
+    "App"
+   ],
+   "db": [
+    "Db"
+   ],
+   "error": [
+    "Result"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "process": [
+    "*"
+   ],
+   "utils/resolve": [
+    "task_display"
+   ],
+   "wiki/graph": [
+    "Wiki"
+   ],
+   "wiki/ingest": [
+    "Mode",
+    "self"
+   ],
+   "wiki/ingest_job/bridge": [
+    "bridge_task_notes"
+   ],
+   "wiki/ingest_job/lock": [
+    "busy",
+    "lock"
+   ],
+   "wiki/ingest_job/review": [
+    "*"
+   ],
+   "wiki/ingest_job/spawn": [
+    "ingest_in_background",
+    "run_agent",
+    "spawn_ingest"
+   ],
+   "wiki/scope": [
+    "Spec",
+    "self"
+   ]
+  },
+  "wiki/ingest_job/bridge": {
+   "agent/taskdir": [
+    "q:TaskDir::files",
+    "q:of"
+   ],
+   "models/organization": [
+    "q:Organization"
+   ],
+   "notes": [
+    "q:append_section",
+    "q:project_dir"
+   ],
+   "wiki/ingest_job/review": [
+    "*"
+   ]
+  },
+  "wiki/ingest_job/lock": {
+   "wiki/ingest_job/review": [
+    "*"
+   ]
+  },
+  "wiki/ingest_job/review": {},
+  "wiki/ingest_job/spawn": {
+   "config": [
+    "q:config"
+   ],
+   "wiki/ingest_job/review": [
+    "*"
+   ]
+  },
+  "wiki/ingest_job/tests": {
+   "agent/taskdir": [
+    "q:of"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "models/task": [
+    "TaskStatus"
+   ],
+   "wiki/ingest_job/review": [
+    "*"
+   ]
+  },
+  "wiki/mv": {
+   "agent/taskdir": [
+    "write_atomic"
+   ],
+   "error": [
+    "Result",
+    "failed"
+   ],
+   "md_edit": [
+    "split_at_divider"
+   ],
+   "wiki": [
+    "*"
+   ],
+   "wiki/graph": [
+    "Wiki",
+    "q:Node"
+   ],
+   "wiki/testutil": [
+    "*"
+   ]
+  },
+  "wiki/ontology": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "wiki": [
+    "*"
+   ]
+  },
+  "wiki/retrieve": {
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "wiki": [
+    "*"
+   ],
+   "wiki/frontmatter": [
+    "*"
+   ],
+   "wiki/graph": [
+    "Node",
+    "Wiki"
+   ],
+   "wiki/ontology": [
+    "NS"
+   ],
+   "wiki/testutil": [
+    "*"
+   ]
+  },
+  "wiki/schema": {
+   "wiki": [
+    "*"
+   ],
+   "wiki/ontology": [
+    "NS",
+    "Ontology",
+    "ns"
+   ]
+  },
+  "wiki/scope": {
+   "db": [
+    "Db",
+    "Table"
+   ],
+   "error": [
+    "IterError",
+    "Result"
+   ],
+   "fixtures": [
+    "*"
+   ],
+   "git": [
+    "slugify"
+   ],
+   "models/organization": [
+    "Organization"
+   ],
+   "models/project": [
+    "Project"
+   ],
+   "models/task": [
+    "Task"
+   ],
+   "notes": [
+    "*"
+   ],
+   "utils/resolve": [
+    "current_session_task",
+    "resolve_task"
+   ],
+   "wiki": [
+    "*"
+   ],
+   "wiki/graph": [
+    "Level",
+    "Wiki"
+   ],
+   "wiki/ontology": [
+    "LevelKind",
+    "Ontology"
+   ]
+  },
+  "wiki/testutil": {
+   "fixtures": [
+    "q:scratch"
+   ],
+   "wiki/graph": [
+    "Level",
+    "Wiki"
+   ],
+   "wiki/ontology": [
+    "LevelKind",
+    "Ontology"
+   ]
+  }
+ },
+ "lines": {
+  "agent": 13,
+  "agent/error": 132,
+  "agent/exec": 76,
+  "agent/instruction": 617,
+  "agent/plan": 566,
+  "agent/prompt": 295,
+  "agent/run": 407,
+  "agent/solve": 480,
+  "agent/task_prompt": 248,
+  "agent/taskdir": 273,
+  "app": 34,
+  "args": 203,
+  "args/board": 34,
+  "args/internal": 40,
+  "args/notes": 40,
+  "args/organization": 80,
+  "args/project": 64,
+  "args/session": 48,
+  "args/tag": 31,
+  "args/task": 218,
+  "args/wiki": 222,
+  "commands": 25,
+  "commands/agent": 142,
+  "commands/board": 143,
+  "commands/ingest": 212,
+  "commands/misc": 137,
+  "commands/notes": 71,
+  "commands/organization": 255,
+  "commands/project": 240,
+  "commands/session": 244,
+  "commands/solve": 148,
+  "commands/sync": 299,
+  "commands/tag": 54,
+  "commands/task": 459,
+  "commands/wiki": 273,
+  "completion": 71,
+  "config": 379,
+  "crate": 99,
+  "db": 334,
+  "db/groups": 207,
+  "db/migrate": 305,
+  "db/pushes": 14,
+  "db/reporting": 51,
+  "db/sessions": 33,
+  "db/sqltypes": 75,
+  "db/tasks": 259,
+  "db/tests": 1549,
+  "error": 274,
+  "fixtures": 114,
+  "git": 125,
+  "github": 458,
+  "md_edit": 345,
+  "models": 172,
+  "models/board": 44,
+  "models/organization": 126,
+  "models/project": 105,
+  "models/push": 33,
+  "models/session": 64,
+  "models/session_config": 15,
+  "models/settings": 81,
+  "models/tag": 179,
+  "models/task": 394,
+  "notes": 462,
+  "platform": 603,
+  "process": 247,
+  "push": 833,
+  "reporting": 303,
+  "reporting/merge": 162,
+  "reporting/render": 196,
+  "reporting/tests": 625,
+  "reporting/worklog": 95,
+  "scaffold": 100,
+  "secret": 254,
+  "sync": 433,
+  "tmux": 591,
+  "utils": 10,
+  "utils/clock": 222,
+  "utils/crud": 103,
+  "utils/output": 71,
+  "utils/report": 243,
+  "utils/resolve": 124,
+  "utils/workspace": 106,
+  "web": 148,
+  "web/agenda": 303,
+  "web/agenda_cards": 103,
+  "web/agenda_day": 264,
+  "web/agenda_drop": 95,
+  "web/agenda_pick": 103,
+  "web/agents": 365,
+  "web/assets": 98,
+  "web/blocking": 15,
+  "web/board_cards": 113,
+  "web/board_edit": 77,
+  "web/board_header": 96,
+  "web/board_info": 74,
+  "web/board_page": 79,
+  "web/boards": 69,
+  "web/crumbs": 63,
+  "web/daily_notes": 360,
+  "web/drop": 55,
+  "web/edit": 141,
+  "web/edit_page": 126,
+  "web/errors": 59,
+  "web/folder_picker": 81,
+  "web/folders": 115,
+  "web/footer": 173,
+  "web/forms": 192,
+  "web/forms/board": 104,
+  "web/forms/org": 104,
+  "web/forms/project": 128,
+  "web/forms/task": 285,
+  "web/guard": 96,
+  "web/home": 72,
+  "web/instructions": 181,
+  "web/instructions/list": 54,
+  "web/instructions/page": 240,
+  "web/instructions/save": 191,
+  "web/instructions/tests": 83,
+  "web/layout": 44,
+  "web/load": 182,
+  "web/matrix": 220,
+  "web/notes": 33,
+  "web/org": 242,
+  "web/org_edit": 139,
+  "web/org_report": 332,
+  "web/org_share": 665,
+  "web/pick": 161,
+  "web/platform_pick": 112,
+  "web/project": 155,
+  "web/project_edit": 113,
+  "web/project_new": 279,
+  "web/project_options": 159,
+  "web/project_rows": 154,
+  "web/quadrants": 189,
+  "web/search": 316,
+  "web/search_index": 193,
+  "web/sections": 303,
+  "web/session_lines": 92,
+  "web/settings": 215,
+  "web/settings_fields": 33,
+  "web/settings_panel": 28,
+  "web/task": 203,
+  "web/task_agent": 530,
+  "web/task_edit": 113,
+  "web/task_fields": 40,
+  "web/task_new": 288,
+  "web/task_notes": 136,
+  "web/task_panel": 29,
+  "web/task_query": 323,
+  "web/task_rows": 129,
+  "web/task_runs": 543,
+  "web/task_sessions": 114,
+  "web/task_wiki": 211,
+  "web/text": 5,
+  "web/ui": 153,
+  "web/ui/board_root": 31,
+  "web/ui/breadcrumb": 63,
+  "web/ui/button": 46,
+  "web/ui/count": 41,
+  "web/ui/day_nav": 62,
+  "web/ui/drop_zone": 19,
+  "web/ui/empty_line": 12,
+  "web/ui/empty_state": 19,
+  "web/ui/field": 329,
+  "web/ui/filter_bar": 63,
+  "web/ui/folded_list": 27,
+  "web/ui/form": 50,
+  "web/ui/form_error": 85,
+  "web/ui/frame": 87,
+  "web/ui/group": 32,
+  "web/ui/group_card": 46,
+  "web/ui/hour_grid": 39,
+  "web/ui/icons": 47,
+  "web/ui/ink": 91,
+  "web/ui/labelled": 40,
+  "web/ui/layout": 44,
+  "web/ui/modal": 34,
+  "web/ui/notes": 90,
+  "web/ui/notice": 64,
+  "web/ui/page_header": 43,
+  "web/ui/panel": 86,
+  "web/ui/pick_bar": 43,
+  "web/ui/pick_here": 29,
+  "web/ui/project_list": 92,
+  "web/ui/prose": 129,
+  "web/ui/quadrant": 45,
+  "web/ui/search": 60,
+  "web/ui/sessions_table": 94,
+  "web/ui/side_rail": 61,
+  "web/ui/site_footer": 129,
+  "web/ui/status": 35,
+  "web/ui/table": 127,
+  "web/ui/tabs": 70,
+  "web/ui/tag_chips": 31,
+  "web/ui/task_card": 137,
+  "web/ui/task_table": 68,
+  "web/ui/tasks_tab": 34,
+  "web/ui/unplaced_list": 50,
+  "web/url": 368,
+  "wiki": 18,
+  "wiki/check": 440,
+  "wiki/frontmatter": 211,
+  "wiki/graph": 853,
+  "wiki/ingest": 211,
+  "wiki/ingest_job": 129,
+  "wiki/ingest_job/bridge": 33,
+  "wiki/ingest_job/lock": 50,
+  "wiki/ingest_job/review": 138,
+  "wiki/ingest_job/spawn": 66,
+  "wiki/ingest_job/tests": 160,
+  "wiki/mv": 367,
+  "wiki/ontology": 353,
+  "wiki/retrieve": 467,
+  "wiki/schema": 75,
+  "wiki/scope": 278,
+  "wiki/testutil": 120
+ },
+ "reexports": {
+  "args": {
+   "*": "args/wiki"
+  },
+  "db": {
+   "datetime": "db/sqltypes"
+  },
+  "models": {
+   "Board": "models/board",
+   "Card": "models/board",
+   "Configured": "models/settings",
+   "Duration": "models/task",
+   "IMPORTANT_TAG": "models/tag",
+   "Organization": "models/organization",
+   "Priority": "models/tag",
+   "Project": "models/project",
+   "Push": "models/push",
+   "START_TIME_FMT": "models/task",
+   "Session": "models/session",
+   "SessionConfig": "models/session_config",
+   "Settings": "models/settings",
+   "Tag": "models/tag",
+   "Task": "models/task",
+   "TaskEdit": "models/task",
+   "TaskStatus": "models/task",
+   "URGENT_TAG": "models/tag",
+   "end_text": "models/task",
+   "is_hex_color": "models/tag",
+   "parse_start_time": "models/task"
+  },
+  "reporting": {
+   "*": "reporting/worklog",
+   "Md": "reporting/render",
+   "non_empty": "reporting/render"
+  },
+  "web/forms": {
+   "BoardForm": "web/forms/board",
+   "OrgForm": "web/forms/org",
+   "ProjectForm": "web/forms/project",
+   "TaskForm": "web/forms/task"
+  },
+  "web/instructions": {
+   "*": "web/instructions/save"
+  },
+  "web/ui": {
+   "*": "web/ui/icons",
+   "Crumb": "web/ui/breadcrumb"
+  },
+  "wiki/ingest_job": {
+   "*": "wiki/ingest_job/review",
+   "bridge_task_notes": "wiki/ingest_job/bridge",
+   "busy": "wiki/ingest_job/lock",
+   "ingest_in_background": "wiki/ingest_job/spawn",
+   "run_agent": "wiki/ingest_job/spawn",
+   "spawn_ingest": "wiki/ingest_job/spawn"
+  }
+ },
+ "test_only": [
+  "db/tests",
+  "fixtures",
+  "reporting/tests",
+  "web/instructions/tests",
+  "wiki/ingest_job/tests",
+  "wiki/testutil"
+ ]
+}

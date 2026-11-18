@@ -1,0 +1,6679 @@
+[
+ {
+  "name": "home",
+  "url": "http://127.0.0.1:3999/",
+  "shots": {
+   "1280_light": "screens/home_1280_light.png",
+   "1280_dark": "screens/home_1280_dark.png",
+   "360_light": "screens/home_360_light.png",
+   "360_dark": "screens/home_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "iter",
+   "h1": [
+    "Where to next?"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Home",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 28,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 28,
+    "page": 69
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "14px",
+    "15px",
+    "17px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "iter",
+   "h1": [
+    "Where to next?"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Home",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 28,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 28,
+    "page": 69
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "14px",
+    "15px",
+    "17px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "settings",
+  "url": "http://127.0.0.1:3999/settings",
+  "shots": {
+   "1280_light": "screens/settings_1280_light.png",
+   "1280_dark": "screens/settings_1280_dark.png",
+   "360_light": "screens/settings_360_light.png",
+   "360_dark": "screens/settings_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Settings - iter",
+   "h1": [
+    "Settings"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|queued",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 2,
+    "input": 8,
+    "select": 1,
+    "textarea": 0,
+    "total": 12,
+    "page": 53
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.9px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Settings - iter",
+   "h1": [
+    "Settings"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|queued",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 2,
+    "input": 8,
+    "select": 1,
+    "textarea": 0,
+    "total": 12,
+    "page": 53
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "11.9px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_info",
+  "url": "http://127.0.0.1:3999/org/1",
+  "shots": {
+   "1280_light": "screens/org_info_1280_light.png",
+   "1280_dark": "screens/org_info_1280_dark.png",
+   "360_light": "screens/org_info_360_light.png",
+   "360_dark": "screens/org_info_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Organization - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 7,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Organization - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 7,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_tasks",
+  "url": "http://127.0.0.1:3999/org/1?tab=tasks&q=is%3Aopen",
+  "shots": {
+   "1280_light": "screens/org_tasks_1280_light.png",
+   "1280_dark": "screens/org_tasks_1280_dark.png",
+   "360_light": "screens/org_tasks_360_light.png",
+   "360_dark": "screens/org_tasks_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Tasks - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter"
+   ],
+   "primary": [],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 44,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 47,
+    "page": 88
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Tasks - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter"
+   ],
+   "primary": [],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 44,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 47,
+    "page": 88
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_tasks_new",
+  "url": "http://127.0.0.1:3999/org/1?tab=tasks&new=task",
+  "shots": {
+   "1280_light": "screens/org_tasks_new_1280_light.png",
+   "1280_dark": "screens/org_tasks_new_1280_dark.png",
+   "360_light": "screens/org_tasks_new_360_light.png",
+   "360_dark": "screens/org_tasks_new_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Tasks - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter",
+    "control cb-button|project-1",
+    "control cb-button|queued",
+    "button primary|Create task"
+   ],
+   "primary": [
+    "Create task"
+   ],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 43,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 46,
+    "page": 102
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Tasks - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter",
+    "control cb-button|project-1",
+    "control cb-button|queued",
+    "button primary|Create task"
+   ],
+   "primary": [
+    "Create task"
+   ],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 43,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 46,
+    "page": 102
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_report",
+  "url": "http://127.0.0.1:3999/org/1?tab=report",
+  "shots": {
+   "1280_light": "screens/org_report_1280_light.png",
+   "1280_dark": "screens/org_report_1280_dark.png",
+   "360_light": "screens/org_report_360_light.png",
+   "360_dark": "screens/org_report_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Report - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button|Previous period",
+    "button|Next period",
+    "button small apply|Apply",
+    "button share-open|Share"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "I.[width:100.0%]"
+   ],
+   "controls": {
+    "a": 16,
+    "button": 1,
+    "input": 2,
+    "select": 0,
+    "textarea": 0,
+    "total": 19,
+    "page": 60
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "22px",
+    "40px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Report - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button|Previous period",
+    "button|Next period",
+    "button small apply|Apply",
+    "button share-open|Share"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "I.[width:100.0%]"
+   ],
+   "controls": {
+    "a": 16,
+    "button": 1,
+    "input": 2,
+    "select": 0,
+    "textarea": 0,
+    "total": 19,
+    "page": 60
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "22px",
+    "32px",
+    "40px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_report_share",
+  "url": "http://127.0.0.1:3999/org/1?tab=report&share=1",
+  "shots": {
+   "1280_light": "screens/org_report_share_1280_light.png",
+   "1280_dark": "screens/org_report_share_1280_dark.png",
+   "360_light": "screens/org_report_share_360_light.png",
+   "360_dark": "screens/org_report_share_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Report - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button|Previous period",
+    "button|Next period",
+    "button small apply|Apply",
+    "button share-open|Share",
+    "control cb-button|Worklog",
+    "button primary share-go|CopyCopied",
+    "button primary share-go|Push"
+   ],
+   "primary": [
+    "CopyCopied",
+    "Push"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "I.[width:100.0%]"
+   ],
+   "controls": {
+    "a": 16,
+    "button": 1,
+    "input": 2,
+    "select": 0,
+    "textarea": 0,
+    "total": 19,
+    "page": 71
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "22px",
+    "40px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Report - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button|Previous period",
+    "button|Next period",
+    "button small apply|Apply",
+    "button share-open|Share",
+    "control cb-button|Worklog",
+    "button primary share-go|CopyCopied",
+    "button primary share-go|Push"
+   ],
+   "primary": [
+    "CopyCopied",
+    "Push"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "I.[width:100.0%]"
+   ],
+   "controls": {
+    "a": 16,
+    "button": 1,
+    "input": 2,
+    "select": 0,
+    "textarea": 0,
+    "total": 19,
+    "page": 71
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "22px",
+    "32px",
+    "40px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_edit",
+  "url": "http://127.0.0.1:3999/org/1/edit",
+  "shots": {
+   "1280_light": "screens/org_edit_1280_light.png",
+   "1280_dark": "screens/org_edit_1280_dark.png",
+   "360_light": "screens/org_edit_360_light.png",
+   "360_dark": "screens/org_edit_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Settings - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button path-pick|Choose folder for Notes path",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 7,
+    "button": 2,
+    "input": 31,
+    "select": 0,
+    "textarea": 1,
+    "total": 41,
+    "page": 82
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Settings - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button path-pick|Choose folder for Notes path",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 7,
+    "button": 2,
+    "input": 31,
+    "select": 0,
+    "textarea": 1,
+    "total": 41,
+    "page": 82
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_note_today",
+  "url": "http://127.0.0.1:3999/org/1/notes/2026-11-02",
+  "shots": {
+   "1280_light": "screens/org_note_today_1280_light.png",
+   "1280_dark": "screens/org_note_today_1280_dark.png",
+   "360_light": "screens/org_note_today_360_light.png",
+   "360_dark": "screens/org_note_today_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "02/11 - Notes - org-1 - iter",
+   "h1": [
+    "02/11"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Notes2 November 2026",
+   "tabs": {
+    "label": "Note sections",
+    "items": [
+     "Info",
+     "Edit"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 5,
+    "page": 46
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "02/11 - Notes - org-1 - iter",
+   "h1": [
+    "02/11"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Notes2 November 2026",
+   "tabs": {
+    "label": "Note sections",
+    "items": [
+     "Info",
+     "Edit"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 5,
+    "page": 46
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_note_edit",
+  "url": "http://127.0.0.1:3999/org/1/notes/2026-11-02?tab=edit",
+  "shots": {
+   "1280_light": "screens/org_note_edit_1280_light.png",
+   "1280_dark": "screens/org_note_edit_1280_dark.png",
+   "360_light": "screens/org_note_edit_360_light.png",
+   "360_dark": "screens/org_note_edit_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "02/11 - Notes - org-1 - iter",
+   "h1": [
+    "02/11"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Notes2 November 2026",
+   "tabs": {
+    "label": "Note sections",
+    "items": [
+     "Info",
+     "Edit"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 1,
+    "input": 0,
+    "select": 0,
+    "textarea": 1,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "02/11 - Notes - org-1 - iter",
+   "h1": [
+    "02/11"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Notes2 November 2026",
+   "tabs": {
+    "label": "Note sections",
+    "items": [
+     "Info",
+     "Edit"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 1,
+    "input": 0,
+    "select": 0,
+    "textarea": 1,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "org_new_project",
+  "url": "http://127.0.0.1:3999/org/1?new=project",
+  "shots": {
+   "1280_light": "screens/org_new_project_1280_light.png",
+   "1280_dark": "screens/org_new_project_1280_dark.png",
+   "360_light": "screens/org_new_project_360_light.png",
+   "360_dark": "screens/org_new_project_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Organization - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 7,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Organization - org-1 - iter",
+   "h1": [
+    "org-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Organization",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Projects3",
+     "3",
+     "Tasks18",
+     "18",
+     "Notes4",
+     "4",
+     "Report",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 7,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "project_info",
+  "url": "http://127.0.0.1:3999/project/1",
+  "shots": {
+   "1280_light": "screens/project_info_1280_light.png",
+   "1280_dark": "screens/project_info_1280_dark.png",
+   "360_light": "screens/project_info_360_light.png",
+   "360_dark": "screens/project_info_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Project - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 5,
+    "page": 46
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Project - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 5,
+    "page": 46
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "project_tasks",
+  "url": "http://127.0.0.1:3999/project/1?tab=tasks&q=is%3Aopen",
+  "shots": {
+   "1280_light": "screens/project_tasks_1280_light.png",
+   "1280_dark": "screens/project_tasks_1280_dark.png",
+   "360_light": "screens/project_tasks_360_light.png",
+   "360_dark": "screens/project_tasks_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Tasks - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter"
+   ],
+   "primary": [],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 13,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 57
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Tasks - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter"
+   ],
+   "primary": [],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 13,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 57
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "project_tasks_new",
+  "url": "http://127.0.0.1:3999/project/1?tab=tasks&new=task",
+  "shots": {
+   "1280_light": "screens/project_tasks_new_1280_light.png",
+   "1280_dark": "screens/project_tasks_new_1280_dark.png",
+   "360_light": "screens/project_tasks_new_360_light.png",
+   "360_dark": "screens/project_tasks_new_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Tasks - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter",
+    "control cb-button|queued",
+    "button primary|Create task"
+   ],
+   "primary": [
+    "Create task"
+   ],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 12,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 15,
+    "page": 69
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Tasks - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter",
+    "control cb-button|queued",
+    "button primary|Create task"
+   ],
+   "primary": [
+    "Create task"
+   ],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 12,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 15,
+    "page": 69
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "project_edit",
+  "url": "http://127.0.0.1:3999/project/1/edit",
+  "shots": {
+   "1280_light": "screens/project_edit_1280_light.png",
+   "1280_dark": "screens/project_edit_1280_dark.png",
+   "360_light": "screens/project_edit_360_light.png",
+   "360_dark": "screens/project_edit_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Settings - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button path-pick|Choose folder for Base path",
+    "button path-pick|Choose folder for Notes path",
+    "control cb-button|org-1",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 4,
+    "input": 9,
+    "select": 1,
+    "textarea": 1,
+    "total": 21,
+    "page": 62
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Settings - project-1 - iter",
+   "h1": [
+    "project-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes1",
+     "1",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button path-pick|Choose folder for Base path",
+    "button path-pick|Choose folder for Notes path",
+    "control cb-button|org-1",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 4,
+    "input": 9,
+    "select": 1,
+    "textarea": 1,
+    "total": 21,
+    "page": 62
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "project_note_today",
+  "url": "http://127.0.0.1:3999/project/1/notes/2026-11-02",
+  "shots": {
+   "1280_light": "screens/project_note_today_1280_light.png",
+   "1280_dark": "screens/project_note_today_1280_dark.png",
+   "360_light": "screens/project_note_today_360_light.png",
+   "360_dark": "screens/project_note_today_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "today - Notes - project-1 - iter",
+   "h1": [
+    "today"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Notes2 November 2026",
+   "tabs": {
+    "label": "Note sections",
+    "items": [
+     "Info",
+     "Edit"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 5,
+    "page": 46
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "today - Notes - project-1 - iter",
+   "h1": [
+    "today"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Notes2 November 2026",
+   "tabs": {
+    "label": "Note sections",
+    "items": [
+     "Info",
+     "Edit"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 5,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 5,
+    "page": 46
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "project_noorg",
+  "url": "http://127.0.0.1:3999/project/10",
+  "shots": {
+   "1280_light": "screens/project_noorg_1280_light.png",
+   "1280_dark": "screens/project_noorg_1280_dark.png",
+   "360_light": "screens/project_noorg_360_light.png",
+   "360_dark": "screens/project_noorg_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Project - project-10 - iter",
+   "h1": [
+    "project-10"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 4,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 4,
+    "page": 45
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Project - project-10 - iter",
+   "h1": [
+    "project-10"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Project",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Tasks6",
+     "6",
+     "Notes",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 4,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 4,
+    "page": 45
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_info",
+  "url": "http://127.0.0.1:3999/task/1",
+  "shots": {
+   "1280_light": "screens/task_info_1280_light.png",
+   "1280_dark": "screens/task_info_1280_dark.png",
+   "360_light": "screens/task_info_360_light.png",
+   "360_dark": "screens/task_info_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Task - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 8,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 8,
+    "page": 49
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Task - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 8,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 8,
+    "page": 49
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_long",
+  "url": "http://127.0.0.1:3999/task/105",
+  "shots": {
+   "1280_light": "screens/task_long_1280_light.png",
+   "1280_dark": "screens/task_long_1280_dark.png",
+   "360_light": "screens/task_long_360_light.png",
+   "360_dark": "screens/task_long_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Task - A task with a rather long name to see how the layout wraps when names get big 105 - iter",
+   "h1": [
+    "A task with a rather long name to see how the layout wraps when names get big 105"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:project-5Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions6",
+     "6",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "SPAN.tag[background:#facc15;color:#000]"
+   ],
+   "controls": {
+    "a": 7,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Task - A task with a rather long name to see how the layout wraps when names get big 105 - iter",
+   "h1": [
+    "A task with a rather long name to see how the layout wraps when names get big 105"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:project-5Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions6",
+     "6",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "SPAN.tag[background:#facc15;color:#000]"
+   ],
+   "controls": {
+    "a": 7,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 7,
+    "page": 48
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_sessions",
+  "url": "http://127.0.0.1:3999/task/1?tab=sessions",
+  "shots": {
+   "1280_light": "screens/task_sessions_1280_light.png",
+   "1280_dark": "screens/task_sessions_1280_dark.png",
+   "360_light": "screens/task_sessions_360_light.png",
+   "360_dark": "screens/task_sessions_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Sessions - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 50
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Sessions - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 50
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_sessions_new",
+  "url": "http://127.0.0.1:3999/task/1?tab=sessions&new=session",
+  "shots": {
+   "1280_light": "screens/task_sessions_new_1280_light.png",
+   "1280_dark": "screens/task_sessions_new_1280_dark.png",
+   "360_light": "screens/task_sessions_new_360_light.png",
+   "360_dark": "screens/task_sessions_new_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Sessions - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Add session"
+   ],
+   "primary": [
+    "Add session"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 57
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Sessions - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Add session"
+   ],
+   "primary": [
+    "Add session"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 57
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_notes",
+  "url": "http://127.0.0.1:3999/task/1?tab=notes",
+  "shots": {
+   "1280_light": "screens/task_notes_1280_light.png",
+   "1280_dark": "screens/task_notes_1280_dark.png",
+   "360_light": "screens/task_notes_360_light.png",
+   "360_dark": "screens/task_notes_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Notes - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No notes yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 50
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Notes - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No notes yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 50
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_notes_new",
+  "url": "http://127.0.0.1:3999/task/1?tab=notes&new=note",
+  "shots": {
+   "1280_light": "screens/task_notes_new_1280_light.png",
+   "1280_dark": "screens/task_notes_new_1280_dark.png",
+   "360_light": "screens/task_notes_new_360_light.png",
+   "360_dark": "screens/task_notes_new_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Notes - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Add note"
+   ],
+   "primary": [
+    "Add note"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No notes yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 56
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Notes - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Add note"
+   ],
+   "primary": [
+    "Add note"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No notes yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 56
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_agent",
+  "url": "http://127.0.0.1:3999/task/1?tab=agent",
+  "shots": {
+   "1280_light": "screens/task_agent_1280_light.png",
+   "1280_dark": "screens/task_agent_1280_dark.png",
+   "360_light": "screens/task_agent_360_light.png",
+   "360_dark": "screens/task_agent_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Agent - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on this task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 50
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Agent - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on this task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 50
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_agent_new",
+  "url": "http://127.0.0.1:3999/task/1?tab=agent&new=agent",
+  "shots": {
+   "1280_light": "screens/task_agent_new_1280_light.png",
+   "1280_dark": "screens/task_agent_new_1280_dark.png",
+   "360_light": "screens/task_agent_new_360_light.png",
+   "360_dark": "screens/task_agent_new_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Agent - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|Claude",
+    "control cb-button|medium",
+    "button primary|Run now",
+    "button|Queue",
+    "button|Close"
+   ],
+   "primary": [
+    "Run now"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on this task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 62
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Agent - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|Claude",
+    "control cb-button|medium",
+    "button primary|Run now",
+    "button|Queue",
+    "button|Close"
+   ],
+   "primary": [
+    "Run now"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on this task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 9,
+    "page": 62
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_wiki",
+  "url": "http://127.0.0.1:3999/task/1?tab=wiki",
+  "shots": {
+   "1280_light": "screens/task_wiki_1280_light.png",
+   "1280_dark": "screens/task_wiki_1280_dark.png",
+   "360_light": "screens/task_wiki_360_light.png",
+   "360_dark": "screens/task_wiki_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Wiki - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "The notes folder /private/tmp/claude-501/-Users-carlorosso--config-iter--iter-worktrees-review/f9634ce8-ea6d-484c-8703-6013688875b7/scratchpad/iter-home/notes/org-1/project-1 is not in a git repository, so there is nothing to review the agents' changes against. Run git init in it.",
+    "Ingest runs only when you ask. Set ingest in wiki/settings.yaml of the project or its organization to change it.",
+    "No sketches yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 8,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 8,
+    "page": 49
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "12.75px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Wiki - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "The notes folder /private/tmp/claude-501/-Users-carlorosso--config-iter--iter-worktrees-review/f9634ce8-ea6d-484c-8703-6013688875b7/scratchpad/iter-home/notes/org-1/project-1 is not in a git repository, so there is nothing to review the agents' changes against. Run git init in it.",
+    "Ingest runs only when you ask. Set ingest in wiki/settings.yaml of the project or its organization to change it.",
+    "No sketches yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 8,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 8,
+    "page": 49
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "12.75px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "task_edit",
+  "url": "http://127.0.0.1:3999/task/1/edit",
+  "shots": {
+   "1280_light": "screens/task_edit_1280_light.png",
+   "1280_dark": "screens/task_edit_1280_dark.png",
+   "360_light": "screens/task_edit_360_light.png",
+   "360_dark": "screens/task_edit_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Settings - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|project-1",
+    "control cb-button|work in progress",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 3,
+    "input": 6,
+    "select": 2,
+    "textarea": 1,
+    "total": 21,
+    "page": 62
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Settings - task-1 - iter",
+   "h1": [
+    "task-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:org-1project-1Task",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Sessions7",
+     "7",
+     "Agents0",
+     "0",
+     "Notes",
+     "Wiki",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|project-1",
+    "control cb-button|work in progress",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 9,
+    "button": 3,
+    "input": 6,
+    "select": 2,
+    "textarea": 1,
+    "total": 21,
+    "page": 62
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "agents",
+  "url": "http://127.0.0.1:3999/agents",
+  "shots": {
+   "1280_light": "screens/agents_1280_light.png",
+   "1280_dark": "screens/agents_1280_dark.png",
+   "360_light": "screens/agents_360_light.png",
+   "360_dark": "screens/agents_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Agents - iter",
+   "h1": [
+    "Agents"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on any task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 41
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Agents - iter",
+   "h1": [
+    "Agents"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on any task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 41
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "instructions",
+  "url": "http://127.0.0.1:3999/instructions",
+  "shots": {
+   "1280_light": "screens/instructions_1280_light.png",
+   "1280_dark": "screens/instructions_1280_dark.png",
+   "360_light": "screens/instructions_360_light.png",
+   "360_dark": "screens/instructions_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Instructions - iter",
+   "h1": [
+    "Instructions"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 6,
+    "page": 47
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Instructions - iter",
+   "h1": [
+    "Instructions"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 6,
+    "page": 47
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "instructions_new",
+  "url": "http://127.0.0.1:3999/instructions?new=instruction",
+  "shots": {
+   "1280_light": "screens/instructions_new_1280_light.png",
+   "1280_dark": "screens/instructions_new_1280_dark.png",
+   "360_light": "screens/instructions_new_360_light.png",
+   "360_dark": "screens/instructions_new_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Instructions - iter",
+   "h1": [
+    "Instructions"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Create"
+   ],
+   "primary": [
+    "Create"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 6,
+    "page": 54
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Instructions - iter",
+   "h1": [
+    "Instructions"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Create"
+   ],
+   "primary": [
+    "Create"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 6,
+    "page": 54
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "instruction_plan",
+  "url": "http://127.0.0.1:3999/instruction/plan",
+  "shots": {
+   "1280_light": "screens/instruction_plan_1280_light.png",
+   "1280_dark": "screens/instruction_plan_1280_dark.png",
+   "360_light": "screens/instruction_plan_360_light.png",
+   "360_dark": "screens/instruction_plan_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "plan - Instruction - iter",
+   "h1": [
+    "Plan"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:InstructionsPlan",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Agents0",
+     "0",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 4,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 4,
+    "page": 45
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.6px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "plan - Instruction - iter",
+   "h1": [
+    "Plan"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:InstructionsPlan",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Agents0",
+     "0",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 4,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 4,
+    "page": 45
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.6px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "boards",
+  "url": "http://127.0.0.1:3999/boards",
+  "shots": {
+   "1280_light": "screens/boards_1280_light.png",
+   "1280_dark": "screens/boards_1280_dark.png",
+   "360_light": "screens/boards_360_light.png",
+   "360_dark": "screens/boards_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Boards - iter",
+   "h1": [
+    "Boards"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Board",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 16,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 57
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "14px",
+    "15px",
+    "17px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Boards - iter",
+   "h1": [
+    "Boards"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Board",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 16,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 57
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "14px",
+    "15px",
+    "17px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_agenda",
+  "url": "http://127.0.0.1:3999/board/1",
+  "shots": {
+   "1280_light": "screens/board_agenda_1280_light.png",
+   "1280_dark": "screens/board_agenda_1280_dark.png",
+   "360_light": "screens/board_agenda_360_light.png",
+   "360_dark": "screens/board_agenda_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Mon 2 Nov - Agenda - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsAgenda",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "sr|Go to this date",
+    "button|Previous day, Sunday 1 November",
+    "button|Today",
+    "button|Next day, Tuesday 3 November",
+    "button side-fold|Hide Unscheduled"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No important tasks waiting.",
+    "No urgent tasks waiting."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 2,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]",
+    "SPAN.now[--at:0.427]"
+   ],
+   "controls": {
+    "a": 82,
+    "button": 1,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 84,
+    "page": 125
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.3333px",
+    "14px",
+    "15px",
+    "20px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Mon 2 Nov - Agenda - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsAgenda",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "sr|Go to this date",
+    "button|Previous day, Sunday 1 November",
+    "button|Today",
+    "button|Next day, Tuesday 3 November",
+    "button side-fold|Hide Unscheduled"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No important tasks waiting.",
+    "No urgent tasks waiting."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 2,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]",
+    "SPAN.now[--at:0.428]"
+   ],
+   "controls": {
+    "a": 82,
+    "button": 1,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 84,
+    "page": 125
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.3333px",
+    "14px",
+    "15px",
+    "20px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_agenda_pick",
+  "url": "http://127.0.0.1:3999/board/1?pick=101",
+  "shots": {
+   "1280_light": "screens/board_agenda_pick_1280_light.png",
+   "1280_dark": "screens/board_agenda_pick_1280_dark.png",
+   "360_light": "screens/board_agenda_pick_360_light.png",
+   "360_dark": "screens/board_agenda_pick_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Moving project-1/task-101 - Mon 2 Nov - Agenda - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsAgenda",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button small|Unschedule",
+    "button small|Cancel",
+    "sr|Go to this date",
+    "button|Previous day, Sunday 1 November",
+    "button|Today",
+    "button|Next day, Tuesday 3 November",
+    "button|Move here · 00:00",
+    "button|Move here · 01:00",
+    "button|Move here · 02:00",
+    "button|Move here · 03:00",
+    "button|Move here · 04:00",
+    "button|Move here · 05:00",
+    "button|Move here · 06:00",
+    "button|Move here · 07:00",
+    "button|Move here · 08:00",
+    "button|Move here · 09:00",
+    "button|Move here · 10:00",
+    "button|Move here · 11:00",
+    "button|Move here · 12:00",
+    "button|Move here · 13:00",
+    "button|Move here · 14:00",
+    "button|Move here · 15:00",
+    "button|Move here · 16:00",
+    "button|Move here · 17:00",
+    "button|Move here · 18:00",
+    "button|Move here · 19:00",
+    "button|Move here · 20:00",
+    "button|Move here · 21:00",
+    "button|Move here · 22:00",
+    "button|Move here · 23:00",
+    "button side-fold|Hide Unscheduled"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No important tasks waiting.",
+    "No urgent tasks waiting."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 2,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]",
+    "SPAN.now[--at:0.429]"
+   ],
+   "controls": {
+    "a": 83,
+    "button": 26,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 110,
+    "page": 151
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.3333px",
+    "14px",
+    "15px",
+    "20px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Moving project-1/task-101 - Mon 2 Nov - Agenda - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsAgenda",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button small|Unschedule",
+    "button small|Cancel",
+    "sr|Go to this date",
+    "button|Previous day, Sunday 1 November",
+    "button|Today",
+    "button|Next day, Tuesday 3 November",
+    "button|Move here · 00:00",
+    "button|Move here · 01:00",
+    "button|Move here · 02:00",
+    "button|Move here · 03:00",
+    "button|Move here · 04:00",
+    "button|Move here · 05:00",
+    "button|Move here · 06:00",
+    "button|Move here · 07:00",
+    "button|Move here · 08:00",
+    "button|Move here · 09:00",
+    "button|Move here · 10:00",
+    "button|Move here · 11:00",
+    "button|Move here · 12:00",
+    "button|Move here · 13:00",
+    "button|Move here · 14:00",
+    "button|Move here · 15:00",
+    "button|Move here · 16:00",
+    "button|Move here · 17:00",
+    "button|Move here · 18:00",
+    "button|Move here · 19:00",
+    "button|Move here · 20:00",
+    "button|Move here · 21:00",
+    "button|Move here · 22:00",
+    "button|Move here · 23:00",
+    "button side-fold|Hide Unscheduled"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No important tasks waiting.",
+    "No urgent tasks waiting."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 2,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]",
+    "SPAN.now[--at:0.429]"
+   ],
+   "controls": {
+    "a": 83,
+    "button": 26,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 110,
+    "page": 151
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.3333px",
+    "14px",
+    "15px",
+    "20px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_agenda_moved",
+  "url": "http://127.0.0.1:3999/board/1?moved=101",
+  "shots": {
+   "1280_light": "screens/board_agenda_moved_1280_light.png",
+   "1280_dark": "screens/board_agenda_moved_1280_dark.png",
+   "360_light": "screens/board_agenda_moved_360_light.png",
+   "360_dark": "screens/board_agenda_moved_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Mon 2 Nov - Agenda - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsAgenda",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "sr|Go to this date",
+    "button|Previous day, Sunday 1 November",
+    "button|Today",
+    "button|Next day, Tuesday 3 November",
+    "button side-fold|Hide Unscheduled"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No important tasks waiting.",
+    "No urgent tasks waiting."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 2,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]",
+    "SPAN.now[--at:0.430]"
+   ],
+   "controls": {
+    "a": 82,
+    "button": 1,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 84,
+    "page": 125
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.3333px",
+    "14px",
+    "15px",
+    "20px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Mon 2 Nov - Agenda - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsAgenda",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "sr|Go to this date",
+    "button|Previous day, Sunday 1 November",
+    "button|Today",
+    "button|Next day, Tuesday 3 November",
+    "button side-fold|Hide Unscheduled"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No important tasks waiting.",
+    "No urgent tasks waiting."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 2,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]",
+    "SPAN.now[--at:0.431]"
+   ],
+   "controls": {
+    "a": 82,
+    "button": 1,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 84,
+    "page": 125
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.3333px",
+    "14px",
+    "15px",
+    "20px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_matrix",
+  "url": "http://127.0.0.1:3999/board/1/matrix",
+  "shots": {
+   "1280_light": "screens/board_matrix_1280_light.png",
+   "1280_dark": "screens/board_matrix_1280_dark.png",
+   "360_light": "screens/board_matrix_360_light.png",
+   "360_dark": "screens/board_matrix_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Eisenhower matrix - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsEisenhower matrix",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button side-fold|Hide Backlog"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "Nothing to do first.",
+    "Nothing to plan.",
+    "Nothing to delegate."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]"
+   ],
+   "controls": {
+    "a": 79,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 79,
+    "page": 120
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "15px",
+    "17px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Eisenhower matrix - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsEisenhower matrix",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button side-fold|Hide Backlog"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "Nothing to do first.",
+    "Nothing to plan.",
+    "Nothing to delegate."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]"
+   ],
+   "controls": {
+    "a": 79,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 79,
+    "page": 120
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "15px",
+    "17px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_matrix_pick",
+  "url": "http://127.0.0.1:3999/board/1/matrix?pick=101",
+  "shots": {
+   "1280_light": "screens/board_matrix_pick_1280_light.png",
+   "1280_dark": "screens/board_matrix_pick_1280_dark.png",
+   "360_light": "screens/board_matrix_pick_360_light.png",
+   "360_dark": "screens/board_matrix_pick_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Placing project-1/task-101 - Eisenhower matrix - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsEisenhower matrix",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button small|Cancel",
+    "button small|Place here at Do first",
+    "button small|Place here at Plan",
+    "button small|Place here at Delegate",
+    "button small|Place here at Eliminate",
+    "button side-fold|Hide Backlog"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "Nothing to do first.",
+    "Nothing to plan.",
+    "Nothing to delegate."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]"
+   ],
+   "controls": {
+    "a": 80,
+    "button": 4,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 84,
+    "page": 125
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "17px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Placing project-1/task-101 - Eisenhower matrix - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsEisenhower matrix",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button small|Cancel",
+    "button small|Place here at Do first",
+    "button small|Place here at Plan",
+    "button small|Place here at Delegate",
+    "button small|Place here at Eliminate",
+    "button side-fold|Hide Backlog"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "Nothing to do first.",
+    "Nothing to plan.",
+    "Nothing to delegate."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 1,
+   "inlineStyleSamples": [
+    "DIV.board-root can-drag[--urgent:#facc15;--important:#3b82f6]"
+   ],
+   "controls": {
+    "a": 80,
+    "button": 4,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 84,
+    "page": 125
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "17px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_info",
+  "url": "http://127.0.0.1:3999/board/1/info",
+  "shots": {
+   "1280_light": "screens/board_info_1280_light.png",
+   "1280_dark": "screens/board_info_1280_dark.png",
+   "360_light": "screens/board_info_360_light.png",
+   "360_dark": "screens/board_info_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Info - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsInfo",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter"
+   ],
+   "primary": [],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 13,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 57
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Info - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsInfo",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter"
+   ],
+   "primary": [],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 13,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 57
+   },
+   "overflowX": 759,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_info_new_project",
+  "url": "http://127.0.0.1:3999/board/1/info?new=project",
+  "shots": {
+   "1280_light": "screens/board_info_new_project_1280_light.png",
+   "1280_dark": "screens/board_info_new_project_1280_dark.png",
+   "360_light": "screens/board_info_new_project_360_light.png",
+   "360_dark": "screens/board_info_new_project_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Info - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsInfo",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter",
+    "button path-pick|Choose folder for Base path",
+    "button primary|Create project"
+   ],
+   "primary": [
+    "Create project"
+   ],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 13,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 71
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Info - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsInfo",
+   "tabs": {
+    "label": "Board sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "filter-help-btn|?Search syntax",
+    "button|Filter",
+    "button path-pick|Choose folder for Base path",
+    "button primary|Create project"
+   ],
+   "primary": [
+    "Create project"
+   ],
+   "filterBar": true,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": [
+     "modal-x|Close"
+    ]
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 13,
+    "button": 2,
+    "input": 1,
+    "select": 0,
+    "textarea": 0,
+    "total": 16,
+    "page": 71
+   },
+   "overflowX": 759,
+   "fontSizes": [
+    "11px",
+    "11.05px",
+    "12px",
+    "13px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "board_edit",
+  "url": "http://127.0.0.1:3999/board/1/edit",
+  "shots": {
+   "1280_light": "screens/board_edit_1280_light.png",
+   "1280_dark": "screens/board_edit_1280_dark.png",
+   "360_light": "screens/board_edit_360_light.png",
+   "360_dark": "screens/board_edit_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Settings - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsSettings",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 1,
+    "input": 21,
+    "select": 0,
+    "textarea": 1,
+    "total": 29,
+    "page": 70
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Settings - board-1 - iter",
+   "h1": [
+    "board-1"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:BoardsSettings",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Agenda",
+     "Eisenhower matrix",
+     "Info",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 1,
+    "input": 21,
+    "select": 0,
+    "textarea": 1,
+    "total": 29,
+    "page": 70
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "err400",
+  "url": "http://127.0.0.1:3999/task/abc",
+  "shots": {
+   "1280_light": "screens/err400_1280_light.png",
+   "1280_dark": "screens/err400_1280_dark.png",
+   "360_light": "screens/err400_360_light.png",
+   "360_dark": "screens/err400_360_dark.png"
+  },
+  "status": 400,
+  "facts_1280": {
+   "title": "Bad request - iter",
+   "h1": [
+    "Bad request"
+   ],
+   "h1count": 1,
+   "kicker": "none",
+   "tabs": null,
+   "nav": [
+    "iter"
+   ],
+   "headActions": [],
+   "buttons": [],
+   "primary": [],
+   "filterBar": false,
+   "footer": false,
+   "searchButton": false,
+   "empty": [],
+   "dialog": null,
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 1,
+    "page": 3
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Bad request - iter",
+   "h1": [
+    "Bad request"
+   ],
+   "h1count": 1,
+   "kicker": "none",
+   "tabs": null,
+   "nav": [
+    "iter"
+   ],
+   "headActions": [],
+   "buttons": [],
+   "primary": [],
+   "filterBar": false,
+   "footer": false,
+   "searchButton": false,
+   "empty": [],
+   "dialog": null,
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 1,
+    "page": 3
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "err404",
+  "url": "http://127.0.0.1:3999/task/999999",
+  "shots": {
+   "1280_light": "screens/err404_1280_light.png",
+   "1280_dark": "screens/err404_1280_dark.png",
+   "360_light": "screens/err404_360_light.png",
+   "360_dark": "screens/err404_360_dark.png"
+  },
+  "status": 404,
+  "facts_1280": {
+   "title": "Not found - iter",
+   "h1": [
+    "Not found"
+   ],
+   "h1count": 1,
+   "kicker": "none",
+   "tabs": null,
+   "nav": [
+    "iter"
+   ],
+   "headActions": [],
+   "buttons": [],
+   "primary": [],
+   "filterBar": false,
+   "footer": false,
+   "searchButton": false,
+   "empty": [],
+   "dialog": null,
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 1,
+    "page": 3
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Not found - iter",
+   "h1": [
+    "Not found"
+   ],
+   "h1count": 1,
+   "kicker": "none",
+   "tabs": null,
+   "nav": [
+    "iter"
+   ],
+   "headActions": [],
+   "buttons": [],
+   "primary": [],
+   "filterBar": false,
+   "footer": false,
+   "searchButton": false,
+   "empty": [],
+   "dialog": null,
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 1,
+    "page": 3
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "err404_nope",
+  "url": "http://127.0.0.1:3999/nope",
+  "shots": {
+   "1280_light": "screens/err404_nope_1280_light.png",
+   "1280_dark": "screens/err404_nope_1280_dark.png",
+   "360_light": "screens/err404_nope_360_light.png",
+   "360_dark": "screens/err404_nope_360_dark.png"
+  },
+  "status": 404,
+  "facts_1280": {
+   "title": "Not found - iter",
+   "h1": [
+    "Not found"
+   ],
+   "h1count": 1,
+   "kicker": "none",
+   "tabs": null,
+   "nav": [
+    "iter"
+   ],
+   "headActions": [],
+   "buttons": [],
+   "primary": [],
+   "filterBar": false,
+   "footer": false,
+   "searchButton": false,
+   "empty": [],
+   "dialog": null,
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 1,
+    "page": 3
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Not found - iter",
+   "h1": [
+    "Not found"
+   ],
+   "h1count": 1,
+   "kicker": "none",
+   "tabs": null,
+   "nav": [
+    "iter"
+   ],
+   "headActions": [],
+   "buttons": [],
+   "primary": [],
+   "filterBar": false,
+   "footer": false,
+   "searchButton": false,
+   "empty": [],
+   "dialog": null,
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 1,
+    "page": 3
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "empty_home",
+  "url": "http://127.0.0.1:4010/",
+  "shots": {
+   "1280_light": "screens/empty_home_1280_light.png",
+   "1280_dark": "screens/empty_home_1280_dark.png",
+   "360_light": "screens/empty_home_360_light.png",
+   "360_dark": "screens/empty_home_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "iter",
+   "h1": [
+    "Where to next?"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Home",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No projects yet. Create one with iter init or iter new <path>."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 11
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12.75px",
+    "17px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "iter",
+   "h1": [
+    "Where to next?"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Home",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No projects yet. Create one with iter init or iter new <path>."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 11
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12.75px",
+    "17px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "empty_boards",
+  "url": "http://127.0.0.1:4010/boards",
+  "shots": {
+   "1280_light": "screens/empty_boards_1280_light.png",
+   "1280_dark": "screens/empty_boards_1280_dark.png",
+   "360_light": "screens/empty_boards_360_light.png",
+   "360_dark": "screens/empty_boards_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Boards - iter",
+   "h1": [
+    "Boards"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Board",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No boards yet. Create one with iter board new."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 11
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12.75px",
+    "17px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Boards - iter",
+   "h1": [
+    "Boards"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Board",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No boards yet. Create one with iter board new."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 11
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12.75px",
+    "17px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "empty_agents",
+  "url": "http://127.0.0.1:4010/agents",
+  "shots": {
+   "1280_light": "screens/empty_agents_1280_light.png",
+   "1280_dark": "screens/empty_agents_1280_dark.png",
+   "360_light": "screens/empty_agents_360_light.png",
+   "360_dark": "screens/empty_agents_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Agents - iter",
+   "h1": [
+    "Agents"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on any task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 11
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Agents - iter",
+   "h1": [
+    "Agents"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [
+    "No agent has worked on any task yet."
+   ],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 0,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 0,
+    "page": 11
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "empty_instructions",
+  "url": "http://127.0.0.1:4010/instructions",
+  "shots": {
+   "1280_light": "screens/empty_instructions_1280_light.png",
+   "1280_dark": "screens/empty_instructions_1280_dark.png",
+   "360_light": "screens/empty_instructions_360_light.png",
+   "360_dark": "screens/empty_instructions_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Instructions - iter",
+   "h1": [
+    "Instructions"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 6,
+    "page": 17
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Instructions - iter",
+   "h1": [
+    "Instructions"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 6,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 6,
+    "page": 17
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "13px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "empty_settings",
+  "url": "http://127.0.0.1:4010/settings",
+  "shots": {
+   "1280_light": "screens/empty_settings_1280_light.png",
+   "1280_dark": "screens/empty_settings_1280_dark.png",
+   "360_light": "screens/empty_settings_360_light.png",
+   "360_dark": "screens/empty_settings_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "Settings - iter",
+   "h1": [
+    "Settings"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|queued",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 2,
+    "input": 8,
+    "select": 1,
+    "textarea": 0,
+    "total": 12,
+    "page": 23
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "11.9px",
+    "13px",
+    "14px",
+    "15px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "Settings - iter",
+   "h1": [
+    "Settings"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:Global",
+   "tabs": null,
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/",
+    "control cb-button|queued",
+    "button primary|Save"
+   ],
+   "primary": [
+    "Save"
+   ],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 1,
+    "button": 2,
+    "input": 8,
+    "select": 1,
+    "textarea": 0,
+    "total": 12,
+    "page": 23
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "11.9px",
+    "13px",
+    "14px",
+    "15px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ },
+ {
+  "name": "empty_instruction_plan",
+  "url": "http://127.0.0.1:4010/instruction/plan",
+  "shots": {
+   "1280_light": "screens/empty_instruction_plan_1280_light.png",
+   "1280_dark": "screens/empty_instruction_plan_1280_dark.png",
+   "360_light": "screens/empty_instruction_plan_360_light.png",
+   "360_dark": "screens/empty_instruction_plan_360_dark.png"
+  },
+  "status": 200,
+  "facts_1280": {
+   "title": "plan - Instruction - iter",
+   "h1": [
+    "Plan"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:InstructionsPlan",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Agents0",
+     "0",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 4,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 4,
+    "page": 15
+   },
+   "overflowX": 0,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.6px",
+    "14px",
+    "15px",
+    "16px",
+    "48px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  },
+  "facts_360": {
+   "title": "plan - Instruction - iter",
+   "h1": [
+    "Plan"
+   ],
+   "h1count": 1,
+   "kicker": "eyebrow:InstructionsPlan",
+   "tabs": {
+    "label": "Sections",
+    "items": [
+     "Info",
+     "Agents0",
+     "0",
+     "Settings"
+    ]
+   },
+   "nav": [
+    "iter",
+    "Board",
+    "Agents",
+    "Instructions",
+    "Settings",
+    "Search/"
+   ],
+   "headActions": [],
+   "buttons": [
+    "search-btn|Search/"
+   ],
+   "primary": [],
+   "filterBar": false,
+   "footer": true,
+   "searchButton": true,
+   "empty": [],
+   "dialog": {
+    "title": null,
+    "exits": []
+   },
+   "inlineStyles": 0,
+   "inlineStyleSamples": [],
+   "controls": {
+    "a": 4,
+    "button": 0,
+    "input": 0,
+    "select": 0,
+    "textarea": 0,
+    "total": 4,
+    "page": 15
+   },
+   "overflowX": 294,
+   "fontSizes": [
+    "11px",
+    "12px",
+    "13px",
+    "13.6px",
+    "14px",
+    "15px",
+    "16px",
+    "32px"
+   ],
+   "bodyBg": "rgb(251, 250, 248)",
+   "unstyled": []
+  }
+ }
+]

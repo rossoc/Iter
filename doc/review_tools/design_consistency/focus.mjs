@@ -1,0 +1,17 @@
+import puppeteer from 'puppeteer-core';
+const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const page = await browser.newPage();
+await page.setViewport({ width: 1280, height: 900 });
+await page.goto('http://127.0.0.1:3999/org/1?tab=tasks&q=is%3Aopen', { waitUntil: 'networkidle0' });
+for (let i = 0; i < 9; i++) await page.keyboard.press('Tab');
+console.log('focused:', await page.evaluate(() => document.activeElement.outerHTML.slice(0, 120)));
+await page.screenshot({ path: 'screens/focus_tasks_1280_light.png', clip: { x: 0, y: 0, width: 1280, height: 520 } });
+await page.keyboard.press('Slash');
+await new Promise(r => setTimeout(r, 300));
+await page.keyboard.type('task');
+await new Promise(r => setTimeout(r, 600));
+await page.screenshot({ path: 'screens/palette_1280_light.png', clip: { x: 0, y: 0, width: 1280, height: 700 } });
+await page.setViewport({ width: 360, height: 800 });
+await new Promise(r => setTimeout(r, 300));
+await page.screenshot({ path: 'screens/palette_360_light.png' });
+await browser.close();

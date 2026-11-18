@@ -1,0 +1,111 @@
+{
+ "url": "/task/1?tab=sessions&new=session",
+ "scheme": "light",
+ "violations": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "tags": [
+    "cat.color",
+    "wcag2aa",
+    "wcag143",
+    "TTv5",
+    "TT13.c",
+    "EN-301-549",
+    "EN-9.1.4.3",
+    "ACT"
+   ],
+   "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+   "help": "Elements must meet minimum color contrast ratio thresholds",
+   "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+   "nodes": [
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#8d8983",
+        "bgColor": "#fbfaf8",
+        "contrastRatio": 3.33,
+        "fontSize": "9.8pt (13px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<section class=\"modal-box\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"session-title\">",
+         "target": [
+          ".modal-box"
+         ]
+        },
+        {
+         "html": "<a class=\"modal-backdrop\" href=\"/task/1?tab=sessions\" tabindex=\"-1\" aria-hidden=\"true\"></a>",
+         "target": [
+          ".modal-backdrop"
+         ]
+        },
+        {
+         "html": "<body>",
+         "target": [
+          "body"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 3.33 (foreground color: #8d8983, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<p class=\"required-note\"><span aria-hidden=\"true\">*</span> Required</p>",
+     "target": [
+      ".required-note"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.33 (foreground color: #8d8983, background color: #fbfaf8, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1"
+    },
+    {
+     "any": [
+      {
+       "id": "color-contrast",
+       "data": {
+        "fgColor": "#e9edf9",
+        "bgColor": "#637cdb",
+        "contrastRatio": 3.3,
+        "fontSize": "10.5pt (14px)",
+        "fontWeight": "normal",
+        "messageKey": null,
+        "expectedContrastRatio": "4.5:1"
+       },
+       "relatedNodes": [
+        {
+         "html": "<button type=\"submit\" class=\"button primary\">Add session</button>",
+         "target": [
+          ".button"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Element has insufficient color contrast of 3.3 (foreground color: #e9edf9, background color: #637cdb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<button type=\"submit\" class=\"button primary\">Add session</button>",
+     "target": [
+      ".button"
+     ],
+     "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.3 (foreground color: #e9edf9, background color: #637cdb, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+    }
+   ]
+  }
+ ],
+ "incomplete": [
+  {
+   "id": "color-contrast",
+   "nodes": 4
+  }
+ ]
+}

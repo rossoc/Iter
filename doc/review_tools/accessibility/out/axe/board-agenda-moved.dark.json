@@ -1,0 +1,346 @@
+{
+ "url": "/board/2?date=2026-11-02&moved=2",
+ "scheme": "dark",
+ "violations": [
+  {
+   "id": "target-size",
+   "impact": "serious",
+   "tags": [
+    "cat.sensory-and-visual-cues",
+    "wcag22aa",
+    "wcag258"
+   ],
+   "description": "Ensure touch targets have sufficient size and space",
+   "help": "All touch targets must be 24px large, or leave sufficient space",
+   "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/target-size?application=axeAPI",
+   "nodes": [
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 57.9,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (57.9px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/1\">org-1</a>",
+         "target": [
+          "a[href$=\"org/1\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/1\">project-1</a>",
+     "target": [
+      "a[href$=\"project/1\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (57.9px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    },
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 66.7,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (66.7px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/2\">org-2</a>",
+         "target": [
+          "a[href$=\"org/2\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/18\">project-18</a>",
+     "target": [
+      "a[href=\"/project/18\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (66.7px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    },
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 64.3,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (64.3px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/3\">org-3</a>",
+         "target": [
+          "a[href$=\"org/3\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/11\">project-11</a>",
+     "target": [
+      "a[href=\"/project/11\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (64.3px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    },
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 66.2,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (66.2px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/4\">org-4</a>",
+         "target": [
+          "a[href$=\"org/4\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/12\">project-12</a>",
+     "target": [
+      "a[href=\"/project/12\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (66.2px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    },
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 66.6,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (66.6px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/5\">org-5</a>",
+         "target": [
+          "a[href$=\"org/5\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/13\">project-13</a>",
+     "target": [
+      "a[href=\"/project/13\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (66.6px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    },
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 66.8,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (66.8px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/6\">org-6</a>",
+         "target": [
+          "a[href$=\"org/6\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/14\">project-14</a>",
+     "target": [
+      "a[href=\"/project/14\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (66.8px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    },
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 59.4,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (59.4px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/7\">org-7</a>",
+         "target": [
+          "a[href$=\"org/7\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/7\">project-7</a>",
+     "target": [
+      "a[href$=\"project/7\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (59.4px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    },
+    {
+     "any": [
+      {
+       "id": "target-size",
+       "data": {
+        "minSize": 24,
+        "width": 66.9,
+        "height": 17
+       },
+       "relatedNodes": [],
+       "impact": "serious",
+       "message": "Target has insufficient size (66.9px by 17px, should be at least 24px by 24px)"
+      },
+      {
+       "id": "target-offset",
+       "data": {
+        "closestOffset": 23.6,
+        "minOffset": 24
+       },
+       "relatedNodes": [
+        {
+         "html": "<a class=\"u\" href=\"/org/8\">org-8</a>",
+         "target": [
+          "a[href$=\"org/8\"]"
+         ]
+        }
+       ],
+       "impact": "serious",
+       "message": "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+      }
+     ],
+     "all": [],
+     "none": [],
+     "impact": "serious",
+     "html": "<a href=\"/project/16\">project-16</a>",
+     "target": [
+      "a[href=\"/project/16\"]"
+     ],
+     "failureSummary": "Fix any of the following:\n  Target has insufficient size (66.9px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.6px instead of at least 24px."
+    }
+   ]
+  }
+ ],
+ "incomplete": [
+  {
+   "id": "color-contrast",
+   "nodes": 21
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+{
+ "url": "/task/1?tab=agent&new=agent",
+ "scheme": "dark",
+ "violations": [],
+ "incomplete": [
+  {
+   "id": "color-contrast",
+   "nodes": 1
+  }
+ ]
+}

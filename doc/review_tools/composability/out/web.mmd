@@ -1,0 +1,114 @@
+flowchart LR
+  subgraph WEB[src/web by family]
+    boards[boards]
+    org[org]
+    project[project]
+    task[task]
+    agents_instructions[agents_instructions]
+    edit_forms_settings[edit_forms_settings]
+    notes[notes]
+    shell[shell]
+  end
+  ui[web/ui/* collapsed]
+  subgraph CORE[core crate]
+    agent[agent]
+    app[app]
+    config[config]
+    db[db]
+    error[error]
+    git[git]
+    github[github]
+    models[models]
+    platform[platform]
+    push[push]
+    reporting[reporting]
+    secret[secret]
+    utils[utils]
+    wiki[wiki]
+  end
+  agents_instructions -->|7| agent
+  agents_instructions -->|2| config
+  agents_instructions -->|1| db
+  agents_instructions -->|3| models
+  agents_instructions -->|1| notes
+  agents_instructions -->|8| shell
+  agents_instructions -->|2| task
+  agents_instructions -->|21| ui
+  agents_instructions -->|2| utils
+  boards -->|9| db
+  boards -->|3| edit_forms_settings
+  boards -->|1| error
+  boards -->|21| models
+  boards -->|1| notes
+  boards -.->|4| project
+  boards -->|1| reporting
+  boards -->|29| shell
+  boards -->|44| ui
+  boards -->|2| utils
+  edit_forms_settings -->|1| config
+  edit_forms_settings -->|4| db
+  edit_forms_settings -->|7| error
+  edit_forms_settings -->|18| models
+  edit_forms_settings -.->|1| project
+  edit_forms_settings -->|1| secret
+  edit_forms_settings -->|7| shell
+  edit_forms_settings -->|17| ui
+  notes -->|1| db
+  notes -->|1| edit_forms_settings
+  notes -->|2| models
+  notes -->|1| reporting
+  notes -.->|5| shell
+  notes -->|10| ui
+  org -->|4| db
+  org -->|6| edit_forms_settings
+  org -->|2| error
+  org -->|1| github
+  org -->|9| models
+  org -->|4| notes
+  org -->|2| platform
+  org -.->|3| project
+  org -->|2| push
+  org -->|5| reporting
+  org -->|3| secret
+  org -->|13| shell
+  org -.->|4| task
+  org -->|20| ui
+  org -->|2| utils
+  project -.->|1| boards
+  project -->|2| config
+  project -->|4| db
+  project -.->|10| edit_forms_settings
+  project -->|1| error
+  project -->|13| models
+  project -->|4| notes
+  project -.->|1| org
+  project -.->|14| shell
+  project -.->|3| task
+  project -->|20| ui
+  shell -->|1| config
+  shell -->|6| db
+  shell -->|5| error
+  shell -->|15| models
+  shell -.->|2| notes
+  shell -.->|1| project
+  shell -->|1| reporting
+  shell -.->|1| task
+  shell -.->|8| ui
+  task -->|14| agent
+  task -->|3| app
+  task -->|2| config
+  task -->|7| db
+  task -->|9| edit_forms_settings
+  task -->|3| error
+  task -->|1| git
+  task -->|23| models
+  task -.->|1| org
+  task -.->|1| project
+  task -->|2| reporting
+  task -.->|31| shell
+  task -->|41| ui
+  task -->|2| utils
+  task -->|3| wiki
+  ui -->|1| error
+  ui -->|6| models
+  ui -.->|1| shell

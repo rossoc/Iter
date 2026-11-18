@@ -1,0 +1,5 @@
+<!doctype html><title>Clickjack check</title>
+<p>Below is http://127.0.0.1:3999/task/1 framed from a different origin (localhost:4090). If it renders, no frame protection exists.</p>
+<iframe src="http://127.0.0.1:3999/task/1" width="1000" height="600" style="border:3px solid red"></iframe>
+<p>Cross-origin fetch of /search (should be blocked by lack of CORS):</p><pre id=o>...</pre>
+<script>fetch('http://127.0.0.1:3999/search?q=task').then(r=>r.text()).then(t=>o.textContent='READABLE: '+t.slice(0,80)).catch(e=>o.textContent='blocked: '+e)</script>

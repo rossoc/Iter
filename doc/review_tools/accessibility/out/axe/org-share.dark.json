@@ -1,0 +1,11 @@
+{
+ "url": "/org/1?tab=report&from=2026-10-27&to=2026-11-02&share=1",
+ "scheme": "dark",
+ "violations": [],
+ "incomplete": [
+  {
+   "id": "color-contrast",
+   "nodes": 2
+  }
+ ]
+}

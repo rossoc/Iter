@@ -1,0 +1,9 @@
+[package]
+name = "testproof"
+version = "0.1.0"
+edition = "2024"
+
+# Same topcoat features as iter's Cargo.toml line 38.
+[dependencies]
+topcoat = { version = "0.9", default-features = false, features = ["router", "view", "serve"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net"] }
