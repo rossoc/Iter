@@ -148,7 +148,7 @@ async fn detail_page(cx: &Cx) -> Result<impl View> {
 async fn actions(task_id: i64, run: &RunRecord) -> Result<impl View> {
     let shown = run.shown_status();
     Ok(view! {
-        <div class="compose-actions">
+        <div class="run-actions">
             if shown == "queued" {
                 act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
                 act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)

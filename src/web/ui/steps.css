@@ -53,7 +53,8 @@
 .compose form>*,.compose-pick>*{min-width:0}
 .compose-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:12px}
 .compose textarea.control{min-height:22rem;font:.8125rem/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
-.compose-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
+/* the agent page side panel: Run now / Remove / Stop, one post button each; not a form footer, so not centered like `.actions` */
+.run-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
 .compose-drop{margin-top:10px}
 .empty-line.note{margin-top:12px}
 .prompts-intro{margin:0 0 24px;max-width:var(--measure);color:var(--muted)}

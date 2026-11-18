@@ -98,7 +98,7 @@ pub async fn compose_form(
                 select(name: "effort", label: "Effort", options: &efforts, current: &c.effort)
             </div>
             textarea(name: "prompt", label: "Prompt", value: &c.prompt, loaded: &c.prompt, hint: hint)
-            <div class="compose-actions">
+            <div class="actions">
                 <button class="button primary" type="submit" name="do" value="run" title="Run now" aria-label="Run now">(icon(PLAY)) <span class="sr">"Run now"</span></button>
                 if editing {
                     <button class="button" type="submit" name="do" value="save">"Save"</button>

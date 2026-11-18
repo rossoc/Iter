@@ -80,7 +80,7 @@ async fn edit_form(scope: &Scope, i: &Instruction) -> Result<impl View> {
                 if !note.is_empty() {
                     <p class="empty-line">(note)</p>
                 }
-                <div class="compose-actions">
+                <div class="actions">
                     if scope.home.is_some() {
                         <button class="button primary" type="submit" name="do" value="save">"Save"</button>
                     }
