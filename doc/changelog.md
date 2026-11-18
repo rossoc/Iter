@@ -12,6 +12,8 @@
 - **C-03** A run can be given an instruction from the task's own `instructions/` folder: the New agent form offered and previewed it, but saving refused it. The form, the preview and both POSTs now share `instruction::layers_for_task`.
 - **S-08** A tmux session whose name starts with `-` (a project called `-web`) no longer breaks its hooks, which had stopped that task's clock from ever starting or stopping. The hooks pass `--` before the names, and `iter internal hook` takes hyphen values, so hooks installed earlier work too (`args/internal.rs`).
 - **C-09** `any_client_attached` and `take_detach_message` name the session exactly (`=name`): a bare `-t web/a` matched `web/ab` by prefix.
+- **S-05** `ITER_PLATFORM_KEY` is taken out of the environment when iter starts (`secret::take_env_key`), so `claude`, `gh`, `git`, `tmux`, the editor and run workers no longer inherit the key.
+- **S-09 / S-10** `iter.db` (and its WAL), run prompts and logs, and ingest logs are created readable by the user alone (`0600`, `utils::fs::{create_private, write_private, make_private}`). Editor buffers are new files with an unguessable name, opened with `create_new` so a planted symlink is never followed (`utils::fs::temp_buffer`, one helper for both copies in `md_edit`). The prompt is still passed to `claude` on argv (S-06, open).
 - **W-02 / W-03** The top bar wraps up to 700px (`--bar-h` 82px there) and project paths shrink (`table-layout:fixed`) so framed pages no longer scroll sideways.
 
 ### Added

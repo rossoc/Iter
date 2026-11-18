@@ -155,7 +155,10 @@ mod tests {
 
         for dest in [src.join("copy"), src.join("deep").join("copy"), src.clone()] {
             let err = copy_template(&src, &dest).unwrap_err();
-            assert!(matches!(err, crate::error::IterError::CloneIntoSource { .. }), "{err}");
+            assert!(
+                matches!(err, crate::error::IterError::CloneIntoSource { .. }),
+                "{err}"
+            );
         }
         assert!(!src.join("copy").exists() && !src.join("deep").exists());
 

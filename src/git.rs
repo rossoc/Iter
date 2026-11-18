@@ -113,7 +113,14 @@ mod tests {
         let dir = crate::fixtures::scratch(name);
         let git = |args: &[&str]| {
             std::process::Command::new("git")
-                .args(["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"])
+                .args([
+                    "-c",
+                    "user.name=t",
+                    "-c",
+                    "user.email=t@t",
+                    "-c",
+                    "commit.gpgsign=false",
+                ])
                 .args(args)
                 .current_dir(&dir)
                 .output()
@@ -125,7 +132,14 @@ mod tests {
 
     fn git_in(dir: &Path, args: &[&str]) {
         let ok = std::process::Command::new("git")
-            .args(["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"])
+            .args([
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "-c",
+                "commit.gpgsign=false",
+            ])
             .args(args)
             .current_dir(dir)
             .status()
@@ -136,7 +150,9 @@ mod tests {
 
     #[test]
     fn a_branch_with_unmerged_commits_is_kept() {
-        let Some(dir) = repo("git-unmerged") else { return };
+        let Some(dir) = repo("git-unmerged") else {
+            return;
+        };
         let base = dir.to_str().unwrap();
         git_in(&dir, &["checkout", "-q", "-b", "feat/x"]);
         git_in(&dir, &["commit", "-q", "--allow-empty", "-m", "work"]);
@@ -161,7 +177,11 @@ mod tests {
     }
 
     fn succeeds(branch: &str, base: &str) -> bool {
-        crate::process::succeeds("git", Some(base), &["rev-parse", "--verify", "--quiet", branch])
+        crate::process::succeeds(
+            "git",
+            Some(base),
+            &["rev-parse", "--verify", "--quiet", branch],
+        )
     }
 
     #[test]

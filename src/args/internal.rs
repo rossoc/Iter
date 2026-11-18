@@ -88,7 +88,13 @@ mod tests {
             client,
             session,
             previous,
-        } = event(&["client-session-changed", "--", "/dev/ttys1", "-web/a", "-api/b"])
+        } = event(&[
+            "client-session-changed",
+            "--",
+            "/dev/ttys1",
+            "-web/a",
+            "-api/b",
+        ])
         else {
             panic!()
         };

@@ -157,7 +157,7 @@ pub fn create(
         worktree: None,
         pid: None,
     };
-    let written = std::fs::write(dir.run_prompt_path(n), text)
+    let written = crate::utils::fs::write_private(&dir.run_prompt_path(n), text)
         .map_err(IterError::from)
         .and_then(|()| dir.write_run(&run).map_err(IterError::from));
     if let Err(e) = written {
@@ -190,7 +190,7 @@ pub fn amend(
     run.effort = spec.effort.clone();
     run.kind = kind;
     run.instruction = Some(instruction.to_string());
-    std::fs::write(dir.run_prompt_path(n), prompt)?;
+    crate::utils::fs::write_private(&dir.run_prompt_path(n), prompt)?;
     dir.write_run(&run)?;
     Ok(())
 }
@@ -217,7 +217,7 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
     let fail = |mut run: RunRecord, e: IterError| {
         run.status = Status::Failed;
         run.ended = Some(now());
-        let _ = std::fs::write(dir.run_log_path(n), format!("iter: {e}\n"));
+        let _ = crate::utils::fs::write_private(&dir.run_log_path(n), format!("iter: {e}\n"));
         let _ = dir.write_run(&run);
         e
     };
@@ -234,7 +234,7 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
         };
         let at = worktree.as_deref().unwrap_or(&project.base_path);
         let text = std::fs::read_to_string(dir.run_prompt_path(n))?;
-        std::fs::write(dir.run_prompt_path(n), text.replace("{{worktree}}", at))?;
+        crate::utils::fs::write_private(&dir.run_prompt_path(n), text.replace("{{worktree}}", at))?;
         Ok((branch, worktree))
     })();
     match placed {
@@ -317,7 +317,7 @@ fn launch(
     extra: &[String],
 ) -> Result<Option<i32>> {
     let prompt = std::fs::read_to_string(dir.run_prompt_path(run.n))?;
-    let log = std::fs::File::create(dir.run_log_path(run.n))?;
+    let log = crate::utils::fs::create_private(&dir.run_log_path(run.n))?;
     let writable = agent_dir(dir);
     let (program, args) = run.agent.command(&Invocation {
         prompt: &prompt,
@@ -361,7 +361,8 @@ fn work(
             };
         }
         Err(e) => {
-            let _ = std::fs::write(dir.run_log_path(run.n), format!("iter: {e}\n"));
+            let _ =
+                crate::utils::fs::write_private(&dir.run_log_path(run.n), format!("iter: {e}\n"));
             run.status = Status::Failed;
         }
     }

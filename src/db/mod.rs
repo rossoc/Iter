@@ -170,6 +170,8 @@ impl Db {
             let _ = std::fs::create_dir_all(parent);
         }
         let conn = Connection::open(path)?;
+        // the WAL and shm files sqlite makes beside it take the database's permissions
+        crate::utils::fs::make_private(path)?;
         conn.execute_batch(
             "PRAGMA busy_timeout = 5000;
              PRAGMA foreign_keys = ON;",

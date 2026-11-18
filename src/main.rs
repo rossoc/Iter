@@ -44,6 +44,8 @@ fn cli() -> clap::Command {
 }
 
 fn main() -> ExitCode {
+    // before anything can spawn a process (or a thread): no child is handed the platform key
+    secret::take_env_key();
     // Shell-driven completion (`COMPLETE=<shell> iter ...`, on every Tab once registered).
     CompleteEnv::with_factory(cli).complete();
 

@@ -9,8 +9,8 @@
 
 use crate::db::{Db, Table};
 use crate::error::Result;
-use crate::models::{Project, SessionConfig, Task};
 use crate::git;
+use crate::models::{Project, SessionConfig, Task};
 use crate::tmux::Multiplexer;
 
 /// Makes the git worktree and the branch for `task` under the project's

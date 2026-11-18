@@ -83,8 +83,30 @@ pub fn resolve(store: &dyn KeyStore, organization: &str, env: Option<&str>) -> R
         .ok_or_else(|| IterError::MissingKey(organization.to_string()))
 }
 
+/// `ITER_PLATFORM_KEY` as it was when iter started; see [`take_env_key`].
+static ENV_VALUE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+/// Moves `ITER_PLATFORM_KEY` out of the environment into iter's memory, so no process iter starts
+/// (`claude`, `gh`, `git`, `tmux`, the editor, a run worker) inherits the key. Called first thing in
+/// `main`, while there is only one thread: that is what makes the `remove_var` sound.
+pub fn take_env_key() {
+    let value = std::env::var(ENV_KEY).ok();
+    if value.is_some() {
+        // SAFETY: called at the top of `main`, before any other thread exists.
+        unsafe { std::env::remove_var(ENV_KEY) };
+    }
+    let _ = ENV_VALUE.set(value);
+}
+
+/// The key from the environment: the one [`take_env_key`] took, else (tests) the variable itself.
+fn env_key() -> Option<&'static str> {
+    ENV_VALUE
+        .get_or_init(|| std::env::var(ENV_KEY).ok())
+        .as_deref()
+}
+
 pub fn resolve_env(store: &dyn KeyStore, organization: &str) -> Result<Secret> {
-    resolve(store, organization, std::env::var(ENV_KEY).ok().as_deref())
+    resolve(store, organization, env_key())
 }
 
 #[cfg_attr(not(feature = "web"), allow(dead_code))]

@@ -13,7 +13,7 @@ pub fn run_agent(
     std::fs::create_dir_all(&dot)?;
     std::fs::write(dot.join(".gitignore"), "*\n")?;
     let log_path = dot.join(format!("{what}-{}.log", now().replace(':', "")));
-    let log = std::fs::File::create(&log_path)?;
+    let log = crate::utils::fs::create_private(&log_path)?;
     let _lock = lock(target)?;
     let harness = opts.agent.unwrap_or_default();
     let (program, args) = harness.command(&Invocation {
@@ -28,11 +28,7 @@ pub fn run_agent(
 }
 
 /// Starts `iter wiki ingest` for `project` (and `task`) as a process that outlives this one.
-pub fn spawn_ingest(
-    project: &Project,
-    task: Option<&Task>,
-    opts: &HarnessChoice,
-) -> Result<()> {
+pub fn spawn_ingest(project: &Project, task: Option<&Task>, opts: &HarnessChoice) -> Result<()> {
     let mut command = std::process::Command::new(std::env::current_exe()?);
     command.args(["wiki", "ingest"]);
     match task {
