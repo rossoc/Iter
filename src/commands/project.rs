@@ -99,8 +99,7 @@ pub(crate) fn clone_cmd(
             template.board_id = chosen_board(db, board, no_board, source_project.board_id)?;
             let files_from = source_project.base_path.clone();
             create_project_interactively(db, &template, Some(&source_project.name), |dest| {
-                std::fs::create_dir_all(dest)?;
-                scaffold::copy_dir_excluding_git(
+                scaffold::copy_template(
                     std::path::Path::new(&files_from),
                     std::path::Path::new(dest),
                 )

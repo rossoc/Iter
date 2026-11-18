@@ -99,6 +99,10 @@ pub enum IterError {
     #[error("base path cannot be empty")]
     EmptyBasePath,
 
+    /// A clone copying a project's folder into a folder inside it would copy its own copy.
+    #[error("cannot clone into {dest}: it is inside the source folder {src}")]
+    CloneIntoSource { src: String, dest: String },
+
     /// Project and tag names travel comma-separated in the web forms'
     /// roster and tag fields, so a comma inside one can't round-trip.
     #[error("{kind} name '{name}' cannot contain a comma")]

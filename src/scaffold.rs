@@ -32,13 +32,51 @@ pub fn dir_name(path: &str) -> String {
         .unwrap_or_default()
 }
 
-/// Recursively copies `src` into the existing `dst`, skipping `.git` at any depth, so a cloned
-/// template brings no history.
+/// Folders a cloned template never brings: its history and the task worktrees iter made in it.
+const NOT_COPIED: [&str; 2] = [".git", ".iter-worktrees"];
+
+/// Copies the template folder `src` into a new folder `dst`: refused when `dst` is `src` or inside
+/// it (the copy would copy itself until the path is too long), checked before anything is created.
+pub fn copy_template(src: &Path, dst: &Path) -> Result<()> {
+    let from = std::fs::canonicalize(src)?;
+    let to = resolved(dst)?;
+    if to.starts_with(&from) {
+        return Err(crate::error::IterError::CloneIntoSource {
+            src: from.display().to_string(),
+            dest: to.display().to_string(),
+        });
+    }
+    std::fs::create_dir_all(dst)?;
+    copy_dir_excluding_git(src, dst)
+}
+
+/// `path` made absolute with its longest existing ancestor canonicalised (symlinks resolved), so it
+/// compares with a canonical path even before it exists.
+fn resolved(path: &Path) -> Result<PathBuf> {
+    let path = std::path::absolute(path)?;
+    let mut missing = Vec::new();
+    let mut base = path.as_path();
+    loop {
+        if let Ok(found) = std::fs::canonicalize(base) {
+            return Ok(missing.iter().rev().fold(found, |p, part| p.join(part)));
+        }
+        match (base.parent(), base.file_name()) {
+            (Some(parent), Some(name)) => {
+                missing.push(name.to_os_string());
+                base = parent;
+            }
+            _ => return Ok(path),
+        }
+    }
+}
+
+/// Recursively copies `src` into the existing `dst`, skipping `.git` and `.iter-worktrees` at any
+/// depth, so a cloned template brings no history and no task worktrees.
 pub fn copy_dir_excluding_git(src: &Path, dst: &Path) -> Result<()> {
     for entry in std::fs::read_dir(src)? {
         let entry = entry?;
         let name = entry.file_name();
-        if name == ".git" {
+        if NOT_COPIED.iter().any(|n| name == *n) {
             continue;
         }
         let from = entry.path();
@@ -104,6 +142,39 @@ mod tests {
             std::fs::read_to_string(dst.join("sub").join("file.txt")).unwrap(),
             "content"
         );
+
+        std::fs::remove_dir_all(&tmp).unwrap();
+    }
+
+    #[test]
+    fn copy_template_refuses_a_destination_inside_the_source() {
+        let tmp = crate::fixtures::scratch("scaffold-nested");
+        let src = tmp.join("src");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("a.txt"), "a").unwrap();
+
+        for dest in [src.join("copy"), src.join("deep").join("copy"), src.clone()] {
+            let err = copy_template(&src, &dest).unwrap_err();
+            assert!(matches!(err, crate::error::IterError::CloneIntoSource { .. }), "{err}");
+        }
+        assert!(!src.join("copy").exists() && !src.join("deep").exists());
+
+        std::fs::remove_dir_all(&tmp).unwrap();
+    }
+
+    #[test]
+    fn copy_template_skips_worktrees_and_copies_beside() {
+        let tmp = crate::fixtures::scratch("scaffold-beside");
+        let src = tmp.join("src");
+        std::fs::create_dir_all(src.join(".iter-worktrees").join("t-1")).unwrap();
+        std::fs::write(src.join("a.txt"), "a").unwrap();
+        // a sibling whose name starts like the source is not inside it
+        let dest = tmp.join("src-copy");
+
+        copy_template(&src, &dest).unwrap();
+
+        assert_eq!(std::fs::read_to_string(dest.join("a.txt")).unwrap(), "a");
+        assert!(!dest.join(".iter-worktrees").exists());
 
         std::fs::remove_dir_all(&tmp).unwrap();
     }

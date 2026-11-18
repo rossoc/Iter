@@ -7,6 +7,7 @@
 - **S-02** `platform_url` is parsed (`platform::check_url`): `https`, or `http` to loopback, no userinfo; `JsonWebhook::new` re-checks, so stored rows are covered.
 - **S-03 / P-01** A run's `pid` is validated before `kill` (`pid > 1`, leads its group, program `iter` or `claude`, not this process; no bare-pid fallback) and liveness is one shared `ps -A` per second instead of two spawns per record. The run records are still inside the agent's `--add-dir` tree (follow-up).
 - **C-02** A confirmed push of a worklog already in the ledger is previewed, not executed; a push is answered with a 303 to the report (`?pushed=<hash>`), which shows the ledger row's lines.
+- **C-01** `iter clone` refuses a destination inside the source project's folder (it used to copy itself until the path was too long) and no longer copies `.iter-worktrees/` (`scaffold::copy_template`).
 - **W-02 / W-03** The top bar wraps up to 700px (`--bar-h` 82px there) and project paths shrink (`table-layout:fixed`) so framed pages no longer scroll sideways.
 
 ### Added
