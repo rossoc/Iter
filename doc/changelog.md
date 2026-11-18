@@ -19,6 +19,8 @@
 - **S-07** needs no change of its own: `//host` links are as allowed as `https://` ones, and the S-01 headers (`img-src 'self'`, `Referrer-Policy: no-referrer`) block remote images and the port leak.
 - **S-06** The prompt goes to `claude -p` on its standard input, no longer on its command line where `ps` showed it to every user (`exec::run_logged` takes the input; `Invocation` has no prompt). Checked against the real `claude`.
 - `iter task plan` with no flag and no terminal (an agent) prints the plan instead of waiting on an editor nobody sees. The develop and test prompts say the worktree is the agent's current directory (`git status`, not `git -C`, which the allowed commands do not match).
+- The buttons that end a form are centered, on every form, by one rule: `.actions` in `ui/form_actions.css`, the footer of `form_shell`. The New agent pop-up, a queued agent's settings and the instruction page use it instead of their own `.compose-actions` row (removed). The agent page's side-panel buttons are not a form footer and keep a left-aligned `.run-actions`. (Done by an agent through `iter task solve`, reviewed independently.)
+- The develop and test prompts tell the agent to run each command on its own: a pipe, `&&` or `$(...)` does not match the allowed commands, and a headless agent cannot be asked.
 - **W-02 / W-03** The top bar wraps up to 700px (`--bar-h` 82px there) and project paths shrink (`table-layout:fixed`) so framed pages no longer scroll sideways.
 
 ### Added

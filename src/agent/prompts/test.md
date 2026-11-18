@@ -21,7 +21,9 @@ Change only tests (and what they need to run); the code under test stays as it i
 
 - Work in {{worktree}}: it is your current directory, so run `git` there as it is
   (`git status`, not `git -C <dir> status`). Commit in small steps with messages
-  that say why.
+  that say why (`git commit -m "..."`).
+- Run each command on its own: no pipes, `&&`, `cd` or `$(...)`. Only plain
+  commands match what you are allowed to run; anything else is refused.
 - Take the test steps of the plan in order. Before you start one, run
   `iter task plan {{task.id}} --mark <id> doing`; when its tests are written and
   pass (or fail for the reason you expected), `iter task plan {{task.id}} --mark <id> done`.
