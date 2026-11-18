@@ -392,7 +392,14 @@ pub fn execute(
                         .iter()
                         .find(|e| e.day == result.day)
                         .map_or(0.0, |e| e.time);
-                    items.push(Item::ok(format!("platform: {} {hours:.2} h", result.day)));
+                    let duplicate = match result.duplicate {
+                        true => " (the platform already had an entry that day: saved as a duplicate)",
+                        false => "",
+                    };
+                    items.push(Item::ok(format!(
+                        "platform: {} {hours:.2} h{duplicate}",
+                        result.day
+                    )));
                     done_days.push(result.day);
                 }
                 false => items.push(Item::failed(

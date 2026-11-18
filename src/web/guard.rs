@@ -76,6 +76,9 @@ pub async fn local_only(cx: &Cx, body: Body, next: Next<'_>) -> Result<Response>
 /// palette preview is an iframe of this same origin. `style-src` keeps `'unsafe-inline'` for
 /// the `style=` attributes (bar widths, tag colours); `img-src data:` is for the SVG masks in
 /// the stylesheet. No inline script is allowed: every script is a `/*.js` file.
+/// `Referrer-Policy` is `same-origin`, not `no-referrer`: under `no-referrer` a browser sends
+/// `Origin: null` on every POST, and `local_only` refuses it (every form answered Forbidden).
+/// Other sites still get no `Referer`, so the port does not leak.
 const HEADERS: [(&str, &str); 4] = [
     ("x-frame-options", "SAMEORIGIN"),
     (
@@ -83,7 +86,7 @@ const HEADERS: [(&str, &str); 4] = [
         "frame-ancestors 'self'; default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'",
     ),
     ("x-content-type-options", "nosniff"),
-    ("referrer-policy", "no-referrer"),
+    ("referrer-policy", "same-origin"),
 ];
 
 #[layer("/")]
@@ -209,7 +212,7 @@ mod router_tests {
             "scripts stay 'self' only: {csp}"
         );
         assert_eq!(header(&h, "x-content-type-options"), Some("nosniff"));
-        assert_eq!(header(&h, "referrer-policy"), Some("no-referrer"));
+        assert_eq!(header(&h, "referrer-policy"), Some("same-origin"));
     }
 
     #[test]
@@ -221,5 +224,21 @@ mod router_tests {
             &[host, ("sec-fetch-dest", "iframe")],
         );
         assert_eq!(status, StatusCode::FORBIDDEN);
+    }
+
+    /// What a browser tab sends for a same-origin form POST under `same-origin` is served.
+    #[test]
+    fn a_same_origin_post_from_a_tab_is_not_forbidden() {
+        let (status, _) = send(
+            Method::POST,
+            "/folders/pick",
+            &[
+                ("host", "127.0.0.1:3000"),
+                ("origin", "http://127.0.0.1:3000"),
+                ("sec-fetch-site", "same-origin"),
+                ("sec-fetch-dest", "document"),
+            ],
+        );
+        assert_ne!(status, StatusCode::FORBIDDEN);
     }
 }

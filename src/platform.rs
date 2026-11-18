@@ -10,18 +10,31 @@ use std::time::Duration;
 
 const BODY_LIMIT: usize = 500;
 
+/// One entry's verdict. The platform answers `{"id", "index", "outcome": "saved", "duplicate"}`:
+/// no day, so the day is the entry `index` points at (else the one at the result's position);
+/// `outcome` is read as `status`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct EntryResult {
+    #[serde(default, alias = "date")]
     pub day: String,
-    #[serde(default)]
+    #[serde(default, alias = "outcome")]
     pub status: String,
     #[serde(default)]
     pub message: String,
+    /// Which sent entry this answers.
+    #[serde(default)]
+    pub index: Option<usize>,
+    /// The platform saved it beside an entry it already had for that day.
+    #[serde(default)]
+    pub duplicate: bool,
 }
 
 impl EntryResult {
     pub fn accepted(&self) -> bool {
-        self.status.is_empty() || self.status == "ok"
+        matches!(
+            self.status.to_ascii_lowercase().as_str(),
+            "" | "ok" | "saved" | "created" | "updated" | "accepted" | "success"
+        )
     }
 }
 
@@ -247,7 +260,10 @@ impl JsonWebhook {
     }
 
     fn parse<T: serde::de::DeserializeOwned>(&self, body: &str) -> Result<T> {
-        serde_json::from_str(body).map_err(|e| self.fail(&format!("unexpected response: {e}")))
+        serde_json::from_str(body).map_err(|e| {
+            let shown: String = body.trim().chars().take(BODY_LIMIT).collect();
+            self.fail(&format!("unexpected response: {e}: {shown}"))
+        })
     }
 }
 
@@ -279,12 +295,21 @@ impl TimePlatform for JsonWebhook {
             "" => Vec::new(),
             text => self.parse::<Results>(text)?.results,
         };
+        // a result that names no day answers the entry its `index` points at, else the one at its place
+        for (place, result) in results.iter_mut().enumerate() {
+            if result.day.is_empty() {
+                let entry = worklog.entries.get(result.index.unwrap_or(place));
+                result.day = entry.map(|e| e.day.clone()).unwrap_or_default();
+            }
+        }
         for entry in &worklog.entries {
             if !results.iter().any(|r| r.day == entry.day) {
                 results.push(EntryResult {
                     day: entry.day.clone(),
                     status: "ok".into(),
                     message: String::new(),
+                    index: None,
+                    duplicate: false,
                 });
             }
         }
@@ -361,6 +386,8 @@ pub mod fake {
                 .entries
                 .iter()
                 .map(|e| EntryResult {
+                    index: None,
+                    duplicate: false,
                     day: e.day.clone(),
                     status: if self.conflicts.contains(&e.day) {
                         "conflict"
@@ -490,6 +517,52 @@ mod tests {
         let err = webhook(&url).push(&log()).unwrap_err();
         request.join().unwrap();
         assert!(err.to_string().contains("unexpected response"), "{err}");
+    }
+
+    /// The platform's own spelling (`date`, `created`) and a result naming no day at all are
+    /// read as the entries they answer, not as an unexpected response.
+    #[test]
+    fn a_push_result_may_name_its_day_date_or_nothing() {
+        for body in [
+            // what the platform really answers
+            r#"{"results":[{"id":"a0bf","index":0,"outcome":"saved","duplicate":false}]}"#,
+            r#"{"results":[{"date":"2026-09-04","status":"created","id":7}]}"#,
+            r#"{"results":[{"status":"ok","id":7}]}"#,
+            r#"{"results":[{"day":"2026-09-04"}]}"#,
+        ] {
+            let (url, request) = stub("200 OK", body);
+            let results = webhook(&url).push(&log()).unwrap();
+            request.join().unwrap();
+            assert_eq!(results.len(), 1, "{body}");
+            assert_eq!(results[0].day, "2026-09-04", "{body}");
+            assert!(results[0].accepted(), "{body}");
+        }
+    }
+
+    /// `index` names the entry a result answers, whatever order the results come in.
+    #[test]
+    fn a_push_result_answers_the_entry_its_index_names() {
+        let mut two = log();
+        let mut second = two.entries[0].clone();
+        second.day = "2026-09-05".into();
+        two.entries.push(second);
+        let body = r#"{"results":[{"id":"b","index":1,"outcome":"saved","duplicate":true},{"id":"a","index":0,"outcome":"saved","duplicate":false}]}"#;
+        let (url, request) = stub("200 OK", body);
+        let results = webhook(&url).push(&two).unwrap();
+        request.join().unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!((results[0].day.as_str(), results[0].duplicate), ("2026-09-05", true));
+        assert_eq!((results[1].day.as_str(), results[1].duplicate), ("2026-09-04", false));
+        assert!(results.iter().all(EntryResult::accepted));
+    }
+
+    /// An unreadable reply names what came back, so the next mismatch can be read off the error.
+    #[test]
+    fn an_unreadable_reply_is_shown_in_the_error() {
+        let (url, request) = stub("200 OK", r#"{"results":"nope"}"#);
+        let err = webhook(&url).push(&log()).unwrap_err().to_string();
+        request.join().unwrap();
+        assert!(err.contains(r#"{"results":"nope"}"#), "{err}");
     }
 
     #[test]

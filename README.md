@@ -577,8 +577,9 @@ unix).
 # `~` is expanded; a relative path is resolved from wherever you run `iter`.
 db_path: ~/.config/iter/iter.db
 
-# A gap between one session's end and the next one's start shorter than this
-# is treated as a pause inside one stretch of work rather than a real break
+# A gap between one session's end and the next one's start of this many
+# minutes or less is treated as a pause inside one stretch of work (and counted
+# as work) rather than a real break
 # between two -- so a quick interruption doesn't split a morning in half.
 pause_gap_minutes: 17
 

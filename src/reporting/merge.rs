@@ -128,7 +128,8 @@ impl Total {
     }
 }
 
-/// Total minutes of `sessions`, merging chronologically adjacent ones whose gap is under `gap_minutes`;
+/// Total minutes of `sessions`, merging chronologically adjacent ones whose gap is at most `gap_minutes`
+/// (17:00 with 17 is a pause, 17:01 a break; the pause counts as work);
 /// fed the union of a project's tasks' sessions it does not double-count parallel work.
 pub fn merged_total_minutes(sessions: &[Session], now: NaiveDateTime, gap_minutes: i64) -> i64 {
     let mut spans: Vec<(NaiveDateTime, NaiveDateTime)> = sessions
@@ -143,7 +144,7 @@ pub fn merged_total_minutes(sessions: &[Session], now: NaiveDateTime, gap_minute
     for (start, end) in spans {
         current = match current {
             None => Some((start, end)),
-            Some((cur_start, cur_end)) if (start - cur_end).num_minutes() < gap_minutes => {
+            Some((cur_start, cur_end)) if (start - cur_end).num_seconds() <= gap_minutes * 60 => {
                 Some((cur_start, end.max(cur_end)))
             }
             Some((cur_start, cur_end)) => {

@@ -13,7 +13,7 @@ const APP_DIR: &str = "iter";
 const CONFIG_FILE: &str = "iter.yaml";
 const DB_FILE: &str = "iter.db";
 
-/// Gaps between sessions shorter than this many minutes count as one continuous span.
+/// Gaps between sessions of at most this many minutes count as one continuous span.
 pub const DEFAULT_PAUSE_GAP_MINUTES: i64 = 17;
 
 /// The editor opened to fill in a new/edited organization, project or task.

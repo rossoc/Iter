@@ -56,7 +56,7 @@ Notes on submissions: checkboxes are present (as `on`) only when ticked; repeate
 
 A refusal is a 403.
 
-`security_headers` puts `X-Frame-Options: SAMEORIGIN`, `Content-Security-Policy` (`frame-ancestors 'self'; default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'`), `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` on every response. No page may carry an inline script (the CSP has no `script-src 'unsafe-inline'`): scripts are `/*.js` assets, and the palette preview is an iframe of this same origin. `style-src` keeps `'unsafe-inline'` for the `style=` attributes (bar widths, tag colours); `data:` images are the SVG masks in the stylesheet. The tests (`guard.rs`) drive the real router in process, no socket.
+`security_headers` puts `X-Frame-Options: SAMEORIGIN`, `Content-Security-Policy` (`frame-ancestors 'self'; default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'`), `X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin` (not `no-referrer`, which makes browsers send `Origin: null` on every POST) on every response. No page may carry an inline script (the CSP has no `script-src 'unsafe-inline'`): scripts are `/*.js` assets, and the palette preview is an iframe of this same origin. `style-src` keeps `'unsafe-inline'` for the `style=` attributes (bar widths, tag colours); `data:` images are the SVG masks in the stylesheet. The tests (`guard.rs`) drive the real router in process, no socket.
 
 ## Errors
 

@@ -40,7 +40,7 @@ pub struct Worklog {
 }
 
 impl Worklog {
-    /// Builds the worklog of `projects` over `sessions` (both from `project_reports`). A day's hours are the merged total of its sessions (a pause shorter than `gap_minutes` counts as work), so parallel tasks are not double-counted, rounded to the nearest half hour.
+    /// Builds the worklog of `projects` over `sessions` (both from `project_reports`). A day's hours are the merged total of its sessions (a pause of at most `gap_minutes` counts as work), so parallel tasks are not double-counted, rounded to the nearest half hour.
     /// A done task reads `Completed` on the last day it was worked on, `Worked on` before.
     pub fn build(
         projects: &[ProjectReport],

@@ -157,7 +157,7 @@ async fn screen(
                 field(name: EDITOR, label: "Editor", value: &values.editor, required: true, identifier: true, error: error,
                     hint: "Opened to fill in a new or edited organization, project or task in the terminal.")
                 field(name: PAUSE_GAP, label: "Pause gap (minutes)", value: &values.pause_gap, required: true, numeric: true, error: error,
-                    hint: "A gap between sessions shorter than this counts as a pause within one span, not a break.")
+                    hint: "A gap between sessions of this many minutes or less counts as a pause within one span, not a break.")
                 select(name: STATUS, label: "Status of a new task", options: &statuses, current: &values.status, error: error)
                 settings_fields(s: &values.settings)
             )

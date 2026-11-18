@@ -88,13 +88,23 @@ fn merged_total_bridges_gaps_under_threshold() {
     assert_eq!(merged_total_minutes(&sessions, now(), 17), 120);
 }
 
+/// 17 minutes or less is a pause: exactly 17 is bridged, 18 is not.
 #[test]
-fn merged_total_keeps_gaps_at_or_above_threshold_separate() {
+fn merged_total_bridges_a_gap_of_exactly_the_threshold() {
     let sessions = vec![
         sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
         sess(1, "2026-09-01 10:17", Some("2026-09-01 11:00"), None),
     ];
-    assert_eq!(merged_total_minutes(&sessions, now(), 17), 60 + 43);
+    assert_eq!(merged_total_minutes(&sessions, now(), 17), 120);
+}
+
+#[test]
+fn merged_total_keeps_gaps_above_threshold_separate() {
+    let sessions = vec![
+        sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
+        sess(1, "2026-09-01 10:18", Some("2026-09-01 11:00"), None),
+    ];
+    assert_eq!(merged_total_minutes(&sessions, now(), 17), 60 + 42);
 }
 
 #[test]
