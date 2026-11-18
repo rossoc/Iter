@@ -2,9 +2,7 @@
 //! rows: the parsing and the URLs live here, `ui/tabs.rs` only draws.
 
 use super::ui::tabs::Tab;
-use super::url::{
-    agent_tab_url, notes_tab_url, projects_tab_url, sessions_tab_url, tasks_tab_url,
-};
+use super::url::{agent_tab_url, notes_tab_url, projects_tab_url, sessions_tab_url, tasks_tab_url};
 use topcoat::router::query_params;
 
 /// The query of the pages with tabs: `?tab=`, and the organization report's

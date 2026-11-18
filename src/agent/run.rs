@@ -19,7 +19,6 @@ pub enum Harness {
 /// What one headless run of a harness is asked to do.
 #[derive(Clone, Copy, Default)]
 pub struct Invocation<'a> {
-    pub prompt: &'a str,
     /// Empty: the harness's own default.
     pub model: &'a str,
     /// Empty: the harness's own default.
@@ -77,7 +76,8 @@ impl Harness {
     }
 }
 
-/// How one agent program is driven; `Harness::backend` dispatches here.
+/// How one agent program is driven; `Harness::backend` dispatches here. The prompt is not in the
+/// command: it goes on the program's standard input (`exec::run_logged`), out of `ps`.
 pub(super) trait AgentBackend {
     fn command(&self, job: &Invocation) -> (&'static str, Vec<String>);
 }
@@ -87,14 +87,14 @@ struct ClaudeCode;
 impl AgentBackend for ClaudeCode {
     fn command(&self, job: &Invocation) -> (&'static str, Vec<String>) {
         let Invocation {
-            prompt,
             model,
             effort,
             dirs,
             allowed,
             extra,
         } = *job;
-        let mut args = vec!["-p".to_string(), prompt.to_string()];
+        // `-p` with no prompt argument reads it from standard input
+        let mut args = vec!["-p".to_string()];
         if !model.is_empty() {
             args.push("--model".into());
             args.push(model.into());
@@ -403,7 +403,6 @@ mod tests {
         let allowed = ["Bash(git:*)".to_string()];
         let extra = ["--verbose".to_string()];
         let job = Invocation {
-            prompt: "do it",
             model: "opus",
             effort: "",
             dirs: &dirs,
@@ -416,7 +415,6 @@ mod tests {
             args,
             [
                 "-p",
-                "do it",
                 "--model",
                 "opus",
                 "--add-dir",
@@ -546,7 +544,6 @@ mod tests {
     fn claude_runs_headless_with_the_prompt_and_the_model() {
         let dir = Path::new("/n/tasks/1");
         let (program, args) = Harness::Claude.command(&Invocation {
-            prompt: "do it",
             model: "haiku",
             effort: "low",
             dirs: &[dir],
@@ -554,20 +551,14 @@ mod tests {
             extra: &["--verbose".into()],
         });
         assert_eq!(program, "claude");
-        assert_eq!(
-            args[..6],
-            ["-p", "do it", "--model", "haiku", "--effort", "low"]
-        );
+        assert_eq!(args[..5], ["-p", "--model", "haiku", "--effort", "low"]);
         assert!(args.windows(2).any(|w| w == ["--add-dir", "/n/tasks/1"]));
         assert!(
             args.windows(2)
                 .any(|w| w == ["--allowedTools", "Bash(git *)"])
         );
         assert_eq!(args.last().map(String::as_str), Some("--verbose"));
-        let (_, bare) = Harness::Claude.command(&Invocation {
-            prompt: "x",
-            ..Invocation::default()
-        });
+        let (_, bare) = Harness::Claude.command(&Invocation::default());
         assert!(!bare.contains(&"--model".to_string()) && !bare.contains(&"--effort".to_string()));
     }
 }

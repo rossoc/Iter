@@ -321,7 +321,6 @@ fn launch(
     let log = crate::utils::fs::create_private(&dir.run_log_path(run.n))?;
     let writable = agent_dir(dir);
     let (program, args) = run.agent.command(&Invocation {
-        prompt: &prompt,
         model: &run.model,
         effort: &run.effort,
         dirs: &[writable.as_path()],
@@ -333,7 +332,7 @@ fn launch(
         (crate::utils::resolve::ENV_TASK, task_id.to_string()),
         (crate::utils::resolve::ENV_PROJECT, project.id().to_string()),
     ];
-    let status = exec::run_logged(program, &args, Path::new(cwd), &env, log)?;
+    let status = exec::run_logged(program, &args, Path::new(cwd), &env, &prompt, log)?;
     Ok(exec::exit_code(status))
 }
 

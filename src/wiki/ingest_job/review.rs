@@ -83,7 +83,6 @@ pub struct Review {
     /// Whether the notes folder is in a git repository (else nothing to review against and an ingest is refused).
     pub in_git: bool,
     pub busy: bool,
-    pub notes_dir: PathBuf,
 }
 
 #[cfg(any(feature = "web", test))]
@@ -100,7 +99,6 @@ pub fn review(db: &Db, project: &Project) -> Result<Review> {
         mode: ingest::mode(&target.wiki.levels).0,
         in_git,
         busy: busy(&target),
-        notes_dir: target.notes_dir.clone(),
     })
 }
 

@@ -113,7 +113,11 @@ fn mode_text(mode: Mode) -> &'static str {
 }
 
 #[component]
-async fn changes_block(project_id: i64, review: &Review, files: &[FileChange]) -> Result<impl View> {
+async fn changes_block(
+    project_id: i64,
+    review: &Review,
+    files: &[FileChange],
+) -> Result<impl View> {
     Ok(view! {
         labelled_section(id: "pending-title", label: "Pending changes", count: Some(files.len()), noun: "files",
             if !review.in_git {

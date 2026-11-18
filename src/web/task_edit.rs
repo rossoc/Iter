@@ -9,9 +9,7 @@ use super::task_fields::task_fields;
 use super::ui::breadcrumb::Crumb;
 use super::ui::field::select;
 use super::ui::form_error::FormError;
-use super::url::{
-    agent_tab_url, notes_tab_url, sessions_tab_url, task_edit_url, task_url,
-};
+use super::url::{agent_tab_url, notes_tab_url, sessions_tab_url, task_edit_url, task_url};
 use super::{Id, open_db};
 use crate::agent::taskdir;
 use crate::db::{Db, Table};

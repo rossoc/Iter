@@ -42,7 +42,8 @@ pub(crate) fn today(app: &App, scope: &NotesScope) -> Result<()> {
     notes::create(&dir, today)?;
     println!(
         "{}",
-        dir.join(format!("{}.md", today.format("%Y-%m-%d"))).display()
+        dir.join(format!("{}.md", today.format("%Y-%m-%d")))
+            .display()
     );
     Ok(())
 }
@@ -77,7 +78,10 @@ impl Run for NoteCommand {
             Self::Read { address } => {
                 let found = note_ref::locate(&app.db, &note_ref::parse(address)?, today)?;
                 let file = found.file.ok_or_else(|| missing(address))?;
-                print!("{}", std::fs::read_to_string(&file).map_err(|_| missing(address))?);
+                print!(
+                    "{}",
+                    std::fs::read_to_string(&file).map_err(|_| missing(address))?
+                );
                 Ok(())
             }
             Self::Path { address } => {
@@ -151,9 +155,8 @@ fn act(app: &App, mut address: Address, action: &DocCommand) -> Result<()> {
                 println!("{}", file.display());
                 return Ok(());
             }
-            let text = std::fs::read_to_string(&file).map_err(|_| {
-                IterError::CommandFailed(format!("no {} '{name}'", noun(&doc)))
-            })?;
+            let text = std::fs::read_to_string(&file)
+                .map_err(|_| IterError::CommandFailed(format!("no {} '{name}'", noun(&doc))))?;
             print!("{text}");
             Ok(())
         }
@@ -235,8 +238,10 @@ fn compose(
     if split.opened && split.front.is_some() {
         return Ok(body);
     }
-    let (Some(description), false) = (description.filter(|d| !d.trim().is_empty()), tags.is_empty())
-    else {
+    let (Some(description), false) = (
+        description.filter(|d| !d.trim().is_empty()),
+        tags.is_empty(),
+    ) else {
         return Err(IterError::CommandFailed(
             "a wiki page needs --description and --tags (or front matter in its text)".into(),
         ));
@@ -318,13 +323,24 @@ mod tests {
     use super::*;
 
     fn app() -> App {
-        App::over(crate::fixtures::db(), crate::fixtures::dt("2026-11-18 10:00"))
+        App::over(
+            crate::fixtures::db(),
+            crate::fixtures::dt("2026-11-18 10:00"),
+        )
     }
 
     #[test]
     fn a_page_gets_the_front_matter_the_wiki_checks() {
         let page = Doc::Page("concept".into());
-        let text = compose(&page, "Backoff", "Wait longer each time.", Some("Retry waits grow"), &["net".into(), "retry".into()], &app()).unwrap();
+        let text = compose(
+            &page,
+            "Backoff",
+            "Wait longer each time.",
+            Some("Retry waits grow"),
+            &["net".into(), "retry".into()],
+            &app(),
+        )
+        .unwrap();
         assert_eq!(
             text,
             "---\ndescription: Retry waits grow\ntags:\n- net\n- retry\nupdated: 2026-11-18T10:00:00\n---\n# Backoff\n\nWait longer each time.\n"
@@ -335,7 +351,10 @@ mod tests {
         // without either, refused
         assert!(compose(&page, "x", "body", Some("d"), &[], &app()).is_err());
         // a sketch is the text, or a title
-        assert_eq!(compose(&Doc::Sketch, "Cause", "", None, &[], &app()).unwrap(), "# Cause\n");
+        assert_eq!(
+            compose(&Doc::Sketch, "Cause", "", None, &[], &app()).unwrap(),
+            "# Cause\n"
+        );
         assert_eq!(
             compose(&Doc::Sketch, "Cause", "It loops.", None, &[], &app()).unwrap(),
             "# Cause\n\nIt loops.\n"

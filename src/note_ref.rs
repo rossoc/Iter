@@ -81,16 +81,25 @@ pub fn parse(text: &str) -> Result<Address> {
     let start = parts
         .iter()
         .position(|p| {
-            is_note(p) || is_sketch(p) || *p == "wiki" || *p == "tasks" || notes::parse_date(p).is_some()
+            is_note(p)
+                || is_sketch(p)
+                || *p == "wiki"
+                || *p == "tasks"
+                || notes::parse_date(p).is_some()
         })
         .ok_or_else(|| bad(text, "say note, wiki, tasks or sketch"))?;
     let owners: Vec<String> = parts[..start].iter().map(|p| p.to_string()).collect();
     if owners.len() > 2 {
-        return Err(bad(text, "at most an organization and a project come first"));
+        return Err(bad(
+            text,
+            "at most an organization and a project come first",
+        ));
     }
     let name = |p: &str| Some(p.to_string());
     let (task, doc, name) = match &parts[start..] {
-        [day] if notes::parse_date(day).is_some() => (None, Doc::Daily(notes::parse_date(day)), None),
+        [day] if notes::parse_date(day).is_some() => {
+            (None, Doc::Daily(notes::parse_date(day)), None)
+        }
         [n] if is_note(n) => (None, Doc::Daily(None), None),
         [n, day] if is_note(n) && notes::parse_date(day).is_some() => {
             (None, Doc::Daily(notes::parse_date(day)), None)
@@ -99,7 +108,11 @@ pub fn parse(text: &str) -> Result<Address> {
         [s, file] if is_sketch(s) => (None, Doc::Sketch, name(file)),
         ["wiki", class, file] => (None, Doc::Page(class.to_string()), name(file)),
         ["tasks", task, kind, file] if is_note(kind) || is_sketch(kind) => {
-            let doc = if is_note(kind) { Doc::TaskNote } else { Doc::Sketch };
+            let doc = if is_note(kind) {
+                Doc::TaskNote
+            } else {
+                Doc::Sketch
+            };
             (Some(task.to_string()), doc, name(file))
         }
         _ => return Err(bad(text, "see `iter note read --help` for the shapes")),
@@ -224,7 +237,11 @@ pub fn page_folder(class: &str, kind: LevelKind, level_dir: &std::path::Path) ->
     places
         .iter()
         .find(|p| {
-            let local = p.class.as_str().strip_prefix(NS).unwrap_or(p.class.as_str());
+            let local = p
+                .class
+                .as_str()
+                .strip_prefix(NS)
+                .unwrap_or(p.class.as_str());
             let folder = p.folder.rsplit('/').next().unwrap_or(&p.folder);
             local.eq_ignore_ascii_case(&wanted) || folder.eq_ignore_ascii_case(&wanted)
         })
@@ -310,12 +327,26 @@ mod tests {
     fn every_shape_reads() {
         let day = NaiveDate::from_ymd_opt(2026, 11, 18);
         assert_eq!(doc("note"), (vec![], None, Doc::Daily(None), None));
-        assert_eq!(doc("acme/app/note"), (vec![s("acme"), s("app")], None, Doc::Daily(None), None));
-        assert_eq!(doc("app/2026-11-18"), (vec![s("app")], None, Doc::Daily(day), None));
-        assert_eq!(doc("note/2026-11-18.md"), (vec![], None, Doc::Daily(day), None));
+        assert_eq!(
+            doc("acme/app/note"),
+            (vec![s("acme"), s("app")], None, Doc::Daily(None), None)
+        );
+        assert_eq!(
+            doc("app/2026-11-18"),
+            (vec![s("app")], None, Doc::Daily(day), None)
+        );
+        assert_eq!(
+            doc("note/2026-11-18.md"),
+            (vec![], None, Doc::Daily(day), None)
+        );
         assert_eq!(
             doc("acme/wiki/concepts/backoff"),
-            (vec![s("acme")], None, Doc::Page(s("concepts")), Some(s("backoff")))
+            (
+                vec![s("acme")],
+                None,
+                Doc::Page(s("concepts")),
+                Some(s("backoff"))
+            )
         );
         assert_eq!(
             doc("app/tasks/7/sketch/cause"),
@@ -325,8 +356,14 @@ mod tests {
             doc("tasks/7/notes/ideas"),
             (vec![], Some(s("7")), Doc::TaskNote, Some(s("ideas")))
         );
-        assert_eq!(doc("sketch/cause"), (vec![], None, Doc::Sketch, Some(s("cause"))));
-        assert_eq!(doc("note/ideas"), (vec![], None, Doc::TaskNote, Some(s("ideas"))));
+        assert_eq!(
+            doc("sketch/cause"),
+            (vec![], None, Doc::Sketch, Some(s("cause")))
+        );
+        assert_eq!(
+            doc("note/ideas"),
+            (vec![], None, Doc::TaskNote, Some(s("ideas")))
+        );
     }
 
     #[test]
@@ -350,14 +387,26 @@ mod tests {
         let today = fixtures::day("2026-11-18");
         let at = |text: &str| {
             let located = locate(&w.db, &parse(text).unwrap(), today).unwrap();
-            located.file.unwrap().strip_prefix(&w.notes).unwrap().display().to_string()
+            located
+                .file
+                .unwrap()
+                .strip_prefix(&w.notes)
+                .unwrap()
+                .display()
+                .to_string()
         };
         let id = w.task_id;
         assert_eq!(at("app/note"), "2026-11-18.md");
         assert_eq!(at("app/wiki/concept/backoff"), "wiki/concepts/backoff.md");
         assert_eq!(at("app/wiki/Synthesis/x"), "wiki/syntheses/x.md");
-        assert_eq!(at(&format!("tasks/{id}/sketch/Root Cause")), format!("tasks/{id}/sketches/root-cause.md"));
-        assert_eq!(at(&format!("app/tasks/Fix it/note/a")), format!("tasks/{id}/notes/a.md"));
+        assert_eq!(
+            at(&format!("tasks/{id}/sketch/Root Cause")),
+            format!("tasks/{id}/sketches/root-cause.md")
+        );
+        assert_eq!(
+            at(&format!("app/tasks/Fix it/note/a")),
+            format!("tasks/{id}/notes/a.md")
+        );
         // a class the ontology does not place at the project level
         assert!(locate(&w.db, &parse("app/wiki/plan/x").unwrap(), today).is_err());
         let _ = std::fs::remove_dir_all(&w.notes);

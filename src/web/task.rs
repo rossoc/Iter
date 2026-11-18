@@ -91,9 +91,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
         _ => None,
     };
     let files = match section {
-        TaskSection::Notes => {
-            Some(task_agent::files(&db, &page.parents.project, &page.task))
-        }
+        TaskSection::Notes => Some(task_agent::files(&db, &page.parents.project, &page.task)),
         _ => None,
     };
     let plan = (section == TaskSection::Info)

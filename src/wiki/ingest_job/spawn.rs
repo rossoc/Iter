@@ -17,7 +17,6 @@ pub fn run_agent(
     let _lock = lock(target)?;
     let harness = opts.agent.unwrap_or_default();
     let (program, args) = harness.command(&Invocation {
-        prompt,
         model: opts.model.as_deref().unwrap_or(""),
         allowed: &crate::config::config().agent.allowed_tools,
         extra: &opts.extra,
@@ -27,7 +26,7 @@ pub fn run_agent(
         crate::utils::resolve::ENV_PROJECT,
         crate::models::Table::id(&target.project).to_string(),
     )];
-    let ok = exec::run_logged(program, &args, &target.notes_dir, &env, log)?.success();
+    let ok = exec::run_logged(program, &args, &target.notes_dir, &env, prompt, log)?.success();
     Ok((log_path, ok))
 }
 
