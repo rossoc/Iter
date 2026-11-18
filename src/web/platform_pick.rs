@@ -76,8 +76,10 @@ struct Activities {
     activities: Vec<String>,
 }
 
-/// `GET /org/{id}/platform-activities?project=NAME`: the project's activity names as JSON (empty when the platform cannot say).
-#[route(GET "/org/{id}/platform-activities")]
+/// `POST /org/{id}/platform-activities?project=NAME`: the project's activity names as JSON (empty
+/// when the platform cannot say). A POST although it changes nothing: it makes an authenticated
+/// call to the platform, which a GET from any site (an `<img>`) could set off.
+#[route(POST "/org/{id}/platform-activities")]
 async fn activities_of(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<ProjectQuery>(cx)?;

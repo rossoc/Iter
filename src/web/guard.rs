@@ -44,8 +44,11 @@ fn allowed(
         return false;
     }
     match origin {
-        Some(origin) => origin.split_once("://").is_some_and(|(_, rest)| {
-            is_loopback(rest) && host.is_some_and(|h| h.eq_ignore_ascii_case(rest))
+        // `serve` speaks plain http: an `https://` origin on the same host and port is another site
+        Some(origin) => origin.split_once("://").is_some_and(|(scheme, rest)| {
+            scheme.eq_ignore_ascii_case("http")
+                && is_loopback(rest)
+                && host.is_some_and(|h| h.eq_ignore_ascii_case(rest))
         }),
         // Neither header: not a browser tab (a page's request carries one), so `curl` works.
         None => true,
@@ -123,6 +126,9 @@ mod tests {
         assert!(allowed(false, host, None, None));
         assert!(!allowed(false, host, Some("https://evil.example"), None));
         assert!(!allowed(false, host, Some("http://127.0.0.1:9999"), None));
+        // same host and port, other scheme: not this server's pages
+        assert!(!allowed(false, host, Some("https://127.0.0.1:3000"), None));
+        assert!(!allowed(false, host, Some("null"), None));
     }
 
     /// A browser that stripped `Origin` still says the request is cross-site.
