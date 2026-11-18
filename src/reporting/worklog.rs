@@ -28,7 +28,9 @@ pub struct WorklogEntry {
     pub note: String,
 }
 
-/// The hours of a period as one entry per day; a day's work is never split.
+/// The hours of a period as one entry per day; a day's work is never split. Each day's hours are
+/// rounded to the nearest half hour (so the total is the sum of rounded days, not a rounded sum);
+/// a day that rounds to nothing is left out.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Worklog {
     pub entries: Vec<WorklogEntry>,
@@ -38,7 +40,7 @@ pub struct Worklog {
 }
 
 impl Worklog {
-    /// Builds the worklog of `projects` over `sessions` (both from `project_reports`). A day's hours are the merged total of its sessions, so parallel tasks are not double-counted.
+    /// Builds the worklog of `projects` over `sessions` (both from `project_reports`). A day's hours are the merged total of its sessions (a pause shorter than `gap_minutes` counts as work), so parallel tasks are not double-counted, rounded to the nearest half hour.
     /// A done task reads `Completed` on the last day it was worked on, `Worked on` before.
     pub fn build(
         projects: &[ProjectReport],
@@ -55,7 +57,12 @@ impl Worklog {
         let tasks: Vec<&TaskReport> = projects.iter().flat_map(|p| &p.tasks).collect();
         let entries = by_day
             .into_iter()
-            .map(|(day, of_day)| {
+            .filter_map(|(day, of_day)| {
+                let minutes = merged_total_minutes(&of_day, now, gap_minutes);
+                let time = round_to_half_hour(minutes as f64 / 60.0);
+                if time == 0.0 {
+                    return None;
+                }
                 let lines: Vec<String> = tasks
                     .iter()
                     .filter(|t| t.sessions.iter().any(|r| r.day == day))
@@ -65,14 +72,13 @@ impl Worklog {
                         format!("- {}", worklog_line(&t.name, done))
                     })
                     .collect();
-                let minutes = merged_total_minutes(&of_day, now, gap_minutes);
-                WorklogEntry {
+                Some(WorklogEntry {
                     project: project.to_string(),
                     activity: activity.to_string(),
                     day: fmt_date(day),
-                    time: (minutes as f64 / 60.0 * 100.0).round() / 100.0,
+                    time,
                     note: lines.join("\n"),
-                }
+                })
             })
             .collect();
         Worklog {

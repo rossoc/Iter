@@ -586,6 +586,42 @@ fn entries_are_one_per_day_with_merged_hours() {
     assert_eq!(log.total_hours(), 2.5);
 }
 
+/// Each day is rounded to the half hour on its own (two days of 1:10 are 1.0 + 1.0, not a rounded
+/// 2:20), after the pauses under the gap are counted as work; a day of a few minutes is left out.
+#[test]
+fn each_day_is_rounded_to_the_half_hour_after_the_pauses() {
+    let (projects, all) = project_of(vec![(
+        "A",
+        TaskStatus::Wip,
+        vec![
+            sess(1, "2026-09-01 09:00", Some("2026-09-01 10:10"), None),
+            sess(1, "2026-09-02 09:00", Some("2026-09-02 10:10"), None),
+            // 09:00-09:50 and 10:05-10:40: the 15-minute pause is work, 1:40 in all
+            sess(1, "2026-09-03 09:00", Some("2026-09-03 09:50"), None),
+            sess(1, "2026-09-03 10:05", Some("2026-09-03 10:40"), None),
+            // a 20-minute pause is a break: 0:50 + 0:30 = 1:20
+            sess(1, "2026-09-04 09:00", Some("2026-09-04 09:50"), None),
+            sess(1, "2026-09-04 10:10", Some("2026-09-04 10:40"), None),
+            // 2:15 is a quarter past: up to 2.5
+            sess(1, "2026-09-05 09:00", Some("2026-09-05 11:15"), None),
+            sess(1, "2026-09-06 09:00", Some("2026-09-06 09:10"), None),
+        ],
+    )]);
+    let log = Worklog::build(&projects, &all, now(), 17, "acme", "dev");
+    let days: Vec<(&str, f64)> = log.entries.iter().map(|e| (e.day.as_str(), e.time)).collect();
+    assert_eq!(
+        days,
+        [
+            ("2026-09-01", 1.0),
+            ("2026-09-02", 1.0),
+            ("2026-09-03", 1.5),
+            ("2026-09-04", 1.5),
+            ("2026-09-05", 2.5),
+        ]
+    );
+    assert_eq!(log.total_hours(), 7.5);
+}
+
 #[test]
 fn an_open_session_marks_the_worklog() {
     let (projects, all) = project_of(vec![(
