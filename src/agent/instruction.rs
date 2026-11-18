@@ -54,6 +54,22 @@ pub fn layers_of(
     Ok(layers)
 }
 
+/// [`layers_of`] with the task's own folder in front: the layers a run of `task` is offered, checked
+/// and filled from. One function so the compose form, its prompt preview and the POST that saves it
+/// cannot disagree about which instructions exist. A task with no folder adds nothing.
+#[cfg(feature = "web")]
+pub fn layers_for_task(
+    db: &crate::db::Db,
+    project: &crate::models::Project,
+    task: &crate::models::Task,
+) -> crate::error::Result<Layers> {
+    let mut layers = layers_of(db, project)?;
+    if let Ok(dir) = crate::agent::taskdir::of(db, project, task) {
+        layers.insert(0, (Source::Task, dir.root().to_path_buf()));
+    }
+    Ok(layers)
+}
+
 #[cfg(feature = "web")]
 pub fn global() -> Option<PathBuf> {
     crate::config::config_dir().ok()

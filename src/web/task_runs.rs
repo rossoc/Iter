@@ -143,8 +143,8 @@ fn world(id: i64) -> Result<(App, String, Task, Project)> {
 async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let (app, name, task, project) = world(id)?;
-    let (kind, spec) =
-        parse_run(&form, &instruction::layers_of(&app.db, &project)?).map_err(bad_request)?;
+    let layers = instruction::layers_for_task(&app.db, &project, &task)?;
+    let (kind, spec) = parse_run(&form, &layers).map_err(bad_request)?;
     let n = solve::create(
         &app,
         &name,
@@ -166,10 +166,7 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<TabQuery>(cx)?;
     let (app, name, task, project) = world(id)?;
-    let mut layers = instruction::layers_of(&app.db, &project)?;
-    if let Ok(dir) = taskdir::of(&app.db, &project, &task) {
-        layers.insert(0, (instruction::Source::Task, dir.root().to_path_buf()));
-    }
+    let layers = instruction::layers_for_task(&app.db, &project, &task)?;
     let chosen = query.instruction.as_deref().unwrap_or_default();
     let inst = instruction::find(chosen, &layers).ok_or_not_found()?;
     let prompt = crate::agent::task_prompt::prompt_for(
@@ -201,9 +198,9 @@ fn follow_up(app: &App, name: &str, n: u32, action: RunButton) -> Result<()> {
 async fn edit_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let n = *path_param::<N>(cx)?;
-    let (app, name, _, project) = world(id)?;
-    let (kind, spec) =
-        parse_run(&form, &instruction::layers_of(&app.db, &project)?).map_err(bad_request)?;
+    let (app, name, task, project) = world(id)?;
+    let layers = instruction::layers_for_task(&app.db, &project, &task)?;
+    let (kind, spec) = parse_run(&form, &layers).map_err(bad_request)?;
     solve::amend(&app, &name, n, kind, &form.instruction, &spec, &form.prompt).map_err(refused)?;
     follow_up(&app, &name, n, form.action)?;
     Err(see_other(agent_url(id, n)).into())
@@ -240,6 +237,30 @@ mod tests {
             prompt: "do it".into(),
             action: RunButton::Run,
         }
+    }
+
+    /// The compose form offers the task folder's own instructions; the POST must take them too.
+    #[test]
+    fn a_task_folder_instruction_is_one_a_run_can_be_given() {
+        let w = crate::fixtures::world("runs-task-layer");
+        let project = w.db.get::<Project>(w.project_id).unwrap().unwrap();
+        let task = w.db.get::<Task>(w.task_id).unwrap().unwrap();
+        let dir = taskdir::of(&w.db, &project, &task).unwrap();
+        std::fs::create_dir_all(dir.root().join("instructions")).unwrap();
+        std::fs::write(
+            dir.root().join("instructions").join("review.md"),
+            "---\nkind: check\n---\nLook it over.\n",
+        )
+        .unwrap();
+
+        let layers = instruction::layers_for_task(&w.db, &project, &task).unwrap();
+        let (kind, _) = parse_run(&form("review", "sonnet", "high"), &layers).unwrap();
+        assert_eq!(kind, Kind::Check);
+        // without the task's layer, as the POST used to check it
+        let project_only = instruction::layers_of(&w.db, &project).unwrap();
+        assert!(parse_run(&form("review", "sonnet", "high"), &project_only).is_err());
+
+        std::fs::remove_dir_all(&w.notes).unwrap();
     }
 
     #[test]

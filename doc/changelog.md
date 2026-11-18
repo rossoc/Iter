@@ -9,6 +9,7 @@
 - **C-02** A confirmed push of a worklog already in the ledger is previewed, not executed; a push is answered with a 303 to the report (`?pushed=<hash>`), which shows the ledger row's lines.
 - **C-01** `iter clone` refuses a destination inside the source project's folder (it used to copy itself until the path was too long) and no longer copies `.iter-worktrees/` (`scaffold::copy_template`).
 - **C-04** `task done` (without `--save`), `task delete` and `project delete` keep a task branch that has commits not merged into the checked-out branch, with a warning, instead of `git branch -D` losing them to the reflog (`git::delete_branch`, `git::is_merged`).
+- **C-03** A run can be given an instruction from the task's own `instructions/` folder: the New agent form offered and previewed it, but saving refused it. The form, the preview and both POSTs now share `instruction::layers_for_task`.
 - **W-02 / W-03** The top bar wraps up to 700px (`--bar-h` 82px there) and project paths shrink (`table-layout:fixed`) so framed pages no longer scroll sideways.
 
 ### Added

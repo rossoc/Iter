@@ -112,10 +112,7 @@ pub fn load(app: &App, project: &Project, task: &Task, open: &Open) -> Loaded<Ag
         None => None,
     };
     let name = task_display(project, task);
-    let mut layers = instruction::layers_of(db, project)?;
-    if let Some(dir) = &dir {
-        layers.insert(0, (instruction::Source::Task, dir.root().to_path_buf()));
-    }
+    let layers = instruction::layers_for_task(db, project, task)?;
     let parsed = plan::parse(plan_text.as_deref().unwrap_or(""));
     let roster = Roster::load(
         app,
