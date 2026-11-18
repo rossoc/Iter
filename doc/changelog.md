@@ -18,6 +18,7 @@
 - **S-12** The guard compares the `Origin` scheme too: `https://127.0.0.1:<port>` is not this server.
 - **S-07** needs no change of its own: `//host` links are as allowed as `https://` ones, and the S-01 headers (`img-src 'self'`, `Referrer-Policy: no-referrer`) block remote images and the port leak.
 - **S-06** The prompt goes to `claude -p` on its standard input, no longer on its command line where `ps` showed it to every user (`exec::run_logged` takes the input; `Invocation` has no prompt). Checked against the real `claude`.
+- `iter task plan` with no flag and no terminal (an agent) prints the plan instead of waiting on an editor nobody sees. The develop and test prompts say the worktree is the agent's current directory (`git status`, not `git -C`, which the allowed commands do not match).
 - **W-02 / W-03** The top bar wraps up to 700px (`--bar-h` 82px there) and project paths shrink (`table-layout:fixed`) so framed pages no longer scroll sideways.
 
 ### Added

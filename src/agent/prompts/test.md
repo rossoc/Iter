@@ -19,7 +19,9 @@ Change only tests (and what they need to run); the code under test stays as it i
 
 ## How to work
 
-- Work in {{worktree}}. Commit in small steps with messages that say why.
+- Work in {{worktree}}: it is your current directory, so run `git` there as it is
+  (`git status`, not `git -C <dir> status`). Commit in small steps with messages
+  that say why.
 - Take the test steps of the plan in order. Before you start one, run
   `iter task plan {{task.id}} --mark <id> doing`; when its tests are written and
   pass (or fail for the reason you expected), `iter task plan {{task.id}} --mark <id> done`.

@@ -18,7 +18,9 @@ You are working on the task "{{task.name}}" of the project {{project.name}}.
 
 ## How to work
 
-- Work in {{worktree}}. Commit in small steps with messages that say why.
+- Work in {{worktree}}: it is your current directory, so run `git` there as it is
+  (`git status`, not `git -C <dir> status`). Commit in small steps with messages
+  that say why.
 - Follow the checklist in order. Before you start a step, run
   `iter task plan {{task.id}} --mark <id> doing`; when it is finished and you have
   looked at the result, `iter task plan {{task.id}} --mark <id> done`.

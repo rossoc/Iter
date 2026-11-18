@@ -52,8 +52,9 @@ fn progress_line(p: &Progress) -> String {
     line
 }
 
-/// What `iter task plan` was asked: alone it edits, `--show` prints,
-/// `--stdin` replaces, `--mark` ticks a step.
+/// What `iter task plan` was asked: alone it edits (or, with no terminal to edit in, prints: an
+/// agent asking for its plan must not wait on an editor it cannot see), `--show` prints, `--stdin`
+/// replaces, `--mark` ticks a step.
 pub struct PlanRequest<'a> {
     pub task: Option<&'a str>,
     pub show: bool,
@@ -74,7 +75,9 @@ pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
         println!("{step}: {} -- {}", state.label(), progress_line(&p));
         return Ok(());
     }
-    if req.show {
+    use std::io::IsTerminal;
+    let no_terminal = !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal();
+    if req.show || (!req.stdin && no_terminal) {
         let content = dir.read_plan()?;
         let v = view(&name, &dir, content.as_deref());
         return emit(req.format, &v, || match &content {
