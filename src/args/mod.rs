@@ -12,7 +12,7 @@ use clap_complete::engine::ArgValueCompleter;
 
 mod board;
 mod internal;
-mod notes;
+mod note;
 mod organization;
 mod project;
 mod session;
@@ -22,7 +22,7 @@ mod wiki;
 
 pub use board::*;
 pub use internal::*;
-pub use notes::*;
+pub use note::*;
 pub use organization::*;
 pub use project::*;
 pub use session::*;
@@ -153,10 +153,11 @@ pub enum Command {
         action: WikiCommand,
     },
 
-    /// Daily notes of a project or an organization
-    Notes {
+    /// Notes: today's daily note (alone), daily notes, a task's notes and sketches, wiki pages
+    #[clap(alias = "notes")]
+    Note {
         #[clap(subcommand)]
-        action: NotesCommand,
+        action: Option<NoteCommand>,
     },
 
     /// Set up and track a task's session (tmux + git worktree/branch, and

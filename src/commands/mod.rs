@@ -4,7 +4,7 @@ pub mod agent;
 pub mod board;
 pub mod ingest;
 pub mod misc;
-pub mod notes;
+pub mod note;
 pub mod organization;
 pub mod project;
 pub mod session;

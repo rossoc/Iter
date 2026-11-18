@@ -22,7 +22,8 @@ You are fixing a defect in the project {{project.name}}: "{{task.name}}".
    fail (a test, if the project has tests). If you cannot reproduce it, say
    what you tried and stop.
 2. Find the cause, not only the place where it shows. Write it in
-   {{task.dir}}/sketches/cause.md in a few lines.
+   the sketch `cause` in a few lines (`iter note sketch new cause`, the text on
+   standard input).
 3. Make the smallest change that removes the cause. Do not clean up around it.
 4. Run the reproduction again, then the rest of the project's checks, and say
    what you ran and what it printed.

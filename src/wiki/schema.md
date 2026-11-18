@@ -61,8 +61,8 @@ Relations you may write in the front matter (a value or a list):
    `owl:`, `rdf:`, `rdfs:`, `xsd:` are declared. A page is `<urn:iter:LEVEL/PATH>`,
    for example `<urn:iter:acme.app/wiki/concepts/backoff>`.
 
-Every command takes `--task`, `--project` or `--org` (default: the task of the
-tmux session you are in), and `--format text|yaml|json`.
+Every command takes `--task`, `--project` or `--org` (default: the task you work
+on, else the project), and `--format text|yaml|json`.
 
 ## Writing
 
@@ -76,6 +76,10 @@ tmux session you are in), and `--format text|yaml|json`.
 - **Contradiction.** If a new note disagrees with a page, keep both and say so:
   `contradicts` on the new page, or `supersedes` if it replaces the old one.
   Lower `confidence` where the evidence is thin.
+- **Write** a page with `iter note <class> new <name> -d "<description>" --tags a,b`
+  (class `idea`, `concept`, `entity` or `synthesis`; the body on standard input),
+  or with its own front matter on standard input. Sketches: `iter note sketch new
+  <name>`. `iter note read <address>` reads any of them.
 - **Move** a page with `iter wiki mv <from> <to>`, never with `mv`: it rewrites
   every reference.
 - **Check** your work with `iter wiki check`. Fix every error. Warnings are

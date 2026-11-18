@@ -148,7 +148,8 @@ pub(crate) fn current_project_at(
 ) -> Result<Project> {
     match current_task_at(db, here, tmux_session) {
         Ok((project, _)) => return Ok(project),
-        Err(IterError::NoCurrentTask) => {}
+        // a tmux session iter does not track says nothing about the project either
+        Err(IterError::NoCurrentTask | IterError::UntrackedTmuxSession(_)) => {}
         Err(e) => return Err(e),
     }
     if let Some(project) = &here.project {
@@ -328,6 +329,10 @@ mod tests {
             project(&here(None, None, Some(p.root.clone()))),
             Err(IterError::NoCurrentProject)
         ));
+        // in a tmux session iter does not track, the folder still answers
+        let in_folder = here(None, None, Some(p.root.join("app")));
+        let found = current_project_at(&p.db, &in_folder, || Some("other".into())).unwrap();
+        assert_eq!(found.name, "app");
         let _ = p.a;
         std::fs::remove_dir_all(&p.root).unwrap();
     }

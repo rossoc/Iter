@@ -61,6 +61,7 @@ impl Default for AgentConfig {
                 "Bash(iter wiki neighbors *)",
                 "Bash(iter wiki check *)",
                 "Bash(iter wiki schema *)",
+                "Bash(iter note *)",
                 "Bash(iter notes *)",
                 // and git, to look at its work and commit it (not to push or rewrite)
                 "Bash(git status *)",

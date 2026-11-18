@@ -45,7 +45,7 @@ fn ask(db: &Db, spec: &Spec) -> Result<Asked> {
             let org = db.org_of(&project)?;
             Ok(Asked::Task(project, task, org))
         }
-        Err(IterError::NoCurrentTask) => {
+        Err(IterError::NoCurrentTask | IterError::UntrackedTmuxSession(_)) => {
             let project = current_project(db).map_err(|e| match e {
                 IterError::NoCurrentProject => IterError::CommandFailed(
                     "no current task or project: say which wiki with --task, --project or --org"

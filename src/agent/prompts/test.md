@@ -27,5 +27,6 @@ Change only tests (and what they need to run); the code under test stays as it i
   test that cannot fail is not a test.
 - Run the whole suite at the end and say what you ran and what it printed. If
   a test shows a bug, do not fix it here: write it in
-  {{task.dir}}/sketches/test.md and leave the test failing.
+  the sketch `test` (`iter note sketch new test --append`, the text on standard
+  input) and leave the test failing.
 - Never edit the user's notes.

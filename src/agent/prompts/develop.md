@@ -27,8 +27,10 @@ You are working on the task "{{task.name}}" of the project {{project.name}}.
 - If the plan is wrong, fix the plan first (`iter task plan {{task.id}} --stdin`, the
   whole plan on standard input) and say why in a sketch. Do not quietly do
   something else.
-- Keep what you learn and decide in {{task.dir}}/sketches/, one markdown file
-  per topic. It is your memory for this task and the user will read it.
+- Keep what you learn and decide in sketches, one per topic: `iter note sketch new
+  <topic>` with the markdown on standard input (`--append` to add to one,
+  `iter note sketch list` and `iter note sketch read <topic>` to look back). They are
+  your memory for this task and the user will read them.
 - Never edit the user's notes.
 - If you cannot ask anyone, decide, and write the decision and the reason in a
   sketch.

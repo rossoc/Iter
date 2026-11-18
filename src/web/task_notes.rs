@@ -48,22 +48,8 @@ struct NoteForm {
     text: String,
 }
 
-/// The file stem a note's name makes: lowercase letters and digits, any run of
-/// anything else one `-`. Never a path, so a name cannot leave the folder.
 fn stem(name: &str) -> std::result::Result<String, String> {
-    let mut out = String::new();
-    for c in name.trim().chars().take(64) {
-        if c.is_alphanumeric() {
-            out.extend(c.to_lowercase());
-        } else if !out.ends_with('-') && !out.is_empty() {
-            out.push('-');
-        }
-    }
-    let out = out.trim_end_matches('-').to_string();
-    match out.is_empty() {
-        true => Err("a note needs a name".into()),
-        false => Ok(out),
-    }
+    crate::notes::stem(name).ok_or_else(|| "a note needs a name".into())
 }
 
 fn write(dir: &Path, form: &NoteForm) -> std::result::Result<(), String> {

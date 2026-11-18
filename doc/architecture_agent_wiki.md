@@ -5,6 +5,7 @@ Design notes for `src/agent`, `src/wiki`, `src/push.rs`, `src/sync.rs`, `src/pla
 ## Agent: task folder and plan (`src/agent/taskdir.rs`, `plan.rs`)
 
 - A task's folder is `tasks/<id>/` inside its project's notes folder (else in iter's config directory when neither project nor organization has notes). It holds the plan, the task's own notes, the agent's sketches and `runs/`. It lives with the notes, not in the worktree, so discarding a branch loses nothing planned or learned.
+- Nobody needs these paths: `iter note` reads and writes by kind (`iter note sketch|task|idea|concept|entity|synthesis list|new|read`) or by address (`iter note read app/tasks/7/sketch/cause`, `acme/app/wiki/concepts/backoff`, `note`), and fills what is left out from the current task (`ITER_TASK`, set on every agent iter starts; else the worktree the command runs in; else the tmux session) or project (`ITER_PROJECT`, else the project folder). A task agent's `--add-dir` is only `sketches/`; the plan goes through `iter task plan`.
 - The plan is `plan.md`, a markdown file and the only store:
 
   ```text

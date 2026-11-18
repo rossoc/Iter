@@ -166,7 +166,9 @@ mod tests {
         let text = prompt_text(&app, Some("app/Fix it"), Kind::Develop, None, true).unwrap();
         assert!(text.contains("Fix it") && text.contains("Retries hammer the api."));
         assert!(text.contains("(there is no plan yet)"));
-        assert!(text.contains(&notes.join("tasks/1/sketches").display().to_string()));
+        // sketches go through the CLI, which knows the folder: the agent needs no path
+        assert!(text.contains("iter note sketch new"));
+        assert!(!text.contains(&notes.join("tasks/1/sketches").display().to_string()));
         assert!(!text.contains("{{"));
         assert!(notes.join("tasks/1/sketches").is_dir());
 

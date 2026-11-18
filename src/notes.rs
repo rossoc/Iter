@@ -259,6 +259,22 @@ fn resolve(path: &str) -> Option<PathBuf> {
     (!path.is_empty()).then(|| expand_home(path))
 }
 
+/// The file stem a note's or a page's name makes: lowercase letters and digits, any run of anything
+/// else one `-`, at most 64 characters. Never a path, so a name cannot leave its folder; `None` when
+/// nothing is left. One rule for the web's New note and `iter note … new`.
+pub fn stem(name: &str) -> Option<String> {
+    let mut out = String::new();
+    for c in name.trim().chars().take(64) {
+        if c.is_alphanumeric() {
+            out.extend(c.to_lowercase());
+        } else if !out.ends_with('-') && !out.is_empty() {
+            out.push('-');
+        }
+    }
+    let out = out.trim_end_matches('-').to_string();
+    (!out.is_empty()).then_some(out)
+}
+
 /// The folder of task `id` inside its project's notes folder: its plan, its
 /// own notes and the agent's sketches (`tasks/<id>/`).
 pub fn task_dir(project_dir: &Path, id: i64) -> PathBuf {

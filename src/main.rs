@@ -17,6 +17,7 @@ mod git;
 mod github;
 mod md_edit;
 mod models;
+mod note_ref;
 mod notes;
 mod platform;
 mod process;
@@ -81,7 +82,10 @@ fn main() -> ExitCode {
             None => task::task_list(app, None, &[TaskStatus::Queue, TaskStatus::Wip]),
         },
         Command::Wiki { action } => action.run(app),
-        Command::Notes { action } => action.run(app),
+        Command::Note { action } => match action {
+            Some(action) => action.run(app),
+            None => commands::note::today(app, &args::NotesScope::default()),
+        },
         Command::Session { action } => action.run(app),
         Command::Comment { task, message } => misc::comment_cmd(app, task.as_deref(), message),
         Command::T => misc::t_cmd(app),
