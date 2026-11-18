@@ -233,7 +233,7 @@ impl Multiplexer for TmuxClient<'_> {
     }
 }
 
-/// The one free-function form left, over the real `tmux`: `resolve::current_session_task` has no client to hand
+/// The one free-function form left, over the real `tmux`: `resolve::current_task` has no client to hand
 /// (threading one through every task-or-current lookup is deferred).
 pub fn current_session_name() -> Option<String> {
     TmuxClient::system().current_session_name()

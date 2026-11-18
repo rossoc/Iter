@@ -11,7 +11,7 @@ use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::{Closed, close_open_session, start_session};
 use crate::utils::resolve::{
-    current_session_task, require_git_repo, resolve_task, resolve_task_or_current, task_display,
+    current_task, require_git_repo, resolve_task, resolve_task_or_current, task_display,
 };
 use crate::utils::workspace::{self, unwind_session_setup};
 use crate::wiki::ingest_job::Trigger;
@@ -222,7 +222,7 @@ fn session_stop(app: &App, task_ref: Option<&str>, message: Option<&str>) -> Res
 /// Time elapsed on the open session of the task of the tmux session this process runs in.
 fn session_elapse(app: &App) -> Result<()> {
     let db = &app.db;
-    let (project, task) = current_session_task(db)?;
+    let (project, task) = current_task(db)?;
     let task_id = task.id();
     let display = task_display(&project, &task);
     let session = db

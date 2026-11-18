@@ -255,7 +255,7 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
         dir.write_run(&run)?;
         if wait {
             say.working(name, &run);
-            work(&project, &dir, run.clone(), extra)?;
+            work(&project, task.id(), &dir, run.clone(), extra)?;
             return Ok(());
         }
         let pid = exec::spawn_detached(
@@ -312,6 +312,7 @@ fn agent_dir(dir: &TaskDir) -> std::path::PathBuf {
 /// Starts the harness of `run` and waits for it; output goes to the run's log.
 fn launch(
     project: &Project,
+    task_id: i64,
     dir: &TaskDir,
     run: &RunRecord,
     extra: &[String],
@@ -328,18 +329,23 @@ fn launch(
         extra,
     });
     let cwd = run.worktree.as_deref().unwrap_or(&project.base_path);
-    let status = exec::run_logged(program, &args, Path::new(cwd), log)?;
+    let env = [
+        (crate::utils::resolve::ENV_TASK, task_id.to_string()),
+        (crate::utils::resolve::ENV_PROJECT, project.id().to_string()),
+    ];
+    let status = exec::run_logged(program, &args, Path::new(cwd), &env, log)?;
     Ok(exec::exit_code(status))
 }
 
 /// Runs the harness to the end and records the outcome; a run that cannot start is failed, reason in its log.
 fn work(
     project: &Project,
+    task_id: i64,
     dir: &TaskDir,
     mut run: RunRecord,
     extra: &[String],
 ) -> Result<RunRecord> {
-    let outcome = launch(project, dir, &run, extra);
+    let outcome = launch(project, task_id, dir, &run, extra);
     // an agent that wrote the plan itself leaves the steps without ids: number them now
     let _ = dir.update_plan(|text| {
         Ok((
@@ -387,7 +393,7 @@ pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
     let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
     run.pid = Some(std::process::id());
     dir.write_run(&run)?;
-    work(&project, &dir, run, extra).map(|_| ())
+    work(&project, task.id(), &dir, run, extra).map(|_| ())
 }
 
 #[cfg(test)]

@@ -138,8 +138,13 @@ pub enum IterError {
     #[error("a tmux session named '{0}' already exists")]
     TmuxSessionExists(String),
 
-    #[error("not inside a tmux session")]
-    NotInTmux,
+    #[error("no current task: name one, or run this inside its worktree or its tmux session")]
+    NoCurrentTask,
+
+    #[error(
+        "no current project: name one, or run this inside its folder, a task's worktree or tmux session"
+    )]
+    NoCurrentProject,
 
     #[error("tmux session '{0}' isn't tracked by iter")]
     UntrackedTmuxSession(String),

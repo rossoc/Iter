@@ -8,7 +8,7 @@ use crate::error::{IterError, Result};
 use crate::git::slugify;
 use crate::models::{Organization, Project, Task};
 use crate::notes;
-use crate::utils::resolve::{current_session_task, resolve_task};
+use crate::utils::resolve::{current_project, current_task, resolve_task};
 use std::path::PathBuf;
 
 #[derive(Default, Debug)]
@@ -39,14 +39,25 @@ fn ask(db: &Db, spec: &Spec) -> Result<Asked> {
     if let Some(name) = &spec.org {
         return Ok(Asked::Organization(db.resolve::<Organization>(name)?));
     }
-    let (project, task) = current_session_task(db).map_err(|e| match e {
-        IterError::NotInTmux => IterError::CommandFailed(
-            "not inside a tmux session: say which wiki with --task, --project or --org".into(),
-        ),
-        other => other,
-    })?;
-    let org = db.org_of(&project)?;
-    Ok(Asked::Task(project, task, org))
+    // here: the current task's wiki, else (in a project's folder, a wiki ingest) the project's
+    match current_task(db) {
+        Ok((project, task)) => {
+            let org = db.org_of(&project)?;
+            Ok(Asked::Task(project, task, org))
+        }
+        Err(IterError::NoCurrentTask) => {
+            let project = current_project(db).map_err(|e| match e {
+                IterError::NoCurrentProject => IterError::CommandFailed(
+                    "no current task or project: say which wiki with --task, --project or --org"
+                        .into(),
+                ),
+                other => other,
+            })?;
+            let org = db.org_of(&project)?;
+            Ok(Asked::Project(project, org))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 fn slug(name: &str, kind: &str, id: i64) -> String {
