@@ -302,6 +302,13 @@ pub fn cancel(app: &App, name: &str, n: u32) -> Result<()> {
     Ok(())
 }
 
+/// The one folder of the task's an agent may edit besides its worktree: its sketches. Not the task
+/// folder itself, which holds `runs/`: a run record the agent could rewrite would decide what Stop
+/// signals and which worktree is torn down. The plan goes through `iter task plan`.
+fn agent_dir(dir: &TaskDir) -> std::path::PathBuf {
+    dir.sketches_dir()
+}
+
 /// Starts the harness of `run` and waits for it; output goes to the run's log.
 fn launch(
     project: &Project,
@@ -311,11 +318,12 @@ fn launch(
 ) -> Result<Option<i32>> {
     let prompt = std::fs::read_to_string(dir.run_prompt_path(run.n))?;
     let log = std::fs::File::create(dir.run_log_path(run.n))?;
+    let writable = agent_dir(dir);
     let (program, args) = run.agent.command(&Invocation {
         prompt: &prompt,
         model: &run.model,
         effort: &run.effort,
-        dirs: &[dir.root()],
+        dirs: &[writable.as_path()],
         allowed: &crate::config::config().agent.allowed_tools,
         extra,
     });
@@ -384,6 +392,15 @@ pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_agent_cannot_reach_the_run_records() {
+        let dir = TaskDir::new("/notes/tasks/7".into());
+        let writable = agent_dir(&dir);
+        assert!(!dir.runs_dir().starts_with(&writable));
+        assert!(!dir.plan_path().starts_with(&writable));
+        assert!(writable.starts_with(dir.root()));
+    }
 
     fn world(name: &str) -> App {
         App::with_db(crate::fixtures::world(&format!("solve-{name}")).db)

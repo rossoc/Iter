@@ -23,7 +23,7 @@ Do not change any code: what you produce is a plan.
    the pages that matter (`iter wiki show <id>`) before you look at the code.
 2. Look at the code in {{project.path}} enough to know what is hard about it.
 3. Write the plan and save it with `iter task plan {{task.id}} --stdin` (the plan on
-   standard input). You can also edit {{plan.path}} directly.
+   standard input).
 
 The plan is markdown with these `##` sections:
 
