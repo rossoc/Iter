@@ -65,7 +65,7 @@ pub(crate) fn teardown_session_config<'a>(
 
 /// The on-disk half of teardown, shared with `session_new`'s unwind (worktree and branch but no row
 /// yet). Failures warn and carry on. The branch goes after the worktree, as `git::delete_branch`
-/// requires.
+/// requires, and is kept (with a warning) while it has unmerged commits.
 pub(crate) fn remove_worktree_and_branch(
     project: &Project,
     worktree: Option<&str>,
@@ -76,10 +76,15 @@ pub(crate) fn remove_worktree_and_branch(
     {
         eprintln!("warning: {e}");
     }
-    if let Some(branch) = branch
-        && let Err(e) = git::delete_branch(&project.base_path, branch)
-    {
-        eprintln!("warning: {e}");
+    if let Some(branch) = branch {
+        match git::delete_branch(&project.base_path, branch) {
+            Ok(true) => {}
+            Ok(false) => eprintln!(
+                "warning: kept branch '{branch}': it has commits that are not merged \
+                 (delete it with `git branch -D {branch}`)"
+            ),
+            Err(e) => eprintln!("warning: {e}"),
+        }
     }
 }
 

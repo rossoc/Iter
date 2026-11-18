@@ -63,10 +63,26 @@ fn refuse_option(name: &str) -> Result<()> {
     Ok(())
 }
 
-/// `-D` for the same reason as `--force` above. Must run after the branch's worktree is removed:
-/// git refuses to delete a checked-out branch.
-pub fn delete_branch(base_path: &str, branch: &str) -> Result<()> {
-    Git(Some(base_path)).run(&["branch", "-D", "--", branch])
+/// Whether every commit of `branch` is already in what `base_path` has checked out (merged, or
+/// never committed to). A failing probe says no, so nothing is deleted on a doubt.
+pub fn is_merged(base_path: &str, branch: &str) -> bool {
+    refuse_option(branch).is_ok()
+        && crate::process::succeeds(
+            Git::BIN,
+            Some(base_path),
+            &["merge-base", "--is-ancestor", branch, "HEAD"],
+        )
+}
+
+/// Deletes `branch` when [`is_merged`]; otherwise keeps it and says so, as `Ok(false)`: its commits
+/// would survive only in the reflog. `-D` once checked, because `-d` also asks about an upstream.
+/// Must run after the branch's worktree is removed: git refuses to delete a checked-out branch.
+pub fn delete_branch(base_path: &str, branch: &str) -> Result<bool> {
+    if !is_merged(base_path, branch) {
+        return Ok(false);
+    }
+    Git(Some(base_path)).run(&["branch", "-D", "--", branch])?;
+    Ok(true)
 }
 
 /// The branch checked out at `path`; `None` if detached or not a repo (the same answer to "is this
@@ -91,6 +107,62 @@ pub fn clone_repo(source: &str, dest: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A throwaway repo with one commit on `main`; `None` when git is not installed.
+    fn repo(name: &str) -> Option<std::path::PathBuf> {
+        let dir = crate::fixtures::scratch(name);
+        let git = |args: &[&str]| {
+            std::process::Command::new("git")
+                .args(["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"])
+                .args(args)
+                .current_dir(&dir)
+                .output()
+                .is_ok_and(|o| o.status.success())
+        };
+        (git(&["init", "-q", "-b", "main"]) && git(&["commit", "-q", "--allow-empty", "-m", "a"]))
+            .then_some(dir)
+    }
+
+    fn git_in(dir: &Path, args: &[&str]) {
+        let ok = std::process::Command::new("git")
+            .args(["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"])
+            .args(args)
+            .current_dir(dir)
+            .status()
+            .unwrap()
+            .success();
+        assert!(ok, "git {args:?}");
+    }
+
+    #[test]
+    fn a_branch_with_unmerged_commits_is_kept() {
+        let Some(dir) = repo("git-unmerged") else { return };
+        let base = dir.to_str().unwrap();
+        git_in(&dir, &["checkout", "-q", "-b", "feat/x"]);
+        git_in(&dir, &["commit", "-q", "--allow-empty", "-m", "work"]);
+        git_in(&dir, &["checkout", "-q", "main"]);
+
+        assert!(!delete_branch(base, "feat/x").unwrap());
+        assert!(succeeds("feat/x", base), "the branch is still there");
+
+        git_in(&dir, &["merge", "-q", "feat/x"]);
+        assert!(delete_branch(base, "feat/x").unwrap());
+        assert!(!succeeds("feat/x", base));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_branch_with_no_commits_of_its_own_is_deleted() {
+        let Some(dir) = repo("git-fresh") else { return };
+        let base = dir.to_str().unwrap();
+        git_in(&dir, &["branch", "feat/y"]);
+        assert!(delete_branch(base, "feat/y").unwrap());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn succeeds(branch: &str, base: &str) -> bool {
+        crate::process::succeeds("git", Some(base), &["rev-parse", "--verify", "--quiet", branch])
+    }
 
     #[test]
     fn slugify_lowercases_and_dashes_punctuation() {
