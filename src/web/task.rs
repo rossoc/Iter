@@ -10,7 +10,6 @@ use super::task_compose::compose_modal;
 use super::task_notes::note_modal;
 use super::task_panel::task_panel;
 use super::task_sessions::session_modal;
-use super::task_wiki::{self, WikiTab, wiki_tab};
 use super::ui::breadcrumb::Crumb;
 use super::ui::frame::frame;
 use super::ui::layout::info_columns;
@@ -19,7 +18,7 @@ use super::ui::prose::description;
 use super::ui::sessions_table::sessions_table;
 use super::ui::table::AddRow;
 use super::ui::tabs::tabs;
-use super::url::{notes_tab_url, page_url, sessions_tab_url, task_url};
+use super::url::{notes_tab_url, page_url, project_url, sessions_tab_url, task_url, wiki_tab_url};
 use super::{now, open_db};
 use crate::agent::taskdir;
 use crate::db::{Db, Table};
@@ -28,7 +27,11 @@ use chrono::NaiveDateTime;
 use topcoat::{
     Result,
     context::Cx,
-    router::{RouterBuilder, error::RouterErrorExt, page, path_param, query_params},
+    router::{
+        RouterBuilder,
+        error::{RouterErrorExt, see_other},
+        page, path_param, query_params,
+    },
     view::{Child, View, component, view},
 };
 
@@ -63,6 +66,11 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let section = TaskSection::of(query.tab.as_deref());
     let db = open_db()?;
     let page = load(&db, id)?;
+    // the wiki was a tab of the task; it is the project's
+    if query.tab.as_deref() == Some("wiki") {
+        let project = page.parents.project.id();
+        return Err(see_other(wiki_tab_url(&project_url(project))).into());
+    }
     let agent = match section {
         TaskSection::Agent => {
             // the prompts of a new agent are made with the commands' own code, which wants an app
@@ -82,12 +90,8 @@ async fn show(cx: &Cx) -> Result<impl View> {
         }
         _ => None,
     };
-    let wiki = match section {
-        TaskSection::Wiki => Some(task_wiki::load(&db, &page.parents.project, &page.task)),
-        _ => None,
-    };
     let files = match section {
-        TaskSection::Notes | TaskSection::Wiki => {
+        TaskSection::Notes => {
             Some(task_agent::files(&db, &page.parents.project, &page.task))
         }
         _ => None,
@@ -101,7 +105,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let add_note = section == TaskSection::Notes && query.new.as_deref() == Some("note");
     let now = now();
     Ok(view! {
-        screen(page: &page, section: section, now: now, agent: agent.as_ref(), wiki: wiki.as_ref(), files: files.as_ref(), add_session: add_session, add_note: add_note, plan: plan.as_ref(), agents: agents)
+        screen(page: &page, section: section, now: now, agent: agent.as_ref(), files: files.as_ref(), add_session: add_session, add_note: add_note, plan: plan.as_ref(), agents: agents)
     })
 }
 
@@ -146,7 +150,6 @@ pub async fn screen(
     section: TaskSection,
     now: NaiveDateTime,
     #[default] agent: Option<&AgentTab>,
-    #[default] wiki: Option<&WikiTab>,
     #[default] files: Option<&task_agent::Files>,
     #[default] add_session: bool,
     #[default] add_note: bool,
@@ -189,8 +192,7 @@ pub async fn screen(
                 agent_tab(task_id: task.id(), agent: agent)
             } else if let (TaskSection::Notes, Some(files)) = (section, files) {
                 files_block(label: "Notes", noun: "notes", docs: &files.notes, add: Some(AddRow::link(&new_note, "New note\u{2026}")))
-            } else if let (TaskSection::Wiki, Some(wiki), Some(files)) = (section, wiki, files) {
-                wiki_tab(tab: wiki, sketches: &files.sketches)
+                files_block(label: "Sketches", noun: "sketches", docs: &files.sketches)
             } else {
                 task_info(task: task, tags: tags, plan: plan)
             }

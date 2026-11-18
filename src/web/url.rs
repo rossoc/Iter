@@ -183,8 +183,8 @@ impl std::str::FromStr for WikiAction {
     }
 }
 
-pub fn wiki_action_url(id: i64, action: WikiAction) -> String {
-    format!("{}/wiki/{}", task_url(id), action.as_str())
+pub fn wiki_action_url(project_id: i64, action: WikiAction) -> String {
+    format!("{}/wiki/{}", project_url(project_id), action.as_str())
 }
 
 pub fn task_step_url(id: i64, step: &str) -> String {
@@ -342,7 +342,7 @@ mod tests {
         assert_eq!(wiki_tab_url("/task/5"), "/task/5?tab=wiki");
         assert_eq!(
             wiki_action_url(5, WikiAction::Accept),
-            "/task/5/wiki/accept"
+            "/project/5/wiki/accept"
         );
         for action in [WikiAction::Accept, WikiAction::Revert, WikiAction::Ingest] {
             assert_eq!(action.as_str().parse(), Ok(action));

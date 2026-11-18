@@ -87,7 +87,11 @@ pub fn load(
 async fn show(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<TabQuery>(cx)?;
-    let section = Section::of(query.tab.as_deref());
+    // an organization has no Wiki tab (its wiki is read with `iter wiki -o`)
+    let section = match Section::of(query.tab.as_deref()) {
+        Section::Wiki => Section::Info,
+        other => other,
+    };
     let now = now();
     let db = open_db()?;
     let recorded = match (section, query.pushed.as_deref()) {

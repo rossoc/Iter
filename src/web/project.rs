@@ -19,7 +19,9 @@ use super::ui::page_header::{Kicker, page_header};
 use super::ui::prose::description;
 use super::ui::tabs::tabs;
 use super::ui::tasks_tab::tasks_tab;
-use super::url::project_url;
+use super::project_wiki::{self, WikiTab, wiki_tab};
+use super::ui::tabs::Tab;
+use super::url::{project_url, wiki_tab_url};
 use crate::db::{Db, Table};
 use crate::models::{Configured, Organization, Project, Task};
 use topcoat::{
@@ -46,6 +48,8 @@ pub struct Loaded {
     pub tasks: Vec<Task>,
     pub task_count: usize,
     pub notes: NotesTab,
+    /// The Wiki tab's review, when that tab is open.
+    pub wiki: Option<WikiTab>,
 }
 
 pub fn load(db: &Db, id: i64, section: Section, q: Option<&str>) -> Result<Loaded> {
@@ -61,11 +65,13 @@ pub fn load(db: &Db, id: i64, section: Section, q: Option<&str>) -> Result<Loade
         crate::notes::project_dir(&parents.project, &parents.org),
         section == Section::Notes,
     );
+    let wiki = (section == Section::Wiki).then(|| project_wiki::load(db, &parents.project));
     Ok(Loaded {
         parents,
         tasks,
         task_count,
         notes,
+        wiki,
     })
 }
 
@@ -80,12 +86,13 @@ async fn show(cx: &Cx) -> Result<impl View> {
         tasks,
         task_count,
         notes,
+        wiki,
     } = page;
     let q = query.q.as_deref();
     let create = (tab == Section::Tasks && query.new.as_deref() == Some("task"))
         .then(|| TaskCreate::in_project(&project, q));
     Ok(view! {
-        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, notes: Some(&notes), section: tab, q: q, task_create: create.as_ref())
+        screen(project: &project, org: &org, tasks: &tasks, task_count: task_count, notes: Some(&notes), wiki: wiki.as_ref(), section: tab, q: q, task_create: create.as_ref())
     })
 }
 
@@ -113,6 +120,7 @@ pub async fn screen(
     task_count: usize,
     section: Section,
     #[default] notes: Option<&NotesTab>,
+    #[default] wiki: Option<&WikiTab>,
     #[default] q: Option<&str>,
     #[default] task_create: Option<&TaskCreate>,
 ) -> Result<impl View> {
@@ -125,6 +133,7 @@ pub async fn screen(
         NotesTab::badge(notes),
         None,
     );
+    items.push(Tab::link("Wiki", wiki_tab_url(&base)).marked(section == Section::Wiki));
     items.push(settings_tab(&base, false));
     let parts = [section.title("Project"), project.name.as_str()];
     // The page has tabs, so the current tab is the current item; the crumb
@@ -146,6 +155,8 @@ pub async fn screen(
 
             } else if let (Section::Notes, Some(notes)) = (section, notes) {
                 notes_section(base: &base, notes: notes)
+            } else if let (Section::Wiki, Some(wiki)) = (section, wiki) {
+                wiki_tab(tab: wiki)
             } else {
                 project_info(project: project)
             }

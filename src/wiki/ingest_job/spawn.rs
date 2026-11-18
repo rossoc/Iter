@@ -55,12 +55,12 @@ pub fn spawn_ingest(project: &Project, task: Option<&Task>, opts: &HarnessChoice
 
 #[cfg(feature = "web")]
 /// Starts an ingest of the project (and `task`'s sketches) in the background.
-pub fn ingest_in_background(db: &Db, project: &Project, task: &Task) -> Result<()> {
+pub fn ingest_in_background(db: &Db, project: &Project, task: Option<&Task>) -> Result<()> {
     let target = Target::new(db, project.clone())?;
     target.require_git()?;
     if busy(&target) {
         return Err(AgentError::IngestRunning.into());
     }
     let none = HarnessChoice::default();
-    spawn_ingest(project, Some(task), &none)
+    spawn_ingest(project, task, &none)
 }

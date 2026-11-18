@@ -10,7 +10,7 @@ use super::ui::breadcrumb::Crumb;
 use super::ui::field::select;
 use super::ui::form_error::FormError;
 use super::url::{
-    agent_tab_url, notes_tab_url, sessions_tab_url, task_edit_url, task_url, wiki_tab_url,
+    agent_tab_url, notes_tab_url, sessions_tab_url, task_edit_url, task_url,
 };
 use super::{Id, open_db};
 use crate::agent::taskdir;
@@ -90,7 +90,6 @@ pub async fn screen(
             ("Sessions", sessions_tab_url(&base), Some(sessions_n)),
             ("Agents", agent_tab_url(&base), Some(agents_n)),
             ("Notes", notes_tab_url(&base), None),
-            ("Wiki", wiki_tab_url(&base), None),
         ],
     );
     Ok(view! {

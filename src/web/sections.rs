@@ -3,7 +3,7 @@
 
 use super::ui::tabs::Tab;
 use super::url::{
-    agent_tab_url, notes_tab_url, projects_tab_url, sessions_tab_url, tasks_tab_url, wiki_tab_url,
+    agent_tab_url, notes_tab_url, projects_tab_url, sessions_tab_url, tasks_tab_url,
 };
 use topcoat::router::query_params;
 
@@ -50,6 +50,8 @@ pub enum Section {
     Notes,
     Report,
     Projects,
+    /// A project's wiki (the organization page has none).
+    Wiki,
 }
 
 impl Section {
@@ -59,6 +61,7 @@ impl Section {
             Some("notes") => Section::Notes,
             Some("report") => Section::Report,
             Some("projects") => Section::Projects,
+            Some("wiki") => Section::Wiki,
             _ => Section::Info,
         }
     }
@@ -71,6 +74,7 @@ impl Section {
             Section::Notes => "Notes",
             Section::Report => "Report",
             Section::Projects => "Projects",
+            Section::Wiki => "Wiki",
         }
     }
 }
@@ -126,7 +130,6 @@ pub enum TaskSection {
     Sessions,
     Agent,
     Notes,
-    Wiki,
     Settings,
 }
 
@@ -136,7 +139,6 @@ impl TaskSection {
             Some("sessions") => TaskSection::Sessions,
             Some("agent") => TaskSection::Agent,
             Some("notes") => TaskSection::Notes,
-            Some("wiki") => TaskSection::Wiki,
             _ => TaskSection::Info,
         }
     }
@@ -148,7 +150,6 @@ impl TaskSection {
             TaskSection::Sessions => "Sessions",
             TaskSection::Agent => "Agent",
             TaskSection::Notes => "Notes",
-            TaskSection::Wiki => "Wiki",
             TaskSection::Settings => "Settings",
         }
     }
@@ -168,7 +169,6 @@ pub fn task_tabs(base: &str, current: TaskSection, sessions: usize, agents: usiz
                 Tab::link("Agents", agent_tab_url(base)).count(agents),
             ),
             (TaskSection::Notes, Tab::link("Notes", notes_tab_url(base))),
-            (TaskSection::Wiki, Tab::link("Wiki", wiki_tab_url(base))),
             (
                 TaskSection::Settings,
                 Tab::link("Settings", format!("{base}/edit")),
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(TaskSection::of(None), TaskSection::Info);
         assert_eq!(TaskSection::of(Some("sessions")), TaskSection::Sessions);
         assert_eq!(TaskSection::of(Some("agent")), TaskSection::Agent);
-        assert_eq!(TaskSection::of(Some("wiki")), TaskSection::Wiki);
+        assert_eq!(Section::of(Some("wiki")), Section::Wiki);
         assert_eq!(TaskSection::of(Some("tasks")), TaskSection::Info);
         assert_eq!(TaskSection::Info.title("Task"), "Task");
         assert_eq!(TaskSection::Agent.title("Task"), "Agent");
@@ -196,7 +196,8 @@ mod tests {
     #[test]
     fn task_tabs_mark_the_current_one() {
         let items = task_tabs("/task/7", TaskSection::Sessions, 3, 2);
-        assert_eq!(items.len(), 6);
+        // Info, Sessions, Agents, Notes, Settings: the wiki is the project's
+        assert_eq!(items.len(), 5);
         assert!(!items[0].is_current() && items[1].is_current() && !items[2].is_current());
         assert_eq!(
             (items[1].href(), items[1].badge()),
