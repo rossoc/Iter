@@ -10,6 +10,8 @@
 - **C-01** `iter clone` refuses a destination inside the source project's folder (it used to copy itself until the path was too long) and no longer copies `.iter-worktrees/` (`scaffold::copy_template`).
 - **C-04** `task done` (without `--save`), `task delete` and `project delete` keep a task branch that has commits not merged into the checked-out branch, with a warning, instead of `git branch -D` losing them to the reflog (`git::delete_branch`, `git::is_merged`).
 - **C-03** A run can be given an instruction from the task's own `instructions/` folder: the New agent form offered and previewed it, but saving refused it. The form, the preview and both POSTs now share `instruction::layers_for_task`.
+- **S-08** A tmux session whose name starts with `-` (a project called `-web`) no longer breaks its hooks, which had stopped that task's clock from ever starting or stopping. The hooks pass `--` before the names, and `iter internal hook` takes hyphen values, so hooks installed earlier work too (`args/internal.rs`).
+- **C-09** `any_client_attached` and `take_detach_message` name the session exactly (`=name`): a bare `-t web/a` matched `web/ab` by prefix.
 - **W-02 / W-03** The top bar wraps up to 700px (`--bar-h` 82px there) and project paths shrink (`table-layout:fixed`) so framed pages no longer scroll sideways.
 
 ### Added

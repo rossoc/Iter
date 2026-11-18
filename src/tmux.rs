@@ -150,7 +150,8 @@ impl Multiplexer for TmuxClient<'_> {
     }
 
     fn any_client_attached(&self, session: &str) -> bool {
-        let Ok(clients) = self.output(&["list-clients", "-t", session, "-F", "#{client_name}"])
+        let target = exact(session);
+        let Ok(clients) = self.output(&["list-clients", "-t", &target, "-F", "#{client_name}"])
         else {
             return false;
         };
@@ -193,9 +194,10 @@ impl Multiplexer for TmuxClient<'_> {
     }
 
     fn take_detach_message(&self, session: &str) -> Option<String> {
+        let target = exact(session);
         let value =
-            self.output_trimmed(&["show-options", "-t", session, "-v", DETACH_MESSAGE_OPTION])?;
-        let _ = self.run(&["set-option", "-t", session, "-u", DETACH_MESSAGE_OPTION]);
+            self.output_trimmed(&["show-options", "-t", &target, "-v", DETACH_MESSAGE_OPTION])?;
+        let _ = self.run(&["set-option", "-t", &target, "-u", DETACH_MESSAGE_OPTION]);
         Some(value)
     }
 
@@ -279,7 +281,8 @@ fn format_variables(action: &str) -> Vec<&str> {
 fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
     // Inside the action's single quotes a `'` cannot be written; the rest is shell-quoted.
     let bin = crate::agent::prompt::shell_word(iter_bin);
-    format!("run-shell '{bin} internal hook {event} {args}'")
+    // `--`: a session name may start with `-`, which clap would read as a flag
+    format!("run-shell '{bin} internal hook {event} -- {args}'")
 }
 
 #[cfg(test)]
@@ -378,7 +381,7 @@ mod tests {
     fn a_hook_action_invokes_the_internal_subcommand() {
         assert_eq!(
             action_for("client-detached"),
-            "run-shell '/usr/bin/iter internal hook client-detached #{q:hook_client}'"
+            "run-shell '/usr/bin/iter internal hook client-detached -- #{q:hook_client}'"
         );
     }
 
@@ -434,6 +437,22 @@ mod tests {
         assert!(runner.calls().is_empty());
     }
 
+    /// A bare `-t web/a` is a prefix match: it answered for `web/ab` when `web/a` was gone.
+    #[test]
+    fn session_probes_name_the_session_exactly() {
+        let runner = FakeRunner::default();
+        runner.reply("tmux list-clients", "/dev/ttys1\n");
+        runner.reply("tmux show-options", "bye");
+        let tmux = client(&runner, false);
+        assert!(tmux.any_client_attached("web/a"));
+        assert_eq!(tmux.take_detach_message("web/a").as_deref(), Some("bye"));
+        let calls = runner.calls();
+        assert!(!calls.is_empty());
+        for call in &calls {
+            assert!(call.contains("-t =web/a"), "{call}");
+        }
+    }
+
     #[test]
     fn sessions_are_listed_one_per_line() {
         let runner = FakeRunner::default();
@@ -455,9 +474,9 @@ mod tests {
         assert_eq!(
             installs,
             [
-                "tmux set-hook -g client-session-changed run-shell '/usr/bin/iter internal hook client-session-changed #{q:hook_client} #{q:session_name} #{q:client_last_session}'",
-                "tmux set-hook -g client-detached run-shell '/usr/bin/iter internal hook client-detached #{q:hook_client}'",
-                "tmux set-hook -g session-closed run-shell '/usr/bin/iter internal hook session-closed #{q:hook_session_name}'",
+                "tmux set-hook -g client-session-changed run-shell '/usr/bin/iter internal hook client-session-changed -- #{q:hook_client} #{q:session_name} #{q:client_last_session}'",
+                "tmux set-hook -g client-detached run-shell '/usr/bin/iter internal hook client-detached -- #{q:hook_client}'",
+                "tmux set-hook -g session-closed run-shell '/usr/bin/iter internal hook session-closed -- #{q:hook_session_name}'",
             ]
         );
     }
