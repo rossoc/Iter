@@ -26,6 +26,14 @@ pub enum AgentError {
     RunBegun(u32),
     #[error("run {0} has no log")]
     RunLogMissing(u32),
+    #[error("run {0} was started by iter, not for a subagent: it closes itself")]
+    RunNotSubagent(u32),
+    #[error("run {run} is {status}: only a running subagent's run can be closed")]
+    RunNotOpen { run: u32, status: String },
+    #[error(
+        "{0} leads subagents from a session and is not a run: print it with `iter task prompt -k {0}`"
+    )]
+    Interactive(&'static str),
     #[error("no such task")]
     TaskGone,
     #[error("no such project")]

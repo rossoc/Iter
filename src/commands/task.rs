@@ -2,7 +2,7 @@
 //! [`super::sync`].
 
 use crate::app::App;
-use crate::args::{ReportOpts, TaskCommand};
+use crate::args::{ReportOpts, RunEnd, TaskCommand};
 use crate::commands::ingest;
 use crate::commands::sync::{task_pull, task_push};
 use crate::commands::{Run, agent, solve};
@@ -82,21 +82,38 @@ impl Run for TaskCommand {
                 effort,
                 yes,
                 wait,
+                subagent,
                 extra,
-            } => solve::solve(
+            } => match subagent {
+                true => solve::subagent(app, task.as_deref(), *kind),
+                false => solve::solve(
+                    app,
+                    &solve::SolveRequest {
+                        task: task.as_deref(),
+                        kind: *kind,
+                        agent: *agent,
+                        model: model.as_deref(),
+                        effort: effort.as_deref(),
+                        yes: *yes,
+                        wait: *wait,
+                        extra,
+                    },
+                ),
+            },
+            Self::Runs {
+                task,
+                close: Some(n),
+                status,
+                message,
+                ..
+            } => solve::close_run(
                 app,
-                &solve::SolveRequest {
-                    task: task.as_deref(),
-                    kind: *kind,
-                    agent: *agent,
-                    model: model.as_deref(),
-                    effort: effort.as_deref(),
-                    yes: *yes,
-                    wait: *wait,
-                    extra,
-                },
+                task.as_deref(),
+                *n,
+                status.unwrap_or(RunEnd::Done),
+                message.as_deref(),
             ),
-            Self::Runs { task, log } => solve::runs(app, task.as_deref(), *log),
+            Self::Runs { task, log, .. } => solve::runs(app, task.as_deref(), *log),
             Self::RunWorker {
                 task_id,
                 run,

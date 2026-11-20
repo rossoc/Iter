@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- **Orchestrated tasks**: the built-in prompt kind `complete` (`iter task prompt -k complete`) makes an interactive Claude session the orchestrator of a task. It writes the sketch `plan` (Requirements, Tests, Implementation) and a checklist, then runs rounds (at most 3) of test (TDD), develop and an independent check subagent, logs each round in the sketch `rounds`, and ends with the sketch `result`. `complete` is never a run: `iter task solve -k complete` is refused, and the web keeps offering the other five kinds.
+- **Subagent runs**: `iter task solve -k <kind> --subagent` records a run without starting a process and prints its prompt for the session's own subagent. `iter task runs --close <n> --status done|failed|cancelled [-m report]` closes it, and the report becomes its log. Records carry `subagent: true` and are never shown `lost`. `iter task runs` gains an agent column, and the Agent tab marks these runs as subagents (`solve::prepare` is now shared by `begin` and `open_subagent`).
+- The test, develop and check prompts read the sketch `plan` when there is one. Test writes failing tests first and records them in the sketch `test`. Develop makes them pass without weakening them. Check judges each requirement before reading the other sketches. Each ends with a short report.
+
 ### Fixed (review 2026-11-02, fix-first batch)
 - **S-01** Security headers on every response and refusal of non-GET requests from a frame (`guard::security_headers`, `Sec-Fetch-Dest`); the focused-notice inline script is `ui/notice.js`.
 - **S-02** `platform_url` is parsed (`platform::check_url`): `https`, or `http` to loopback, no userinfo; `JsonWebhook::new` re-checks, so stored rows are covered.

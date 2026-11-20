@@ -24,6 +24,11 @@ Change only tests (and what they need to run); the code under test stays as it i
   that say why (`git commit -m "..."`).
 - Run each command on its own: no pipes, `&&`, `cd` or `$(...)`. Only plain
   commands match what you are allowed to run; anything else is refused.
+- If the task has a sketch `plan` (`iter note sketch read plan`), read it first: its
+  Requirements and Tests say what to test.
+- The tests come before the code: a test of work not done yet fails, and that is
+  right. Write in the sketch `test` (`iter note sketch new test --append`, the text on
+  standard input) each test, the requirement it covers, and why it fails now.
 - Take the test steps of the plan in order. Before you start one, run
   `iter task plan {{task.id}} --mark <id> doing`; when its tests are written and
   pass (or fail for the reason you expected), `iter task plan {{task.id}} --mark <id> done`.
@@ -34,3 +39,4 @@ Change only tests (and what they need to run); the code under test stays as it i
   the sketch `test` (`iter note sketch new test --append`, the text on standard
   input) and leave the test failing.
 - Never edit the user's notes.
+- End with a short report: the tests written, what the suite printed, what is left.

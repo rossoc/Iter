@@ -2,10 +2,11 @@
 
 use crate::agent::error::AgentError;
 use crate::agent::prompt::Kind;
-use crate::agent::run::{Harness, RunRecord};
-use crate::agent::solve::{Launch, Observer, Spec, start};
+use crate::agent::run::{Harness, RunRecord, Status};
+use crate::agent::solve::{Launch, Observer, Spec, close, open_subagent, start};
 use crate::agent::task_prompt::locate;
 use crate::app::App;
+use crate::args::RunEnd;
 use crate::commands::ingest::say_auto;
 use crate::error::Result;
 use crate::md_edit::{edit_text, split_front};
@@ -54,6 +55,10 @@ fn parse(buffer: &str) -> Result<(Spec, String)> {
 }
 
 pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
+    if req.kind.interactive() {
+        // before the editor: there is nothing to start
+        return Err(AgentError::Interactive(req.kind.key()).into());
+    }
     let (project, task, dir) = locate(app, req.task)?;
     let name = task_display(&project, &task);
     let mut spec = Spec {
@@ -96,6 +101,50 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
     Ok(())
 }
 
+/// `solve --subagent`: records the run, prints the prompt to give the subagent; how to close it
+/// goes to standard error, so the prompt can be taken as it is.
+pub fn subagent(app: &App, task: Option<&str>, kind: Kind) -> Result<()> {
+    let (project, task, _) = locate(app, task)?;
+    let name = task_display(&project, &task);
+    let (n, prompt) = open_subagent(app, &name, kind, &Console)?;
+    eprintln!(
+        "run {n} ({}): give the prompt below to a new subagent; when it is done: iter task runs --close {n} --status done -m \"<its report>\"",
+        kind.key()
+    );
+    print!("{}", prompt.trim_end());
+    println!();
+    Ok(())
+}
+
+/// `runs --close`: the report is `-m`, else standard input when it is not a terminal, else none.
+pub fn close_run(
+    app: &App,
+    task: Option<&str>,
+    n: u32,
+    end: RunEnd,
+    message: Option<&str>,
+) -> Result<()> {
+    use std::io::{IsTerminal, Read};
+    let (project, task, _) = locate(app, task)?;
+    let report = match message {
+        Some(text) => text.to_string(),
+        None if !std::io::stdin().is_terminal() => {
+            let mut text = String::new();
+            std::io::stdin().read_to_string(&mut text)?;
+            text
+        }
+        None => String::new(),
+    };
+    let status = match end {
+        RunEnd::Done => Status::Done,
+        RunEnd::Failed => Status::Failed,
+        RunEnd::Cancelled => Status::Cancelled,
+    };
+    close(app, &task_display(&project, &task), n, status, &report)?;
+    println!("run {n}: {}", status.label());
+    Ok(())
+}
+
 pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
     let (project, task, dir) = locate(app, task)?;
     if let Some(n) = log {
@@ -114,10 +163,11 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
     }
     for r in runs {
         println!(
-            "#{:<3} {:<8} {:<11} {:<6} {}{}",
+            "#{:<3} {:<9} {:<8} {:<17} {:<6} {}{}",
             r.n,
             r.shown_status(),
             r.kind.key(),
+            r.agent_label(),
             r.model,
             r.started,
             r.ended.map(|e| format!(" -> {e}")).unwrap_or_default()

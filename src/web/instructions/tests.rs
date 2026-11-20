@@ -22,6 +22,7 @@ fn the_list_counts_the_runs_each_instruction_was_given() {
             branch: None,
             worktree: None,
             pid: None,
+            subagent: false,
         },
     };
     // a run from before instructions existed counts for its kind
@@ -70,6 +71,7 @@ fn usage_is_found_in_the_runs_of_the_tasks() {
         branch: None,
         worktree: None,
         pid: None,
+        subagent: false,
     };
     dir.write_run(&run).unwrap();
     run.n = 2;

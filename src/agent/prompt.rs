@@ -24,16 +24,20 @@ pub enum Kind {
     Check,
     /// Reproduce a defect, find its cause and fix it
     Fix,
+    /// Lead the work in an interactive session: plan in sketches, then test, develop and check
+    /// through subagents until the requirements hold
+    Complete,
 }
 
 impl Kind {
     #[cfg(test)]
-    pub const ALL: [Kind; 5] = [
+    pub const ALL: [Kind; 6] = [
         Kind::Plan,
         Kind::Develop,
         Kind::Test,
         Kind::Check,
         Kind::Fix,
+        Kind::Complete,
     ];
 
     pub fn key(self) -> &'static str {
@@ -43,6 +47,7 @@ impl Kind {
             Kind::Test => "test",
             Kind::Check => "check",
             Kind::Fix => "fix",
+            Kind::Complete => "complete",
         }
     }
 
@@ -57,7 +62,14 @@ impl Kind {
             Kind::Test => include_str!("prompts/test.md"),
             Kind::Check => include_str!("prompts/check.md"),
             Kind::Fix => include_str!("prompts/fix.md"),
+            Kind::Complete => include_str!("prompts/complete.md"),
         }
+    }
+
+    /// Whether the kind leads subagents from a session someone is in: it cannot run headless
+    /// (its subagents' runs would meet it on the task's one-run-at-a-time rule).
+    pub fn interactive(self) -> bool {
+        self == Kind::Complete
     }
 }
 
@@ -289,5 +301,32 @@ mod tests {
             assert_eq!(serde_yaml::to_string(&kind).unwrap().trim(), kind.key());
         }
         assert!(serde_yaml::from_str::<Kind>("nonsense").is_err());
+    }
+
+    #[test]
+    fn complete_leads_subagents_through_iter_runs_and_sketches() {
+        let dir = Path::new("/notes/app/tasks/7");
+        let text = render(
+            Kind::Complete.builtin(),
+            Kind::Complete,
+            &ctx(None, "", dir),
+        )
+        .unwrap();
+        for kind in ["test", "develop", "check"] {
+            assert!(
+                text.contains(&format!("iter task solve -k {kind} --subagent")),
+                "{kind}: {text}"
+            );
+        }
+        assert!(text.contains("iter task runs --close"));
+        for sketch in ["plan", "rounds", "result"] {
+            assert!(
+                text.contains(&format!("iter note sketch new {sketch}")),
+                "{sketch}"
+            );
+        }
+        assert!(text.contains("iter task plan 7 --stdin"));
+        assert!(Kind::Complete.interactive() && !Kind::Complete.changes_code());
+        assert!(Kind::ALL.iter().filter(|k| k.interactive()).count() == 1);
     }
 }

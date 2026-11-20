@@ -168,7 +168,7 @@ async fn facts(a: &Loaded) -> Result<impl View> {
             <dl>
                 <dt>"Status"</dt><dd>state_pill(run: run)</dd>
                 <dt>"Instruction"</dt><dd>(label_of(run.instruction_name()))</dd>
-                <dt>"Agent"</dt><dd>(run.agent.key())</dd>
+                <dt>"Agent"</dt><dd>(run.agent_label())</dd>
                 <dt>"Model"</dt><dd>(run.model.as_str())</dd>
                 <dt>"Effort"</dt><dd>(run.effort.as_str())</dd>
                 <dt>"Task"</dt><dd><a class="u" href=(task_url(a.task_id))>(a.task.as_str())</a></dd>
@@ -330,6 +330,7 @@ mod tests {
             branch: None,
             worktree: None,
             pid: None,
+            subagent: false,
         };
         assert_eq!(heading(&run), "#3 Develop");
         run.instruction = Some("review".into());

@@ -113,13 +113,7 @@ pub fn start(
     launch: &Launch,
 ) -> Result<u32> {
     let (_, _, dir) = locate(app, Some(name))?;
-    if let Some(r) = dir.runs().iter().find(|r| r.is_running()) {
-        return Err(AgentError::RunBusy {
-            run: r.n,
-            task: name.to_string(),
-        }
-        .into());
-    }
+    not_busy(&dir, name)?;
     let n = create(app, name, kind, spec, description, None, None)?;
     begin(app, name, n, launch)?;
     Ok(n)
@@ -135,6 +129,9 @@ pub fn create(
     prompt: Option<&str>,
     instruction: Option<&str>,
 ) -> Result<u32> {
+    if kind.interactive() {
+        return Err(AgentError::Interactive(kind.key()).into());
+    }
     let (_, _, dir) = locate(app, Some(name))?;
     dir.ensure()?;
     let text = match prompt {
@@ -156,6 +153,7 @@ pub fn create(
         branch: None,
         worktree: None,
         pid: None,
+        subagent: false,
     };
     let written = crate::utils::fs::write_private(&dir.run_prompt_path(n), text)
         .map_err(IterError::from)
@@ -195,17 +193,41 @@ pub fn amend(
     Ok(())
 }
 
-/// Begins queued run `n`: makes the workspace if the kind changes code, starts the harness (detached unless `wait`); a run that cannot begin is recorded as failed.
-pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
-    let Launch { wait, extra, say } = *launch;
-    let (project, mut task, dir) = locate(app, Some(name))?;
-    if let Some(r) = dir.runs().iter().find(|r| r.is_running()) {
-        return Err(AgentError::RunBusy {
+/// A queued run made ready to work: in its workspace, the task in progress, marked running.
+struct Ready {
+    project: Project,
+    task: Task,
+    dir: TaskDir,
+    run: RunRecord,
+}
+
+/// Records `run` as failed for `e`, the reason in its log.
+fn fail(dir: &TaskDir, mut run: RunRecord, e: IterError) -> IterError {
+    run.status = Status::Failed;
+    run.ended = Some(now());
+    let _ = crate::utils::fs::write_private(&dir.run_log_path(run.n), format!("iter: {e}\n"));
+    let _ = dir.write_run(&run);
+    e
+}
+
+/// Refuses while another run of the task is working.
+fn not_busy(dir: &TaskDir, name: &str) -> Result<()> {
+    match dir.runs().iter().find(|r| r.is_running()) {
+        Some(r) => Err(AgentError::RunBusy {
             run: r.n,
             task: name.to_string(),
         }
-        .into());
+        .into()),
+        None => Ok(()),
     }
+}
+
+/// What every run does before its agent starts: makes the workspace if the kind changes code
+/// (before the prompt is final, so it names the right directory), marks the task in progress,
+/// may trigger an ingest, then `running`. The record is not written; a failure is recorded.
+fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
+    let (project, mut task, dir) = locate(app, Some(name))?;
+    not_busy(&dir, name)?;
     let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
     if !run.is_queued() {
         return Err(AgentError::RunNotQueued {
@@ -214,13 +236,6 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
         }
         .into());
     }
-    let fail = |mut run: RunRecord, e: IterError| {
-        run.status = Status::Failed;
-        run.ended = Some(now());
-        let _ = crate::utils::fs::write_private(&dir.run_log_path(n), format!("iter: {e}\n"));
-        let _ = dir.write_run(&run);
-        e
-    };
     let kind = run.kind;
     // read-only runs need no branch; code-changing ones get the task's workspace first,
     // so that the prompt names the right directory
@@ -239,16 +254,33 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
     })();
     match placed {
         Ok((branch, worktree)) => (run.branch, run.worktree) = (branch, worktree),
-        Err(e) => return Err(fail(run, e)),
+        Err(e) => return Err(fail(&dir, run, e)),
     }
     if let Err(e) = start_work(app, &mut task) {
-        return Err(fail(run, e));
+        return Err(fail(&dir, run, e));
     }
     if dir.runs().iter().all(|r| r.n == n || r.is_queued()) {
         say.ingest(&project, &auto(app, &project, &task, Trigger::TaskStart));
     }
     run.status = Status::Running;
     run.started = now();
+    Ok(Ready {
+        project,
+        task,
+        dir,
+        run,
+    })
+}
+
+/// Begins queued run `n`: makes the workspace if the kind changes code, starts the harness (detached unless `wait`); a run that cannot begin is recorded as failed.
+pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
+    let Launch { wait, extra, say } = *launch;
+    let Ready {
+        project,
+        task,
+        dir,
+        mut run,
+    } = prepare(app, name, n, say)?;
     run.pid = wait.then(std::process::id);
     // whatever goes wrong from here on is recorded, not left `running`
     let launched = (|| -> Result<()> {
@@ -274,7 +306,58 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
         }
         Ok(())
     })();
-    launched.map_err(|e| fail(run, e))?;
+    launched.map_err(|e| fail(&dir, run, e))?;
+    Ok(())
+}
+
+/// Opens a run of `kind` for a subagent of the session the caller is in: iter starts nothing,
+/// the session gives the subagent the prompt and closes the run with [`close`]. Returns the run's
+/// number and its prompt, final (the worktree named).
+pub fn open_subagent(
+    app: &App,
+    name: &str,
+    kind: Kind,
+    say: &dyn Observer,
+) -> Result<(u32, String)> {
+    let (_, task, dir) = locate(app, Some(name))?;
+    not_busy(&dir, name)?;
+    let spec = Spec {
+        agent: Harness::default(),
+        model: String::new(),
+        effort: String::new(),
+    };
+    let n = create(app, name, kind, &spec, &task.description, None, None)?;
+    let Ready { dir, mut run, .. } = prepare(app, name, n, say)?;
+    run.subagent = true;
+    let prompt = (|| -> Result<String> {
+        dir.write_run(&run)?;
+        Ok(std::fs::read_to_string(dir.run_prompt_path(n))?)
+    })();
+    let prompt = prompt.map_err(|e| fail(&dir, run, e))?;
+    Ok((n, prompt))
+}
+
+/// Closes subagent run `n` as `status` (done, failed or cancelled), keeping `report` (what the
+/// subagent said at the end) as its log. A run iter started closes itself and is refused.
+pub fn close(app: &App, name: &str, n: u32, status: Status, report: &str) -> Result<()> {
+    let (_, _, dir) = locate(app, Some(name))?;
+    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
+    if !run.subagent {
+        return Err(AgentError::RunNotSubagent(n).into());
+    }
+    if run.status != Status::Running || matches!(status, Status::Queued | Status::Running) {
+        return Err(AgentError::RunNotOpen {
+            run: n,
+            status: run.shown_status().to_string(),
+        }
+        .into());
+    }
+    let mut log = report.trim_end().to_string();
+    log.push('\n');
+    crate::utils::fs::write_private(&dir.run_log_path(n), log)?;
+    run.status = status;
+    run.ended = Some(now());
+    dir.write_run(&run)?;
     Ok(())
 }
 
@@ -483,6 +566,71 @@ mod tests {
         assert!(cancel(&app, name, n).is_err());
         assert!(!dir.read_run(m).unwrap().unwrap().is_running());
     }
+
+    #[test]
+    fn a_subagent_run_is_opened_with_its_prompt_and_closed_by_the_session() {
+        let app = world("subagent");
+        let name = "app/Fix it";
+        let (n, prompt) = open_subagent(&app, name, Kind::Test, &Quietly).unwrap();
+        assert!(prompt.contains("Retries hammer the api.") && !prompt.contains("{{"));
+        let (_, task, dir) = locate(&app, Some(name)).unwrap();
+        assert_eq!(task.status, TaskStatus::Wip);
+        let run = dir.read_run(n).unwrap().unwrap();
+        assert!(run.subagent && run.pid.is_none() && run.is_running());
+        assert_eq!(
+            std::fs::read_to_string(dir.run_prompt_path(n)).unwrap(),
+            prompt
+        );
+
+        // one at a time, and nothing written down for the refused one
+        let busy = open_subagent(&app, name, Kind::Develop, &Quietly).unwrap_err();
+        assert!(busy.to_string().contains("still working"), "{busy}");
+        assert_eq!(dir.runs().len(), 1);
+        assert!(close(&app, name, n, Status::Running, "x").is_err());
+
+        close(&app, name, n, Status::Done, "R1 tested\n\n").unwrap();
+        let run = dir.read_run(n).unwrap().unwrap();
+        assert_eq!((run.status, run.ended.is_some()), (Status::Done, true));
+        assert_eq!(
+            std::fs::read_to_string(dir.run_log_path(n)).unwrap(),
+            "R1 tested\n"
+        );
+        let again = close(&app, name, n, Status::Failed, "").unwrap_err();
+        assert!(again.to_string().contains("is done"), "{again}");
+
+        let (m, _) = open_subagent(&app, name, Kind::Check, &Quietly).unwrap();
+        assert_eq!(m, n + 1);
+    }
+
+    #[test]
+    fn a_run_iter_started_is_not_closed_by_a_session_and_complete_is_never_a_run() {
+        let app = world("not-subagent");
+        let name = "app/Fix it";
+        let spec = Spec {
+            agent: Harness::Claude,
+            model: "haiku".into(),
+            effort: "low".into(),
+        };
+        let n = create(&app, name, Kind::Develop, &spec, "x", None, None).unwrap();
+        let e = close(&app, name, n, Status::Done, "").unwrap_err();
+        assert!(
+            matches!(e, IterError::Agent(AgentError::RunNotSubagent(_))),
+            "{e}"
+        );
+        assert!(close(&app, name, 99, Status::Done, "").is_err());
+
+        let e = create(&app, name, Kind::Complete, &spec, "x", None, None).unwrap_err();
+        assert!(
+            e.to_string().contains("iter task prompt -k complete"),
+            "{e}"
+        );
+        assert!(open_subagent(&app, name, Kind::Complete, &Quietly).is_err());
+        let (_, _, dir) = locate(&app, Some(name)).unwrap();
+        assert_eq!(dir.runs().len(), 1);
+    }
+
+    struct Quietly;
+    impl Observer for Quietly {}
 
     #[test]
     fn an_agent_starting_makes_a_queued_task_work_in_progress_and_leaves_a_done_one() {

@@ -165,15 +165,31 @@ pub struct RunRecord {
     pub worktree: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pid: Option<u32>,
+    /// A subagent of an interactive session (`iter task solve --subagent`): iter started no
+    /// process, the session closes the run (`iter task runs --close`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub subagent: bool,
 }
 
 impl RunRecord {
     /// The status to show: `lost` for a running run whose process is gone, or one that never got a process after a minute.
+    /// A subagent's run has no process to watch: it is running until closed.
     pub fn shown_status(&self) -> &'static str {
+        if self.subagent {
+            return self.status.label();
+        }
         match (self.status, self.pid) {
             (Status::Running, Some(pid)) if !alive(pid) => "lost",
             (Status::Running, None) if self.age_seconds() > 60 => "lost",
             (status, _) => status.label(),
+        }
+    }
+
+    /// The harness, and whether it ran as a subagent of a session.
+    pub fn agent_label(&self) -> String {
+        match self.subagent {
+            true => format!("{} (subagent)", self.agent.key()),
+            false => self.agent.key().to_string(),
         }
     }
 
@@ -448,7 +464,30 @@ mod tests {
             branch: Some("feat/x".into()),
             worktree: None,
             pid: Some(42),
+            subagent: false,
         }
+    }
+
+    #[test]
+    fn a_subagent_run_is_running_until_closed_and_old_records_still_read() {
+        let mut r = run(1);
+        (r.pid, r.subagent) = (None, true);
+        assert_eq!(
+            (r.shown_status(), r.agent_label().as_str()),
+            ("running", "claude (subagent)")
+        );
+        r.subagent = false;
+        assert_eq!(
+            (r.shown_status(), r.agent_label().as_str()),
+            ("lost", "claude")
+        );
+        let text = serde_yaml::to_string(&r).unwrap();
+        assert!(!text.contains("subagent"), "{text}");
+        let old: RunRecord = serde_yaml::from_str(&text).unwrap();
+        assert!(!old.subagent);
+        r.subagent = true;
+        let back: RunRecord = serde_yaml::from_str(&serde_yaml::to_string(&r).unwrap()).unwrap();
+        assert!(back.subagent);
     }
 
     #[test]

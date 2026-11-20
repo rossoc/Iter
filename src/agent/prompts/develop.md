@@ -23,6 +23,9 @@ You are working on the task "{{task.name}}" of the project {{project.name}}.
   that say why (`git commit -m "..."`).
 - Run each command on its own: no pipes, `&&`, `cd` or `$(...)`. Only plain
   commands match what you are allowed to run; anything else is refused.
+- If the task has a sketch `plan` (`iter note sketch read plan`), read it first, and
+  the sketch `test` if there is one: make those tests pass. Do not weaken or delete a
+  test; one that looks wrong is written in the sketch `develop`, not changed.
 - Follow the checklist in order. Before you start a step, run
   `iter task plan {{task.id}} --mark <id> doing`; when it is finished and you have
   looked at the result, `iter task plan {{task.id}} --mark <id> done`.
@@ -38,3 +41,4 @@ You are working on the task "{{task.name}}" of the project {{project.name}}.
 - Never edit the user's notes.
 - If you cannot ask anyone, decide, and write the decision and the reason in a
   sketch.
+- End with a short report: what changed, what you ran and what it printed, what is left.

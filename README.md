@@ -79,6 +79,9 @@ iter task weekday myproj/mytask     # average hours per weekday
 iter task pull myproj               # issues -> tasks (and issue state -> task status)
 iter task push myproj               # tasks -> issues (and task status -> issue state)
 iter task push myproj --task mytask --body   # ...just that task, description included
+iter task prompt [myproj/mytask] -k complete  # the orchestrator prompt (see "Letting Claude lead a task")
+iter task solve -k test --subagent  # record a subagent's run, print its prompt
+iter task runs --close 3 --status done -m "report"   # ...and close it
 
 # sessions (tmux + git worktree/branch, and time tracking)
 iter session new myproj/mytask [-b custom-branch] [--no-branch]
@@ -505,6 +508,36 @@ the task needs the branch and worktree `iter session new` creates, and the
 project's `base_path` has to have `default_branch` itself checked out --
 that second merge lands in whatever is checked out there, and git would
 merge into a bystander branch as happily as into the right one.
+
+## Letting Claude lead a task
+
+Inside a task's session (`iter session new myproj/mytask` puts you in its
+worktree), start `claude` and say:
+
+```
+run `iter task prompt -k complete` and do it
+```
+
+The prompt makes Claude the orchestrator. It reads the task, writes the
+sketch `plan` (Requirements, Tests, Implementation) and a short checklist
+(`iter task plan`), then works in rounds of at most three: a test subagent
+writes failing tests first, a develop subagent makes them pass, and a fresh
+check subagent reviews the work without being told what the others did.
+After each round Claude logs its decision in the sketch `rounds` and either
+starts another round or writes the sketch `result`.
+
+The agents talk through sketches (`iter note sketch list`): `plan`, `test`,
+`develop`, `check`, `rounds`, `result`. Each subagent is a run of the task:
+`iter task solve -k <kind> --subagent` records it and prints the prompt
+Claude hands over verbatim, and `iter task runs --close <n> --status
+done|failed|cancelled -m "<report>"` closes it with the subagent's report as
+its log. So `iter task runs` and the task's Agent tab show every step. A
+subagent's run has no process for iter to watch, so it is never shown
+`lost`; one a session left open is closed with `--close` or Stop.
+
+`complete` is not a run itself (`iter task solve -k complete` is refused).
+Like the other prompts it can be overridden with `instructions/complete.md`
+in the task's, project's or organization's notes, or iter's config folder.
 
 ## Browsing in the browser: `iter serve`
 

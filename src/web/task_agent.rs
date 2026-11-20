@@ -532,7 +532,11 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
                     "#" (run.n.to_string()) " " (label_of(run.instruction_name()))
                 </a>
                 // what it was told to use: only on the row under the pointer
-                <span class="hint">(run.model.as_str()) ", " (run.effort.as_str())</span>
+                if run.subagent {
+                    <span class="hint">"subagent of a session"</span>
+                } else {
+                    <span class="hint">(run.model.as_str()) ", " (run.effort.as_str())</span>
+                }
             )
             cell(state_pill(run: run))
             cell(class: "acts",

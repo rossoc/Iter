@@ -130,6 +130,12 @@ pub enum TaskCommand {
         #[clap(long)]
         wait: bool,
 
+        /// For a subagent of the session you are in: start nothing, record
+        /// the run and print its prompt. Close it with `iter task runs
+        /// --close <n>` when the subagent is done
+        #[clap(long, conflicts_with_all = ["agent", "model", "effort", "wait", "extra"])]
+        subagent: bool,
+
         /// Passed to the harness as they are, after `--`
         #[clap(last = true)]
         extra: Vec<String>,
@@ -142,8 +148,21 @@ pub enum TaskCommand {
         task: Option<String>,
 
         /// Print the log of this run
-        #[clap(long)]
+        #[clap(long, conflicts_with = "close")]
         log: Option<u32>,
+
+        /// Close a subagent's run (`solve --subagent`) as `--status`
+        #[clap(long, requires = "status")]
+        close: Option<u32>,
+
+        /// How the closed run ended
+        #[clap(long, value_enum, requires = "close")]
+        status: Option<RunEnd>,
+
+        /// What the subagent reported at the end, kept as the run's log
+        /// (else standard input when it is not a terminal)
+        #[clap(long, short = 'm', requires = "close")]
+        message: Option<String>,
     },
 
     /// What a detached `solve` runs: the harness itself, to the end
@@ -214,4 +233,12 @@ pub enum TaskCommand {
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
     },
+}
+
+/// How a subagent's run ended (`iter task runs --close`).
+#[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RunEnd {
+    Done,
+    Failed,
+    Cancelled,
 }
