@@ -82,6 +82,52 @@ impl Target {
     }
 }
 
+/// The text a [`ingest::Job`] borrows, rendered once per run.
+pub struct JobText {
+    scope: String,
+    stamp: String,
+    schema: String,
+}
+
+impl JobText {
+    pub fn of(target: &Target) -> Self {
+        JobText {
+            scope: target.scope(),
+            stamp: now(),
+            schema: crate::wiki::schema::render(&target.wiki.ontology),
+        }
+    }
+
+    pub fn job<'a>(&'a self, target: &'a Target) -> ingest::Job<'a> {
+        ingest::Job {
+            project: &target.project.name,
+            notes_dir: &target.notes_dir,
+            scope: &self.scope,
+            now: &self.stamp,
+            schema: &self.schema,
+        }
+    }
+}
+
+/// The wiki ingest text for `task`: the notes waiting, the task's sources, the rules. `None` when
+/// the project has no wiki; while another ingest is writing the wiki, a text that says so.
+pub fn task_ingest_text(db: &Db, project: &Project, task: &Task) -> Option<String> {
+    let target = Target::new(db, project.clone()).ok()?;
+    if busy(&target) {
+        return Some(format!(
+            "(an ingest is already writing the wiki of {}: do nothing, say so and stop)",
+            project.name
+        ));
+    }
+    let waiting = ingest::waiting(&target.wiki);
+    let text = JobText::of(&target);
+    Some(ingest::ingest_prompt(
+        &text.job(&target),
+        &waiting,
+        Some(&task_display(project, task)),
+    ))
+}
+
 pub fn now() -> String {
     chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()
 }

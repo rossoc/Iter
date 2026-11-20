@@ -98,10 +98,11 @@ fn fill(template: &str, job: &Job, extra: &[(&str, String)]) -> String {
     text.replace("{{schema}}", job.schema)
 }
 
-/// The prompt that ingests `notes`; `sketches` is a finished task's sketches folder, read as notes too.
-pub fn ingest_prompt(job: &Job, notes: &[Waiting], sketches: Option<&Path>) -> String {
+/// The prompt that ingests `notes`; `task` (`<project>/<task>`) is a finished task whose sketches,
+/// notes and commits are read as sources too. Every source is named by the command that reads it.
+pub fn ingest_prompt(job: &Job, notes: &[Waiting], task: Option<&str>) -> String {
     let dirty = if notes.is_empty() {
-        "(none: only the sketches below)".to_string()
+        "(none: only the task below)".to_string()
     } else {
         notes
             .iter()
@@ -110,17 +111,33 @@ pub fn ingest_prompt(job: &Job, notes: &[Waiting], sketches: Option<&Path>) -> S
                     Dirty::New => "new",
                     Dirty::Changed => "changed since it was ingested",
                 };
-                let rel = n.path.strip_prefix(job.notes_dir).unwrap_or(&n.path);
-                format!("- `{}` ({why}): {}", n.id, rel.display())
+                format!(
+                    "- `{}` ({why}): `iter note read {}`",
+                    n.id,
+                    crate::agent::prompt::shell_word(&n.id)
+                )
             })
             .collect::<Vec<_>>()
             .join("\n")
     };
-    let extra = match sketches {
-        Some(dir) => format!(
-            "\n## Sketches of a finished task\n\nThe agent that worked on the task wrote these. Read the files in {} and keep what the project should remember: decisions and their reasons, causes, dead ends. The project's wiki cannot see a task's folder, so a page made from a sketch must not name it in `source` (that would be a dangling reference): say in the body which task and which sketch it comes from, and leave `source` for the notes.\n\n",
-            dir.display()
-        ),
+    let extra = match task {
+        Some(task) => {
+            let t = crate::agent::prompt::shell_word(task);
+            format!(
+                "\n### The task {t}\n\n\
+                 The task is finished. Keep what the project should remember: decisions and their \
+                 reasons, causes, dead ends.\n\n\
+                 - Its sketches, the working memory of the agents that did it: \
+                 `iter note sketch list --task {t}`, then `iter note sketch read <name> --task {t}`.\n\
+                 - Its notes, the user's: `iter note task list --task {t}`, then \
+                 `iter note task read <name> --task {t}`.\n\
+                 - Its commits: the short shas under `## Commits` in the sketch `result`; read \
+                 each with `git show --stat <sha>` (what changed where; the message says why).\n\n\
+                 The wiki cannot see a task's files, so a page made from one must not name it \
+                 in `source` (that would be a dangling reference): say in the body which task \
+                 and which sketch or commit it comes from, and leave `source` for the notes.\n"
+            )
+        }
         None => String::new(),
     };
     fill(
@@ -197,10 +214,13 @@ mod tests {
             path: PathBuf::from("/n/app/2026-10-27.md"),
             why: Dirty::New,
         }];
-        let text = ingest_prompt(&job, &notes, Some(Path::new("/n/app/tasks/3/sketches")));
-        assert!(text.contains("- `2026-10-27` (new): 2026-10-27.md"));
+        let text = ingest_prompt(&job, &notes, Some("app/Fix it"));
+        assert!(text.contains("- `2026-10-27` (new): `iter note read 2026-10-27`"));
         assert!(text.contains("iter wiki check --project app"));
-        assert!(text.contains("/n/app/tasks/3/sketches") && text.contains("RULES"));
+        assert!(
+            text.contains(r"iter note sketch list --task app/Fix\ it") && text.contains("RULES")
+        );
+        assert!(!text.contains("/n/app/tasks"));
         assert!(text.contains("must not name it in `source`"));
         assert!(!text.contains("{{"));
         let concept = concept_prompt(&job, "retries", &["ideas/a".into(), "ideas/b".into()]);

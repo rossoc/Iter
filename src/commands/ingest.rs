@@ -5,41 +5,14 @@ use crate::app::App;
 use crate::args::HarnessOpts;
 use crate::error::{IterError, Result};
 use crate::models::{Project, Task};
+use crate::utils::resolve::task_display;
 use crate::utils::resolve::{resolve_project_or_current, resolve_task};
-use crate::wiki::ingest::{self, Job};
+use crate::wiki::ingest;
 use crate::wiki::ingest_job::{
-    Auto, HarnessChoice, Target, Trigger, auto as wiki_auto, busy, changes, now, run_agent, settle,
-    spawn_ingest,
+    Auto, HarnessChoice, JobText, Target, Trigger, auto as wiki_auto, busy, changes, run_agent,
+    settle_with, spawn_ingest,
 };
-use crate::wiki::schema;
 use std::path::PathBuf;
-
-/// The text a [`Job`] borrows, rendered once per run.
-struct JobText {
-    scope: String,
-    stamp: String,
-    schema: String,
-}
-
-impl JobText {
-    fn of(target: &Target) -> Self {
-        JobText {
-            scope: target.scope(),
-            stamp: now(),
-            schema: schema::render(&target.wiki.ontology),
-        }
-    }
-
-    fn job<'a>(&'a self, target: &'a Target) -> Job<'a> {
-        Job {
-            project: &target.project.name,
-            notes_dir: &target.notes_dir,
-            scope: &self.scope,
-            now: &self.stamp,
-            schema: &self.schema,
-        }
-    }
-}
 
 fn choice(opts: &HarnessOpts) -> HarnessChoice {
     HarnessChoice {
@@ -116,7 +89,11 @@ pub fn ingest(
         return Ok(());
     }
     let text = JobText::of(&target);
-    let prompt = ingest::ingest_prompt(&text.job(&target), &waiting, sketches.as_deref());
+    let name = task
+        .as_ref()
+        .filter(|_| sketches.is_some())
+        .map(|t| task_display(&target.project, t));
+    let prompt = ingest::ingest_prompt(&text.job(&target), &waiting, name.as_deref());
     println!(
         "ingesting {} notes of {}...",
         waiting.len(),
@@ -173,7 +150,13 @@ pub fn build_concept(
     )
 }
 
-pub fn pending(app: &App, project: Option<&str>, accept: bool, revert: bool) -> Result<()> {
+pub fn pending(
+    app: &App,
+    project: Option<&str>,
+    accept: bool,
+    revert: bool,
+    message: Option<&str>,
+) -> Result<()> {
     let (project, _) = project_of(app, project, None)?;
     let target = Target::new(&app.db, project.clone())?;
     target.require_git()?;
@@ -187,7 +170,7 @@ pub fn pending(app: &App, project: Option<&str>, accept: bool, revert: bool) -> 
         .map(|c| format!("{:<8}{}\n", c.kind, c.path))
         .collect();
     if accept || revert {
-        settle(&app.db, &project, accept)?;
+        settle_with(&app.db, &project, accept, message)?;
         let verb = if accept { "committed" } else { "thrown away" };
         println!("{verb}:\n{summary}");
     } else {

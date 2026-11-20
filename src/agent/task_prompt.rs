@@ -67,6 +67,14 @@ fn keywords(name: &str, description: &str) -> String {
     words.join(" ")
 }
 
+/// Whether `template` has the placeholder `key` (`{{key}}`, spaces allowed inside the braces).
+fn uses(template: &str, key: &str) -> bool {
+    template
+        .split("{{")
+        .skip(1)
+        .any(|rest| rest.split("}}").next().is_some_and(|k| k.trim() == key))
+}
+
 /// Folders that may hold `instructions/<kind>.md`, nearest first.
 fn override_dirs(app: &App, project: &Project, dir: &TaskDir) -> Result<Vec<PathBuf>> {
     let org = app.db.org_of(project)?;
@@ -119,6 +127,13 @@ pub fn prompt_for(
         true => onboarding(app, &project, &task),
         false => String::new(),
     };
+    // computed only when asked for: it reads the whole wiki
+    let ingest = match uses(&text, "ingest") {
+        true => {
+            crate::wiki::ingest_job::task_ingest_text(&app.db, &project, &task).unwrap_or_default()
+        }
+        false => String::new(),
+    };
     let name = task_display(&project, &task);
     let plan_path = dir.plan_path();
     let ctx = Context {
@@ -135,6 +150,8 @@ pub fn prompt_for(
         plan_path: &plan_path,
         plan: plan_text.as_deref(),
         onboarding: &known,
+        branch_main: &project.default_branch,
+        ingest: &ingest,
     };
     Ok(prompt::render(&text, kind, &ctx)?)
 }
@@ -245,7 +262,10 @@ mod tests {
         assert!(!text.contains("{{"), "{text}");
         assert!(text.contains("Fix it"), "{text}");
         assert!(text.contains("2026-10-27"), "the waiting note: {text}");
-        assert!(text.contains("## Workflow") && text.contains("## Rules"), "{text}");
+        assert!(
+            text.contains("## Workflow") && text.contains("## Rules"),
+            "{text}"
+        );
         assert!(text.contains("iter note sketch list --task"), "{text}");
         assert!(text.contains("git show --stat"), "{text}");
         let sketches = notes.join("tasks/1/sketches").display().to_string();

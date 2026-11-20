@@ -27,17 +27,21 @@ pub enum Kind {
     /// Lead the work in an interactive session: plan in sketches, then test, develop and check
     /// through subagents until the requirements hold
     Complete,
+    /// Turn the task's sketches, notes and commits, and the notes waiting, into wiki pages;
+    /// change no code
+    Ingest,
 }
 
 impl Kind {
     #[cfg(test)]
-    pub const ALL: [Kind; 6] = [
+    pub const ALL: [Kind; 7] = [
         Kind::Plan,
         Kind::Develop,
         Kind::Test,
         Kind::Check,
         Kind::Fix,
         Kind::Complete,
+        Kind::Ingest,
     ];
 
     pub fn key(self) -> &'static str {
@@ -48,6 +52,7 @@ impl Kind {
             Kind::Check => "check",
             Kind::Fix => "fix",
             Kind::Complete => "complete",
+            Kind::Ingest => "ingest",
         }
     }
 
@@ -63,6 +68,7 @@ impl Kind {
             Kind::Check => include_str!("prompts/check.md"),
             Kind::Fix => include_str!("prompts/fix.md"),
             Kind::Complete => include_str!("prompts/complete.md"),
+            Kind::Ingest => include_str!("prompts/ingest.md"),
         }
     }
 
@@ -107,9 +113,13 @@ pub struct Context<'a> {
     pub plan: Option<&'a str>,
     /// Wiki onboarding text; empty when none.
     pub onboarding: &'a str,
+    /// The project's main branch (`project.default_branch`).
+    pub branch_main: &'a str,
+    /// The wiki ingest text for the task; empty when the project has no wiki (or it was not asked for).
+    pub ingest: &'a str,
 }
 
-pub const PLACEHOLDERS: [&str; 12] = [
+pub const PLACEHOLDERS: [&str; 14] = [
     "task",
     "task.name",
     "task.description",
@@ -122,6 +132,8 @@ pub const PLACEHOLDERS: [&str; 12] = [
     "plan",
     "onboarding",
     "kind",
+    "branch.main",
+    "ingest",
 ];
 
 fn value(ctx: &Context<'_>, key: &str, kind: Kind) -> Option<String> {
@@ -144,6 +156,8 @@ fn value(ctx: &Context<'_>, key: &str, kind: Kind) -> Option<String> {
         "plan" => or(ctx.plan.unwrap_or(""), "(there is no plan yet)"),
         "onboarding" => or(ctx.onboarding, "(nothing was found for this task)"),
         "kind" => kind.key().to_string(),
+        "branch.main" => ctx.branch_main.to_string(),
+        "ingest" => or(ctx.ingest, "(the project has no wiki)"),
         _ => return None,
     })
 }
@@ -209,6 +223,8 @@ mod tests {
             plan_path: dir,
             plan,
             onboarding,
+            branch_main: "main",
+            ingest: "",
         }
     }
 

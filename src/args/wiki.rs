@@ -200,6 +200,10 @@ pub enum WikiCommand {
         /// Throw away every uncommitted change under wiki/, yours too
         #[clap(long)]
         revert: bool,
+
+        /// With --accept: the commit message (default `wiki: ingest`)
+        #[clap(long, short = 'm', requires = "accept", conflicts_with = "revert")]
+        message: Option<String>,
     },
 }
 

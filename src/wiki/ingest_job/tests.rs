@@ -168,8 +168,8 @@ fn accepting_with_a_message_uses_it() {
     )
     .unwrap();
     let message = "update: app/fix-it - 1a2b3c4";
-    let args = parse(&["-p", "app", "--accept", "-m", message])
-        .unwrap_or_else(|e| panic!("refused: {e}"));
+    let args =
+        parse(&["-p", "app", "--accept", "-m", message]).unwrap_or_else(|e| panic!("refused: {e}"));
     let crate::args::Command::Wiki { action } = args.command else {
         panic!("not a wiki command")
     };
