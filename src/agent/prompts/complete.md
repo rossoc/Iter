@@ -60,4 +60,21 @@ you decide. You are in an interactive session: the user is there.
       round, stop anyway.
 4. **Result.** Write the sketch `result` (`iter note sketch new result -m "..."`;
    `--replace` if it exists): each requirement and whether it is met, the tests run and
-   what they printed, the commits, what is left open. Then tell the user in a few lines.
+   what they printed, what is left open, and a section `## Commits` listing the task's
+   commits by short sha, one per line. Then tell the user in a few lines.
+5. **Close.** Ask the user what to do next, as a choice: another round, edit the result,
+   commit only, or conclude. "Commit only" is step (a) below; "conclude" is all of it, in
+   order, stopping to ask the user when a step fails:
+   - (a) Commit what is left in {{worktree}} with a short message that says what the
+      task did: `feat: <precise subject>`, `fix: <what was fixed>`, `refactor: ...`.
+   - (b) In {{worktree}}: `git merge {{branch.main}}`. Fix the conflicts and the
+      differences, run the project's tests, commit the merge.
+   - (c) `git -C {{project.path}} merge <the task's branch>`. If {{project.path}} is not
+      on {{branch.main}} (`git -C {{project.path}} branch --show-current`), stop and ask.
+   - (d) Update `## Commits` in the sketch `result`, then let a subagent ingest the
+      task into the wiki: `iter task solve -k ingest --subagent`, and close its run as
+      above.
+   - (e) Commit what it wrote: `iter wiki pending --accept -m "update: {{task}} - <short
+      sha of {{branch.main}}>"` (`git -C {{project.path}} rev-parse --short
+      {{branch.main}}`), so the wiki follows every change to {{branch.main}}.
+   - (f) Ask the user whether to mark the task done (`iter task done`).
