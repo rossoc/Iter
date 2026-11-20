@@ -207,4 +207,46 @@ mod tests {
         assert!(concept.contains("- `ideas/b`") && concept.contains("concepts/retries.md"));
         assert!(!concept.contains("{{"));
     }
+
+    /// R3: the ingest instruction is laid out like a CLAUDE.md (purpose, sources, workflow, rules)
+    /// and reads only through iter commands.
+    #[test]
+    fn the_ingest_instruction_has_the_claude_md_sections_and_reads_through_iter() {
+        let job = Job {
+            project: "app",
+            notes_dir: Path::new("/n/app"),
+            scope: "--project app",
+            now: "2026-10-30T12:00:00",
+            schema: "RULES",
+        };
+        let notes = [Waiting {
+            id: "2026-10-27".into(),
+            path: PathBuf::from("/n/app/2026-10-27.md"),
+            why: Dirty::New,
+        }];
+        let text = ingest_prompt(&job, &notes, None);
+        let mut at = 0;
+        for section in ["## Purpose", "## Sources", "## Workflow", "## Rules"] {
+            let found = text[at..]
+                .find(section)
+                .unwrap_or_else(|| panic!("{section} missing or out of order: {text}"));
+            at += found + section.len();
+        }
+        for command in [
+            "iter note read",
+            "iter wiki find --project app",
+            "iter wiki show",
+            "iter wiki neighbors",
+            "iter wiki check --project app",
+        ] {
+            assert!(text.contains(command), "{command}: {text}");
+        }
+        for word in ["contradicts", "supersedes"] {
+            assert!(text.contains(word), "{word}: {text}");
+        }
+        // cross-links both ways
+        assert!(text.contains("`nb`") || text.contains("nb:"), "{text}");
+        assert!(text.contains("2026-10-27") && text.contains("RULES"));
+        assert!(!text.contains("{{"), "{text}");
+    }
 }

@@ -629,6 +629,22 @@ mod tests {
         assert_eq!(dir.runs().len(), 1);
     }
 
+    /// R2: the ingest of a closing task is a subagent run like the others, opened and closed.
+    #[test]
+    fn an_ingest_subagent_run_is_opened_and_closed() {
+        let app = world("ingest");
+        let name = "app/Fix it";
+        let kind = <Kind as clap::ValueEnum>::from_str("ingest", false)
+            .unwrap_or_else(|e| panic!("no kind `ingest`: {e}"));
+        let (n, prompt) = open_subagent(&app, name, kind, &Quietly).unwrap();
+        assert!(!prompt.contains("{{"), "{prompt}");
+        let (_, _, dir) = locate(&app, Some(name)).unwrap();
+        let run = dir.read_run(n).unwrap().unwrap();
+        assert!(run.subagent && run.is_running() && run.kind == kind);
+        close(&app, name, n, Status::Done, "2 pages updated").unwrap();
+        assert_eq!(dir.read_run(n).unwrap().unwrap().status, Status::Done);
+    }
+
     struct Quietly;
     impl Observer for Quietly {}
 

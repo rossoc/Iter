@@ -229,6 +229,57 @@ mod tests {
         );
     }
 
+    fn ingest_kind() -> Kind {
+        <Kind as clap::ValueEnum>::from_str("ingest", false)
+            .unwrap_or_else(|e| panic!("no kind `ingest`: {e}"))
+    }
+
+    /// R2, R3, R4: `-k ingest` carries the wiki ingest text for the task: the note waiting, the
+    /// rules, and the task's sketches named by command, not by folder.
+    #[test]
+    fn the_ingest_prompt_lists_the_waiting_notes_and_reads_through_iter() {
+        let (app, notes) = world("ingest");
+        std::fs::create_dir_all(notes.join("wiki")).unwrap();
+        std::fs::write(notes.join("2026-10-27.md"), "Retries need a budget.\n").unwrap();
+        let text = prompt_text(&app, Some("app/Fix it"), ingest_kind(), None, false).unwrap();
+        assert!(!text.contains("{{"), "{text}");
+        assert!(text.contains("Fix it"), "{text}");
+        assert!(text.contains("2026-10-27"), "the waiting note: {text}");
+        assert!(text.contains("## Workflow") && text.contains("## Rules"), "{text}");
+        assert!(text.contains("iter note sketch list --task"), "{text}");
+        assert!(text.contains("git show --stat"), "{text}");
+        let sketches = notes.join("tasks/1/sketches").display().to_string();
+        assert!(!text.contains(&sketches), "names the folder: {text}");
+        assert!(!text.contains("(the project has no wiki)"), "{text}");
+    }
+
+    /// R4: a project without a notes folder has no wiki; the prompt says so and does not fail.
+    #[test]
+    fn the_ingest_prompt_of_a_project_without_notes_says_there_is_no_wiki() {
+        let db = fixtures::db();
+        let project = db.insert(&fixtures::project("bare")).unwrap();
+        fixtures::add_task(&db, project, "x");
+        let app = App::with_db(db);
+        let text = prompt_text(&app, Some("bare/x"), ingest_kind(), None, false).unwrap();
+        assert!(text.contains("(the project has no wiki)"), "{text}");
+        assert!(!text.contains("{{"), "{text}");
+    }
+
+    /// R4: `{{branch.main}}` is the project's default branch, `{{ingest}}` works in any template.
+    #[test]
+    fn a_template_can_name_the_main_branch_and_the_ingest_text() {
+        let (app, notes) = world("branch");
+        let mut project = app.db.resolve::<Project>("app").unwrap();
+        project.default_branch = "trunk".into();
+        app.db.update(project.id(), &project).unwrap();
+        std::fs::create_dir_all(notes.join("wiki")).unwrap();
+        let file = notes.join("close.md");
+        std::fs::write(&file, "merge {{branch.main}}\n{{ingest}}").unwrap();
+        let text = prompt_text(&app, Some("app/Fix it"), Kind::Plan, Some(&file), false).unwrap();
+        assert!(text.starts_with("merge trunk\n"), "{text}");
+        assert!(!text.contains("{{"), "{text}");
+    }
+
     #[test]
     fn no_notes_folder_means_the_task_is_kept_in_the_config_folder() {
         let db = fixtures::db();

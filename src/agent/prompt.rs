@@ -329,4 +329,57 @@ mod tests {
         assert!(Kind::Complete.interactive() && !Kind::Complete.changes_code());
         assert!(Kind::ALL.iter().filter(|k| k.interactive()).count() == 1);
     }
+
+    /// The kind `ingest`, read by name as the CLI reads it (`-k ingest`).
+    fn ingest_kind() -> Kind {
+        <Kind as clap::ValueEnum>::from_str("ingest", false)
+            .unwrap_or_else(|e| panic!("no kind `ingest`: {e}"))
+    }
+
+    /// R2: a kind that only writes the wiki: headless, no code changed, a built-in template.
+    #[test]
+    fn ingest_is_a_headless_kind_that_changes_no_code() {
+        let kind = ingest_kind();
+        assert_eq!(kind.key(), "ingest");
+        assert!(!kind.interactive() && !kind.changes_code());
+        assert!(Kind::ALL.contains(&kind), "Kind::ALL misses ingest");
+        assert_eq!(serde_yaml::from_str::<Kind>("ingest").unwrap(), kind);
+        assert!(kind.builtin().contains("{{ingest}}"), "{}", kind.builtin());
+    }
+
+    /// Every kind the CLI accepts is in `Kind::ALL`, so the loops over it cover them all.
+    #[test]
+    fn all_lists_every_kind() {
+        use clap::ValueEnum;
+        assert_eq!(Kind::ALL.len(), Kind::value_variants().len());
+    }
+
+    /// R4: the main branch and the ingest text are placeholders a template may use.
+    #[test]
+    fn branch_main_and_ingest_are_known_placeholders() {
+        for key in ["branch.main", "ingest"] {
+            assert!(PLACEHOLDERS.contains(&key), "{key}");
+        }
+    }
+
+    /// R1: `complete` closes the task with the user: commit, merge main in, merge into main,
+    /// ingest by a subagent, commit the wiki.
+    #[test]
+    fn complete_closes_the_task_by_merging_and_ingesting() {
+        let text = Kind::Complete.builtin();
+        for wanted in [
+            "git merge {{branch.main}}",
+            "git -C {{project.path}} merge",
+            "iter task solve -k ingest --subagent",
+            "iter wiki pending --accept -m \"update:",
+            "## Commits",
+            "iter task done",
+        ] {
+            assert!(text.contains(wanted), "{wanted}: {text}");
+        }
+        // the close comes after the result, not before it
+        let result = text.find("**Result.**").expect("a Result step");
+        let merge = text.find("git merge {{branch.main}}").unwrap_or(0);
+        assert!(merge > result, "the merge must come after the result");
+    }
 }
