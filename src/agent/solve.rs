@@ -641,7 +641,12 @@ mod tests {
         let name = "app/Fix it";
         let kind = <Kind as clap::ValueEnum>::from_str("ingest", false)
             .unwrap_or_else(|e| panic!("no kind `ingest`: {e}"));
-        let (n, prompt) = open_subagent(&app, name, kind, &Quietly).unwrap();
+        let spec = Spec {
+            agent: Harness::Claude,
+            model: "haiku".into(),
+            effort: "low".into(),
+        };
+        let (n, prompt) = open_subagent(&app, name, kind, &spec, &Quietly).unwrap();
         assert!(!prompt.contains("{{"), "{prompt}");
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
