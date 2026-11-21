@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- **Notifications in the web UI**: a toast in the top right corner, blue for a success and red for an error, that goes on its own after 5 seconds (paused while hovered or focused, with a close button). A saved form, a started run, a moved task and so on say so; a form refused with a 400/500 goes back to its page with the refusal as a red toast (same-origin `Referer` only; a script's `fetch` keeps the status); a form re-rendered with an error also raises it as a toast, beside the inline error box. New config key `notifications: { enabled, seconds }` (default on, 5), editable on `/settings` (seconds 1-60). Built from one router layer (`web/flash.rs`, a short-lived `iter_flash` cookie) and `ui/toast.{rs,js,css}`; `window.iterToast` is used by the board's drag and drop. The settings page's inline "Saved." notice shows only when toasts are off.
+
 ### Changed
 - **Instructions live in the config folder, not in the binary.** `src/agent/prompts/` is now `instructions/` at the repo root; install it by copying it beside `iter.yaml` and `iter.db` (`cp -r instructions ~/.config/iter/`). The lookup is the task's folder, the project's notes, the organization's notes, then `<config>/instructions/`, with no built-in fallback: a name found nowhere is an error naming `<config>/instructions/<name>.md`. The web's instructions list shows only what those folders hold (an empty state when none), and any instruction can be renamed.
 - **`-i/--instruction` replaces `-k/--kind`** on `iter task prompt` and `iter task solve`, and is required. Any instruction name works, not only the seven iter ships; `{{kind}}` is filled with the name.

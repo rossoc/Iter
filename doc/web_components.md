@@ -46,7 +46,7 @@ Content blocks
   levels down.
 - `tag_chips`, `status` (icon plus word), `count_badge(n, noun)` (a screen
   reader hears "(3 sessions)"), `empty_line`, `empty_state(svg)`, `notice` /
-  `error_box`, `group_card` and `card_grid` (Home, Boards), `folded_list`.
+  `error_box`, `toasts` (the frame's top-right region; `doc/web.md`, Notifications), `group_card` and `card_grid` (Home, Boards), `folded_list`.
 
 Tables and lists
 - `data_table(caption, columns, actions, class, headed, add, empty, child)`: the

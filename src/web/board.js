@@ -9,7 +9,9 @@
 //   [data-target] a drop zone; what is POSTed as `target`.
 //   .dragging     on the card while dragged; .over on the zone above it.
 //   .board-notes  (optional, a role=status region in the root) where a done move
-//                 and a failed drop (as an alert) are said; made if missing.
+//                 is said, and a failed drop (as an alert) when the toasts are off;
+//                 made if missing. With them on, a failed drop is a red toast and a
+//                 done one a blue toast on the reloaded page (ui/toast.js).
 // The server decides where a card belongs, so after a good drop the page reloads
 // (?moved=<task>, as a pick form's redirect): the keyboard lands on #card-<task>
 // and the status says "Moved <task> to <place>". A failed drop says so and stays.
@@ -130,7 +132,10 @@
     if (board.contains(form) || (form.closest && form.closest(".pickbar"))) saveScroll();
   });
 
+  // A failed drop is a red toast (ui/toast.js); with the toasts off, a note in the board.
   function fail(what) {
+    var text = "The task could not be moved (" + what + "). Nothing changed.";
+    if (window.iterToast) return window.iterToast("error", text);
     var notes = board.querySelector(".board-notes");
     if (!notes) {
       notes = document.createElement("div");
@@ -140,7 +145,7 @@
     var note = document.createElement("p");
     note.className = "notice error";
     note.setAttribute("role", "alert");
-    note.textContent = "The task could not be moved (" + what + "). Nothing changed.";
+    note.textContent = text;
     notes.replaceChildren(note);
   }
 
@@ -188,6 +193,8 @@
         next.searchParams.set("moved", task);
         next.hash = "card-" + task;
         saveScroll();
+        // the blue toast on the reloaded page, as a pick form's redirect gets from the server
+        if (window.iterToast) window.iterToast.next("ok", "Task moved.");
         location.replace(next);
       })
       .catch(function () {
