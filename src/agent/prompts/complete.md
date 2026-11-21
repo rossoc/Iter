@@ -25,9 +25,12 @@ you decide. You are in an interactive session: the user is there.
   subagents write `test`, `develop` and `check`. Messages to a subagent are only the
   prompt iter prints for it; what it says back is its final report.
 - Every subagent is a run of the task, so the user can follow the work in iter:
-  1. `iter task solve -k <kind> --subagent` prints the subagent's prompt (and, on
-     standard error, its run number `<n>`).
-  2. Start a fresh subagent and give it exactly that prompt, nothing else.
+  1. `iter task solve -k <kind> --subagent --model <model> --effort <effort>` prints
+     the subagent's prompt (and, on standard error, its run number `<n>`). Name the
+     model and effort you will start the subagent with (`inherit` if it takes the
+     session's own), so the run records them.
+  2. Start a fresh subagent with that model and effort, and give it exactly that
+     prompt, nothing else.
   3. When it returns, `iter task runs --close <n> --status done -m "<its final report>"`
      (`--status failed` if it could not do its job). Never leave a run open.
 - The code is in {{worktree}}, your current directory.

@@ -26,6 +26,9 @@ impl Observer for Console {
     }
 }
 
+/// A subagent's model or effort when the session does not say: the session's own.
+const INHERIT: &str = "inherit";
+
 pub struct SolveRequest<'a> {
     pub task: Option<&'a str>,
     pub kind: Kind,
@@ -103,13 +106,26 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
 
 /// `solve --subagent`: records the run, prints the prompt to give the subagent; how to close it
 /// goes to standard error, so the prompt can be taken as it is.
-pub fn subagent(app: &App, task: Option<&str>, kind: Kind) -> Result<()> {
+pub fn subagent(
+    app: &App,
+    task: Option<&str>,
+    kind: Kind,
+    model: Option<&str>,
+    effort: Option<&str>,
+) -> Result<()> {
     let (project, task, _) = locate(app, task)?;
     let name = task_display(&project, &task);
-    let (n, prompt) = open_subagent(app, &name, kind, &Console)?;
+    let spec = Spec {
+        agent: Harness::default(),
+        model: model.unwrap_or(INHERIT).to_string(),
+        effort: effort.unwrap_or(INHERIT).to_string(),
+    };
+    let (n, prompt) = open_subagent(app, &name, kind, &spec, &Console)?;
     eprintln!(
-        "run {n} ({}): give the prompt below to a new subagent; when it is done: iter task runs --close {n} --status done -m \"<its report>\"",
-        kind.key()
+        "run {n} ({}, {}, effort {}): give the prompt below to a new subagent; when it is done: iter task runs --close {n} --status done -m \"<its report>\"",
+        kind.key(),
+        spec.model,
+        spec.effort
     );
     print!("{}", prompt.trim_end());
     println!();
@@ -163,12 +179,13 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
     }
     for r in runs {
         println!(
-            "#{:<3} {:<9} {:<8} {:<17} {:<6} {}{}",
+            "#{:<3} {:<9} {:<8} {:<17} {:<7} {:<7} {}{}",
             r.n,
             r.shown_status(),
             r.kind.key(),
             r.agent_label(),
             r.model,
+            r.effort,
             r.started,
             r.ended.map(|e| format!(" -> {e}")).unwrap_or_default()
         );

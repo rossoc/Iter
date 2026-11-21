@@ -85,7 +85,13 @@ impl Run for TaskCommand {
                 subagent,
                 extra,
             } => match subagent {
-                true => solve::subagent(app, task.as_deref(), *kind),
+                true => solve::subagent(
+                    app,
+                    task.as_deref(),
+                    *kind,
+                    model.as_deref(),
+                    effort.as_deref(),
+                ),
                 false => solve::solve(
                     app,
                     &solve::SolveRequest {

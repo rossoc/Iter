@@ -132,8 +132,9 @@ pub enum TaskCommand {
 
         /// For a subagent of the session you are in: start nothing, record
         /// the run and print its prompt. Close it with `iter task runs
-        /// --close <n>` when the subagent is done
-        #[clap(long, conflicts_with_all = ["agent", "model", "effort", "wait", "extra"])]
+        /// --close <n>` when the subagent is done. `--model` and `--effort`
+        /// record what the subagent is started with (default: inherit)
+        #[clap(long, conflicts_with_all = ["agent", "wait", "extra"])]
         subagent: bool,
 
         /// Passed to the harness as they are, after `--`

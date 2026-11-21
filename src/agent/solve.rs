@@ -312,21 +312,17 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
 
 /// Opens a run of `kind` for a subagent of the session the caller is in: iter starts nothing,
 /// the session gives the subagent the prompt and closes the run with [`close`]. Returns the run's
-/// number and its prompt, final (the worktree named).
+/// number and its prompt, final (the worktree named). `spec` is what the subagent is started with.
 pub fn open_subagent(
     app: &App,
     name: &str,
     kind: Kind,
+    spec: &Spec,
     say: &dyn Observer,
 ) -> Result<(u32, String)> {
     let (_, task, dir) = locate(app, Some(name))?;
     not_busy(&dir, name)?;
-    let spec = Spec {
-        agent: Harness::default(),
-        model: String::new(),
-        effort: String::new(),
-    };
-    let n = create(app, name, kind, &spec, &task.description, None, None)?;
+    let n = create(app, name, kind, spec, &task.description, None, None)?;
     let Ready { dir, mut run, .. } = prepare(app, name, n, say)?;
     run.subagent = true;
     let prompt = (|| -> Result<String> {
@@ -571,19 +567,28 @@ mod tests {
     fn a_subagent_run_is_opened_with_its_prompt_and_closed_by_the_session() {
         let app = world("subagent");
         let name = "app/Fix it";
-        let (n, prompt) = open_subagent(&app, name, Kind::Test, &Quietly).unwrap();
+        let sonnet = Spec {
+            agent: Harness::Claude,
+            model: "sonnet".into(),
+            effort: "high".into(),
+        };
+        let (n, prompt) = open_subagent(&app, name, Kind::Test, &sonnet, &Quietly).unwrap();
         assert!(prompt.contains("Retries hammer the api.") && !prompt.contains("{{"));
         let (_, task, dir) = locate(&app, Some(name)).unwrap();
         assert_eq!(task.status, TaskStatus::Wip);
         let run = dir.read_run(n).unwrap().unwrap();
         assert!(run.subagent && run.pid.is_none() && run.is_running());
         assert_eq!(
+            (run.model.as_str(), run.effort.as_str()),
+            ("sonnet", "high")
+        );
+        assert_eq!(
             std::fs::read_to_string(dir.run_prompt_path(n)).unwrap(),
             prompt
         );
 
         // one at a time, and nothing written down for the refused one
-        let busy = open_subagent(&app, name, Kind::Develop, &Quietly).unwrap_err();
+        let busy = open_subagent(&app, name, Kind::Develop, &sonnet, &Quietly).unwrap_err();
         assert!(busy.to_string().contains("still working"), "{busy}");
         assert_eq!(dir.runs().len(), 1);
         assert!(close(&app, name, n, Status::Running, "x").is_err());
@@ -598,7 +603,7 @@ mod tests {
         let again = close(&app, name, n, Status::Failed, "").unwrap_err();
         assert!(again.to_string().contains("is done"), "{again}");
 
-        let (m, _) = open_subagent(&app, name, Kind::Check, &Quietly).unwrap();
+        let (m, _) = open_subagent(&app, name, Kind::Check, &sonnet, &Quietly).unwrap();
         assert_eq!(m, n + 1);
     }
 
@@ -624,7 +629,7 @@ mod tests {
             e.to_string().contains("iter task prompt -k complete"),
             "{e}"
         );
-        assert!(open_subagent(&app, name, Kind::Complete, &Quietly).is_err());
+        assert!(open_subagent(&app, name, Kind::Complete, &spec, &Quietly).is_err());
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         assert_eq!(dir.runs().len(), 1);
     }
