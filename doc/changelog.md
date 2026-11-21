@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+- **Instructions live in the config folder, not in the binary.** `src/agent/prompts/` is now `instructions/` at the repo root; install it by copying it beside `iter.yaml` and `iter.db` (`cp -r instructions ~/.config/iter/`). The lookup is the task's folder, the project's notes, the organization's notes, then `<config>/instructions/`, with no built-in fallback: a name found nowhere is an error naming `<config>/instructions/<name>.md`. The web's instructions list shows only what those folders hold (an empty state when none), and any instruction can be renamed.
+- **`-i/--instruction` replaces `-k/--kind`** on `iter task prompt` and `iter task solve`, and is required. Any instruction name works, not only the seven iter ships; `{{kind}}` is filled with the name.
+- **Front matter `worktree: true` / `interactive: true` replace the kinds.** `worktree: true` (shipped on `develop`, `test`, `fix`) gives the run the task's branch and worktree; `interactive: true` (on `complete`) makes `solve`, `--subagent` and the web refuse it, pointing at `iter task prompt -i <name>`. `kind:` is no longer read. The `Kind` enum is gone.
+- Run records store `instruction` (and `wants_worktree`); records that say `kind:` (also `execute`/`investigate`) still load and show their instruction's name.
+
 ### Added
 - **Closing a task from `complete`**: after the sketch `result` (which now lists the task's commits under `## Commits`), the orchestrator asks the user: another round, edit the result, commit only, or conclude. Conclude commits in the worktree (`feat|fix|...: <subject>`), merges `{{branch.main}}` into the task branch and fixes what differs, merges the branch into main in the project folder (stops if that folder is not on main), lets a subagent ingest the task, commits the wiki as `update: <project>/<task> - <short sha of main>`, and asks whether to mark the task done.
 - **Prompt kind `ingest`** (`iter task prompt -k ingest`, `iter task solve -k ingest --subagent`): a headless kind that changes no code and turns the task's sketches, notes and commits, plus the notes waiting, into wiki pages. Its template embeds the new placeholder `{{ingest}}`, the filled wiki ingest text ("(the project has no wiki)" without a notes folder; computed only when a template uses it). New placeholder `{{branch.main}}` is the project's default branch. The web still lists five built-in kinds.

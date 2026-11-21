@@ -79,8 +79,8 @@ iter task weekday myproj/mytask     # average hours per weekday
 iter task pull myproj               # issues -> tasks (and issue state -> task status)
 iter task push myproj               # tasks -> issues (and task status -> issue state)
 iter task push myproj --task mytask --body   # ...just that task, description included
-iter task prompt [myproj/mytask] -k complete  # the orchestrator prompt (see "Letting Claude lead a task")
-iter task solve -k test --subagent  # record a subagent's run, print its prompt
+iter task prompt [myproj/mytask] -i complete  # the orchestrator prompt (see "Letting Claude lead a task")
+iter task solve -i test --subagent  # record a subagent's run, print its prompt
 iter task runs --close 3 --status done -m "report"   # ...and close it
 
 # sessions (tmux + git worktree/branch, and time tracking)
@@ -515,7 +515,7 @@ Inside a task's session (`iter session new myproj/mytask` puts you in its
 worktree), start `claude` and say:
 
 ```
-run `iter task prompt -k complete` and do it
+run `iter task prompt -i complete` and do it
 ```
 
 The prompt makes Claude the orchestrator. It reads the task, writes the
@@ -528,7 +528,7 @@ starts another round or writes the sketch `result`.
 
 The agents talk through sketches (`iter note sketch list`): `plan`, `test`,
 `develop`, `check`, `rounds`, `result`. Each subagent is a run of the task:
-`iter task solve -k <kind> --subagent` records it and prints the prompt
+`iter task solve -i <instruction> --subagent` records it and prints the prompt
 Claude hands over verbatim, and `iter task runs --close <n> --status
 done|failed|cancelled -m "<report>"` closes it with the subagent's report as
 its log. So `iter task runs` and the task's Agent tab show every step. A
@@ -538,16 +538,57 @@ subagent's run has no process for iter to watch, so it is never shown
 When the result is in, Claude asks what next: another round, edit the
 result, commit only, or conclude. Concluding commits the work, merges the
 main branch into the task branch (fixing what differs), merges the task
-branch into main, has an `ingest` subagent (`iter task solve -k ingest
+branch into main, has an `ingest` subagent (`iter task solve -i ingest
 --subagent`) fold the task's sketches, notes and commits into the wiki, and
 commits the wiki as `update: <project>/<task> - <short sha of main>`
 (`iter wiki pending --accept -m ...`), so the wiki follows every change to
 main. Last, it asks whether to mark the task done (with the `ingest` setting
 `on_task_done`, that would ingest a second time).
 
-`complete` is not a run itself (`iter task solve -k complete` is refused).
-Like the other prompts it can be overridden with `instructions/complete.md`
-in the task's, project's or organization's notes, or iter's config folder.
+`complete` is not a run itself (its `interactive: true` makes `iter task
+solve -i complete` refuse it).
+
+## Instructions: what an agent is told
+
+An instruction is a markdown file, `instructions/<name>.md`, in the format of
+an opencode agent: front matter over the prompt, whose `{{placeholders}}`
+(`{{task.name}}`, `{{plan}}`, `{{worktree}}`...) are filled from the task.
+None is compiled into iter: they live beside `iter.yaml` and `iter.db`, in
+`~/.config/iter/instructions/`. iter ships seven in the repo's
+`instructions/` folder (`plan`, `develop`, `test`, `check`, `fix`,
+`complete`, `ingest`); install them by copying that folder into the config
+folder:
+
+```sh
+cp -r instructions ~/.config/iter/
+```
+
+The command line names the instruction with `-i` (`--instruction`), which is
+required, and any name works, not only those seven:
+
+```sh
+iter task prompt myproj/mytask -i plan
+iter task solve myproj/mytask -i review --yes
+```
+
+The lookup is nearest first: the task's folder, the project's notes, the
+organization's notes, then iter's config folder. A name found in none of
+them is an error naming `~/.config/iter/instructions/<name>.md`.
+
+Two front-matter keys of iter's own say how a run is set up (both default to
+false):
+
+```yaml
+---
+description: Work through the plan's development steps
+worktree: true      # the run works on the code: it gets the task's branch and worktree
+interactive: true   # it leads subagents from a session: printed, never run headless
+---
+```
+
+`develop`, `test` and `fix` carry `worktree: true`; `complete` carries
+`interactive: true`. Older run records, which said `kind: develop`, still
+load and show their instruction's name.
 
 ## Browsing in the browser: `iter serve`
 
