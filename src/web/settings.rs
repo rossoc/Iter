@@ -2,14 +2,15 @@
 
 use super::forms::SettingsForm;
 use super::settings_fields::settings_fields;
-use super::ui::field::{field, select};
+use super::ui::field::{checkbox, field, select};
+use super::ui::group::group;
 use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::frame::frame;
 use super::ui::notice::notice;
 use super::ui::page_header::{Kicker, page_header};
 use super::url::{SETTINGS, settings_saved_url};
-use crate::config::{Config, config_file, replace};
+use crate::config::{Config, NotificationConfig, config_file, replace};
 use crate::error::IterError;
 use crate::models::{Settings, TaskStatus};
 use serde::Deserialize;
@@ -28,6 +29,10 @@ const EDITOR: &str = "editor";
 const PAUSE_GAP: &str = "pause_gap_minutes";
 const STATUS: &str = "status";
 const DEFAULT_BRANCH: &str = "default_branch";
+const NOTIFICATIONS: &str = "notifications";
+const NOTIFICATION_SECONDS: &str = "notification_seconds";
+/// The longest a toast may stay, in seconds; the shortest is one.
+const MAX_NOTIFICATION_SECONDS: u32 = 60;
 
 #[query_params(error = bad_request)]
 struct SavedQuery {
@@ -39,6 +44,11 @@ struct SettingsPage {
     editor: String,
     pause_gap_minutes: String,
     status: String,
+    /// The "Notifications" checkbox: present (`on`) only when ticked.
+    #[serde(default, deserialize_with = "super::forms::ticked")]
+    notifications: bool,
+    #[serde(default)]
+    notification_seconds: String,
     #[serde(flatten)]
     settings: SettingsForm,
 }
@@ -75,10 +85,29 @@ impl SettingsPage {
                 "Default branch cannot be empty.".into(),
             ));
         }
+        let seconds = self
+            .notification_seconds
+            .trim()
+            .parse::<u32>()
+            .ok()
+            .filter(|n| (1..=MAX_NOTIFICATION_SECONDS).contains(n))
+            .ok_or_else(|| {
+                bad(
+                    NOTIFICATION_SECONDS,
+                    format!(
+                        "Seconds shown '{}' is not valid. Use a whole number from 1 to {MAX_NOTIFICATION_SECONDS}, such as 5.",
+                        self.notification_seconds.trim()
+                    ),
+                )
+            })?;
         config.editor = editor.to_string();
         config.pause_gap_minutes = gap;
         config.task.status = status;
         config.project = settings;
+        config.notifications = NotificationConfig {
+            enabled: self.notifications,
+            seconds,
+        };
         Ok(config)
     }
 }
@@ -87,6 +116,8 @@ struct Values {
     editor: String,
     pause_gap: String,
     status: String,
+    notifications: bool,
+    notification_seconds: String,
     settings: Settings,
 }
 
@@ -96,6 +127,8 @@ impl Values {
             editor: config.editor.clone(),
             pause_gap: config.pause_gap_minutes.to_string(),
             status: config.task.status.as_str().to_string(),
+            notifications: config.notifications.enabled,
+            notification_seconds: config.notifications.seconds.to_string(),
             settings: config.project.clone(),
         }
     }
@@ -105,6 +138,8 @@ impl Values {
             editor: page.editor.clone(),
             pause_gap: page.pause_gap_minutes.clone(),
             status: page.status.clone(),
+            notifications: page.notifications,
+            notification_seconds: page.notification_seconds.clone(),
             settings: page.settings.settings(),
         }
     }
@@ -160,6 +195,11 @@ async fn screen(
                     hint: "A gap between sessions of this many minutes or less counts as a pause within one span, not a break.")
                 select(name: STATUS, label: "Status of a new task", options: &statuses, current: &values.status, error: error)
                 settings_fields(s: &values.settings)
+                group(title: "Notifications",
+                    checkbox(name: NOTIFICATIONS, label: "Notifications", on: values.notifications)
+                    field(name: NOTIFICATION_SECONDS, label: "Seconds shown", value: &values.notification_seconds, required: true, numeric: true, error: error,
+                        hint: "How long a notification stays in the top right corner before it goes, from 1 to 60.")
+                )
             )
             <p class="foot-note">"Saved to " <code>(path.as_str())</code>": every key is written, and comments in the file are not kept. The database location is not changed here."</p>
         )
@@ -175,6 +215,8 @@ mod tests {
             editor: editor.into(),
             pause_gap_minutes: gap.into(),
             status: status.into(),
+            notifications: true,
+            notification_seconds: "5".into(),
             settings: SettingsForm {
                 github: true,
                 tmux: false,

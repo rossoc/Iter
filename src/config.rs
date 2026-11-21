@@ -77,6 +77,26 @@ impl Default for AgentConfig {
     }
 }
 
+/// The web UI's toasts: whether they show, and for how many seconds.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct NotificationConfig {
+    pub enabled: bool,
+    pub seconds: u32,
+}
+
+/// How long a toast stays when the config says nothing.
+pub const DEFAULT_NOTIFICATION_SECONDS: u32 = 5;
+
+impl Default for NotificationConfig {
+    fn default() -> Self {
+        NotificationConfig {
+            enabled: true,
+            seconds: DEFAULT_NOTIFICATION_SECONDS,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
@@ -93,6 +113,7 @@ pub struct Config {
     pub project: Settings,
     pub task: TaskDefaults,
     pub agent: AgentConfig,
+    pub notifications: NotificationConfig,
 }
 
 impl Default for Config {
@@ -104,6 +125,7 @@ impl Default for Config {
             project: Settings::default(),
             task: TaskDefaults::default(),
             agent: AgentConfig::default(),
+            notifications: NotificationConfig::default(),
         }
     }
 }

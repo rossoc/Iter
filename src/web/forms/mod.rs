@@ -17,7 +17,7 @@ pub use task::TaskForm;
 use super::edit::{DESCRIPTION, NAME};
 
 /// Present (as `on`) only when ticked: for `deserialize_with = "ticked"` on a `bool`.
-fn ticked<'de, D: serde::Deserializer<'de>>(
+pub(super) fn ticked<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> std::result::Result<bool, D::Error> {
     Option::<String>::deserialize(deserializer).map(|value| value.is_some())
