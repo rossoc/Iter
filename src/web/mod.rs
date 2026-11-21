@@ -67,6 +67,8 @@ mod task_rows;
 mod task_runs;
 mod task_sessions;
 mod text;
+#[cfg(test)]
+mod toast_tests;
 mod ui;
 mod url;
 

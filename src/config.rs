@@ -356,6 +356,43 @@ mod tests {
         assert_eq!(from_yaml("").editor, DEFAULT_EDITOR);
     }
 
+    /// The `notifications` block as YAML, so these tests compile before the field exists.
+    fn notifications_of(config: &Config) -> serde_yaml::Value {
+        serde_yaml::to_value(config).expect("writes")["notifications"].clone()
+    }
+
+    /// R1: toasts are on, for five seconds, when the file says nothing about them.
+    #[test]
+    fn notifications_default_to_on_for_five_seconds() {
+        for config in [Config::default(), from_yaml(""), from_yaml("editor: vim\n")] {
+            let n = notifications_of(&config);
+            assert_eq!(n["enabled"], serde_yaml::Value::Bool(true), "{n:?}");
+            assert_eq!(n["seconds"], serde_yaml::Value::from(5u32), "{n:?}");
+        }
+    }
+
+    /// R1: a `notifications` block is read, a key it leaves out keeps its default, and a
+    /// mistyped key in it is refused like any other.
+    #[test]
+    fn a_notifications_block_parses_and_reads_back() {
+        let config = parse("notifications:\n  enabled: false\n  seconds: 12\n")
+            .expect("a notifications block parses");
+        let n = notifications_of(&config);
+        assert_eq!(n["enabled"], serde_yaml::Value::Bool(false));
+        assert_eq!(n["seconds"], serde_yaml::Value::from(12u32));
+
+        let text = serde_yaml::to_string(&config).expect("writes");
+        let back = notifications_of(&parse(&text).expect("reads back"));
+        assert_eq!(back, n, "the block survives a save:\n{text}");
+
+        let partial = notifications_of(&from_yaml("notifications:\n  seconds: 9\n"));
+        assert_eq!(partial["enabled"], serde_yaml::Value::Bool(true));
+        assert_eq!(partial["seconds"], serde_yaml::Value::from(9u32));
+
+        assert!(parse("notifications:\n  secs: 3\n").is_err());
+        assert!(parse("notifications:\n  seconds: -1\n").is_err());
+    }
+
     #[test]
     fn a_config_written_reads_back_the_same() {
         let mut config = Config {

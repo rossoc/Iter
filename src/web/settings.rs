@@ -211,4 +211,63 @@ mod tests {
         );
         assert_eq!(refused(page("vim", "17", "queue", "main")), None);
     }
+
+    /// The `name` of the "Seconds shown" field (R2). A literal, so the tests compile before it exists.
+    const SECONDS: &str = "notification_seconds";
+
+    /// A submission as the browser posts it: a valid form plus `extra`; the "Notifications"
+    /// checkbox is the field `notifications`, absent when unticked.
+    fn posted(extra: &[(&str, &str)]) -> SettingsPage {
+        let mut form = serde_json::json!({
+            "editor": "vim", "pause_gap_minutes": "17", "status": "queue",
+            "branch_template": "feat/{task}", "default_branch": "main", "github_project": "",
+        });
+        for (k, v) in extra {
+            form[*k] = serde_json::Value::from(*v);
+        }
+        serde_json::from_value(form).expect("the form deserializes")
+    }
+
+    fn notifications(config: &Config) -> serde_yaml::Value {
+        serde_yaml::to_value(config).expect("writes")["notifications"].clone()
+    }
+
+    /// R2: the checkbox and the seconds are saved into the config.
+    #[test]
+    fn the_notification_fields_change_the_config() {
+        let on = posted(&[("notifications", "on"), (SECONDS, " 12 ")])
+            .apply(Config::default())
+            .expect("valid");
+        assert_eq!(notifications(&on)["enabled"], serde_yaml::Value::Bool(true));
+        assert_eq!(notifications(&on)["seconds"], serde_yaml::Value::from(12u32));
+
+        let off = posted(&[(SECONDS, "5")])
+            .apply(Config::default())
+            .expect("valid");
+        assert_eq!(
+            notifications(&off)["enabled"],
+            serde_yaml::Value::Bool(false),
+            "an unticked box turns the toasts off"
+        );
+    }
+
+    /// R2: the seconds are a whole number from 1 to 60, else refused on that field.
+    #[test]
+    fn seconds_outside_one_to_sixty_are_refused_on_their_field() {
+        for bad in ["0", "61", "x", "-3", "2.5", ""] {
+            let refused = posted(&[("notifications", "on"), (SECONDS, bad)])
+                .apply(Config::default())
+                .err()
+                .map(|(_, f)| f);
+            assert_eq!(refused, Some(SECONDS), "seconds {bad:?}");
+        }
+        for good in ["1", "60"] {
+            assert!(
+                posted(&[("notifications", "on"), (SECONDS, good)])
+                    .apply(Config::default())
+                    .is_ok(),
+                "seconds {good:?}"
+            );
+        }
+    }
 }
