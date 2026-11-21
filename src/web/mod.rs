@@ -22,6 +22,7 @@ mod drop;
 mod edit;
 mod edit_page;
 mod errors;
+mod flash;
 mod folder_picker;
 mod folders;
 mod footer;
@@ -93,6 +94,7 @@ fn router() -> Router {
         .layer(blocking::off_the_workers)
         .layer(guard::security_headers)
         .layer(guard::local_only)
+        .layer(flash::flash)
         .layer(LayerFn::new(None::<&'static str>, errors::error_pages));
     [
         layout::register,

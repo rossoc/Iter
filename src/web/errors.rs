@@ -1,4 +1,4 @@
-//! Pages for the 400 (id not a number) and 404 (names nothing) refusals; topcoat's own answer is a bare text body. Only GET is rewritten: the drop script's `fetch` wants the status.
+//! Pages for the 400 (id not a number) and 404 (names nothing) refusals; topcoat's own answer is a bare text body. Only GET is rewritten here: the drop script's `fetch` wants the status, and a refused form POST is sent back to its page with an error toast by `flash.rs`.
 
 use topcoat::{
     context::Cx,
