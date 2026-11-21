@@ -404,3 +404,86 @@ fn the_settings_page_has_no_saved_notice() {
     assert_eq!(page.status, StatusCode::OK);
     assert!(!page.body.contains("id=\"saved\""), "no inline notice");
 }
+
+/// R11: the save that turns the toasts on is told so with a blue toast: the layer reads
+/// `notifications.enabled` after the handler has saved the new config.
+#[test]
+fn the_save_that_turns_toasts_on_shows_one() {
+    if isolated(
+        "the_save_that_turns_toasts_on_shows_one",
+        Some("notifications:\n  enabled: false\n  seconds: 5\n"),
+    ) {
+        return;
+    }
+    let saved = post(
+        "/settings",
+        &settings_form(true, "5"),
+        "navigate",
+        Some("http://127.0.0.1:3000/settings"),
+    );
+    assert_eq!(saved.status, StatusCode::SEE_OTHER, "{}", saved.body);
+    let (value, attributes) = saved.flash();
+    assert_flash_cookie_attributes(&attributes);
+    assert!(
+        !value.trim().is_empty() && !value.to_lowercase().contains("error"),
+        "a success message: {value:?}"
+    );
+}
+
+/// R11, the reverse: the save that turns the toasts off sets no cookie, though they were on
+/// when the request came in.
+#[test]
+fn the_save_that_turns_toasts_off_sets_no_cookie() {
+    if isolated(
+        "the_save_that_turns_toasts_off_sets_no_cookie",
+        Some("notifications:\n  enabled: true\n  seconds: 5\n"),
+    ) {
+        return;
+    }
+    let saved = post(
+        "/settings",
+        &settings_form(false, "5"),
+        "navigate",
+        Some("http://127.0.0.1:3000/settings"),
+    );
+    assert_eq!(saved.status, StatusCode::SEE_OTHER, "{}", saved.body);
+    assert!(saved.cookies().is_empty(), "{:?}", saved.headers);
+}
+
+/// R12: a refused daily-note edit raises the red toast like every other form: the message is
+/// in the inline box (in `<main>`) and in the frame's toast region (outside it).
+#[test]
+fn a_refused_daily_note_raises_a_toast() {
+    if isolated("a_refused_daily_note_raises_a_toast", None) {
+        return;
+    }
+    // in the child: `$HOME` is the scratch folder, and the database is the scratch config's
+    let home = std::path::PathBuf::from(std::env::var_os("HOME").expect("a scratch home"));
+    let notes = home.join("notes");
+    let id = crate::db::open_db()
+        .insert(&crate::models::Project {
+            notes_path: notes.display().to_string(),
+            ..crate::fixtures::project("app")
+        })
+        .expect("project inserts");
+    let day = crate::fixtures::day("2026-01-05");
+    crate::notes::create(&notes, day).expect("the note exists");
+
+    let path = format!("/project/{id}/notes/2026-01-05");
+    let referer = format!("{ORIGIN}{path}?tab=edit");
+    // front matter opened and never closed: `notes::check` refuses it
+    let refused = post(&path, "text=---%0Atitle%3A+x%0A", "navigate", Some(&referer));
+    assert_eq!(refused.status, StatusCode::OK, "{}", refused.body);
+    let main_start = refused.body.find("<main").expect("main");
+    let main_end = refused.body.find("</main>").expect("main");
+    let wanted = "front matter is not closed";
+    assert!(
+        refused.body[main_start..main_end].contains(wanted),
+        "the inline error box: {}",
+        &refused.body[main_start..main_end]
+    );
+    assert!(
+        refused.outside_main().contains(wanted),
+        "the toast carries the message"
+    );
+}
