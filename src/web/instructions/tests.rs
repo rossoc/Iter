@@ -1,11 +1,22 @@
 use super::*;
-use crate::agent::prompt::Kind;
 use crate::fixtures;
 
 #[test]
 fn the_list_counts_the_runs_each_instruction_was_given() {
-    let scope = Scope::global();
-    let run = |n: u32, instruction: Option<&str>, kind: Kind| Use {
+    // the shipped instructions, as a config folder holds them
+    let scope = Scope {
+        project: None,
+        org: None,
+        layers: vec![(
+            Source::Global,
+            fixtures::shipped_instructions()
+                .parent()
+                .unwrap()
+                .to_path_buf(),
+        )],
+        home: None,
+    };
+    let run = |n: u32, instruction: &str| Use {
         task_id: 1,
         task: "app/Fix it".into(),
         run: RunRecord {
@@ -13,8 +24,8 @@ fn the_list_counts_the_runs_each_instruction_was_given() {
             agent: crate::agent::run::Harness::Claude,
             model: "haiku".into(),
             effort: "low".into(),
-            kind,
-            instruction: instruction.map(String::from),
+            instruction: instruction.into(),
+            wants_worktree: false,
             status: crate::agent::run::Status::Done,
             started: format!("2026-10-30 10:0{n}:00"),
             ended: None,
@@ -25,12 +36,7 @@ fn the_list_counts_the_runs_each_instruction_was_given() {
             subagent: false,
         },
     };
-    // a run from before instructions existed counts for its kind
-    let uses = vec![
-        run(3, Some("fix"), Kind::Fix),
-        run(2, None, Kind::Fix),
-        run(1, None, Kind::Plan),
-    ];
+    let uses = vec![run(3, "fix"), run(2, "fix"), run(1, "plan")];
     let rows = rows(&scope, &uses);
     let by = |name: &str| rows.iter().find(|r| r.name == name).unwrap();
     assert_eq!(by("fix").used, 2);
@@ -62,8 +68,8 @@ fn usage_is_found_in_the_runs_of_the_tasks() {
         agent: crate::agent::run::Harness::Claude,
         model: "haiku".into(),
         effort: "low".into(),
-        kind: Kind::Fix,
-        instruction: Some("review".into()),
+        instruction: "review".into(),
+        wants_worktree: false,
         status: crate::agent::run::Status::Done,
         started: "2026-10-30 10:00:00".into(),
         ended: None,
@@ -75,7 +81,7 @@ fn usage_is_found_in_the_runs_of_the_tasks() {
     };
     dir.write_run(&run).unwrap();
     run.n = 2;
-    run.instruction = None;
+    run.instruction = "fix".into();
     dir.write_run(&run).unwrap();
     let all = usage(&db, None);
     assert_eq!(all.len(), 2);

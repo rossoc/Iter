@@ -446,7 +446,8 @@ fn defaults() -> (String, String) {
 fn offered(layers: &Layers, has_plan: bool) -> Vec<(String, String)> {
     instruction::list(layers)
         .into_iter()
-        .filter(|i| has_plan || i.name == "plan")
+        // an interactive one leads a session: it is printed, never run from here
+        .filter(|i| !i.front.interactive && (has_plan || i.name == "plan"))
         .map(|i| {
             let label = label_of(&i.name);
             (i.name, label)
@@ -477,17 +478,38 @@ impl Roster {
                 .unwrap_or(if has_plan { "develop" } else { "plan" });
             let inst = instruction::find(chosen, layers)
                 .or_else(|| instruction::find("plan", layers))
-                .expect("the built-in instruction is always there");
+                .or_else(|| instruction::list(layers).into_iter().next());
+            let Some(inst) = inst else {
+                // nothing is built in: an empty config folder offers nothing to run
+                roster.compose = Some(Compose {
+                    instruction: chosen.to_string(),
+                    offered: Vec::new(),
+                    run: None,
+                    model,
+                    effort,
+                    prompt: String::new(),
+                    error: Some(
+                        crate::agent::error::AgentError::InstructionNotFound {
+                            name: chosen.to_string(),
+                            path: instruction::file(
+                                &instruction::global().unwrap_or_default(),
+                                chosen,
+                            ),
+                        }
+                        .to_string(),
+                    ),
+                });
+                return roster;
+            };
             let models = Harness::Claude.models(&config().agent.models);
             if let Some(m) = instruction::preferred_model(&inst.front, &models) {
                 model = m;
             }
-            let kind = inst.kind();
             let (prompt, error) = match crate::agent::task_prompt::prompt_for(
                 app,
                 Some(name),
-                kind,
-                inst.path.as_deref(),
+                &inst.name,
+                None,
                 true,
                 None,
                 true,
@@ -508,7 +530,7 @@ impl Roster {
             roster.current = Some(run.n);
             if run.is_queued() {
                 roster.compose = Some(Compose {
-                    instruction: run.instruction_name().to_string(),
+                    instruction: run.instruction.clone(),
                     offered: offered(layers, has_plan),
                     run: Some(run.n),
                     model: run.model.clone(),
@@ -529,7 +551,7 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
         row(class: if current { "current" } else { "" },
             cell(
                 <a class="u" href=(agent_url(task_id, run.n)) if current { aria-current="true" }>
-                    "#" (run.n.to_string()) " " (label_of(run.instruction_name()))
+                    "#" (run.n.to_string()) " " (label_of(&run.instruction))
                 </a>
                 // what it was told to use: only on the row under the pointer
                 <span class="hint">

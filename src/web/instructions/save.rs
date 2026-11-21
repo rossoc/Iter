@@ -13,7 +13,7 @@ pub(super) fn placeholder_hint() -> String {
     )
 }
 
-/// Made a `develop` instruction; Settings changes that.
+/// Made an instruction that changes no code; Settings changes that.
 #[component]
 pub async fn new_instruction_modal(scope: &Scope) -> Result<impl View> {
     let project = scope
@@ -81,7 +81,6 @@ pub(super) async fn create_instruction(Form(form): Form<NewForm>) -> Result<Resp
         None,
         &instruction::Fields {
             description: &form.description,
-            kind: Some("develop"),
             prompt: &form.prompt,
             ..Default::default()
         },
@@ -111,8 +110,9 @@ struct SaveForm {
     new_name: String,
     #[serde(default)]
     description: String,
+    /// `true` or `false`; absent leaves the file's `worktree` as it is.
     #[serde(default)]
-    kind: Option<String>,
+    worktree: Option<String>,
     #[serde(default)]
     model: String,
     #[serde(default)]
@@ -143,16 +143,12 @@ pub(super) async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Res
                 .map_err(|e| bad_request(e.to_string()))?;
             let target = renamed.as_deref().unwrap_or(&name);
             // the keys the form does not know stay as they are in the file
-            let kind = if instruction::is_builtin(&name) {
-                None
-            } else {
-                form.kind.as_deref().filter(|k| !k.is_empty())
-            };
+            let worktree = form.worktree.as_deref().map(|w| w.trim() == "true");
             let text = instruction::compose(
                 Some(&current.raw),
                 &instruction::Fields {
                     description: &form.description,
-                    kind,
+                    worktree,
                     model: &form.model,
                     mode: &form.mode,
                     temperature: &form.temperature,

@@ -1,7 +1,6 @@
 //! A run: one headless agent working on a task in its worktree, kept as `runs/<n>.yaml`, `.prompt.md` and `.log` in the task's folder.
 
 use crate::agent::error::AgentResult;
-use crate::agent::prompt::Kind;
 use crate::agent::taskdir::TaskDir;
 use crate::process::{Runner, SYSTEM};
 use serde::{Deserialize, Serialize};
@@ -143,15 +142,17 @@ impl Status {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(try_from = "StoredRun")]
 pub struct RunRecord {
     pub n: u32,
     pub agent: Harness,
     pub model: String,
     pub effort: String,
-    pub kind: Kind,
-    /// The instruction name; empty for runs that predate instructions (the kind is the name).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub instruction: Option<String>,
+    /// The instruction the run follows (`plan`, `develop`, `review`...).
+    pub instruction: String,
+    /// The instruction asked for the task's worktree (`worktree: true`): the run gets it when it begins.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub wants_worktree: bool,
     pub status: Status,
     /// `YYYY-MM-DD HH:MM:SS` local time the run began (queued: when written).
     pub started: String,
@@ -169,6 +170,71 @@ pub struct RunRecord {
     /// process, the session closes the run (`iter task runs --close`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub subagent: bool,
+}
+
+/// A run record as stored, older ones included: those named their instruction by `kind`
+/// (`execute` and `investigate` before `develop` and `check`), and the kind said whether the run
+/// had a worktree.
+#[derive(Deserialize)]
+struct StoredRun {
+    n: u32,
+    agent: Harness,
+    model: String,
+    effort: String,
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default)]
+    instruction: Option<String>,
+    #[serde(default)]
+    wants_worktree: Option<bool>,
+    status: Status,
+    started: String,
+    #[serde(default)]
+    ended: Option<String>,
+    #[serde(default)]
+    exit_code: Option<i32>,
+    #[serde(default)]
+    branch: Option<String>,
+    #[serde(default)]
+    worktree: Option<String>,
+    #[serde(default)]
+    pid: Option<u32>,
+    #[serde(default)]
+    subagent: bool,
+}
+
+impl TryFrom<StoredRun> for RunRecord {
+    type Error = String;
+
+    fn try_from(s: StoredRun) -> Result<RunRecord, String> {
+        let kind = s.kind.as_deref().map(|k| match k {
+            "execute" => "develop",
+            "investigate" => "check",
+            k => k,
+        });
+        let instruction = s
+            .instruction
+            .clone()
+            .or_else(|| kind.map(String::from))
+            .ok_or("a run record names its instruction")?;
+        let legacy_worktree = kind.is_some_and(|k| matches!(k, "develop" | "test" | "fix"));
+        Ok(RunRecord {
+            n: s.n,
+            agent: s.agent,
+            model: s.model,
+            effort: s.effort,
+            instruction,
+            wants_worktree: s.wants_worktree.unwrap_or(legacy_worktree),
+            status: s.status,
+            started: s.started,
+            ended: s.ended,
+            exit_code: s.exit_code,
+            branch: s.branch,
+            worktree: s.worktree,
+            pid: s.pid,
+            subagent: s.subagent,
+        })
+    }
 }
 
 impl RunRecord {
@@ -191,11 +257,6 @@ impl RunRecord {
             true => format!("{} (subagent)", self.agent.key()),
             false => self.agent.key().to_string(),
         }
-    }
-
-    #[cfg(feature = "web")]
-    pub fn instruction_name(&self) -> &str {
-        self.instruction.as_deref().unwrap_or(self.kind.key())
     }
 
     pub fn is_queued(&self) -> bool {
@@ -455,8 +516,8 @@ mod tests {
             agent: Harness::Claude,
             model: "haiku".into(),
             effort: "medium".into(),
-            kind: Kind::Develop,
-            instruction: None,
+            instruction: "develop".into(),
+            wants_worktree: true,
             status: Status::Running,
             started: "2026-10-30 10:00:00".into(),
             ended: None,

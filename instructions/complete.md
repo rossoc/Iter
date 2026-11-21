@@ -1,5 +1,6 @@
 ---
 description: Lead the task to done in an interactive session; subagents test, develop and check
+interactive: true
 ---
 
 You are leading the task "{{task.name}}" of the project {{project.name}} to done.
@@ -25,7 +26,7 @@ you decide. You are in an interactive session: the user is there.
   subagents write `test`, `develop` and `check`. Messages to a subagent are only the
   prompt iter prints for it; what it says back is its final report.
 - Every subagent is a run of the task, so the user can follow the work in iter:
-  1. `iter task solve -k <kind> --subagent --model <model> --effort <effort>` prints
+  1. `iter task solve -i <instruction> --subagent --model <model> --effort <effort>` prints
      the subagent's prompt (and, on standard error, its run number `<n>`). Name the
      model and effort you will start the subagent with (`inherit` if it takes the
      session's own), so the run records them.
@@ -50,10 +51,10 @@ you decide. You are in an interactive session: the user is there.
    `## How`, `## Checklist` with `### test`, `### develop`, `### check` steps; mark the
    checking steps `(verify)`), so the user sees progress.
 3. **Round** (at most 3):
-   1. Test first: `iter task solve -k test --subagent`. The tests are written before the
+   1. Test first: `iter task solve -i test --subagent`. The tests are written before the
       code, so they should fail, for the reason the plan gives.
-   2. Then `iter task solve -k develop --subagent`: make the tests pass.
-   3. Then `iter task solve -k check --subagent`: a new subagent every round, so the
+   2. Then `iter task solve -i develop --subagent`: make the tests pass.
+   3. Then `iter task solve -i check --subagent`: a new subagent every round, so the
       review is independent. Do not tell it what the others did.
    4. Read the sketches `test`, `develop` and `check`, and the diff. Add the round to the
       sketch `rounds` (`iter note sketch new rounds --append -m "..."`): the runs, the
@@ -75,7 +76,7 @@ you decide. You are in an interactive session: the user is there.
    - (c) `git -C {{project.path}} merge <the task's branch>`. If {{project.path}} is not
      on {{branch.main}} (`git -C {{project.path}} branch --show-current`), stop and ask.
    - (d) Update `## Commits` in the sketch `result`, then let a subagent ingest the
-     task into the wiki: `iter task solve -k ingest --subagent`, and close its run as
+     task into the wiki: `iter task solve -i ingest --subagent`, and close its run as
      above.
    - (e) Commit what it wrote: `iter wiki pending --accept -m "update:
      {{project.name}}/{{task.name}} - <sha>"`, `<sha>` being `git -C {{project.path}}

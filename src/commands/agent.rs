@@ -2,7 +2,7 @@
 
 use crate::agent::error::AgentError;
 use crate::agent::plan::{self, Plan, Progress, State};
-use crate::agent::prompt::{self, Kind};
+use crate::agent::prompt;
 use crate::agent::task_prompt::{locate, prompt_text};
 use crate::agent::taskdir::{TaskDir, mark_step, save_plan};
 use crate::app::App;
@@ -82,7 +82,7 @@ pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
         let v = view(&name, &dir, content.as_deref());
         return emit(req.format, &v, || match &content {
             None => format!(
-                "No plan yet. Write one with `iter task plan {word}`, or send an agent: `iter task prompt {word} --kind plan`.\n"
+                "No plan yet. Write one with `iter task plan {word}`, or send an agent: `iter task prompt {word} -i plan`.\n"
             ),
             Some(text) => format!("{}\n\n{}\n", text.trim_end(), progress_line(&v.progress)),
         });
@@ -113,13 +113,13 @@ pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
 pub fn prompt_cmd(
     app: &App,
     task: Option<&str>,
-    kind: Kind,
+    instruction: &str,
     template: Option<&Path>,
     onboarding_wanted: bool,
 ) -> Result<()> {
     print!(
         "{}",
-        prompt_text(app, task, kind, template, onboarding_wanted)?
+        prompt_text(app, task, instruction, template, onboarding_wanted)?
     );
     Ok(())
 }

@@ -1,5 +1,6 @@
 ---
 description: Work through the plan's development steps and keep it up to date
+worktree: true
 ---
 
 You are working on the task "{{task.name}}" of the project {{project.name}}.

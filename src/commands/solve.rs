@@ -1,10 +1,9 @@
 //! `iter task solve`, `iter task runs`: handing a task to an agent working on its own in the task's worktree.
 
 use crate::agent::error::AgentError;
-use crate::agent::prompt::Kind;
 use crate::agent::run::{Harness, RunRecord, Status};
 use crate::agent::solve::{Launch, Observer, Spec, close, open_subagent, start};
-use crate::agent::task_prompt::locate;
+use crate::agent::task_prompt::{instruction_for, locate};
 use crate::app::App;
 use crate::args::RunEnd;
 use crate::commands::ingest::say_auto;
@@ -31,7 +30,8 @@ const INHERIT: &str = "inherit";
 
 pub struct SolveRequest<'a> {
     pub task: Option<&'a str>,
-    pub kind: Kind,
+    /// The instruction the agent follows.
+    pub instruction: &'a str,
     pub agent: Option<Harness>,
     pub model: Option<&'a str>,
     pub effort: Option<&'a str>,
@@ -58,11 +58,14 @@ fn parse(buffer: &str) -> Result<(Spec, String)> {
 }
 
 pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
-    if req.kind.interactive() {
-        // before the editor: there is nothing to start
-        return Err(AgentError::Interactive(req.kind.key()).into());
-    }
     let (project, task, dir) = locate(app, req.task)?;
+    // before the editor: an instruction found nowhere, or interactive, has nothing to start
+    if instruction_for(app, &project, &task, req.instruction)?
+        .front
+        .interactive
+    {
+        return Err(AgentError::Interactive(req.instruction.to_string()).into());
+    }
     let name = task_display(&project, &task);
     let mut spec = Spec {
         agent: req.agent.unwrap_or_default(),
@@ -82,7 +85,7 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
     let n = start(
         app,
         &name,
-        req.kind,
+        req.instruction,
         &spec,
         &description,
         &Launch {
@@ -109,7 +112,7 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
 pub fn subagent(
     app: &App,
     task: Option<&str>,
-    kind: Kind,
+    instruction: &str,
     model: Option<&str>,
     effort: Option<&str>,
 ) -> Result<()> {
@@ -120,12 +123,10 @@ pub fn subagent(
         model: model.unwrap_or(INHERIT).to_string(),
         effort: effort.unwrap_or(INHERIT).to_string(),
     };
-    let (n, prompt) = open_subagent(app, &name, kind, &spec, &Console)?;
+    let (n, prompt) = open_subagent(app, &name, instruction, &spec, &Console)?;
     eprintln!(
         "run {n} ({}, {}, effort {}): give the prompt below to a new subagent; when it is done: iter task runs --close {n} --status done -m \"<its report>\"",
-        kind.key(),
-        spec.model,
-        spec.effort
+        instruction, spec.model, spec.effort
     );
     print!("{}", prompt.trim_end());
     println!();
@@ -172,7 +173,7 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
     let runs = dir.runs();
     if runs.is_empty() {
         println!(
-            "No runs of {} yet: `iter task solve {}`.",
+            "No runs of {} yet: `iter task solve {} -i develop`.",
             task_display(&project, &task),
             crate::agent::prompt::shell_word(&task_display(&project, &task))
         );
@@ -182,7 +183,7 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
             "#{:<3} {:<9} {:<8} {:<17} {:<7} {:<7} {}{}",
             r.n,
             r.shown_status(),
-            r.kind.key(),
+            r.instruction,
             r.agent_label(),
             r.model,
             r.effort,

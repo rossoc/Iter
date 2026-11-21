@@ -17,7 +17,7 @@ use super::ui::table::{AddRow, cell, data_table, row};
 use super::ui::tabs::{Tab, tabs};
 use super::url::{agent_url, instruction_url, instructions_url, page_url, project_url, task_url};
 use crate::agent::instruction::{self, Instruction, Layers, Source};
-use crate::agent::prompt::{Kind, PLACEHOLDERS};
+use crate::agent::prompt::PLACEHOLDERS;
 use crate::agent::run::Harness;
 use crate::agent::run::RunRecord;
 use crate::agent::taskdir;
@@ -164,7 +164,7 @@ pub fn rows(scope: &Scope, uses: &[Use]) -> Vec<ListRow> {
         .map(|i| {
             let mine: Vec<&Use> = uses
                 .iter()
-                .filter(|u| u.run.instruction_name() == i.name)
+                .filter(|u| u.run.instruction == i.name)
                 .collect();
             ListRow {
                 href: scope.url(&i.name),

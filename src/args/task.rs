@@ -79,18 +79,20 @@ pub enum TaskCommand {
         format: DataFormat,
     },
 
-    /// Print the prompt that tells an agent what to do with a task: plan it,
-    /// work through its plan, fix it or investigate it
+    /// Print the prompt that tells an agent what to do with a task, from
+    /// one of the instructions: plan it, work through its plan, fix it...
     Prompt {
         /// `<project>/<task>` (default: the task of the tmux session you're in)
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
 
-        /// What the agent is to do
-        #[clap(long, short = 'k', value_enum, default_value_t = PromptKind::Plan)]
-        kind: PromptKind,
+        /// The instruction to follow: `instructions/<name>.md` in the task's
+        /// folder, the project's or organization's notes, or iter's config
+        /// folder (nearest first)
+        #[clap(long, short = 'i')]
+        instruction: String,
 
-        /// Use this template instead of the task's, project's or built-in one
+        /// Use this template instead of the instruction's file
         #[clap(long)]
         template: Option<std::path::PathBuf>,
 
@@ -107,9 +109,11 @@ pub enum TaskCommand {
         #[arg(add = ArgValueCompleter::new(task_completer))]
         task: Option<String>,
 
-        /// What the agent is to do
-        #[clap(long, short = 'k', value_enum, default_value_t = PromptKind::Develop)]
-        kind: PromptKind,
+        /// The instruction the agent follows: `instructions/<name>.md` in the
+        /// task's folder, the project's or organization's notes, or iter's
+        /// config folder (nearest first)
+        #[clap(long, short = 'i')]
+        instruction: String,
 
         /// The harness that runs the agent
         #[clap(long, value_enum)]

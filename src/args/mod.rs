@@ -1,4 +1,3 @@
-use crate::agent::prompt::Kind as PromptKind;
 use crate::agent::run::Harness;
 use crate::completion::{
     board_completer, organization_completer, project_completer, queued_task_completer,

@@ -1,5 +1,6 @@
 ---
 description: Write and run the tests for the work in the plan
+worktree: true
 ---
 
 You are writing the tests for the task "{{task.name}}" of the project {{project.name}}.

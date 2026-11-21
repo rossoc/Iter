@@ -1,83 +1,8 @@
-//! Prompts that tell an agent what to do with a task: templates (`instruction.rs`) filled from the task.
-//! A template is overridden by the first `instructions/<kind>.md` in the task, project notes, organization notes or config folder.
+//! Prompts that tell an agent what to do with a task: instructions (`instruction.rs`) filled from the task.
+//! An instruction is the first `instructions/<name>.md` in the task, project notes, organization notes or config folder.
 
 use crate::agent::error::{AgentError, AgentResult};
 use std::path::{Path, PathBuf};
-
-/// What an agent is asked to do; saved in a run's record.
-#[derive(
-    Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum, serde::Serialize, serde::Deserialize,
-)]
-#[serde(rename_all = "lowercase")]
-pub enum Kind {
-    /// Read the task and write its plan; change no code
-    Plan,
-    /// Work through the plan's development steps
-    #[value(alias = "execute")]
-    #[serde(alias = "execute")]
-    Develop,
-    /// Write and run the tests for the work
-    Test,
-    /// Check the work against the plan; change no code
-    #[value(alias = "investigate")]
-    #[serde(alias = "investigate")]
-    Check,
-    /// Reproduce a defect, find its cause and fix it
-    Fix,
-    /// Lead the work in an interactive session: plan in sketches, then test, develop and check
-    /// through subagents until the requirements hold
-    Complete,
-    /// Turn the task's sketches, notes and commits, and the notes waiting, into wiki pages;
-    /// change no code
-    Ingest,
-}
-
-impl Kind {
-    #[cfg(test)]
-    pub const ALL: [Kind; 7] = [
-        Kind::Plan,
-        Kind::Develop,
-        Kind::Test,
-        Kind::Check,
-        Kind::Fix,
-        Kind::Complete,
-        Kind::Ingest,
-    ];
-
-    pub fn key(self) -> &'static str {
-        match self {
-            Kind::Plan => "plan",
-            Kind::Develop => "develop",
-            Kind::Test => "test",
-            Kind::Check => "check",
-            Kind::Fix => "fix",
-            Kind::Complete => "complete",
-            Kind::Ingest => "ingest",
-        }
-    }
-
-    pub fn changes_code(self) -> bool {
-        matches!(self, Kind::Develop | Kind::Test | Kind::Fix)
-    }
-
-    pub fn builtin(self) -> &'static str {
-        match self {
-            Kind::Plan => include_str!("prompts/plan.md"),
-            Kind::Develop => include_str!("prompts/develop.md"),
-            Kind::Test => include_str!("prompts/test.md"),
-            Kind::Check => include_str!("prompts/check.md"),
-            Kind::Fix => include_str!("prompts/fix.md"),
-            Kind::Complete => include_str!("prompts/complete.md"),
-            Kind::Ingest => include_str!("prompts/ingest.md"),
-        }
-    }
-
-    /// Whether the kind leads subagents from a session someone is in: it cannot run headless
-    /// (its subagents' runs would meet it on the task's one-run-at-a-time rule).
-    pub fn interactive(self) -> bool {
-        self == Kind::Complete
-    }
-}
 
 /// `word` as one shell word, backslash-escaped (`app/Fix\ it`): task names may contain spaces.
 pub fn shell_word(word: &str) -> String {
@@ -136,7 +61,7 @@ pub const PLACEHOLDERS: [&str; 14] = [
     "ingest",
 ];
 
-fn value(ctx: &Context<'_>, key: &str, kind: Kind) -> Option<String> {
+fn value(ctx: &Context<'_>, key: &str, name: &str) -> Option<String> {
     let or = |s: &str, none: &str| match s.trim() {
         "" => none.to_string(),
         s => s.to_string(),
@@ -155,22 +80,23 @@ fn value(ctx: &Context<'_>, key: &str, kind: Kind) -> Option<String> {
         "plan.path" => ctx.plan_path.display().to_string(),
         "plan" => or(ctx.plan.unwrap_or(""), "(there is no plan yet)"),
         "onboarding" => or(ctx.onboarding, "(nothing was found for this task)"),
-        "kind" => kind.key().to_string(),
+        "kind" => name.to_string(),
         "branch.main" => ctx.branch_main.to_string(),
         "ingest" => or(ctx.ingest, "(the project has no wiki)"),
         _ => return None,
     })
 }
 
-/// `template` with its placeholders filled; an unknown one is an error, not a literal `{{taks.name}}` in the prompt.
-pub fn render(template: &str, kind: Kind, ctx: &Context<'_>) -> AgentResult<String> {
+/// `template` (the instruction `name`'s prompt) with its placeholders filled; `{{kind}}` is the
+/// name. An unknown one is an error, not a literal `{{taks.name}}` in the prompt.
+pub fn render(template: &str, name: &str, ctx: &Context<'_>) -> AgentResult<String> {
     let (mut out, mut rest) = (String::with_capacity(template.len()), template);
     while let Some(open) = rest.find("{{") {
         let Some(close) = rest[open + 2..].find("}}") else {
             break;
         };
         let key = rest[open + 2..open + 2 + close].trim();
-        let Some(text) = value(ctx, key, kind) else {
+        let Some(text) = value(ctx, key, name) else {
             return Err(AgentError::UnknownPlaceholder {
                 key: key.to_string(),
                 known: PLACEHOLDERS.join(", "),
@@ -189,26 +115,10 @@ pub fn file(dir: &Path, name: &str) -> PathBuf {
     dir.join("instructions").join(format!("{name}.md"))
 }
 
-/// The prompt of an instruction file: what follows its front matter, if any.
-fn prompt_of(raw: &str) -> String {
-    let body = crate::md_edit::split_closed(raw).map_or(raw, |(_, body)| body);
-    body.trim_start_matches('\n').to_string()
-}
-
-/// The template for `kind`: the first `instructions/<kind>.md` in `dirs` (nearest first) and where it came from, else the built-in.
-pub fn template(kind: Kind, dirs: &[PathBuf]) -> (Option<PathBuf>, String) {
-    for dir in dirs {
-        let path = file(dir, kind.key());
-        if let Ok(text) = std::fs::read_to_string(&path) {
-            return (Some(path), prompt_of(&text));
-        }
-    }
-    (None, prompt_of(kind.builtin()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::{SHIPPED, shipped};
 
     fn ctx<'a>(plan: Option<&'a str>, onboarding: &'a str, dir: &'a Path) -> Context<'a> {
         Context {
@@ -228,16 +138,25 @@ mod tests {
         }
     }
 
+    /// The prompt of a shipped instruction: what follows its front matter.
+    fn body(name: &str) -> String {
+        let raw = shipped(name);
+        crate::agent::instruction::split(&raw).1.to_string()
+    }
+
     #[test]
-    fn every_builtin_renders_and_leaves_no_placeholder() {
+    fn every_shipped_instruction_renders_and_leaves_no_placeholder() {
         let dir = Path::new("/notes/app/tasks/7");
-        for kind in Kind::ALL {
-            let text = render(kind.builtin(), kind, &ctx(None, "", dir))
-                .unwrap_or_else(|e| panic!("{}: {e}", kind.key()));
-            assert!(!text.contains("{{"), "{}: {text}", kind.key());
-            assert!(text.contains("Fix it") && text.contains("It is broken."));
-            assert!(text.contains("(there is no plan yet)"));
-            assert!(text.contains("(nothing was found for this task)"));
+        for name in SHIPPED {
+            let text = render(&body(name), name, &ctx(None, "", dir))
+                .unwrap_or_else(|e| panic!("{name}: {e}"));
+            assert!(!text.contains("{{"), "{name}: {text}");
+            assert!(
+                text.contains("Fix it") && text.contains("It is broken."),
+                "{name}"
+            );
+            assert!(text.contains("(there is no plan yet)"), "{name}");
+            assert!(text.contains("(nothing was found for this task)"), "{name}");
         }
     }
 
@@ -245,18 +164,18 @@ mod tests {
     fn the_context_fills_the_placeholders() {
         let dir = Path::new("/notes/app/tasks/7");
         let text = render(
-            "{{task}}|{{task.id}}|{{task.dir}}|{{worktree}}|{{plan}}|{{ onboarding }}",
-            Kind::Plan,
+            "{{task}}|{{task.id}}|{{task.dir}}|{{worktree}}|{{plan}}|{{ onboarding }}|{{kind}}",
+            "review",
             &ctx(Some("## Goal\nx"), "wiki/a: a thing", dir),
         )
         .unwrap();
         assert_eq!(
             text,
-            "app/Fix\\ it|7|/notes/app/tasks/7|/code/app|## Goal\nx|wiki/a: a thing"
+            "app/Fix\\ it|7|/notes/app/tasks/7|/code/app|## Goal\nx|wiki/a: a thing|review"
         );
         let mut c = ctx(None, "", dir);
         c.worktree = Some("/wt/fix-it");
-        assert_eq!(render("{{worktree}}", Kind::Fix, &c).unwrap(), "/wt/fix-it");
+        assert_eq!(render("{{worktree}}", "fix", &c).unwrap(), "/wt/fix-it");
     }
 
     #[test]
@@ -272,7 +191,7 @@ mod tests {
     #[test]
     fn an_unknown_placeholder_is_an_error_that_names_it() {
         let dir = Path::new("/x");
-        let e = render("hello {{taks.name}}", Kind::Plan, &ctx(None, "", dir)).unwrap_err();
+        let e = render("hello {{taks.name}}", "plan", &ctx(None, "", dir)).unwrap_err();
         assert!(matches!(&e, AgentError::UnknownPlaceholder { key, .. } if key == "taks.name"));
         let e = e.to_string();
         assert!(
@@ -280,58 +199,19 @@ mod tests {
             "{e}"
         );
         assert_eq!(
-            render("a {{ b", Kind::Plan, &ctx(None, "", dir)).unwrap(),
+            render("a {{ b", "plan", &ctx(None, "", dir)).unwrap(),
             "a {{ b"
         );
     }
 
     #[test]
-    fn the_nearest_override_wins_and_the_builtin_is_the_default() {
-        let root = crate::fixtures::scratch("prompt");
-        let (task, project) = (root.join("task"), root.join("project"));
-        for (dir, text) in [(&task, "from the task"), (&project, "from the project")] {
-            std::fs::create_dir_all(dir.join("instructions")).unwrap();
-            std::fs::write(dir.join("instructions/plan.md"), text).unwrap();
-        }
-        let dirs = [task.clone(), project.clone()];
-        let (from, text) = template(Kind::Plan, &dirs);
-        assert_eq!(
-            (from, text.as_str()),
-            (Some(task.join("instructions/plan.md")), "from the task")
-        );
-        let (from, text) = template(Kind::Fix, &dirs);
-        assert_eq!(from, None);
-        assert!(text.starts_with("You are fixing a defect"), "{text}");
-        std::fs::remove_file(task.join("instructions/plan.md")).unwrap();
-        assert_eq!(template(Kind::Plan, &dirs).1, "from the project");
-    }
-
-    /// Legacy names `execute` and `investigate` still read.
-    #[test]
-    fn a_kind_reads_the_names_older_runs_were_saved_with() {
-        let read = |word: &str| serde_yaml::from_str::<Kind>(word).unwrap();
-        assert_eq!(read("execute"), Kind::Develop);
-        assert_eq!(read("investigate"), Kind::Check);
-        for kind in Kind::ALL {
-            assert_eq!(read(kind.key()), kind);
-            assert_eq!(serde_yaml::to_string(&kind).unwrap().trim(), kind.key());
-        }
-        assert!(serde_yaml::from_str::<Kind>("nonsense").is_err());
-    }
-
-    #[test]
     fn complete_leads_subagents_through_iter_runs_and_sketches() {
         let dir = Path::new("/notes/app/tasks/7");
-        let text = render(
-            Kind::Complete.builtin(),
-            Kind::Complete,
-            &ctx(None, "", dir),
-        )
-        .unwrap();
-        for kind in ["test", "develop", "check"] {
+        let text = render(&body("complete"), "complete", &ctx(None, "", dir)).unwrap();
+        for name in ["test", "develop", "check"] {
             assert!(
-                text.contains(&format!("iter task solve -k {kind} --subagent")),
-                "{kind}: {text}"
+                text.contains(&format!("iter task solve -i {name} --subagent")),
+                "{name}: {text}"
             );
         }
         assert!(text.contains("iter task runs --close"));
@@ -342,32 +222,12 @@ mod tests {
             );
         }
         assert!(text.contains("iter task plan 7 --stdin"));
-        assert!(Kind::Complete.interactive() && !Kind::Complete.changes_code());
-        assert!(Kind::ALL.iter().filter(|k| k.interactive()).count() == 1);
     }
 
-    /// The kind `ingest`, read by name as the CLI reads it (`-k ingest`).
-    fn ingest_kind() -> Kind {
-        <Kind as clap::ValueEnum>::from_str("ingest", false)
-            .unwrap_or_else(|e| panic!("no kind `ingest`: {e}"))
-    }
-
-    /// R2: a kind that only writes the wiki: headless, no code changed, a built-in template.
+    /// R2: `ingest` only writes the wiki, from the ingest text.
     #[test]
-    fn ingest_is_a_headless_kind_that_changes_no_code() {
-        let kind = ingest_kind();
-        assert_eq!(kind.key(), "ingest");
-        assert!(!kind.interactive() && !kind.changes_code());
-        assert!(Kind::ALL.contains(&kind), "Kind::ALL misses ingest");
-        assert_eq!(serde_yaml::from_str::<Kind>("ingest").unwrap(), kind);
-        assert!(kind.builtin().contains("{{ingest}}"), "{}", kind.builtin());
-    }
-
-    /// Every kind the CLI accepts is in `Kind::ALL`, so the loops over it cover them all.
-    #[test]
-    fn all_lists_every_kind() {
-        use clap::ValueEnum;
-        assert_eq!(Kind::ALL.len(), Kind::value_variants().len());
+    fn ingest_carries_the_ingest_text() {
+        assert!(body("ingest").contains("{{ingest}}"));
     }
 
     /// R4: the main branch and the ingest text are placeholders a template may use.
@@ -382,11 +242,11 @@ mod tests {
     /// ingest by a subagent, commit the wiki.
     #[test]
     fn complete_closes_the_task_by_merging_and_ingesting() {
-        let text = Kind::Complete.builtin();
+        let text = body("complete");
         for wanted in [
             "git merge {{branch.main}}",
             "git -C {{project.path}} merge",
-            "iter task solve -k ingest --subagent",
+            "iter task solve -i ingest --subagent",
             "iter wiki pending --accept -m \"update:",
             "## Commits",
             "iter task done",

@@ -31,9 +31,16 @@ pub enum AgentError {
     #[error("run {run} is {status}: only a running subagent's run can be closed")]
     RunNotOpen { run: u32, status: String },
     #[error(
-        "{0} leads subagents from a session and is not a run: print it with `iter task prompt -k {0}`"
+        "{0} leads subagents from a session and is not a run: print it with `iter task prompt -i {0}`"
     )]
-    Interactive(&'static str),
+    Interactive(String),
+    #[error(
+        "no instruction '{name}' in the task, the project's or the organization's notes, or {}: write it there",
+        .path.display()
+    )]
+    InstructionNotFound { name: String, path: PathBuf },
+    #[error("{}: {problem}", .path.display())]
+    InstructionUnreadable { path: PathBuf, problem: String },
     #[error("no such task")]
     TaskGone,
     #[error("no such project")]
@@ -68,18 +75,12 @@ pub enum AgentError {
     FrontMatterNotMapping,
     #[error("front matter: `{0}` must be text")]
     FrontMatterNotText(String),
-    #[error("front matter: `kind` is plan, develop, test, check or fix, not '{0}'")]
-    FrontMatterKind(String),
+    #[error("front matter: `{0}` must be true or false")]
+    FrontMatterNotFlag(String),
     #[error("'{0}' is not a name: lowercase letters, digits and dashes")]
     InvalidName(String),
-    #[error("'{0}' is built in and keeps its name")]
-    BuiltInKeepsName(String),
-    #[error("'{0}' is the name of a built-in instruction")]
-    BuiltInName(String),
     #[error("an instruction needs a prompt under its front matter")]
     NoPrompt,
-    #[error("kind is plan, develop, test, check or fix, not '{0}'")]
-    FieldKind(String),
     #[error("permission: {0}")]
     FieldPermission(serde_yaml::Error),
     #[error("{0}")]

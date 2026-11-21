@@ -111,3 +111,30 @@ pub fn world(tag: &str) -> World {
         notes,
     }
 }
+
+/// The repo's `instructions/` folder: the instructions iter ships, read at run time (never
+/// compiled in), as a config folder holds them once installed.
+pub fn shipped_instructions() -> PathBuf {
+    PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/instructions"))
+}
+
+/// The text of the shipped instruction `name`.
+pub fn shipped(name: &str) -> String {
+    let path = shipped_instructions().join(format!("{name}.md"));
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+}
+
+/// The names of the shipped instructions.
+pub const SHIPPED: [&str; 7] = [
+    "plan", "develop", "test", "check", "fix", "complete", "ingest",
+];
+
+/// Copies the shipped instructions into `<dir>/instructions/`, as if `dir` were a layer that
+/// holds them (the project's notes, say).
+pub fn install_instructions(dir: &std::path::Path) {
+    let to = dir.join("instructions");
+    std::fs::create_dir_all(&to).expect("instructions folder");
+    for name in SHIPPED {
+        std::fs::write(to.join(format!("{name}.md")), shipped(name)).expect("instruction copied");
+    }
+}

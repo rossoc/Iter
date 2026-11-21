@@ -1,23 +1,21 @@
-//! Instructions: markdown files (opencode agent format, front matter over the prompt) saying what an agent is told for a kind of work.
-//! Looked up nearest first: project notes, organization notes, config folder, then the built-in ones; see [`Source`].
+//! Instructions: markdown files (opencode agent format, front matter over the prompt) saying what an agent is told.
+//! Looked up nearest first: the task's folder, project notes, organization notes, then iter's config
+//! folder (`<config>/instructions/<name>.md`, beside `iter.yaml`); see [`Source`]. None is built in.
 
-#[cfg(feature = "web")]
 use crate::agent::error::{AgentError, AgentResult};
 #[cfg(feature = "web")]
-use crate::agent::prompt::{self, Context, Kind};
-#[cfg(feature = "web")]
+use crate::agent::prompt::{self, Context};
 use serde_yaml::Value;
 #[cfg(feature = "web")]
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
-#[cfg(feature = "web")]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Source {
     Task,
     Project,
     Organization,
     Global,
-    BuiltIn,
 }
 
 #[cfg(feature = "web")]
@@ -28,15 +26,12 @@ impl Source {
             Source::Project => "project",
             Source::Organization => "organization",
             Source::Global => "iter's config folder",
-            Source::BuiltIn => "built in",
         }
     }
 }
 
-#[cfg(feature = "web")]
 pub type Layers = Vec<(Source, PathBuf)>;
 
-#[cfg(feature = "web")]
 /// The layers that apply to `project`, nearest first (those that exist).
 pub fn layers_of(
     db: &crate::db::Db,
@@ -55,9 +50,7 @@ pub fn layers_of(
 }
 
 /// [`layers_of`] with the task's own folder in front: the layers a run of `task` is offered, checked
-/// and filled from. One function so the compose form, its prompt preview and the POST that saves it
-/// cannot disagree about which instructions exist. A task with no folder adds nothing.
-#[cfg(feature = "web")]
+/// and filled from, by the CLI and the web alike. A task with no folder adds nothing.
 pub fn layers_for_task(
     db: &crate::db::Db,
     project: &crate::models::Project,
@@ -70,12 +63,11 @@ pub fn layers_for_task(
     Ok(layers)
 }
 
-#[cfg(feature = "web")]
+/// iter's config folder, where the instructions everyone shares live.
 pub fn global() -> Option<PathBuf> {
     crate::config::config_dir().ok()
 }
 
-#[cfg(feature = "web")]
 pub use crate::agent::prompt::file;
 
 /// The front matter (between a first line `---` and the next) and the prompt; no `---` means all prompt.
@@ -86,20 +78,21 @@ pub fn split(raw: &str) -> (Option<&str>, &str) {
     }
 }
 
-#[cfg(feature = "web")]
 /// The front matter keys iter reads; others stay in the file.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Front {
     pub description: String,
     pub model: Option<String>,
-    /// Built-in kind: sets up the work (code-changing kinds get a worktree); Develop if absent.
-    pub kind: Option<String>,
+    /// The run works on the code: it gets the task's branch and worktree.
+    pub worktree: bool,
+    /// The instruction leads subagents from a session someone is in: it is printed
+    /// (`iter task prompt`), never run headless.
+    pub interactive: bool,
     pub mode: Option<String>,
     pub temperature: Option<String>,
     pub permission: Option<String>,
 }
 
-#[cfg(feature = "web")]
 fn scalar(v: &Value) -> Option<String> {
     match v {
         Value::String(s) => Some(s.clone()),
@@ -109,7 +102,6 @@ fn scalar(v: &Value) -> Option<String> {
     }
 }
 
-#[cfg(feature = "web")]
 pub fn parse_front(yaml: &str) -> AgentResult<Front> {
     let value: Value = serde_yaml::from_str(yaml).map_err(AgentError::FrontMatterUnreadable)?;
     let map = match value {
@@ -126,10 +118,18 @@ pub fn parse_front(yaml: &str) -> AgentResult<Front> {
                 .ok_or_else(|| AgentError::FrontMatterNotText(key.to_string())),
         }
     };
-    let front = Front {
+    let flag = |key: &str| -> AgentResult<bool> {
+        match get(key) {
+            None | Some(Value::Null) => Ok(false),
+            Some(Value::Bool(b)) => Ok(*b),
+            Some(_) => Err(AgentError::FrontMatterNotFlag(key.to_string())),
+        }
+    };
+    Ok(Front {
         description: text("description")?.unwrap_or_default(),
         model: text("model")?,
-        kind: text("kind")?,
+        worktree: flag("worktree")?,
+        interactive: flag("interactive")?,
         mode: text("mode")?,
         temperature: text("temperature")?,
         permission: match get("permission") {
@@ -138,23 +138,11 @@ pub fn parse_front(yaml: &str) -> AgentResult<Front> {
                 .ok()
                 .map(|s| s.trim_end().to_string()),
         },
-    };
-    if let Some(kind) = &front.kind
-        && kind_of_key(kind).is_none()
-    {
-        return Err(AgentError::FrontMatterKind(kind.clone()));
-    }
-    Ok(front)
+    })
 }
 
-#[cfg(feature = "web")]
-fn kind_of_key(key: &str) -> Option<Kind> {
-    use clap::ValueEnum;
-    Kind::from_str(key, true).ok()
-}
-
-#[cfg(feature = "web")]
 #[derive(Clone, Debug)]
+#[cfg_attr(not(feature = "web"), allow(dead_code))] // the web lists and edits them; the CLI reads front and body
 pub struct Instruction {
     pub name: String,
     pub front: Front,
@@ -165,7 +153,6 @@ pub struct Instruction {
     pub problem: Option<String>,
 }
 
-#[cfg(feature = "web")]
 impl Instruction {
     fn new(name: &str, raw: String, source: Source, path: Option<PathBuf>) -> Instruction {
         let (yaml, body) = split(&raw);
@@ -176,7 +163,7 @@ impl Instruction {
         };
         Instruction {
             name: name.to_string(),
-            body: body.to_string(),
+            body: body.trim_start_matches('\n').to_string(),
             front,
             raw,
             source,
@@ -184,16 +171,8 @@ impl Instruction {
             problem,
         }
     }
-
-    /// The kind: the name if built-in, else `kind:` of the front matter, else Develop.
-    pub fn kind(&self) -> Kind {
-        kind_of_key(&self.name)
-            .or_else(|| self.front.kind.as_deref().and_then(kind_of_key))
-            .unwrap_or(Kind::Develop)
-    }
 }
 
-#[cfg(feature = "web")]
 /// Whether `name` can be a file name: lowercase letters, digits and dashes, starting with a letter or digit.
 pub fn valid_name(name: &str) -> bool {
     !name.is_empty()
@@ -204,52 +183,7 @@ pub fn valid_name(name: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
-#[cfg(feature = "web")]
-/// Whether `name` is a built-in instruction; those keep their names.
-pub fn is_builtin(name: &str) -> bool {
-    kind_of_key(name).is_some()
-}
-
-#[cfg(feature = "web")]
-/// The name to save under when the form asks for `wanted`: none if unchanged; an error if built-in or named like one.
-pub fn rename_target(old: &str, wanted: &str) -> AgentResult<Option<String>> {
-    let wanted = wanted.trim();
-    if wanted.is_empty() || wanted == old {
-        return Ok(None);
-    }
-    if !valid_name(wanted) {
-        return Err(AgentError::InvalidName(wanted.to_string()));
-    }
-    if is_builtin(old) {
-        return Err(AgentError::BuiltInKeepsName(old.to_string()));
-    }
-    if is_builtin(wanted) {
-        return Err(AgentError::BuiltInName(wanted.to_string()));
-    }
-    Ok(Some(wanted.to_string()))
-}
-
-#[cfg(feature = "web")]
-const KINDS: [Kind; 5] = [
-    Kind::Plan,
-    Kind::Develop,
-    Kind::Test,
-    Kind::Check,
-    Kind::Fix,
-];
-
-#[cfg(feature = "web")]
-fn builtin(kind: Kind) -> Instruction {
-    Instruction::new(
-        kind.key(),
-        kind.builtin().to_string(),
-        Source::BuiltIn,
-        None,
-    )
-}
-
-#[cfg(feature = "web")]
-/// The instruction `name` under these layers: nearest file, else built-in.
+/// The instruction `name` under these layers: the nearest file; none if no layer holds one.
 pub fn find(name: &str, layers: &Layers) -> Option<Instruction> {
     if !valid_name(name) {
         return None;
@@ -260,13 +194,53 @@ pub fn find(name: &str, layers: &Layers) -> Option<Instruction> {
             return Some(Instruction::new(name, raw, *source, Some(path)));
         }
     }
-    kind_of_key(name).map(builtin)
+    None
+}
+
+/// [`find`] for a run or a prompt: an instruction found nowhere is an error naming where it is
+/// expected (`<config>/instructions/<name>.md`), and one whose front matter does not read is one too.
+pub fn resolve(name: &str, layers: &Layers) -> AgentResult<Instruction> {
+    if !valid_name(name) {
+        return Err(AgentError::InvalidName(name.to_string()));
+    }
+    let Some(found) = find(name, layers) else {
+        let config = layers
+            .iter()
+            .find(|(s, _)| *s == Source::Global)
+            .map(|(_, d)| d.clone())
+            .or_else(global)
+            .unwrap_or_default();
+        return Err(AgentError::InstructionNotFound {
+            name: name.to_string(),
+            path: file(&config, name),
+        });
+    };
+    if let Some(problem) = &found.problem {
+        return Err(AgentError::InstructionUnreadable {
+            path: found.path.clone().unwrap_or_default(),
+            problem: problem.clone(),
+        });
+    }
+    Ok(found)
 }
 
 #[cfg(feature = "web")]
-/// Every instruction under these layers, by name: built-in and files.
+/// The name to save under when the form asks for `wanted`: none if unchanged; an error if not a name.
+pub fn rename_target(old: &str, wanted: &str) -> AgentResult<Option<String>> {
+    let wanted = wanted.trim();
+    if wanted.is_empty() || wanted == old {
+        return Ok(None);
+    }
+    if !valid_name(wanted) {
+        return Err(AgentError::InvalidName(wanted.to_string()));
+    }
+    Ok(Some(wanted.to_string()))
+}
+
+#[cfg(feature = "web")]
+/// Every instruction under these layers, by name: what the files hold, nothing else.
 pub fn list(layers: &Layers) -> Vec<Instruction> {
-    let mut names: Vec<String> = KINDS.iter().map(|k| k.key().to_string()).collect();
+    let mut names: Vec<String> = Vec::new();
     for (_, dir) in layers {
         let Ok(entries) = std::fs::read_dir(dir.join("instructions")) else {
             continue;
@@ -283,7 +257,7 @@ pub fn list(layers: &Layers) -> Vec<Instruction> {
             }
         }
     }
-    names[KINDS.len()..].sort();
+    names.sort();
     names.iter().filter_map(|n| find(n, layers)).collect()
 }
 
@@ -291,16 +265,12 @@ pub fn list(layers: &Layers) -> Vec<Instruction> {
 /// Whether `raw` can be kept: front matter reads, has a prompt, and no unknown placeholder (an agent must never see a literal `{{taks}}`).
 pub fn check(name: &str, raw: &str) -> AgentResult<()> {
     let (yaml, body) = split(raw);
-    let front = match yaml {
-        Some(y) => parse_front(y)?,
-        None => Front::default(),
-    };
+    if let Some(y) = yaml {
+        parse_front(y)?;
+    }
     if body.trim().is_empty() {
         return Err(AgentError::NoPrompt);
     }
-    let kind = kind_of_key(name)
-        .or_else(|| front.kind.as_deref().and_then(kind_of_key))
-        .unwrap_or(Kind::Develop);
     let dir = Path::new("/");
     let ctx = Context {
         task: "p/t",
@@ -317,7 +287,7 @@ pub fn check(name: &str, raw: &str) -> AgentResult<()> {
         branch_main: "main",
         ingest: "",
     };
-    prompt::render(body, kind, &ctx).map(|_| ())
+    prompt::render(body, name, &ctx).map(|_| ())
 }
 
 #[cfg(feature = "web")]
@@ -329,10 +299,13 @@ pub fn preferred_model(front: &Front, offered: &[String]) -> Option<String> {
 }
 
 #[cfg(feature = "web")]
+/// What a new instruction's prompt starts as in the editor: the placeholders most prompts use.
 pub fn starter_prompt() -> String {
-    split(Kind::Develop.builtin())
-        .1
-        .trim_start_matches('\n')
+    "You are working on the task \"{{task.name}}\" of the project {{project.name}}.\n\n\
+     ## The task\n\n{{task.description}}\n\n\
+     ## What the project already knows\n\n{{onboarding}}\n\n\
+     ## The plan\n\n{{plan}}\n\n\
+     The code is in {{worktree}}.\n"
         .to_string()
 }
 
@@ -340,8 +313,8 @@ pub fn starter_prompt() -> String {
 #[derive(Clone, Debug, Default)]
 pub struct Fields<'a> {
     pub description: &'a str,
-    /// A built-in kind; none leaves the file's `kind` as it is.
-    pub kind: Option<&'a str>,
+    /// `worktree: true`: the run works on the code. None leaves the file's key as it is.
+    pub worktree: Option<bool>,
     pub model: &'a str,
     pub mode: &'a str,
     pub temperature: &'a str,
@@ -391,11 +364,8 @@ pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
             Err(_) => Value::String(temperature.into()),
         }),
     );
-    if let Some(kind) = f.kind.map(str::trim) {
-        if kind_of_key(kind).is_none() {
-            return Err(AgentError::FieldKind(kind.to_string()));
-        }
-        put(&mut map, "kind", Some(Value::String(kind.into())));
+    if let Some(worktree) = f.worktree {
+        put(&mut map, "worktree", worktree.then_some(Value::Bool(true)));
     }
     let permission = f.permission.trim();
     put(
@@ -452,7 +422,7 @@ mod tests {
             i.front.permission.as_deref(),
             Some("edit: deny\nbash: deny")
         );
-        assert_eq!(i.kind(), Kind::Check);
+        assert!(!i.front.worktree && !i.front.interactive);
         assert_eq!(i.body.trim(), "You are in review mode.");
         let offered = vec!["claude-sonnet-5-5".to_string(), "haiku".to_string()];
         assert_eq!(
@@ -463,27 +433,27 @@ mod tests {
     }
 
     #[test]
-    fn a_built_in_name_keeps_its_kind_and_a_bad_front_matter_is_said() {
+    fn worktree_and_interactive_are_flags_and_a_bad_front_matter_is_said() {
         let i = Instruction::new(
             "fix",
-            "---\nkind: plan\n---\nx".into(),
+            "---\nworktree: true\ninteractive: true\n---\nx".into(),
             Source::Project,
             None,
         );
-        assert_eq!(i.kind(), Kind::Fix);
+        assert!(i.front.worktree && i.front.interactive && i.problem.is_none());
         let bad = Instruction::new(
             "a",
-            "---\nkind: dance\n---\nx".into(),
+            "---\nworktree: dance\n---\nx".into(),
             Source::Project,
             None,
         );
-        assert!(bad.problem.unwrap().contains("dance"));
+        assert!(bad.problem.unwrap().contains("worktree"));
         let worse = Instruction::new("a", "---\n[1, 2\n---\nx".into(), Source::Project, None);
         assert!(worse.problem.is_some());
     }
 
     #[test]
-    fn the_nearest_layer_wins_and_the_built_in_ones_are_the_last_resort() {
+    fn the_nearest_layer_wins_and_nothing_is_built_in() {
         let (project, org) = (fixtures::scratch("instr-p"), fixtures::scratch("instr-o"));
         write(&org, "fix", "---\ndescription: Org fix\n---\nOrg {{task}}");
         write(&org, "review", "Review it");
@@ -502,10 +472,18 @@ mod tests {
             (review.source, review.body.as_str()),
             (Source::Project, "Project review")
         );
-        assert_eq!(find("plan", &layers).unwrap().source, Source::BuiltIn);
+        assert!(find("plan", &layers).is_none());
         assert!(find("nope", &layers).is_none() && find("../x", &layers).is_none());
         let names: Vec<String> = list(&layers).into_iter().map(|i| i.name).collect();
-        assert_eq!(names, ["plan", "develop", "test", "check", "fix", "review"]);
+        assert_eq!(names, ["fix", "review"]);
+        let e = resolve("plan", &layers).unwrap_err().to_string();
+        assert!(
+            e.contains("'plan'") && e.contains("instructions/plan.md"),
+            "{e}"
+        );
+        write(&project, "broken", "---\nworktree: 3\n---\nx");
+        let e = resolve("broken", &layers).unwrap_err().to_string();
+        assert!(e.contains("broken.md") && e.contains("worktree"), "{e}");
     }
 
     #[test]
@@ -513,7 +491,8 @@ mod tests {
         assert!(check("fix", "---\ndescription: x\n---\nWork on {{task.name}}").is_ok());
         assert!(check("fix", "Work on {{taks}}").is_err());
         assert!(check("fix", "---\ndescription: x\n---\n\n").is_err());
-        assert!(check("fix", "---\nkind: dance\n---\nx").is_err());
+        assert!(check("fix", "---\nkind: dance\n---\nx").is_ok());
+        assert!(check("fix", "---\ninteractive: maybe\n---\nx").is_err());
         assert!(
             valid_name("code-review")
                 && !valid_name("Code")
@@ -525,7 +504,7 @@ mod tests {
     fn fields<'a>(prompt: &'a str) -> Fields<'a> {
         Fields {
             description: "Reviews: code",
-            kind: Some("check"),
+            worktree: Some(true),
             prompt,
             ..Fields::default()
         }
@@ -555,7 +534,7 @@ mod tests {
             i.front.permission.as_deref(),
             Some("edit: deny\nbash: deny")
         );
-        assert_eq!(i.kind(), Kind::Check);
+        assert!(i.front.worktree);
         assert_eq!(i.body.trim(), "Review {{task.name}}.\nBe kind.");
     }
 
@@ -566,7 +545,10 @@ mod tests {
             description: "new",
             ..fields("New prompt")
         };
-        let f = Fields { kind: None, ..f };
+        let f = Fields {
+            worktree: None,
+            ..f
+        };
         let raw = compose(Some(existing), &f).unwrap();
         let (yaml, body) = split(&raw);
         let map: serde_yaml::Mapping = serde_yaml::from_str(yaml.unwrap()).unwrap();
@@ -579,7 +561,7 @@ mod tests {
                 .and_then(Value::as_bool),
             Some(false)
         );
-        assert!(map.get("kind").is_none());
+        assert!(map.get("worktree").is_none());
         assert_eq!(body.trim(), "New prompt");
         let bare = compose(
             None,
@@ -594,16 +576,12 @@ mod tests {
 
     #[test]
     fn a_field_that_cannot_be_kept_is_refused_by_name() {
-        let bad_kind = Fields {
-            kind: Some("dance"),
+        let off = Fields {
+            worktree: Some(false),
             ..fields("x")
         };
-        assert!(
-            compose(None, &bad_kind)
-                .unwrap_err()
-                .to_string()
-                .contains("dance")
-        );
+        let raw = compose(Some("---\nworktree: true\n---\nx"), &off).unwrap();
+        assert!(!raw.contains("worktree"), "{raw}");
         let bad_yaml = Fields {
             permission: "[1, 2",
             ..fields("x")
@@ -629,17 +607,7 @@ mod tests {
     }
 
     #[test]
-    fn every_built_in_instruction_is_valid_and_says_what_it_is_for() {
-        for kind in KINDS {
-            let i = builtin(kind);
-            assert_eq!(i.problem, None);
-            assert!(!i.front.description.is_empty(), "{}", kind.key());
-            assert!(check(kind.key(), &i.raw).is_ok(), "{}", kind.key());
-        }
-    }
-
-    #[test]
-    fn a_name_can_change_unless_it_is_built_in_or_would_be() {
+    fn a_name_can_change_to_any_valid_name() {
         assert_eq!(rename_target("review", "review").unwrap(), None);
         assert_eq!(rename_target("review", "  ").unwrap(), None);
         assert_eq!(
@@ -647,9 +615,6 @@ mod tests {
             Some("audit".into())
         );
         assert!(rename_target("review", "Bad Name").is_err());
-        assert!(rename_target("review", "fix").is_err());
-        assert!(rename_target("fix", "audit").is_err());
         assert_eq!(rename_target("fix", "fix").unwrap(), None);
-        assert!(is_builtin("plan") && !is_builtin("review"));
     }
 }

@@ -16,7 +16,6 @@ async fn edit_form(scope: &Scope, i: &Instruction) -> Result<impl View> {
         .map(|p| p.to_string())
         .unwrap_or_default();
     let own = i.source == scope.own();
-    let builtin = instruction::is_builtin(&i.name);
     let close = scope.url(&i.name);
     let action = format!("/instruction/{}", i.name);
     let note = if scope.home.is_none() {
@@ -26,20 +25,14 @@ async fn edit_form(scope: &Scope, i: &Instruction) -> Result<impl View> {
     } else {
         "Saving keeps a copy of its own, here; the one it comes from stays as it is."
     };
-    let kinds: Vec<(String, String)> = [
-        (
-            Kind::Develop,
-            "Develop: works on the code, following the plan",
-        ),
-        (Kind::Test, "Test: works on the tests"),
-        (Kind::Fix, "Fix: works on the code, to fix a defect"),
-        (Kind::Check, "Check: reads and runs checks, changes no code"),
-        (Kind::Plan, "Plan: reads, writes the plan"),
+    let worktrees: Vec<(String, String)> = [
+        ("false", "No: it reads, and changes no code"),
+        ("true", "Yes: it works on the code, in the task's worktree"),
     ]
     .into_iter()
-    .map(|(k, text)| (k.key().to_string(), text.to_string()))
+    .map(|(k, text)| (k.to_string(), text.to_string()))
     .collect();
-    let kind = i.kind().key();
+    let worktree = if i.front.worktree { "true" } else { "false" };
     let models: Vec<String> = Harness::Claude.models(&config().agent.models);
     let hint = placeholder_hint();
     let prompt = i.body.trim_matches('\n').to_string();
@@ -53,11 +46,9 @@ async fn edit_form(scope: &Scope, i: &Instruction) -> Result<impl View> {
             <form method="post" action=(action.as_str())>
                 <input type="hidden" name="project" value=(project.as_str())>
                 <div class="compose-pick">
-                    if !builtin {
-                        field(name: "new_name", label: "Name", value: &i.name, identifier: true,
-                            hint: "Lowercase letters, digits and dashes: it is the file name. Agents already run keep the old name.")
-                        select(name: "kind", label: "Set up like", options: &kinds, current: kind)
-                    }
+                    field(name: "new_name", label: "Name", value: &i.name, identifier: true,
+                        hint: "Lowercase letters, digits and dashes: it is the file name. Agents already run keep the old name.")
+                    select(name: "worktree", label: "Worktree", options: &worktrees, current: worktree)
                 </div>
                 field(name: "description", label: "Description", value: &i.front.description,
                     hint: "One line: what the instruction is for.")
@@ -109,7 +100,8 @@ async fn info_part(i: &Instruction) -> Result<impl View> {
         .unwrap_or_default();
     let rows = [
         Row::Text("From", i.source.label().to_string()),
-        Row::Text("Set up like", i.kind().key().to_string()),
+        Row::Text("Worktree", yes_no(i.front.worktree).to_string()),
+        Row::Text("Interactive", yes_no(i.front.interactive).to_string()),
         Row::Text("Model", i.front.model.clone().unwrap_or_default()),
         Row::Text("Mode", i.front.mode.clone().unwrap_or_default()),
         Row::Text(
@@ -139,6 +131,10 @@ async fn info_part(i: &Instruction) -> Result<impl View> {
             panel(id: "details-title", title: "Details", rows: &rows)
         )
     })
+}
+
+fn yes_no(b: bool) -> &'static str {
+    if b { "yes" } else { "no" }
 }
 
 /// The start time is stored with the run, not shown.
@@ -177,7 +173,7 @@ pub(super) async fn detail_page(cx: &Cx) -> Result<impl View> {
     };
     let uses: Vec<Use> = usage(&db, scope.project_id())
         .into_iter()
-        .filter(|u| u.run.instruction_name() == name)
+        .filter(|u| u.run.instruction == name)
         .collect();
     Ok(view! {
         detail_screen(scope: &scope, i: &i, part: part, uses: &uses)

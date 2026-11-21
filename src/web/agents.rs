@@ -44,7 +44,7 @@ fn tail(log: &str) -> (String, bool) {
 }
 
 fn heading(run: &RunRecord) -> String {
-    format!("#{} {}", run.n, label_of(run.instruction_name()))
+    format!("#{} {}", run.n, label_of(&run.instruction))
 }
 
 #[component]
@@ -167,7 +167,7 @@ async fn facts(a: &Loaded) -> Result<impl View> {
             <h2 id="run-title" class="label">"Agent"</h2>
             <dl>
                 <dt>"Status"</dt><dd>state_pill(run: run)</dd>
-                <dt>"Instruction"</dt><dd>(label_of(run.instruction_name()))</dd>
+                <dt>"Instruction"</dt><dd>(label_of(&run.instruction))</dd>
                 <dt>"Agent"</dt><dd>(run.agent_label())</dd>
                 <dt>"Model"</dt><dd>(run.model.as_str())</dd>
                 <dt>"Effort"</dt><dd>(run.effort.as_str())</dd>
@@ -239,7 +239,7 @@ async fn output_part(a: &Loaded, raw: bool) -> Result<impl View> {
 async fn settings_part(a: &Loaded) -> Result<impl View> {
     let run = &a.run;
     let c = Compose {
-        instruction: run.instruction_name().to_string(),
+        instruction: run.instruction.clone(),
         offered: Vec::new(),
         run: Some(run.n),
         model: run.model.clone(),
@@ -321,8 +321,8 @@ mod tests {
             agent: crate::agent::run::Harness::Claude,
             model: "haiku".into(),
             effort: "low".into(),
-            kind: crate::agent::prompt::Kind::Develop,
-            instruction: None,
+            instruction: "develop".into(),
+            wants_worktree: true,
             status: crate::agent::run::Status::Done,
             started: "2026-10-30 10:00:00".into(),
             ended: None,
@@ -333,7 +333,7 @@ mod tests {
             subagent: false,
         };
         assert_eq!(heading(&run), "#3 Develop");
-        run.instruction = Some("review".into());
+        run.instruction = "review".into();
         assert_eq!(heading(&run), "#3 review");
     }
 }

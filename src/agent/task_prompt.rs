@@ -1,15 +1,15 @@
 //! The prompt that sends an agent to work on a task; shared by the CLI and the web page.
 
 use crate::agent::error::AgentError;
-use crate::agent::prompt::{self, Context, Kind};
+use crate::agent::instruction::{self, Instruction};
+use crate::agent::prompt::{self, Context};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
 use crate::db::Table;
 use crate::error::Result;
 use crate::models::{Project, Task};
-use crate::notes;
 use crate::utils::resolve::{resolve_task_or_current, task_display};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)> {
     let (project, task) = resolve_task_or_current(&app.db, task)?;
@@ -75,38 +75,70 @@ fn uses(template: &str, key: &str) -> bool {
         .any(|rest| rest.split("}}").next().is_some_and(|k| k.trim() == key))
 }
 
-/// Folders that may hold `instructions/<kind>.md`, nearest first.
-fn override_dirs(app: &App, project: &Project, dir: &TaskDir) -> Result<Vec<PathBuf>> {
-    let org = app.db.org_of(project)?;
-    let mut dirs = vec![dir.root().to_path_buf()];
-    dirs.extend(notes::project_dir(project, &org));
-    dirs.extend(org.as_ref().and_then(notes::org_dir));
-    dirs.extend(crate::config::config_dir().ok());
-    Ok(dirs)
+/// The instruction `name` for `task`: the nearest `instructions/<name>.md` in the task's folder,
+/// the project's notes, the organization's notes or iter's config folder; an error if none holds it.
+pub fn instruction_for(
+    app: &App,
+    project: &Project,
+    task: &Task,
+    name: &str,
+) -> Result<Instruction> {
+    let layers = instruction::layers_for_task(&app.db, project, task)?;
+    Ok(instruction::resolve(name, &layers)?)
 }
 
-/// The prompt of `kind`: `template`, else the nearest override, else the built-in, filled from the task and plan.
+/// The prompt of the instruction `name`: `template` if given, else the nearest instruction file, filled from the task and plan.
 pub fn prompt_text(
     app: &App,
     task: Option<&str>,
-    kind: Kind,
+    name: &str,
     template: Option<&Path>,
     onboarding_wanted: bool,
 ) -> Result<String> {
-    prompt_for(app, task, kind, template, onboarding_wanted, None, false)
+    prompt_for(app, task, name, template, onboarding_wanted, None, false)
 }
 
 /// As [`prompt_text`] with `description` in place of the task's; `defer_worktree` keeps `{{worktree}}` when there is no worktree yet.
 pub fn prompt_for(
     app: &App,
     task: Option<&str>,
-    kind: Kind,
+    name: &str,
     template: Option<&Path>,
     onboarding_wanted: bool,
     description: Option<&str>,
     defer_worktree: bool,
 ) -> Result<String> {
     let (project, task, dir) = locate(app, task)?;
+    let text = match template {
+        Some(path) => std::fs::read_to_string(path)
+            .map(|t| instruction::split(&t).1.to_string())
+            .map_err(|source| AgentError::TemplateUnreadable {
+                path: path.to_path_buf(),
+                source,
+            })?,
+        None => instruction_for(app, &project, &task, name)?.body,
+    };
+    fill(
+        app,
+        (&project, &task, &dir),
+        name,
+        &text,
+        onboarding_wanted,
+        description,
+        defer_worktree,
+    )
+}
+
+/// `text`, the prompt of the instruction `name`, filled from the task and plan.
+pub fn fill(
+    app: &App,
+    (project, task, dir): (&Project, &Task, &TaskDir),
+    name: &str,
+    text: &str,
+    onboarding_wanted: bool,
+    description: Option<&str>,
+    defer_worktree: bool,
+) -> Result<String> {
     // the folder the agent writes sketches in must exist
     dir.ensure()?;
     let plan_text = dir.read_plan()?;
@@ -114,30 +146,21 @@ pub fn prompt_for(
         .db
         .find_session_config_by_task(task.id())?
         .and_then(|s| s.worktree_path);
-    let text = match template {
-        Some(path) => std::fs::read_to_string(path)
-            .map(|t| crate::agent::instruction::split(&t).1.to_string())
-            .map_err(|source| AgentError::TemplateUnreadable {
-                path: path.to_path_buf(),
-                source,
-            })?,
-        None => prompt::template(kind, &override_dirs(app, &project, &dir)?).1,
-    };
     let known = match onboarding_wanted {
-        true => onboarding(app, &project, &task),
+        true => onboarding(app, project, task),
         false => String::new(),
     };
     // computed only when asked for: it reads the whole wiki
-    let ingest = match uses(&text, "ingest") {
+    let ingest = match uses(text, "ingest") {
         true => {
-            crate::wiki::ingest_job::task_ingest_text(&app.db, &project, &task).unwrap_or_default()
+            crate::wiki::ingest_job::task_ingest_text(&app.db, project, task).unwrap_or_default()
         }
         false => String::new(),
     };
-    let name = task_display(&project, &task);
+    let shown = task_display(project, task);
     let plan_path = dir.plan_path();
     let ctx = Context {
-        task: &name,
+        task: &shown,
         task_name: &task.name,
         task_description: description.unwrap_or(&task.description),
         task_id: task.id(),
@@ -153,7 +176,7 @@ pub fn prompt_for(
         branch_main: &project.default_branch,
         ingest: &ingest,
     };
-    Ok(prompt::render(&text, kind, &ctx)?)
+    Ok(prompt::render(text, name, &ctx)?)
 }
 
 #[cfg(test)]
@@ -163,8 +186,10 @@ mod tests {
     use crate::fixtures;
     use std::path::PathBuf;
 
+    /// The agent test world, its notes holding the shipped instructions (the project's layer).
     fn world(name: &str) -> (App, PathBuf) {
         let world = fixtures::world(&format!("agentcmd-{name}"));
+        fixtures::install_instructions(&world.notes);
         (App::with_db(world.db), world.notes)
     }
 
@@ -180,7 +205,7 @@ mod tests {
     #[test]
     fn the_prompt_names_the_task_the_plan_and_its_folder() {
         let (app, notes) = world("prompt");
-        let text = prompt_text(&app, Some("app/Fix it"), Kind::Develop, None, true).unwrap();
+        let text = prompt_text(&app, Some("app/Fix it"), "develop", None, true).unwrap();
         assert!(text.contains("Fix it") && text.contains("Retries hammer the api."));
         assert!(text.contains("(there is no plan yet)"));
         // sketches go through the CLI, which knows the folder: the agent needs no path
@@ -194,7 +219,7 @@ mod tests {
             "## Goal\nStop it.\n## Checklist\n- [ ] one\n",
         )
         .unwrap();
-        let text = prompt_text(&app, Some("app/Fix it"), Kind::Plan, None, true).unwrap();
+        let text = prompt_text(&app, Some("app/Fix it"), "plan", None, true).unwrap();
         assert!(text.contains("Stop it.") && text.contains("- [ ] {s1} one"));
     }
 
@@ -207,12 +232,12 @@ mod tests {
             "---\ndescription: Retries need exponential backoff\ntags: [net]\n---\n# Backoff\n",
         )
         .unwrap();
-        let with = prompt_text(&app, Some("app/Fix it"), Kind::Plan, None, true).unwrap();
+        let with = prompt_text(&app, Some("app/Fix it"), "plan", None, true).unwrap();
         assert!(
             with.contains("`wiki/concepts/backoff` [Concept]: Retries need exponential backoff")
         );
         assert!(with.contains("iter wiki show <id>"));
-        let without = prompt_text(&app, Some("app/Fix it"), Kind::Plan, None, false).unwrap();
+        let without = prompt_text(&app, Some("app/Fix it"), "plan", None, false).unwrap();
         assert!(!without.contains("backoff"));
         assert!(without.contains("(nothing was found for this task)"));
     }
@@ -224,16 +249,16 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("plan.md"), "Plan {{task.name}} as a haiku.").unwrap();
         assert_eq!(
-            prompt_text(&app, Some("app/Fix it"), Kind::Plan, None, false).unwrap(),
+            prompt_text(&app, Some("app/Fix it"), "plan", None, false).unwrap(),
             "Plan Fix it as a haiku."
         );
         assert!(
-            prompt_text(&app, Some("app/Fix it"), Kind::Fix, None, false)
+            prompt_text(&app, Some("app/Fix it"), "fix", None, false)
                 .unwrap()
                 .contains("Reproduce it first")
         );
         std::fs::write(dir.join("plan.md"), "{{task.nmae}}").unwrap();
-        let e = prompt_text(&app, Some("app/Fix it"), Kind::Plan, None, false).unwrap_err();
+        let e = prompt_text(&app, Some("app/Fix it"), "plan", None, false).unwrap_err();
         assert!(
             e.to_string().contains("unknown placeholder {{task.nmae}}"),
             "{e}"
@@ -241,24 +266,19 @@ mod tests {
         let file = notes.join("mine.md");
         std::fs::write(&file, "mine: {{task}}").unwrap();
         assert_eq!(
-            prompt_text(&app, Some("app/Fix it"), Kind::Plan, Some(&file), false).unwrap(),
+            prompt_text(&app, Some("app/Fix it"), "plan", Some(&file), false).unwrap(),
             r"mine: app/Fix\ it"
         );
     }
 
-    fn ingest_kind() -> Kind {
-        <Kind as clap::ValueEnum>::from_str("ingest", false)
-            .unwrap_or_else(|e| panic!("no kind `ingest`: {e}"))
-    }
-
-    /// R2, R3, R4: `-k ingest` carries the wiki ingest text for the task: the note waiting, the
+    /// R2, R3, R4: `-i ingest` carries the wiki ingest text for the task: the note waiting, the
     /// rules, and the task's sketches named by command, not by folder.
     #[test]
     fn the_ingest_prompt_lists_the_waiting_notes_and_reads_through_iter() {
         let (app, notes) = world("ingest");
         std::fs::create_dir_all(notes.join("wiki")).unwrap();
         std::fs::write(notes.join("2026-10-27.md"), "Retries need a budget.\n").unwrap();
-        let text = prompt_text(&app, Some("app/Fix it"), ingest_kind(), None, false).unwrap();
+        let text = prompt_text(&app, Some("app/Fix it"), "ingest", None, false).unwrap();
         assert!(!text.contains("{{"), "{text}");
         assert!(text.contains("Fix it"), "{text}");
         assert!(text.contains("2026-10-27"), "the waiting note: {text}");
@@ -280,7 +300,8 @@ mod tests {
         let project = db.insert(&fixtures::project("bare")).unwrap();
         fixtures::add_task(&db, project, "x");
         let app = App::with_db(db);
-        let text = prompt_text(&app, Some("bare/x"), ingest_kind(), None, false).unwrap();
+        let ingest = fixtures::shipped_instructions().join("ingest.md");
+        let text = prompt_text(&app, Some("bare/x"), "ingest", Some(&ingest), false).unwrap();
         assert!(text.contains("(the project has no wiki)"), "{text}");
         assert!(!text.contains("{{"), "{text}");
     }
@@ -295,7 +316,7 @@ mod tests {
         std::fs::create_dir_all(notes.join("wiki")).unwrap();
         let file = notes.join("close.md");
         std::fs::write(&file, "merge {{branch.main}}\n{{ingest}}").unwrap();
-        let text = prompt_text(&app, Some("app/Fix it"), Kind::Plan, Some(&file), false).unwrap();
+        let text = prompt_text(&app, Some("app/Fix it"), "plan", Some(&file), false).unwrap();
         assert!(text.starts_with("merge trunk\n"), "{text}");
         assert!(!text.contains("{{"), "{text}");
     }

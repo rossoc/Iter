@@ -3,9 +3,8 @@
 
 use crate::agent::error::AgentError;
 use crate::agent::exec;
-use crate::agent::prompt::Kind;
 use crate::agent::run::{Harness, Invocation, RunRecord, Status};
-use crate::agent::task_prompt::{locate, prompt_for};
+use crate::agent::task_prompt::{fill, instruction_for, locate};
 use crate::agent::taskdir::TaskDir;
 use crate::app::App;
 use crate::db::Table;
@@ -103,40 +102,50 @@ fn now() -> String {
     chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
-/// Starts a run of `kind` on `name` (`create` then `begin`), detached unless `wait`; returns its number. One run at a time per task.
+/// Starts a run of the instruction `instruction` on `name` (`create` then `begin`), detached unless `wait`; returns its number. One run at a time per task.
 pub fn start(
     app: &App,
     name: &str,
-    kind: Kind,
+    instruction: &str,
     spec: &Spec,
     description: &str,
     launch: &Launch,
 ) -> Result<u32> {
     let (_, _, dir) = locate(app, Some(name))?;
     not_busy(&dir, name)?;
-    let n = create(app, name, kind, spec, description, None, None)?;
+    let n = create(app, name, instruction, spec, description, None)?;
     begin(app, name, n, launch)?;
     Ok(n)
 }
 
-/// Writes a run down without starting it (`queued`); `{{worktree}}` in the prompt is resolved at `begin`.
+/// Writes a run of the instruction `instruction` down without starting it (`queued`): its prompt
+/// is `prompt`, else the instruction's filled in. An interactive instruction is refused, and so is
+/// one found nowhere. `{{worktree}}` in the prompt is resolved at `begin`.
 pub fn create(
     app: &App,
     name: &str,
-    kind: Kind,
+    instruction: &str,
     spec: &Spec,
     description: &str,
     prompt: Option<&str>,
-    instruction: Option<&str>,
 ) -> Result<u32> {
-    if kind.interactive() {
-        return Err(AgentError::Interactive(kind.key()).into());
+    let (project, task, dir) = locate(app, Some(name))?;
+    let found = instruction_for(app, &project, &task, instruction)?;
+    if found.front.interactive {
+        return Err(AgentError::Interactive(instruction.to_string()).into());
     }
-    let (_, _, dir) = locate(app, Some(name))?;
     dir.ensure()?;
     let text = match prompt {
         Some(text) if !text.trim().is_empty() => text.to_string(),
-        _ => prompt_for(app, Some(name), kind, None, true, Some(description), true)?,
+        _ => fill(
+            app,
+            (&project, &task, &dir),
+            instruction,
+            &found.body,
+            true,
+            Some(description),
+            true,
+        )?,
     };
     let n = dir.claim_run()?;
     let run = RunRecord {
@@ -144,8 +153,8 @@ pub fn create(
         agent: spec.agent,
         model: spec.model.clone(),
         effort: spec.effort.clone(),
-        kind,
-        instruction: instruction.map(String::from),
+        instruction: instruction.to_string(),
+        wants_worktree: found.front.worktree,
         status: Status::Queued,
         started: now(),
         ended: None,
@@ -173,21 +182,24 @@ pub fn amend(
     app: &App,
     name: &str,
     n: u32,
-    kind: Kind,
     instruction: &str,
     spec: &Spec,
     prompt: &str,
 ) -> Result<()> {
-    let (_, _, dir) = locate(app, Some(name))?;
+    let (project, task, dir) = locate(app, Some(name))?;
     let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
     if !run.is_queued() {
         return Err(AgentError::RunBegun(n).into());
     }
+    let found = instruction_for(app, &project, &task, instruction)?;
+    if found.front.interactive {
+        return Err(AgentError::Interactive(instruction.to_string()).into());
+    }
     run.agent = spec.agent;
     run.model = spec.model.clone();
     run.effort = spec.effort.clone();
-    run.kind = kind;
-    run.instruction = Some(instruction.to_string());
+    run.instruction = instruction.to_string();
+    run.wants_worktree = found.front.worktree;
     crate::utils::fs::write_private(&dir.run_prompt_path(n), prompt)?;
     dir.write_run(&run)?;
     Ok(())
@@ -222,7 +234,7 @@ fn not_busy(dir: &TaskDir, name: &str) -> Result<()> {
     }
 }
 
-/// What every run does before its agent starts: makes the workspace if the kind changes code
+/// What every run does before its agent starts: makes the workspace if the instruction asks for it
 /// (before the prompt is final, so it names the right directory), marks the task in progress,
 /// may trigger an ingest, then `running`. The record is not written; a failure is recorded.
 fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
@@ -236,11 +248,10 @@ fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
         }
         .into());
     }
-    let kind = run.kind;
-    // read-only runs need no branch; code-changing ones get the task's workspace first,
-    // so that the prompt names the right directory
+    // read-only runs need no branch; code-changing ones (`worktree: true`) get the task's
+    // workspace first, so that the prompt names the right directory
     let placed = (|| -> Result<(Option<String>, Option<String>)> {
-        let (branch, worktree) = if kind.changes_code() {
+        let (branch, worktree) = if run.wants_worktree {
             workspace(app, &project, &mut task)?
         } else {
             app.db
@@ -272,7 +283,7 @@ fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
     })
 }
 
-/// Begins queued run `n`: makes the workspace if the kind changes code, starts the harness (detached unless `wait`); a run that cannot begin is recorded as failed.
+/// Begins queued run `n`: makes the workspace if its instruction asks for one, starts the harness (detached unless `wait`); a run that cannot begin is recorded as failed.
 pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
     let Launch { wait, extra, say } = *launch;
     let Ready {
@@ -310,19 +321,19 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
     Ok(())
 }
 
-/// Opens a run of `kind` for a subagent of the session the caller is in: iter starts nothing,
+/// Opens a run of the instruction `instruction` for a subagent of the session the caller is in: iter starts nothing,
 /// the session gives the subagent the prompt and closes the run with [`close`]. Returns the run's
 /// number and its prompt, final (the worktree named). `spec` is what the subagent is started with.
 pub fn open_subagent(
     app: &App,
     name: &str,
-    kind: Kind,
+    instruction: &str,
     spec: &Spec,
     say: &dyn Observer,
 ) -> Result<(u32, String)> {
     let (_, task, dir) = locate(app, Some(name))?;
     not_busy(&dir, name)?;
-    let n = create(app, name, kind, spec, &task.description, None, None)?;
+    let n = create(app, name, instruction, spec, &task.description, None)?;
     let Ready { dir, mut run, .. } = prepare(app, name, n, say)?;
     run.subagent = true;
     let prompt = (|| -> Result<String> {
@@ -487,8 +498,11 @@ mod tests {
         assert!(writable.starts_with(dir.root()));
     }
 
+    /// The agent test world, its notes holding the shipped instructions.
     fn world(name: &str) -> App {
-        App::with_db(crate::fixtures::world(&format!("solve-{name}")).db)
+        let w = crate::fixtures::world(&format!("solve-{name}"));
+        crate::fixtures::install_instructions(&w.notes);
+        App::with_db(w.db)
     }
 
     #[cfg(feature = "web")]
@@ -505,49 +519,25 @@ mod tests {
     fn a_run_is_written_down_edited_and_taken_out_of_the_line_before_it_begins() {
         let app = world("queue");
         let name = "app/Fix it";
-        let n = create(
-            &app,
-            name,
-            Kind::Develop,
-            &spec("haiku"),
-            "Retries.",
-            None,
-            None,
-        )
-        .unwrap();
+        let n = create(&app, name, "develop", &spec("haiku"), "Retries.", None).unwrap();
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
         assert!(run.is_queued() && run.pid.is_none());
         let told = std::fs::read_to_string(dir.run_prompt_path(n)).unwrap();
         assert!(told.contains("Retries.") && told.contains("{{worktree}}"));
 
-        amend(
-            &app,
-            name,
-            n,
-            Kind::Fix,
-            "fix",
-            &spec("opus"),
-            "Do it my way",
-        )
-        .unwrap();
+        amend(&app, name, n, "fix", &spec("opus"), "Do it my way").unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
-        assert_eq!((run.kind, run.model.as_str()), (Kind::Fix, "opus"));
+        assert_eq!(
+            (run.instruction.as_str(), run.model.as_str()),
+            ("fix", "opus")
+        );
         assert_eq!(
             std::fs::read_to_string(dir.run_prompt_path(n)).unwrap(),
             "Do it my way"
         );
 
-        let m = create(
-            &app,
-            name,
-            Kind::Plan,
-            &spec("haiku"),
-            "",
-            Some("Mine"),
-            None,
-        )
-        .unwrap();
+        let m = create(&app, name, "plan", &spec("haiku"), "", Some("Mine")).unwrap();
         assert_eq!(m, n + 1);
         assert_eq!(
             std::fs::read_to_string(dir.run_prompt_path(m)).unwrap(),
@@ -557,7 +547,7 @@ mod tests {
         cancel(&app, name, n).unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
         assert_eq!((run.status, run.ended.is_some()), (Status::Cancelled, true));
-        assert!(amend(&app, name, n, Kind::Fix, "fix", &spec("opus"), "x").is_err());
+        assert!(amend(&app, name, n, "fix", &spec("opus"), "x").is_err());
         assert!(begin(&app, name, n, &Launch::detached()).is_err());
         assert!(cancel(&app, name, n).is_err());
         assert!(!dir.read_run(m).unwrap().unwrap().is_running());
@@ -572,7 +562,7 @@ mod tests {
             model: "sonnet".into(),
             effort: "high".into(),
         };
-        let (n, prompt) = open_subagent(&app, name, Kind::Test, &sonnet, &Quietly).unwrap();
+        let (n, prompt) = open_subagent(&app, name, "test", &sonnet, &Quietly).unwrap();
         assert!(prompt.contains("Retries hammer the api.") && !prompt.contains("{{"));
         let (_, task, dir) = locate(&app, Some(name)).unwrap();
         assert_eq!(task.status, TaskStatus::Wip);
@@ -588,7 +578,7 @@ mod tests {
         );
 
         // one at a time, and nothing written down for the refused one
-        let busy = open_subagent(&app, name, Kind::Develop, &sonnet, &Quietly).unwrap_err();
+        let busy = open_subagent(&app, name, "develop", &sonnet, &Quietly).unwrap_err();
         assert!(busy.to_string().contains("still working"), "{busy}");
         assert_eq!(dir.runs().len(), 1);
         assert!(close(&app, name, n, Status::Running, "x").is_err());
@@ -603,7 +593,7 @@ mod tests {
         let again = close(&app, name, n, Status::Failed, "").unwrap_err();
         assert!(again.to_string().contains("is done"), "{again}");
 
-        let (m, _) = open_subagent(&app, name, Kind::Check, &sonnet, &Quietly).unwrap();
+        let (m, _) = open_subagent(&app, name, "check", &sonnet, &Quietly).unwrap();
         assert_eq!(m, n + 1);
     }
 
@@ -616,7 +606,7 @@ mod tests {
             model: "haiku".into(),
             effort: "low".into(),
         };
-        let n = create(&app, name, Kind::Develop, &spec, "x", None, None).unwrap();
+        let n = create(&app, name, "develop", &spec, "x", None).unwrap();
         let e = close(&app, name, n, Status::Done, "").unwrap_err();
         assert!(
             matches!(e, IterError::Agent(AgentError::RunNotSubagent(_))),
@@ -624,12 +614,12 @@ mod tests {
         );
         assert!(close(&app, name, 99, Status::Done, "").is_err());
 
-        let e = create(&app, name, Kind::Complete, &spec, "x", None, None).unwrap_err();
+        let e = create(&app, name, "complete", &spec, "x", None).unwrap_err();
         assert!(
-            e.to_string().contains("iter task prompt -k complete"),
+            e.to_string().contains("iter task prompt -i complete"),
             "{e}"
         );
-        assert!(open_subagent(&app, name, Kind::Complete, &spec, &Quietly).is_err());
+        assert!(open_subagent(&app, name, "complete", &spec, &Quietly).is_err());
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         assert_eq!(dir.runs().len(), 1);
     }
@@ -639,18 +629,16 @@ mod tests {
     fn an_ingest_subagent_run_is_opened_and_closed() {
         let app = world("ingest");
         let name = "app/Fix it";
-        let kind = <Kind as clap::ValueEnum>::from_str("ingest", false)
-            .unwrap_or_else(|e| panic!("no kind `ingest`: {e}"));
         let spec = Spec {
             agent: Harness::Claude,
             model: "haiku".into(),
             effort: "low".into(),
         };
-        let (n, prompt) = open_subagent(&app, name, kind, &spec, &Quietly).unwrap();
+        let (n, prompt) = open_subagent(&app, name, "ingest", &spec, &Quietly).unwrap();
         assert!(!prompt.contains("{{"), "{prompt}");
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
-        assert!(run.subagent && run.is_running() && run.kind == kind);
+        assert!(run.subagent && run.is_running() && run.instruction == "ingest");
         close(&app, name, n, Status::Done, "2 pages updated").unwrap();
         assert_eq!(dir.read_run(n).unwrap().unwrap().status, Status::Done);
     }

@@ -10,6 +10,7 @@ pub async fn instruction_table(
     Ok(view! {
         data_table(caption: "Instructions", columns: &["Instruction", "Used"], class: "tasks instructions",
             add: add.map(|href| AddRow::link(href, "New instruction\u{2026}")),
+            empty: rows.is_empty().then_some("No instructions yet: copy iter's instructions/ folder into the config folder, or make one."),
             for r in rows.iter() {
                 row(
                     cell(
@@ -44,8 +45,8 @@ async fn list_screen(scope: &Scope, rows: &[ListRow], adding: bool) -> Result<im
         frame(title: &["Instructions"], current: "/instructions", dialog: dialog,
             page_header(title: "Instructions", kicker: Kicker::Eyebrow("Global"))
             <p class="prompts-intro">
-                "What an agent is told for a kind of work, in the format of an opencode agent: front matter over the prompt. "
-                "These are the ones every project shares; a project or its organization can keep its own of the same name."
+                "What an agent is told, in the format of an opencode agent: front matter over the prompt. "
+                "These are the ones every project shares, in iter's config folder (instructions/<name>.md); a project or its organization can keep its own of the same name."
             </p>
             instruction_table(rows: rows, add: Some(add))
         )

@@ -64,19 +64,19 @@ impl Run for TaskCommand {
             ),
             Self::Prompt {
                 task,
-                kind,
+                instruction,
                 template,
                 no_onboarding,
             } => agent::prompt_cmd(
                 app,
                 task.as_deref(),
-                *kind,
+                instruction,
                 template.as_deref(),
                 !*no_onboarding,
             ),
             Self::Solve {
                 task,
-                kind,
+                instruction,
                 agent,
                 model,
                 effort,
@@ -88,7 +88,7 @@ impl Run for TaskCommand {
                 true => solve::subagent(
                     app,
                     task.as_deref(),
-                    *kind,
+                    instruction,
                     model.as_deref(),
                     effort.as_deref(),
                 ),
@@ -96,7 +96,7 @@ impl Run for TaskCommand {
                     app,
                     &solve::SolveRequest {
                         task: task.as_deref(),
-                        kind: *kind,
+                        instruction,
                         agent: *agent,
                         model: model.as_deref(),
                         effort: effort.as_deref(),

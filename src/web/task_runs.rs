@@ -6,8 +6,7 @@ use super::sections::TabQuery;
 use super::ui::icon;
 use super::url::{agent_tab_url, agent_url, task_url};
 use super::{Id, open_db};
-use crate::agent::instruction::{self, Layers};
-use crate::agent::prompt::Kind;
+use crate::agent::instruction::{self, Instruction, Layers};
 use crate::agent::run::{Harness, RunRecord};
 use crate::agent::solve::{self, Launch, Spec};
 use crate::agent::taskdir::{self};
@@ -100,12 +99,12 @@ enum RunButton {
     Save,
 }
 
-/// The model and the effort must be ones the agent takes: the form offers only those.
-fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Kind, Spec), String> {
+/// The instruction must be one the layers hold, and the model and the effort ones the agent
+/// takes: the form offers only those.
+fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Instruction, Spec), String> {
     use clap::ValueEnum;
-    let kind = instruction::find(&form.instruction, layers)
-        .ok_or_else(|| format!("'{}' is not an instruction", form.instruction))?
-        .kind();
+    let found = instruction::find(&form.instruction, layers)
+        .ok_or_else(|| format!("'{}' is not an instruction", form.instruction))?;
     let agent = Harness::from_str(&form.agent, true)
         .map_err(|_| format!("'{}' is not an agent", form.agent))?;
     let model = form.model.trim();
@@ -120,7 +119,7 @@ fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Kind, Spec
         return Err(format!("'{}' is not an effort", form.effort));
     }
     Ok((
-        kind,
+        found,
         Spec {
             agent,
             model: model.to_string(),
@@ -144,15 +143,14 @@ async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let (app, name, task, project) = world(id)?;
     let layers = instruction::layers_for_task(&app.db, &project, &task)?;
-    let (kind, spec) = parse_run(&form, &layers).map_err(bad_request)?;
+    let (found, spec) = parse_run(&form, &layers).map_err(bad_request)?;
     let n = solve::create(
         &app,
         &name,
-        kind,
+        &found.name,
         &spec,
         &task.description,
         Some(&form.prompt),
-        Some(&form.instruction),
     )
     .map_err(refused)?;
     follow_up(&app, &name, n, form.action)?;
@@ -172,8 +170,8 @@ async fn prompt_of(cx: &Cx) -> Result<Response> {
     let prompt = crate::agent::task_prompt::prompt_for(
         &app,
         Some(&name),
-        inst.kind(),
-        inst.path.as_deref(),
+        &inst.name,
+        None,
         true,
         None,
         true,
@@ -200,8 +198,8 @@ async fn edit_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let n = *path_param::<N>(cx)?;
     let (app, name, task, project) = world(id)?;
     let layers = instruction::layers_for_task(&app.db, &project, &task)?;
-    let (kind, spec) = parse_run(&form, &layers).map_err(bad_request)?;
-    solve::amend(&app, &name, n, kind, &form.instruction, &spec, &form.prompt).map_err(refused)?;
+    let (found, spec) = parse_run(&form, &layers).map_err(bad_request)?;
+    solve::amend(&app, &name, n, &found.name, &spec, &form.prompt).map_err(refused)?;
     follow_up(&app, &name, n, form.action)?;
     Err(see_other(agent_url(id, n)).into())
 }
@@ -249,13 +247,17 @@ mod tests {
         std::fs::create_dir_all(dir.root().join("instructions")).unwrap();
         std::fs::write(
             dir.root().join("instructions").join("review.md"),
-            "---\nkind: check\n---\nLook it over.\n",
+            "---\nworktree: true\n---\nLook it over.\n",
         )
         .unwrap();
 
         let layers = instruction::layers_for_task(&w.db, &project, &task).unwrap();
-        let (kind, _) = parse_run(&form("review", "sonnet", "high"), &layers).unwrap();
-        assert_eq!(kind, Kind::Check);
+        let (found, _) = parse_run(&form("review", "sonnet", "high"), &layers).unwrap();
+        assert_eq!(found.name, "review");
+        assert!(
+            found.front.worktree,
+            "the front matter's worktree is picked up"
+        );
         // without the task's layer, as the POST used to check it
         let project_only = instruction::layers_of(&w.db, &project).unwrap();
         assert!(parse_run(&form("review", "sonnet", "high"), &project_only).is_err());
@@ -265,19 +267,35 @@ mod tests {
 
     #[test]
     fn the_form_is_checked_before_anything_starts() {
-        let (kind, spec) = parse_run(&form("fix", " sonnet ", "high"), &Layers::new()).unwrap();
+        let shipped: Layers = vec![(
+            instruction::Source::Global,
+            crate::fixtures::shipped_instructions()
+                .parent()
+                .unwrap()
+                .to_path_buf(),
+        )];
+        let (found, spec) = parse_run(&form("fix", " sonnet ", "high"), &shipped).unwrap();
         assert_eq!(
-            (kind, spec.model.as_str(), spec.effort.as_str()),
-            (Kind::Fix, "sonnet", "high")
+            (
+                found.name.as_str(),
+                found.front.worktree,
+                spec.model.as_str(),
+                spec.effort.as_str()
+            ),
+            ("fix", true, "sonnet", "high")
         );
-        assert!(parse_run(&form("dance", "haiku", "low"), &Layers::new()).is_err());
+        let (plan, _) = parse_run(&form("plan", "haiku", "low"), &shipped).unwrap();
+        assert!(!plan.front.worktree);
+        assert!(parse_run(&form("dance", "haiku", "low"), &shipped).is_err());
+        // an instruction found nowhere is not one: nothing is built in
+        assert!(parse_run(&form("fix", "haiku", "low"), &Layers::new()).is_err());
         // only the models the agent takes, and the efforts it knows
-        assert!(parse_run(&form("fix", "gpt-4", "low"), &Layers::new()).is_err());
-        assert!(parse_run(&form("fix", "--dangerous", "low"), &Layers::new()).is_err());
-        assert!(parse_run(&form("fix", "haiku", "extreme"), &Layers::new()).is_err());
+        assert!(parse_run(&form("fix", "gpt-4", "low"), &shipped).is_err());
+        assert!(parse_run(&form("fix", "--dangerous", "low"), &shipped).is_err());
+        assert!(parse_run(&form("fix", "haiku", "extreme"), &shipped).is_err());
         let mut other = form("fix", "haiku", "low");
         other.agent = "nobody".into();
-        assert!(parse_run(&other, &Layers::new()).is_err());
+        assert!(parse_run(&other, &shipped).is_err());
     }
 
     #[test]
