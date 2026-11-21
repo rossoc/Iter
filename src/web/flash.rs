@@ -155,10 +155,12 @@ fn refusal(error: &topcoat::Error, status: StatusCode) -> String {
 
 #[layer("/")]
 pub async fn flash(cx: &Cx, body: Body, next: Next<'_>) -> Result<Response> {
-    if method(cx).as_str() != "POST" || !config().notifications.enabled {
-        return next.run(cx, body).await;
-    }
     let result = next.run(cx, body).await;
+    // read after the handler: the settings save that turns toasts on is confirmed by one,
+    // and the one that turns them off leaves no cookie behind
+    if method(cx).as_str() != "POST" || !config().notifications.enabled {
+        return result;
+    }
     let error = result.as_ref().err().cloned();
     let mut response = result.into_response(cx)?;
     let status = response.status();

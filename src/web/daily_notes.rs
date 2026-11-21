@@ -353,6 +353,7 @@ async fn note_screen(page: &NotePage) -> Result<impl View> {
     Ok(view! {
         frame(
             title: &parts,
+            error: error.as_ref(),
             page_header(title: note.title.as_str(), kicker: Kicker::Crumbs(crumbs))
             tabs(label: "Note sections", items: &items)
             <p class="note-date"><time datetime=(iso.as_str())>(when.as_str())</time></p>
