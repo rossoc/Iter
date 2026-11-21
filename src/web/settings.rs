@@ -3,10 +3,10 @@
 use super::forms::SettingsForm;
 use super::settings_fields::settings_fields;
 use super::ui::field::{checkbox, field, select};
-use super::ui::group::group;
 use super::ui::form::form_shell;
 use super::ui::form_error::FormError;
 use super::ui::frame::frame;
+use super::ui::group::group;
 use super::ui::notice::notice;
 use super::ui::page_header::{Kicker, page_header};
 use super::url::{SETTINGS, settings_saved_url};
@@ -283,7 +283,10 @@ mod tests {
             .apply(Config::default())
             .expect("valid");
         assert_eq!(notifications(&on)["enabled"], serde_yaml::Value::Bool(true));
-        assert_eq!(notifications(&on)["seconds"], serde_yaml::Value::from(12u32));
+        assert_eq!(
+            notifications(&on)["seconds"],
+            serde_yaml::Value::from(12u32)
+        );
 
         let off = posted(&[(SECONDS, "5")])
             .apply(Config::default())

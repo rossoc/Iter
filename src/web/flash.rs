@@ -129,7 +129,11 @@ fn back_to(referer: &str, host: &str) -> Option<String> {
     if path.starts_with("//") || path.starts_with("/\\") {
         return None;
     }
-    Some(if path.is_empty() { "/".into() } else { path.into() })
+    Some(if path.is_empty() {
+        "/".into()
+    } else {
+        path.into()
+    })
 }
 
 /// The refusal's message: a 400's own text as its page says it (without the
@@ -142,7 +146,9 @@ fn refusal(error: &topcoat::Error, status: StatusCode) -> String {
         || REFUSED.into(),
         |e| {
             let text = e.to_string();
-            text.strip_prefix("bad request: ").unwrap_or(&text).to_string()
+            text.strip_prefix("bad request: ")
+                .unwrap_or(&text)
+                .to_string()
         },
     )
 }
@@ -171,7 +177,10 @@ pub async fn flash(cx: &Cx, body: Body, next: Next<'_>) -> Result<Response> {
     if get("sec-fetch-mode") != Some("navigate") {
         return Ok(response);
     }
-    let Some(back) = get("referer").zip(get("host")).and_then(|(r, h)| back_to(r, h)) else {
+    let Some(back) = get("referer")
+        .zip(get("host"))
+        .and_then(|(r, h)| back_to(r, h))
+    else {
         return Ok(response);
     };
     let Ok(location) = HeaderValue::from_str(&back) else {
@@ -220,7 +229,10 @@ mod tests {
     #[test]
     fn the_cookie_is_encoded_and_short_lived() {
         let c = cookie(Kind::Error, "Name; \"x\", é");
-        assert!(c.starts_with("iter_flash=error%3AName%3B%20%22x%22%2C%20%C3%A9;"), "{c}");
+        assert!(
+            c.starts_with("iter_flash=error%3AName%3B%20%22x%22%2C%20%C3%A9;"),
+            "{c}"
+        );
         assert!(c.ends_with("; Path=/; Max-Age=60; SameSite=Strict"));
         assert!(HeaderValue::from_str(&c).is_ok());
     }
