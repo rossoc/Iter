@@ -535,6 +535,16 @@ its log. So `iter task runs` and the task's Agent tab show every step. A
 subagent's run has no process for iter to watch, so it is never shown
 `lost`; one a session left open is closed with `--close` or Stop.
 
+When the result is in, Claude asks what next: another round, edit the
+result, commit only, or conclude. Concluding commits the work, merges the
+main branch into the task branch (fixing what differs), merges the task
+branch into main, has an `ingest` subagent (`iter task solve -k ingest
+--subagent`) fold the task's sketches, notes and commits into the wiki, and
+commits the wiki as `update: <project>/<task> - <short sha of main>`
+(`iter wiki pending --accept -m ...`), so the wiki follows every change to
+main. Last, it asks whether to mark the task done (with the `ingest` setting
+`on_task_done`, that would ingest a second time).
+
 `complete` is not a run itself (`iter task solve -k complete` is refused).
 Like the other prompts it can be overridden with `instructions/complete.md`
 in the task's, project's or organization's notes, or iter's config folder.

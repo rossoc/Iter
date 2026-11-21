@@ -104,6 +104,16 @@ pub fn review(db: &Db, project: &Project) -> Result<Review> {
 
 /// Commits (`accept`) or discards the pending pages under `wiki/`, and no other file; returns the paths touched.
 pub fn settle(db: &Db, project: &Project, accept: bool) -> Result<Vec<String>> {
+    settle_with(db, project, accept, None)
+}
+
+/// As [`settle`]; an accepted commit gets `message` (default `wiki: ingest`).
+pub fn settle_with(
+    db: &Db,
+    project: &Project,
+    accept: bool,
+    message: Option<&str>,
+) -> Result<Vec<String>> {
     let target = Target::new(db, project.clone())?;
     target.require_git()?;
     if busy(&target) {
@@ -122,7 +132,7 @@ pub fn settle(db: &Db, project: &Project, accept: bool) -> Result<Vec<String>> {
     };
     if accept {
         with(&["add"])?;
-        with(&["commit", "-m", "wiki: ingest"])?;
+        with(&["commit", "-m", message.unwrap_or("wiki: ingest")])?;
     } else {
         // out of the index first (a commit that failed leaves files staged),
         // then back to the last commit, and the pages that are new are removed

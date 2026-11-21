@@ -314,6 +314,8 @@ pub fn check(name: &str, raw: &str) -> AgentResult<()> {
         plan_path: dir,
         plan: None,
         onboarding: "",
+        branch_main: "main",
+        ingest: "",
     };
     prompt::render(body, kind, &ctx).map(|_| ())
 }

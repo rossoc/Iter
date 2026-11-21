@@ -190,7 +190,14 @@ impl Run for WikiCommand {
                 project,
                 accept,
                 revert,
-            } => ingest::pending(app, project.as_deref(), *accept, *revert),
+                message,
+            } => ingest::pending(
+                app,
+                project.as_deref(),
+                *accept,
+                *revert,
+                message.as_deref(),
+            ),
             Self::Schema { scope } => {
                 let levels = scope::levels(&app.db, &spec(scope))?;
                 println!("{}", schema::render(&scope::ontology(&levels)?).trim_end());
