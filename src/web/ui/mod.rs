@@ -45,6 +45,7 @@ pub mod tag_chips;
 pub mod task_card;
 pub mod task_table;
 pub mod tasks_tab;
+pub mod toast;
 pub mod unplaced_list;
 
 pub use breadcrumb::Crumb;
@@ -97,6 +98,7 @@ static CSS: Asset = Asset::css(concat!(
     include_str!("modal.css"),
     include_str!("search.css"),
     include_str!("combobox.css"),
+    include_str!("toast.css"),
     include_str!("../org.css"),
 ));
 
@@ -106,6 +108,7 @@ static FILTER_BAR_JS: Asset = Asset::js(include_str!("filter_bar.js"));
 static SEARCH_JS: Asset = Asset::js(include_str!("search.js"));
 static COMBOBOX_JS: Asset = Asset::js(include_str!("combobox.js"));
 static PATH_PICK_JS: Asset = Asset::js(include_str!("path_pick.js"));
+static TOAST_JS: Asset = Asset::js(include_str!("toast.js"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     serve(
@@ -118,6 +121,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
             ("/search.js", &SEARCH_JS),
             ("/combobox.js", &COMBOBOX_JS),
             ("/path_pick.js", &PATH_PICK_JS),
+            ("/toast.js", &TOAST_JS),
         ],
     )
 }

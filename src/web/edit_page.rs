@@ -44,7 +44,7 @@ pub fn settings_row(base: &str, entries: &[(&'static str, String, Option<usize>)
 async fn titled(
     head: &str,
     subject: &str,
-    error: bool,
+    error: Option<&FormError>,
     current: &str,
     child: Child<'_>,
 ) -> Result<impl View> {
@@ -80,7 +80,7 @@ pub async fn edit_page(
         titled(
             head: &parts[0],
             subject: &parts[1],
-            error: error.is_some(),
+            error: error,
             current: current,
             page_header(title: &title, kicker: Kicker::Crumbs(crumbs))
             if let Some(items) = sections {

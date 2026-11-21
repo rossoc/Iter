@@ -218,8 +218,9 @@ pub async fn screen(
         )),
         (None, None, None, None) => None,
     };
-    let refused = task_create.is_some_and(|c| c.error.is_some())
-        || project_create.is_some_and(|c| c.error.is_some());
+    let refused = task_create
+        .and_then(|c| c.error.as_ref())
+        .or_else(|| project_create.and_then(|c| c.error.as_ref()));
     Ok(view! {
         frame(
             title: &parts,

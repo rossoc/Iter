@@ -1,6 +1,8 @@
 //! The frame: the top bar and the centered main pane.
 
+use super::form_error::FormError;
 use super::search::{palette, search_button};
+use super::toast::toasts;
 use super::{BOT, FILE_TEXT, KANBAN, MARK, SLIDERS, icon};
 use topcoat::{
     Result,
@@ -30,20 +32,21 @@ pub(super) fn document_title(parts: &[&str], error: bool) -> String {
 }
 
 /// `title` parts feed [`document_title`]. The `<title>` is written first in the
-/// body because the layout renders before the page knows its title. `current` is the
-/// nav `href` that gets `aria-current`. `dialog` is a pop-up (`modal.rs`): the rest
-/// becomes `inert` and `modal.js` is loaded for Esc and the focus trap.
+/// body because the layout renders before the page knows its title. `error` is the
+/// form's refusal: it prefixes the title and is raised as a toast too (`toast.rs`).
+/// `current` is the nav `href` that gets `aria-current`. `dialog` is a pop-up
+/// (`modal.rs`): the rest becomes `inert` and `modal.js` is loaded for Esc and the focus trap.
 #[component]
 pub async fn frame(
     title: &[&str],
-    #[default] error: bool,
+    #[default] error: Option<&FormError>,
     #[default] current: &str,
     #[default] dialog: Option<Child<'_>>,
     child: Child<'_>,
 ) -> Result<impl View> {
     let covered = dialog.is_some();
     Ok(view! {
-        <title>(document_title(title, error))</title>
+        <title>(document_title(title, error.is_some()))</title>
         <script src="/search.js"></script>
         <script src="/combobox.js" defer=""></script>
         <script src="/path_pick.js" defer=""></script>
@@ -61,6 +64,7 @@ pub async fn frame(
             </header>
             <main id="main" tabindex="-1" if covered { inert="" }>(child)</main>
             palette()
+            toasts(error: error)
             if let Some(dialog) = dialog {
                 (dialog)
             }

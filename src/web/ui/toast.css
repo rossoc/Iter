@@ -1,0 +1,20 @@
+/* Toasts (toast.rs): fixed in the top right corner, under the bar, above a modal. Blue for a
+   success and red for an error in both themes (the dark --accent is orange, so the blue is
+   its own token). The error also has a thicker left edge: a cue that is not a color. */
+:root{--toast-ok:#3b5bd3;--toast-error:#b42318;--on-toast:#fff}
+@media (prefers-color-scheme:dark){:root{--toast-ok:#7aa2f7;--toast-error:#f7768e;--on-toast:#1a1b26}}
+.toasts{position:fixed;top:calc(var(--bar-h) + 12px);right:16px;z-index:40;display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+  width:max-content;max-width:min(24rem,calc(100vw - 32px));pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:flex-start;gap:8px;padding:10px 8px 10px 14px;border-radius:var(--r-md);
+  background:var(--toast-ok);color:var(--on-toast);box-shadow:var(--shadow-lift);font-size:.875rem;font-weight:500;overflow-wrap:anywhere}
+.toast.error{background:var(--toast-error);border-left:5px solid color-mix(in srgb,var(--on-toast) 55%,var(--toast-error))}
+.toast.ok{background:var(--toast-ok)}
+.toast-text{margin:0;padding:2px 0;flex:1}
+.toast-close{flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin:-2px 0;padding:0;
+  border:0;border-radius:var(--r-sm);background:transparent;color:inherit;font:inherit;font-size:1.125rem;line-height:1;cursor:pointer}
+.toast-close:hover{background:color-mix(in srgb,var(--on-toast) 18%,transparent)}
+.toast-close:focus-visible{outline:2px solid var(--on-toast);outline-offset:-2px}
+@media (pointer:coarse){.toast-close{width:var(--touch);height:var(--touch);margin:-10px -4px -10px 0}}
+@media (prefers-reduced-motion:no-preference){.toast{animation:toast-in var(--med) var(--ease-out)}}
+@keyframes toast-in{from{opacity:0;transform:translateY(-6px)}}
+@media (forced-colors:active){.toast{border:1px solid CanvasText}.toast.error{border-left-width:8px}}

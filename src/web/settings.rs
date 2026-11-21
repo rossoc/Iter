@@ -147,7 +147,9 @@ impl Values {
 
 #[page("/settings")]
 async fn show(cx: &Cx) -> Result<impl View> {
-    let saved = query_params::<SavedQuery>(cx)?.saved.is_some();
+    // the toast says "Settings saved."; with the toasts off, this notice says it
+    let saved = query_params::<SavedQuery>(cx)?.saved.is_some()
+        && !crate::config::config().notifications.enabled;
     let values = Values::of(&Config::load()?);
     Ok(view! { screen(values: &values, saved: saved) })
 }
@@ -182,7 +184,7 @@ async fn screen(
     Ok(view! {
         frame(
             title: &["Settings"],
-            error: error.is_some(),
+            error: error,
             current: SETTINGS,
             page_header(title: "Settings", kicker: Kicker::Eyebrow("Global"))
             if saved {

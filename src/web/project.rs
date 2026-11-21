@@ -142,7 +142,7 @@ pub async fn screen(
     let rows = project_rows(tasks);
     let add = TaskHome::Project(project.id()).open_url(q);
     let dialog = task_create.map(|create| Child::new(view! { task_modal(create: create) }));
-    let refused = task_create.is_some_and(|c| c.error.is_some());
+    let refused = task_create.and_then(|c| c.error.as_ref());
     Ok(view! {
         frame(
             title: &parts,
