@@ -69,6 +69,13 @@ impl fmt::Display for TaskLabel {
 }
 
 impl Task {
+    /// The slug of the task's branch and worktree folder: `<id>-<title slug>`, or `task-<id>` when
+    /// the title has no ASCII letter or digit (replaces `git::task_slug`).
+    #[allow(dead_code)] // stub: I4
+    pub fn slug(&self) -> String {
+        unimplemented!("stub: I4")
+    }
+
     pub fn label(&self, project: &Project) -> TaskLabel {
         TaskLabel {
             id: self.id(),
@@ -244,5 +251,24 @@ mod tests {
                 TaskRef::Label(shown),
             );
         }
+    }
+
+    /// Round I4 (isolation step 6): the slug is the task's own, the same cases as `git::task_slug`.
+    #[test]
+    fn the_slug_of_a_task_carries_its_id() {
+        let task = |id: i64, name: &str| Task {
+            id: Some(id),
+            ..fixtures::task(1, name)
+        };
+        for (id, name, slug) in [
+            (42, "Fix Login Bug!", "42-fix-login-bug"),
+            (12, "login", "12-login"),
+            (42, "設計を見直す", "task-42"),
+            (7, "!!! ---", "task-7"),
+            (3, "", "task-3"),
+        ] {
+            assert_eq!(task(id, name).slug(), slug, "{id} {name:?}");
+        }
+        assert_ne!(task(1, "login").slug(), task(2, "login").slug());
     }
 }

@@ -211,8 +211,8 @@ mod tests {
     }
 
     /// A github project with a real repository in a scratch folder, and two tasks of one title.
-    fn repo_world(tag: &str) -> Option<(Db, Project, Vec<Task>)> {
-        let dir = fixtures::git_repo(tag)?;
+    fn repo_world(tag: &str) -> (Db, Project, Vec<Task>) {
+        let dir = fixtures::git_repo(tag);
         let db = fixtures::db();
         let mut project = Project {
             base_path: dir.display().to_string(),
@@ -226,15 +226,13 @@ mod tests {
                 db.get::<Task>(id).unwrap().unwrap()
             })
             .collect();
-        Some((db, project, tasks))
+        (db, project, tasks)
     }
 
     /// R3: branch and folder are `<id>-<slug>`, and the row has no tmux name yet.
     #[test]
     fn open_makes_the_worktree_the_branch_and_the_row_with_the_id_in_the_slug() {
-        let Some((db, project, tasks)) = repo_world("ws-open") else {
-            return;
-        };
+        let (db, project, tasks) = repo_world("ws-open");
         let (first, second) = (&tasks[0], &tasks[1]);
         let one = open(&db, &project, first, None).unwrap();
         let two = open(&db, &project, second, None).unwrap();
@@ -262,9 +260,7 @@ mod tests {
     /// A stale folder of this task is an error naming it, and nothing is written.
     #[test]
     fn a_worktree_folder_that_exists_is_an_error_and_writes_no_row() {
-        let Some((db, project, tasks)) = repo_world("ws-stale") else {
-            return;
-        };
+        let (db, project, tasks) = repo_world("ws-stale");
         let task = &tasks[0];
         let folder = format!("{}-fix-login", task.id());
         std::fs::create_dir_all(
@@ -283,9 +279,7 @@ mod tests {
     /// the branch are taken down again, so a retry does not meet "branch already exists".
     #[test]
     fn a_row_that_cannot_be_written_undoes_the_worktree_and_the_branch() {
-        let Some((db, project, _)) = repo_world("ws-undo") else {
-            return;
-        };
+        let (db, project, _) = repo_world("ws-undo");
         let ghost = task(999, "Ghost");
         assert!(open(&db, &project, &ghost, None).is_err());
         let worktree = std::path::Path::new(&project.base_path).join(".iter-worktrees/999-ghost");

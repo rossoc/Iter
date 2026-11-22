@@ -178,10 +178,11 @@ pub fn in_scratch_config(module: &str, name: &str, yaml: Option<&str>) -> bool {
     true
 }
 
-/// A scratch git repository on `main` with one empty commit, or `None` where `git` is missing.
-pub fn git_repo(tag: &str) -> Option<PathBuf> {
+/// A scratch git repository on `main` with one empty commit. Panics where `git` is missing: a test
+/// that needs a repository fails there, it does not pass by returning early.
+pub fn git_repo(tag: &str) -> PathBuf {
     let dir = scratch(tag);
-    std::fs::create_dir_all(&dir).ok()?;
+    std::fs::create_dir_all(&dir).expect("a scratch folder");
     let git = |args: &[&str]| {
         std::process::Command::new("git")
             .args([
@@ -197,6 +198,9 @@ pub fn git_repo(tag: &str) -> Option<PathBuf> {
             .output()
             .is_ok_and(|o| o.status.success())
     };
-    (git(&["init", "-q", "-b", "main"]) && git(&["commit", "-q", "--allow-empty", "-m", "a"]))
-        .then_some(dir)
+    assert!(
+        git(&["init", "-q", "-b", "main"]) && git(&["commit", "-q", "--allow-empty", "-m", "a"]),
+        "git is needed to make a scratch repository"
+    );
+    dir
 }

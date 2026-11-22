@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 
 /// The core modules and their rank: a module imports only modules of a lower rank (sketch
 /// `architecture`, section 1). `agent` is the top of what the others may not reach.
-const RANKS: [(&str, u8); 26] = [
+const RANKS: [(&str, u8); 25] = [
     ("error", 0),
     ("text", 1),
     ("files", 1),
@@ -30,7 +30,6 @@ const RANKS: [(&str, u8); 26] = [
     ("tmux", 4),
     ("reporting", 4),
     ("notes", 4),
-    ("editor", 4),
     ("sync", 4),
     ("scaffold", 4),
     ("front", 4),
@@ -411,7 +410,6 @@ fn every_module_is_in_the_design_and_imports_only_lower_ranks() {
 }
 
 #[test]
-#[ignore = "isolation: round I4"]
 fn the_core_imports_nothing_from_the_interface() {
     let graph = imports(&sources());
     let bad: Vec<String> = graph
@@ -569,7 +567,6 @@ fn sqltypes_sit_in_models_and_md_edit_is_split() {
     assert!(!src_path("db/sqltypes.rs").exists(), "db/sqltypes.rs");
     assert!(src_path("models/traits.rs").exists(), "models/traits.rs");
     assert!(!src_path("md_edit.rs").exists(), "md_edit.rs");
-    assert!(src_path("editor.rs").exists(), "editor.rs");
 }
 
 /// Step 3: a library does not exit the process. `config::load` and `App::open` return errors and
@@ -760,6 +757,190 @@ fn the_rebuild_step_has_no_hand_kept_index() {
             .is_match(&migrate.scan.blank),
         "`REBUILD` is an index kept by hand"
     );
+}
+
+// ---- Round I4 (isolation steps 5-6): `agent::ingest_job` and the `cli` module -----------------
+
+/// Every `.rs` file of `src/` as `(path under src, raw text)`, test files included: the rules below
+/// are about where code that drives the command line may sit, and its tests count.
+fn raw_files() -> Vec<(String, String)> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut all = Vec::new();
+    fn go(dir: &Path, out: &mut Vec<PathBuf>) {
+        for e in fs::read_dir(dir).expect("a readable folder").flatten() {
+            let path = e.path();
+            if path.is_dir() {
+                if e.file_name() != "graphify-out" {
+                    go(&path, out);
+                }
+            } else if path.extension().is_some_and(|x| x == "rs") {
+                out.push(path);
+            }
+        }
+    }
+    go(&root, &mut all);
+    all.sort();
+    all.into_iter()
+        .map(|p| {
+            let rel = p
+                .strip_prefix(&root)
+                .expect("under src")
+                .display()
+                .to_string();
+            (rel, fs::read_to_string(&p).expect("a readable file"))
+        })
+        .collect()
+}
+
+/// Step 5: the ingest job runs an agent, so it sits in `agent`; `wiki` reads markdown and knows no
+/// agent.
+#[test]
+fn the_ingest_job_is_in_agent_and_wiki_knows_no_agent() {
+    assert!(src_path("agent/ingest_job").is_dir(), "agent/ingest_job/");
+    assert!(!src_path("wiki/ingest_job").exists(), "wiki/ingest_job");
+    let found = imported_by(&sources(), "wiki");
+    assert!(!found.contains("agent"), "wiki imports agent");
+}
+
+/// Step 6: `args`, `commands`, `completion`, `crud` and `output` are one module `cli`, with the
+/// editor (only the command line launches one) and the tests that drive `Args` inside it.
+#[test]
+fn the_command_line_is_one_cli_module() {
+    for old in [
+        "args",
+        "commands",
+        "completion.rs",
+        "utils",
+        "editor.rs",
+        "agent/config_instructions_tests.rs",
+    ] {
+        assert!(!src_path(old).exists(), "{old} is still there");
+    }
+    for new in [
+        "cli/args/mod.rs",
+        "cli/run.rs",
+        "cli/complete.rs",
+        "cli/entity.rs",
+        "cli/output.rs",
+        "cli/editor.rs",
+        "cli/config_instructions_tests.rs",
+    ] {
+        assert!(src_path(new).exists(), "{new} is missing");
+    }
+}
+
+/// Step 6: the core cannot name the command line, not even in a test: no `Args::try_parse_from`,
+/// no `crate::args`/`crate::cli`/`crate::commands` outside the interface. The argv a core module
+/// builds for the CLI (`worker_args`, `ingest_args`, `hook_args`) is parsed by a test in `cli`.
+#[test]
+fn nothing_but_the_interface_names_the_command_line() {
+    let named =
+        Regex::new(r"try_parse_from|crate::(args|cli|commands|completion)\b").expect("regex");
+    let found: Vec<String> = raw_files()
+        .into_iter()
+        .filter(|(file, _)| {
+            !(file.starts_with("cli/") || file.starts_with("web/") || file == "main.rs")
+        })
+        .filter(|(_, text)| named.is_match(text))
+        .map(|(file, _)| file)
+        .collect();
+    none("the core names the command line", found);
+    let cli: String = raw_files()
+        .into_iter()
+        .filter(|(file, _)| file.starts_with("cli/"))
+        .map(|(_, text)| text)
+        .collect();
+    for argv in ["worker_args", "ingest_args", "hook_args"] {
+        assert!(
+            cli.contains(argv) && cli.contains("try_parse_from"),
+            "no test in cli/ parses `{argv}`"
+        );
+    }
+}
+
+/// Step 6: the slug is the task's (`Task::slug`), not a `git` function of a title and an id.
+#[test]
+fn the_task_slug_is_a_task_method() {
+    assert!(
+        none_of(&sources(), r"\bfn task_slug\b|\btask_slug\("),
+        "`git::task_slug` remains"
+    );
+}
+
+fn none_of(sources: &[Source], pattern: &str) -> bool {
+    files_matching(sources, pattern).is_empty()
+}
+
+/// Step 6: migration steps say `copy_first` themselves; the runner does not compare function
+/// addresses.
+#[test]
+fn migration_steps_carry_copy_first_and_nothing_compares_function_addresses() {
+    let sources = sources();
+    let migrate = file_of(&sources, "db/migrate.rs").expect("db/migrate.rs");
+    assert!(migrate.scan.blank.contains("copy_first"), "no `copy_first`");
+    none(
+        "compares function addresses",
+        files_matching(&sources, r"fn_addr_eq|ptr::eq\(.*step"),
+    );
+}
+
+/// Step 6: the web's DOM id of a quadrant is a function of the quadrant, not an array kept in step
+/// with `QUADRANTS` by hand.
+#[test]
+fn a_quadrants_dom_id_comes_from_a_function_not_a_parallel_array() {
+    let sources = sources();
+    none(
+        "a parallel array of DOM ids",
+        files_matching(&sources, r"\bDOM_IDS\b"),
+    );
+    let web: String = sources
+        .iter()
+        .filter(|s| s.file.starts_with("web/"))
+        .map(|s| s.scan.full.as_str())
+        .collect();
+    assert!(
+        Regex::new(r"fn \w*dom_id\w*\(")
+            .expect("regex")
+            .is_match(&web),
+        "no `fn ..dom_id..` in web"
+    );
+}
+
+/// Step 6: `locate::task_in` reads an id through the `TaskRef`/`TaskId` grammar only: no `#` test
+/// written by hand in `locate.rs` (other modules strip `#` for tags and notes, which is not an id).
+#[test]
+fn task_in_has_no_hash_check_of_its_own() {
+    // char literals are blank in the scan, so read the text; a comment line is no code
+    let hash = Regex::new(r"(starts_with|trim_start_matches|strip_prefix)\('#'\)").expect("regex");
+    let found: Vec<String> = raw_files()
+        .into_iter()
+        .filter(|(file, _)| file == "locate.rs")
+        .filter(|(_, text)| {
+            text.lines()
+                .filter(|l| !l.trim_start().starts_with("//"))
+                .any(|l| hash.is_match(l))
+        })
+        .map(|(file, _)| file)
+        .collect();
+    none("reads a `#<id>` by hand", found);
+}
+
+/// Step 6: `session new` and the adoption of an agent's workspace are one path: the second
+/// function is gone and the "could not attach" advice is written once.
+#[test]
+fn session_new_and_an_adopted_workspace_share_one_path() {
+    let sources = sources();
+    none(
+        "`adopt_workspace` remains",
+        files_matching(&sources, r"\bfn adopt_workspace\b"),
+    );
+    let twice: Vec<String> = raw_files()
+        .into_iter()
+        .filter(|(file, _)| file.starts_with("cli/") || file.starts_with("commands/"))
+        .filter(|(_, text)| text.matches("the session is set up -- attach with").count() > 1)
+        .map(|(file, _)| file)
+        .collect();
+    none("the attach advice is written twice", twice);
 }
 
 /// The scanner is what every rule stands on, so it is tested while the rules are ignored.

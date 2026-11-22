@@ -412,3 +412,65 @@ fn the_copy_is_taken_right_before_the_rebuild_wherever_it_sits() {
     assert_eq!(ids(&copy, "tasks"), [1, 2, 5]);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn step(run: fn(&Db) -> Result<()>, copy_first: bool) -> migrate::Step {
+    migrate::Step { run, copy_first }
+}
+
+/// A version-6 file opened without migrating it, as `old_database` leaves it.
+fn open_old(dir: &std::path::Path) -> (PathBuf, Db) {
+    let path = old_database(dir, 6, true);
+    let conn = Connection::open(&path).expect("opens");
+    conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
+    (path, Db { conn })
+}
+
+/// Round I4 (step 6): a step takes a copy because it says `copy_first`, not because it is the
+/// rebuild. The rebuild without the flag takes none; a no-op step with it takes one named for the
+/// version it brings, and the copy holds the version before.
+#[test]
+fn the_copy_is_taken_because_the_step_says_copy_first() {
+    let dir = fixtures::scratch("rebuild-copy-first-flag");
+    let (path, db) = open_old(&dir);
+    let (old, _) = Db::MIGRATIONS.split_at(6);
+    let mut steps: Vec<migrate::Step> = old.iter().map(|&run| step(run, false)).collect();
+    steps.push(step(Db::task_titles_repeat, false));
+    db.migrate_with(&steps).expect("migrates");
+    assert_eq!(db.user_version().unwrap(), 7);
+    assert!(!backup_of(&path).exists(), "the flag was off: no copy");
+    let _ = std::fs::remove_dir_all(&dir);
+
+    let dir = fixtures::scratch("rebuild-copy-first-noop");
+    let (path, db) = open_old(&dir);
+    let mut steps: Vec<migrate::Step> = old.iter().map(|&run| step(run, false)).collect();
+    steps.push(step(noop_step, true));
+    db.migrate_with(&steps).expect("migrates");
+    let copy = Connection::open(backup_of(&path)).expect("a copy was made before step 7");
+    let version: i64 = copy
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, 6, "taken before the step ran");
+    assert_eq!(ids(&copy, "tasks"), [1, 2, 5]);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// With the flag the data survives the rebuild exactly as before (the runner still switches
+/// foreign keys off around it and back on), and a failing flagged step leaves them on.
+#[test]
+fn a_flagged_rebuild_keeps_every_row_and_a_failing_flagged_step_keeps_foreign_keys_on() {
+    let dir = fixtures::scratch("rebuild-copy-first-rows");
+    let (path, db) = open_old(&dir);
+    let (old, _) = Db::MIGRATIONS.split_at(6);
+    let mut steps: Vec<migrate::Step> = old.iter().map(|&run| step(run, false)).collect();
+    steps.push(step(Db::task_titles_repeat, true));
+    db.migrate_with(&steps).expect("migrates");
+    assert_eq!(ids(&db.conn, "tasks"), [1, 2, 5]);
+    assert_eq!(count(&db.conn, "sessions"), 3);
+    assert!(foreign_keys_on(&db));
+    assert!(backup_of(&path).exists());
+    steps.push(step(failing_step, true));
+    db.migrate_with(&steps).expect_err("the step fails");
+    assert!(foreign_keys_on(&db));
+    assert_eq!(db.user_version().unwrap(), 7);
+    let _ = std::fs::remove_dir_all(&dir);
+}

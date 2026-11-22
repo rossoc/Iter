@@ -3,7 +3,24 @@
 use super::*;
 use std::path::PathBuf;
 
+/// A migration step and what must happen before it (round I4: replaces finding the rebuild by
+/// `fn_addr_eq`).
+#[allow(dead_code)] // stub: I4
+#[derive(Clone, Copy)]
+pub(super) struct Step {
+    pub run: fn(&Db) -> Result<()>,
+    /// Copy the database to `<db>.before-v<n>` (`n` the version the step brings) right before it
+    /// runs, once, unless it is a new database.
+    pub copy_first: bool,
+}
+
 impl Db {
+    /// [`Self::migrate_steps`] over steps that say whether a copy comes first.
+    #[allow(dead_code)] // stub: I4
+    pub(super) fn migrate_with(&self, _steps: &[Step]) -> Result<()> {
+        unimplemented!("stub: I4")
+    }
+
     /// Brings the schema up to date. `PRAGMA user_version` counts the [`Self::MIGRATIONS`] run, so an
     /// up-to-date open costs one pragma read (serve and completion open per request/TAB). Each step
     /// and its version bump share one `IMMEDIATE` transaction: the write lock is taken up front
