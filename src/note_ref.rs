@@ -6,7 +6,7 @@
 //! - `[org/][project/]tasks/<task>/sketch/<name>`, `.../note/<name>`: a task's sketch or note;
 //! - `sketch/<name>`, `note/<name>`: the current task's.
 //!
-//! What is left out comes from where iter runs (`utils::resolve::current_task`/`current_project`).
+//! What is left out comes from where iter runs (`locate::current_task`/`current_project`).
 //! A wiki class's folder is the ontology's (`iter:place`), so a project's extension adds classes.
 
 use crate::agent::taskdir;

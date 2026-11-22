@@ -19,7 +19,7 @@ pub struct Session {
 
 impl Session {
     /// The shortest stretch worth keeping; shorter is an attach/detach blip, never stored (see
-    /// `utils::clock::close_open_session`).
+    /// `workspace::clock::close_open_session`).
     pub const MIN_SECONDS: i64 = 60;
 
     pub fn too_short(&self, end: NaiveDateTime) -> bool {

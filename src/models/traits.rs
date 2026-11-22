@@ -78,8 +78,8 @@ impl<T: Serialize + DeserializeOwned + MarkdownBody> Editable for T {}
 
 /// A stored type with a database-wide unique `name`: how the CLI addresses it, what completion
 /// offers and `list` prints. Implemented by `#[derive(Table)]` given a `kind`. Not implemented for
-/// [`Task`]: its name is unique only within its project, so tasks are addressed by [`task_ref`]
-/// (`Db::task_refs`/`Db::task_names` are their own queries).
+/// [`Task`]: its name is unique only within its project, so tasks are addressed by [`TaskRef`](super::TaskRef)
+/// (`Db::task_labels` is their own query).
 pub(crate) trait Named: Table {
     /// What messages call one of these: "board", "tag", ...
     const KIND: &'static str;

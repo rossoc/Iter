@@ -15,7 +15,6 @@ mod task_ref;
 mod traits;
 
 pub use board::{Board, Card};
-#[allow(unused_imports)] // stub: I3
 pub use organization::{Organization, check_url};
 pub use project::Project;
 pub use push::Push;
