@@ -52,7 +52,11 @@ fn ingest_command(
 /// The arguments of `iter wiki ingest` for `project` (or `task`, by id) and `opts`: what
 /// [`ingest_command`] puts after the program. Each is `--flag=value`, so a name starting with
 /// `-` is a value, not a flag.
-fn ingest_args(project: &Project, task: Option<&Task>, opts: &HarnessChoice) -> Vec<String> {
+pub(crate) fn ingest_args(
+    project: &Project,
+    task: Option<&Task>,
+    opts: &HarnessChoice,
+) -> Vec<String> {
     let target = match task {
         Some(task) => format!("--task={}", task.id()),
         None => format!("--project={}", project.name),
@@ -106,55 +110,6 @@ mod tests {
         };
         assert_eq!(args(&project, Some(&task)), ["wiki", "ingest", "--task=42"]);
         assert_eq!(args(&project, None), ["wiki", "ingest", "--project=app"]);
-    }
-
-    /// The command line the core starts must parse as `iter wiki ingest`, with the same
-    /// project, task, harness and extra arguments it was built from.
-    #[test]
-    fn the_ingest_command_line_parses_as_wiki_ingest() {
-        use crate::agent::run::Harness;
-        use crate::args::{Args, Command, WikiCommand};
-        use clap::Parser;
-        let project = crate::fixtures::project("-odd project");
-        let task = Task {
-            id: Some(42),
-            ..crate::fixtures::task(1, "-Fix it")
-        };
-        let choices = [
-            HarnessChoice::default(),
-            HarnessChoice {
-                agent: Some(Harness::default()),
-                model: Some("-model-x".into()),
-                extra: vec!["--flag".into(), "-v".into()],
-            },
-        ];
-        for opts in &choices {
-            for task in [Some(&task), None] {
-                let mut argv = vec!["iter".to_string()];
-                argv.extend(ingest_args(&project, task, opts));
-                let parsed =
-                    Args::try_parse_from(&argv).unwrap_or_else(|e| panic!("{argv:?}: {e}"));
-                let Command::Wiki {
-                    action:
-                        WikiCommand::Ingest {
-                            project: p,
-                            task: t,
-                            harness,
-                            dry_run,
-                            detach,
-                        },
-                } = parsed.command
-                else {
-                    panic!("{argv:?} is not `wiki ingest`");
-                };
-                assert_eq!((dry_run, detach), (false, false));
-                assert_eq!(t, task.map(|t| t.id.unwrap().to_string()));
-                assert_eq!(p, task.is_none().then(|| "-odd project".to_string()));
-                assert_eq!(harness.model, opts.model);
-                assert_eq!(harness.extra, opts.extra);
-                assert_eq!(harness.agent.is_some(), opts.agent.is_some());
-            }
-        }
     }
 
     /// `ingest_command` is these arguments after the program: one list, not two.

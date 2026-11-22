@@ -1,10 +1,10 @@
 use crate::agent::run::Harness;
-use crate::completion::{
+use crate::cli::complete::{
     board_completer, organization_completer, project_completer, queued_task_completer,
     tag_completer, task_completer, task_name_completer,
 };
+use crate::cli::output::Format as DataFormat;
 use crate::reporting::Format;
-use crate::utils::output::Format as DataFormat;
 use crate::wiki::retrieve::Depth;
 use clap::Parser;
 use clap_complete::engine::ArgValueCompleter;

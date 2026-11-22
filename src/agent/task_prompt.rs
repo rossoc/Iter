@@ -152,9 +152,7 @@ pub fn fill(
     };
     // computed only when asked for: it reads the whole wiki
     let ingest = match uses(text, "ingest") {
-        true => {
-            super::ingest_job::task_ingest_text(&app.db, project, task).unwrap_or_default()
-        }
+        true => super::ingest_job::task_ingest_text(&app.db, project, task).unwrap_or_default(),
         false => String::new(),
     };
     let shown = task.id().to_string();

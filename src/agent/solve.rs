@@ -1,6 +1,7 @@
 //! The life of an agent run: `create`, `amend`, `begin`, `cancel` and the detached `worker`; shared by `iter task solve` and the web page.
 //! Callers hear what happens through an [`Observer`]; nothing prints here.
 
+use super::ingest_job::{Auto, Trigger, auto};
 use crate::agent::exec;
 use crate::agent::run::{Harness, Invocation, RunRecord, Status};
 use crate::agent::task_prompt::{fill, instruction_for, locate};
@@ -12,7 +13,6 @@ use crate::error::{IterError, Result};
 use crate::git;
 use crate::models::{Project, Task};
 use crate::text::now_as;
-use super::ingest_job::{Auto, Trigger, auto};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -463,7 +463,7 @@ pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
 }
 
 /// The arguments of the detached worker: `iter task run-worker <task> <run> -- <extra..>`.
-fn worker_args(task_id: i64, run: u32, extra: &[String]) -> Vec<String> {
+pub(crate) fn worker_args(task_id: i64, run: u32, extra: &[String]) -> Vec<String> {
     ["task", "run-worker"]
         .map(String::from)
         .into_iter()
@@ -476,30 +476,6 @@ fn worker_args(task_id: i64, run: u32, extra: &[String]) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::models::TaskStatus;
-
-    /// The command line a detached worker is started with must parse as `iter task run-worker`:
-    /// rename the subcommand and this fails, instead of a worker that exits 2 unseen.
-    #[test]
-    fn the_worker_command_line_parses_as_run_worker() {
-        use crate::args::{Args, Command, TaskCommand};
-        use clap::Parser;
-        for extra in [vec![], vec!["--model".to_string(), "-x".to_string()]] {
-            let mut argv = vec!["iter".to_string()];
-            argv.extend(worker_args(42, 3, &extra));
-            let parsed = Args::try_parse_from(&argv).unwrap_or_else(|e| panic!("{argv:?}: {e}"));
-            match parsed.command {
-                Command::Task {
-                    action:
-                        Some(TaskCommand::RunWorker {
-                            task_id,
-                            run,
-                            extra: passed,
-                        }),
-                } => assert_eq!((task_id, run, passed), (42, 3, extra)),
-                other => panic!("{argv:?} parsed as {other:?}"),
-            }
-        }
-    }
 
     #[test]
     fn the_agent_cannot_reach_the_run_records() {

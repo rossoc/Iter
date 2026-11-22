@@ -3,8 +3,8 @@
 //! same files under the Notes and Wiki tabs.
 
 use crate::app::App;
-use crate::args::{DocCommand, NoteCommand, NotesScope, TaskScope};
-use crate::commands::Run;
+use crate::cli::Run;
+use crate::cli::args::{DocCommand, NoteCommand, NotesScope, TaskScope};
 use crate::error::{IterError, Result};
 use crate::locate::project_or_current;
 use crate::models::{Organization, TaskRef};
@@ -212,7 +212,7 @@ fn text_of(message: Option<&str>) -> Result<Option<String>> {
         stdin.read_to_string(&mut text)?;
         return Ok(Some(text));
     }
-    crate::editor::edit_text("")
+    crate::cli::editor::edit_text("")
 }
 
 /// The whole file for a new document. A wiki page gets the front matter `iter wiki check` wants

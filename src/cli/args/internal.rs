@@ -56,7 +56,7 @@ pub enum HookEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::args::{Args, Command};
+    use crate::cli::args::{Args, Command};
     use clap::Parser;
 
     fn event(argv: &[&str]) -> HookEvent {

@@ -63,7 +63,7 @@ Design notes for `src/agent`, `src/wiki`, `src/push.rs`, `src/sync.rs`, `src/pla
 - `mv` renames a file inside its level and rewrites every reference (front matter values, body links) keeping each spelling; a page must stay in a folder that gives it a class; a failed move puts back what it changed. Raw notes are never rewritten.
 - `retrieve` reads cheaply in four steps of rising cost: `find` (rank by path, title, tags, description), `grep`, `neighbors` (follow relations, backlinks included, `nb` pages first), `show` (a page at a chosen depth). `find` and `grep` stop at a token budget (about four bytes per token).
 
-## Wiki: ingest and review (`src/wiki/ingest*.rs`, `ingest_job/`)
+## Wiki: ingest and review (`src/wiki/ingest*.rs`, `src/agent/ingest_job/`)
 
 - The ingest prompt (`prompts/ingest.md`) is laid out like a CLAUDE.md: Purpose, Sources, Workflow, Rules, then the schema. Every source is named by the command that reads it (`iter note read <date>`, `iter note sketch|task list|read --task <t>`, the `## Commits` of the sketch `result` read with `git show --stat`), never by a folder path, so the agent reads only through a small fixed set of commands.
 - Ingest turns notes into pages: `wiki::ingest` finds pending notes and words the prompts (ingest notes, build a concept from ideas, with `schema::render` rules last so nothing in them reads as a placeholder); an agent run does the writing. The `ingest` setting (`manual`, `on_task_start`, `on_task_done`) lives in `wiki/settings.yaml` of the project, inherited from its organization; the innermost level that sets one wins.

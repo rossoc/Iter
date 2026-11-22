@@ -2,8 +2,8 @@
 //! the hidden `iter internal hook`/`kill-server`/`restore` that tmux invokes.
 
 use crate::app::App;
-use crate::args::{HookEvent, InternalCommand};
-use crate::commands::Run;
+use crate::cli::Run;
+use crate::cli::args::{HookEvent, InternalCommand};
 use crate::error::Result;
 use crate::github::{GhCli, IssueTracker};
 use crate::locate::{current_task, linked_issue, require_github, task_or_current};

@@ -1,14 +1,16 @@
 //! `iter task` -- the CRUD and reporting half. The GitHub sync half is
 //! [`super::sync`].
 
+use crate::agent::ingest_job::{self, Trigger};
 use crate::app::App;
-use crate::args::{ReportOpts, RunEnd, TaskCommand};
-use crate::commands::ingest;
-use crate::commands::sync::{task_pull, task_push};
-use crate::commands::{Run, agent, solve};
+use crate::cli::args::{ReportOpts, RunEnd, TaskCommand};
+use crate::cli::editor::edited;
+use crate::cli::ingest;
+use crate::cli::output::print_yaml;
+use crate::cli::sync::{task_pull, task_push};
+use crate::cli::{Run, agent, solve};
 use crate::config::config;
 use crate::db::{Db, Table};
-use crate::editor::edited;
 use crate::error::{IterError, Result};
 use crate::git;
 use crate::github::{self, GhCli, IssueTracker};
@@ -20,8 +22,6 @@ use crate::reporting::{
     Header, TaskInfo, WeekdayReport, print_report, session_rows, weekday_averages,
 };
 use crate::tmux::{Multiplexer, TmuxClient};
-use crate::utils::output::print_yaml;
-use crate::agent::ingest_job::{self, Trigger};
 use crate::workspace::clock::close_open_session;
 use crate::workspace::teardown_and_kill;
 
@@ -466,11 +466,11 @@ mod tests {
         app.db.insert(&done).expect("task inserts");
 
         let unfinished =
-            crate::completion::offered(&app.db, None, &[TaskStatus::Queue, TaskStatus::Wip])
+            crate::cli::complete::offered(&app.db, None, &[TaskStatus::Queue, TaskStatus::Wip])
                 .expect("refs");
         assert_eq!(unfinished, vec!["proj/a task"]);
         assert_eq!(
-            crate::completion::offered(&app.db, Some("nosuch"), &[])
+            crate::cli::complete::offered(&app.db, Some("nosuch"), &[])
                 .expect("refs")
                 .len(),
             0

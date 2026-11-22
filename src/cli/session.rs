@@ -1,16 +1,16 @@
 //! `iter session` -- setting up a task's workspace and tracking the time
 //! spent in it.
 
+use crate::agent::ingest_job::Trigger;
 use crate::app::App;
-use crate::args::SessionCommand;
-use crate::commands::Run;
-use crate::commands::ingest;
+use crate::cli::Run;
+use crate::cli::args::SessionCommand;
+use crate::cli::ingest;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::locate::{self, current_task, require_git_repo, task_or_current};
 use crate::models::{Duration, SessionConfig, TaskStatus};
 use crate::tmux::{Multiplexer, TmuxClient};
-use crate::agent::ingest_job::Trigger;
 use crate::workspace;
 use crate::workspace::clock::{Closed, close_open_session, start_session};
 
@@ -52,7 +52,10 @@ fn session_new(
         let worktree_exists = |path: &str| std::path::Path::new(path).exists();
         if project.tmux
             && existing.tmux_session_name.is_none()
-            && existing.worktree_path.as_deref().is_some_and(worktree_exists)
+            && existing
+                .worktree_path
+                .as_deref()
+                .is_some_and(worktree_exists)
         {
             adopted = Some(existing);
         } else {
@@ -61,7 +64,10 @@ fn session_new(
                 .tmux_session_name
                 .as_deref()
                 .is_some_and(|name| !tmux.session_exists(name));
-            let worktree_gone = !existing.worktree_path.as_deref().is_some_and(worktree_exists);
+            let worktree_gone = !existing
+                .worktree_path
+                .as_deref()
+                .is_some_and(worktree_exists);
             match (tmux_gone, worktree_gone, existing.id) {
                 (true, true, Some(id)) => {
                     db.delete::<SessionConfig>(id)?;

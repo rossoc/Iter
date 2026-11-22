@@ -133,8 +133,8 @@ mod tests {
         assert!(!made.ends_with('-') && !made.starts_with('-'));
     }
 
-    /// Round I3 (step 2): the front-matter rule moved here from the old `md_edit`, the same cases and the
-    /// same exact divider, with the result as a [`Split`].
+    /// The front matter ends at the first exact divider line, and the
+    /// result is a [`Split`].
     #[test]
     fn front_matter_ends_at_the_first_exact_divider() {
         let closed = |front: &'static str, body: &'static str| {

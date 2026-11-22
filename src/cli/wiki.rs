@@ -1,10 +1,10 @@
 //! `iter wiki`: reads the wiki the notes are the source of; each command builds the graph from the files (`crate::wiki`).
 
 use crate::app::App;
-use crate::args::{WikiCommand, WikiScope};
-use crate::commands::{Run, ingest};
+use crate::cli::args::{WikiCommand, WikiScope};
+use crate::cli::output::emit;
+use crate::cli::{Run, ingest};
 use crate::error::{IterError, Result};
-use crate::utils::output::emit;
 use crate::wiki::check::{self, Severity};
 use crate::wiki::graph::{Answer, Wiki};
 use crate::wiki::retrieve::{self, Shown};

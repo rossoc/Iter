@@ -6,8 +6,8 @@
 //! before the work and after it, and fail before it for the reason each one names.
 
 use crate::app::App;
-use crate::args::{Args, Command};
-use crate::commands::Run;
+use crate::cli::Run;
+use crate::cli::args::{Args, Command};
 use crate::db::Table;
 use crate::fixtures;
 use crate::models::Project;

@@ -1,8 +1,6 @@
 //! What an agent works with on a task: its folder, plan, prompts and runs.
 //! See `doc/architecture_agent_wiki.md`.
 
-#[cfg(test)]
-mod config_instructions_tests;
 pub mod exec;
 pub mod ingest_job;
 pub mod instruction;

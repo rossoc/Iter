@@ -1,20 +1,20 @@
 //! `iter project`, plus `iter init`, `iter new` and `iter clone`, which also create a project, all through [`create_project_interactively`] (one validation).
 
 use crate::app::App;
-use crate::args::{ProjectCommand, ReportOpts};
-use crate::commands::Run;
+use crate::cli::Run;
+use crate::cli::args::{ProjectCommand, ReportOpts};
+use crate::cli::editor::edited;
+use crate::cli::entity::update;
+use crate::cli::output::list_names;
 use crate::config::config;
 use crate::db::Db;
 use crate::db::Table;
-use crate::editor::edited;
 use crate::error::Result;
 use crate::locate::project_or_current;
 use crate::models::{Board, Named, Organization, Project};
 use crate::reporting::{Header, ProjectInfo, print_report};
 use crate::reporting::{task_reports, total_minutes};
 use crate::tmux::{Multiplexer, TmuxClient};
-use crate::utils::crud::update;
-use crate::utils::output::list_names;
 use crate::workspace::teardown;
 use crate::{git, scaffold};
 

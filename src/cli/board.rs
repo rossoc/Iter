@@ -1,15 +1,15 @@
 //! `iter board` -- calendars that hold projects.
 
 use crate::app::App;
-use crate::args::BoardCommand;
-use crate::commands::Run;
+use crate::cli::Run;
+use crate::cli::args::BoardCommand;
+use crate::cli::entity::{create, delete_group, update_group};
+use crate::cli::output::list_names;
 use crate::db::Table;
 use crate::error::Result;
 use crate::locate::group_or_current;
 use crate::models::{Board, Card, Priority, Project, START_TIME_FMT, TaskStatus, end_text};
 use crate::reporting::non_empty;
-use crate::utils::crud::{create, delete_group, update_group};
-use crate::utils::output::list_names;
 use std::fmt::Write as _;
 
 impl Run for BoardCommand {

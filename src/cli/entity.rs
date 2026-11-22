@@ -3,8 +3,8 @@
 //! check beyond [`Named::validate`] -- and the editor round trip, the write
 //! and the message come from here.
 
+use crate::cli::editor::{edit_in_editor, edited, no_changes};
 use crate::db::{Db, Table};
-use crate::editor::{edit_in_editor, edited, no_changes};
 use crate::error::Result;
 use crate::models::{Editable, GroupEdit, Named, Project, ProjectGroup};
 

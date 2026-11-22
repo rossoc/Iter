@@ -1,18 +1,18 @@
 //! `iter task solve`, `iter task runs`: handing a task to an agent working on its own in the task's worktree.
 
+use crate::agent::ingest_job::Auto;
 use crate::agent::run::{Harness, RunRecord, Status};
 use crate::agent::solve::{Launch, Observer, Spec, close, open_subagent, start};
 use crate::agent::task_prompt::{instruction_for, locate};
 use crate::app::App;
-use crate::args::RunEnd;
-use crate::commands::ingest::say_auto;
+use crate::cli::args::RunEnd;
+use crate::cli::editor::edit_text;
+use crate::cli::ingest::say_auto;
 use crate::db::Table;
-use crate::editor::edit_text;
 use crate::error::AgentError;
 use crate::error::Result;
 use crate::models::Project;
 use crate::text::split_front;
-use crate::agent::ingest_job::Auto;
 
 struct Console;
 

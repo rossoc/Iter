@@ -21,12 +21,14 @@ mod lock;
 mod review;
 mod spawn;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub use bridge::bridge_task_notes;
 pub use lock::busy;
 use lock::lock;
 pub use review::*;
+#[cfg(test)]
+pub(crate) use spawn::ingest_args;
 #[cfg(feature = "web")]
 pub use spawn::ingest_in_background;
 pub use spawn::{run_agent, spawn_ingest};

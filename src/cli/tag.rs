@@ -1,14 +1,14 @@
 //! `iter tag` -- coloured labels shared by every task.
 
 use crate::app::App;
-use crate::args::TagCommand;
-use crate::commands::Run;
+use crate::cli::Run;
+use crate::cli::args::TagCommand;
+use crate::cli::entity::{create, update};
+use crate::cli::output::list_names;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::Tag;
 use crate::reporting::non_empty;
-use crate::utils::crud::{create, update};
-use crate::utils::output::list_names;
 
 impl Run for TagCommand {
     fn run(&self, app: &App) -> Result<()> {

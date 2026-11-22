@@ -254,7 +254,7 @@ pub const DETACH_MESSAGE_OPTION: &str = "@iter_detach_message";
 
 /// The hooks `iter` drives, with the format variables each is passed. Wrong variables fail
 /// silently, so the per-event table is in `doc/architecture_core.md`.
-const HOOKS: [(&str, &str); 3] = [
+pub(crate) const HOOKS: [(&str, &str); 3] = [
     (
         "client-session-changed",
         "#{q:hook_client} #{q:session_name} #{q:client_last_session}",
@@ -288,7 +288,7 @@ fn hook_action(iter_bin: &str, event: &str, variables: &str) -> String {
 /// The arguments of the hook for `event` (one entry of [`HOOKS`]) after the binary:
 /// `internal hook <event> -- <format variables..>`, which `hook_action` quotes into the
 /// `set-hook` body. `--`: a session name may start with `-`, which clap would read as a flag.
-fn hook_args(event: &str, variables: &str) -> Vec<String> {
+pub(crate) fn hook_args(event: &str, variables: &str) -> Vec<String> {
     ["internal", "hook", event, "--"]
         .into_iter()
         .chain(variables.split(' '))
@@ -299,57 +299,6 @@ fn hook_args(event: &str, variables: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// Every hook iter installs must parse as the `internal hook` event of its name, with the
-    /// number of arguments that event takes: a renamed subcommand fails here, not in a tmux
-    /// that ignores a failing hook.
-    #[test]
-    fn every_installed_hook_parses_as_its_internal_event() {
-        use crate::args::{Args, Command, HookEvent, InternalCommand};
-        use clap::Parser;
-        for (event, variables) in HOOKS {
-            // what tmux fills the variables with; a leading dash is the case that broke
-            let filled: String = variables
-                .split(' ')
-                .enumerate()
-                .map(|(i, _)| format!("-v{i}"))
-                .collect::<Vec<_>>()
-                .join(" ");
-            let mut argv = vec!["iter".to_string()];
-            argv.extend(hook_args(event, &filled));
-            let parsed = Args::try_parse_from(&argv).unwrap_or_else(|e| panic!("{argv:?}: {e}"));
-            let Command::Internal {
-                action: InternalCommand::Hook { event: parsed },
-            } = parsed.command
-            else {
-                panic!("{argv:?} is not `internal hook`");
-            };
-            let name = match (&parsed, event) {
-                (
-                    HookEvent::ClientSessionChanged {
-                        client,
-                        session,
-                        previous,
-                    },
-                    "client-session-changed",
-                ) => {
-                    assert_eq!((client.as_str(), session.as_str()), ("-v0", "-v1"));
-                    assert_eq!(previous.as_deref(), Some("-v2"));
-                    event
-                }
-                (HookEvent::ClientDetached { client }, "client-detached") => {
-                    assert_eq!(client, "-v0");
-                    event
-                }
-                (HookEvent::SessionClosed { session }, "session-closed") => {
-                    assert_eq!(session, "-v0");
-                    event
-                }
-                (other, event) => panic!("{event} parsed as {other:?}"),
-            };
-            assert_eq!(name, event);
-        }
-    }
 
     /// The same words end up in the `set-hook` body, so what is tested is what is installed.
     #[test]

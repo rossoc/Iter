@@ -1,17 +1,17 @@
 //! `iter wiki ingest`, `build-concept` and `pending`: agents writing the wiki and the review of what they wrote (`agent::ingest_job`).
 
+use crate::agent::ingest_job::{
+    Auto, HarnessChoice, JobText, Target, Trigger, auto as wiki_auto, busy, changes, run_agent,
+    settle_with, spawn_ingest,
+};
 use crate::app::App;
-use crate::args::HarnessOpts;
+use crate::cli::args::HarnessOpts;
 use crate::db::Table;
 use crate::error::AgentError;
 use crate::error::{IterError, Result};
 use crate::locate::{self, project_or_current};
 use crate::models::{Project, Task};
 use crate::wiki::ingest;
-use crate::agent::ingest_job::{
-    Auto, HarnessChoice, JobText, Target, Trigger, auto as wiki_auto, busy, changes, run_agent,
-    settle_with, spawn_ingest,
-};
 use std::path::PathBuf;
 
 fn choice(opts: &HarnessOpts) -> HarnessChoice {

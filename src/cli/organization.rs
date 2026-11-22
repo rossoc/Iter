@@ -1,8 +1,10 @@
 //! `iter organization` -- grouping projects and reporting across them.
 
 use crate::app::App;
-use crate::args::{OrganizationCommand, ReportOpts};
-use crate::commands::Run;
+use crate::cli::Run;
+use crate::cli::args::{OrganizationCommand, ReportOpts};
+use crate::cli::entity::{create, delete_group, update_group};
+use crate::cli::output::list_names;
 use crate::config::config;
 use crate::db::Table;
 use crate::error::{IterError, Result};
@@ -15,8 +17,6 @@ use crate::push::{self, Target};
 use crate::reporting::{Header, OrganizationInfo, print_report};
 use crate::reporting::{project_reports, total_minutes};
 use crate::secret::{self, KeyStore, Keychain, Secret};
-use crate::utils::crud::{create, delete_group, update_group};
-use crate::utils::output::list_names;
 use std::io::IsTerminal;
 
 impl Run for OrganizationCommand {

@@ -46,7 +46,7 @@ fn git_in(dir: &std::path::Path, args: &[&str]) {
 }
 
 /// An organization repository `root` whose project `app` keeps notes in `root/app`, with one committed page.
-fn repo(name: &str) -> (Db, Project, PathBuf) {
+pub(crate) fn repo(name: &str) -> (Db, Project, PathBuf) {
     let root = fixtures::scratch(&format!("pending-{name}"));
     let notes = root.join("app");
     std::fs::create_dir_all(notes.join("wiki/ideas")).unwrap();
@@ -141,7 +141,7 @@ fn accepting_commits_the_pages_only() {
     assert_eq!(last_subject(&notes), "wiki: ingest");
 }
 
-fn last_subject(notes: &std::path::Path) -> String {
+pub(crate) fn last_subject(notes: &std::path::Path) -> String {
     process::output(
         "git",
         Some(&notes.display().to_string()),
@@ -150,40 +150,6 @@ fn last_subject(notes: &std::path::Path) -> String {
     .unwrap()
     .trim()
     .to_string()
-}
-
-fn parse(argv: &[&str]) -> std::result::Result<crate::args::Args, clap::Error> {
-    use clap::Parser;
-    crate::args::Args::try_parse_from([&["iter", "wiki", "pending"], argv].concat())
-}
-
-/// R5: `iter wiki pending --accept -m <msg>` commits the pages with that message.
-#[test]
-fn accepting_with_a_message_uses_it() {
-    use crate::commands::Run;
-    let (db, _, notes) = repo("accept-message");
-    std::fs::write(
-        notes.join("wiki/ideas/a.md"),
-        "---\ndescription: a\n---\nnew\n",
-    )
-    .unwrap();
-    let message = "update: app/fix-it - 1a2b3c4";
-    let args =
-        parse(&["-p", "app", "--accept", "-m", message]).unwrap_or_else(|e| panic!("refused: {e}"));
-    let crate::args::Command::Wiki { action } = args.command else {
-        panic!("not a wiki command")
-    };
-    action.run(&App::with_db(db)).unwrap();
-    assert_eq!(last_subject(&notes), message);
-}
-
-/// R5: a message means nothing without `--accept`.
-#[test]
-fn a_message_without_accept_is_refused() {
-    assert!(parse(&["--accept", "--message", "x"]).is_ok());
-    for argv in [&["-m", "x"][..], &["--revert", "-m", "x"]] {
-        assert!(parse(argv).is_err(), "{argv:?}");
-    }
 }
 
 #[test]

@@ -7,10 +7,10 @@ use super::ui::labelled::labelled_section;
 use super::ui::notice::notice;
 use super::url::{WikiAction, project_url, wiki_action_url, wiki_tab_url};
 use super::{Id, fresh_db};
+use crate::agent::ingest_job::{self, Review};
 use crate::db::{Db, Table};
 use crate::models::Project;
 use crate::wiki::ingest::Mode;
-use crate::agent::ingest_job::{self, Review};
 use topcoat::{
     Result,
     context::Cx,

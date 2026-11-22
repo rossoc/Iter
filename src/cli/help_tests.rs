@@ -1,6 +1,6 @@
 //! `--help` of every subcommand, pinned (task 298, R9: "the same commands and `--help`"). The
 //! reorganisation moves the argument types between modules and crates; none of that may change
-//! what a person reads. The snapshot is `src/help_snapshot.txt`; after a change to the help on
+//! what a person reads. The snapshot is `src/cli/help_snapshot.txt`; after a change to the help on
 //! purpose, `ITER_UPDATE_HELP=1 cargo test help_tests` rewrites it.
 //!
 //! `serve` exists only with the `web` feature, so it is left out of the snapshot.
@@ -27,11 +27,11 @@ fn render(command: &mut Command, path: &str, out: &mut String) {
 
 #[test]
 fn the_help_of_every_subcommand_is_unchanged() {
-    let mut command = crate::cli();
+    let mut command = super::run::command();
     command.build();
     let mut now = String::new();
     render(&mut command, "iter", &mut now);
-    let file = concat!(env!("CARGO_MANIFEST_DIR"), "/src/help_snapshot.txt");
+    let file = concat!(env!("CARGO_MANIFEST_DIR"), "/src/cli/help_snapshot.txt");
     if std::env::var_os("ITER_UPDATE_HELP").is_some() {
         std::fs::write(file, &now).expect("snapshot written");
     }
@@ -56,7 +56,7 @@ fn the_help_of_every_subcommand_is_unchanged() {
 fn the_snapshot_covers_the_commands_a_person_runs() {
     let snapshot = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/src/help_snapshot.txt"
+        "/src/cli/help_snapshot.txt"
     ))
     .expect("src/help_snapshot.txt");
     for command in [
