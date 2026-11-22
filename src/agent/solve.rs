@@ -10,9 +10,8 @@ use crate::db::Table;
 use crate::error::AgentError;
 use crate::error::{IterError, Result};
 use crate::git;
-use crate::models::{Project, SessionConfig, Task, TaskStatus};
+use crate::models::{Project, Task};
 use crate::text::now_as;
-use crate::utils::workspace::create_task_worktree;
 use crate::wiki::ingest_job::{Auto, Trigger, auto};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -71,32 +70,9 @@ fn workspace(
     if !git::is_git_repo(&project.base_path) {
         return Err(AgentError::NotAGitRepo(project.base_path.clone()).into());
     }
-    let (branch, path) = create_task_worktree(project, task, None)?;
-    let row = SessionConfig {
-        id: None,
-        task_id: task.id(),
-        tmux_session_name: None,
-        github_branch: Some(branch.clone()),
-        worktree_path: Some(path.clone()),
-    };
-    if let Err(e) = db.insert(&row) {
-        crate::utils::workspace::remove_worktree_and_branch(project, Some(&path), Some(&branch));
-        return Err(e);
-    }
-    if task.status == TaskStatus::Queue {
-        task.status = TaskStatus::Wip;
-        db.update(task.id(), task)?;
-    }
-    Ok((Some(branch), Some(path)))
-}
-
-/// Marks a queued task in progress when an agent starts on it; a done task stays done.
-fn start_work(app: &App, task: &mut Task) -> Result<()> {
-    if task.status == TaskStatus::Queue {
-        task.status = TaskStatus::Wip;
-        app.db.update(task.id(), task)?;
-    }
-    Ok(())
+    let config = crate::workspace::open(db, project, task, None)?;
+    crate::workspace::start_work(db, task)?;
+    Ok((config.github_branch, config.worktree_path))
 }
 
 fn now() -> String {
@@ -268,7 +244,7 @@ fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
         Ok((branch, worktree)) => (run.branch, run.worktree) = (branch, worktree),
         Err(e) => return Err(fail(&dir, run, e)),
     }
-    if let Err(e) = start_work(app, &mut task) {
+    if let Err(e) = crate::workspace::start_work(&app.db, &mut task) {
         return Err(fail(&dir, run, e));
     }
     if dir.runs().iter().all(|r| r.n == n || r.is_queued()) {
@@ -499,6 +475,7 @@ fn worker_args(task_id: i64, run: u32, extra: &[String]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::TaskStatus;
 
     /// The command line a detached worker is started with must parse as `iter task run-worker`:
     /// rename the subcommand and this fails, instead of a worker that exits 2 unseen.
@@ -692,7 +669,7 @@ mod tests {
             let (_, mut task, _) = locate(&app, Some("app/Fix it")).unwrap();
             task.status = before;
             app.db.update(task.id(), &task).unwrap();
-            start_work(&app, &mut task).unwrap();
+            crate::workspace::start_work(&app.db, &mut task).unwrap();
             let (_, stored, _) = locate(&app, Some("app/Fix it")).unwrap();
             assert_eq!((task.status, stored.status), (after, after));
         }

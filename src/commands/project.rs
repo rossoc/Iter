@@ -15,7 +15,7 @@ use crate::reporting::{task_reports, total_minutes};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::crud::update;
 use crate::utils::output::list_names;
-use crate::utils::workspace::teardown_session_config;
+use crate::workspace::teardown;
 use crate::{git, scaffold};
 
 /// The one way a project is created: opens `template` in the editor, validates, lets `populate` make the directory the edited `base_path` names, and only then inserts the row;
@@ -199,7 +199,7 @@ fn project_delete(app: &App, mux: &dyn Multiplexer, name: Option<&str>) -> Resul
 
     let tmux_sessions: Vec<&str> = session_configs
         .iter()
-        .filter_map(|session_config| teardown_session_config(db, &project, session_config))
+        .filter_map(|session_config| teardown(db, &project, session_config))
         .collect();
     println!("deleted project '{}'", project.name);
 

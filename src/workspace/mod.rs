@@ -1,41 +1,158 @@
-//! A task's workspace: the worktree, branch, tmux name and the work-in-progress mark. From
-//! `utils::workspace`, `commands/session.rs` and `agent/solve.rs` in isolation step 4; the
-//! whole module is a stub until then.
+//! A task's workspace: the git worktree and branch, the tmux session name, the clock that times
+//! the work, and the teardown of all of them.
+//!
+//! Kill-last invariant: `kill-session` takes down every pane, including this process when run from
+//! inside that session, so nothing after it is guaranteed to run. Hence (1) write the database
+//! before tearing down, and (2) kill last: [`teardown`] returns the tmux session to kill instead of
+//! killing it, so `project delete` can kill after its loop; [`teardown_and_kill`] is for callers
+//! where nothing follows.
 
-use crate::db::Db;
-use crate::error::Result;
-use crate::models::{Project, SessionConfig, Task};
+pub mod clock;
+
+use crate::db::{Db, Table};
+use crate::error::{IterError, Result};
+use crate::git;
+use crate::models::{Project, SessionConfig, Task, TaskStatus};
+use crate::tmux::Multiplexer;
+use std::path::Path;
 
 /// The tmux session name of a new session, `<project>/<id> <title>`, each half flattened (tmux
-/// reads `/`, `:`, `.` in a target). Names already stored are read back, never recomputed.
-// stub: I3 (`commands::session::tmux_session_name` still does the work)
-#[allow(dead_code)]
+/// reads `/`, `:`, `.` in a target). The id keeps it unique when titles repeat. A tmux identifier,
+/// not a task reference; names already stored are read back from the database, never recomputed.
 pub fn tmux_name(project: &Project, task: &Task) -> String {
-    let _ = (project, task);
-    unimplemented!("stub: I3")
+    let part = |name: &str| name.replace('/', "-").replace([':', '.', '*', '?'], "_");
+    format!("{}/{} {}", part(&project.name), task.id(), part(&task.name))
 }
 
 /// The worktree, branch and `session_configs` row of `task` (no tmux name yet), undone when the
 /// row cannot be written. The slug carries the id, so equal titles never collide, and a worktree
-/// folder that already exists is an error naming it.
-// stub: I3 (`create_task_worktree` plus the two callers' row code still do the work)
-#[allow(dead_code)]
+/// folder that already exists (a stale one of this task) is an error naming it. `session new` and
+/// `task solve` both start from here.
 pub fn open(
     db: &Db,
     project: &Project,
     task: &Task,
     branch: Option<&str>,
 ) -> Result<SessionConfig> {
-    let _ = (db, project, task, branch);
-    unimplemented!("stub: I3")
+    // An empty prefix (blank, or a task from before the field) falls back to the project's template.
+    let prefix = match task.branch_prefix.trim() {
+        "" => git::branch_prefix(&project.branch_template),
+        prefix => prefix.to_string(),
+    };
+    let slug = git::task_slug(&task.name, task.id());
+    let path = Path::new(&project.base_path)
+        .join(".iter-worktrees")
+        .join(&slug);
+    if path.exists() {
+        return Err(IterError::CommandFailed(format!(
+            "the worktree folder '{slug}' already exists"
+        )));
+    }
+    let path = path.to_string_lossy().to_string();
+    let branch = branch.map_or_else(|| format!("{prefix}{slug}"), str::to_string);
+    git::create_worktree(&project.base_path, &branch, &path)?;
+    let mut config = SessionConfig {
+        id: None,
+        task_id: task.id(),
+        tmux_session_name: None,
+        github_branch: Some(branch),
+        worktree_path: Some(path),
+    };
+    match db.insert(&config) {
+        Ok(id) => {
+            config.id = Some(id);
+            Ok(config)
+        }
+        Err(error) => {
+            remove_worktree_and_branch(
+                project,
+                config.worktree_path.as_deref(),
+                config.github_branch.as_deref(),
+            );
+            Err(error)
+        }
+    }
 }
 
 /// Marks a queued task in progress when work starts on it; a done task stays done.
-// stub: I3 (`agent::solve::start_work` still does the work)
-#[allow(dead_code)]
 pub fn start_work(db: &Db, task: &mut Task) -> Result<()> {
-    let _ = (db, task);
-    unimplemented!("stub: I3")
+    if task.status == TaskStatus::Queue {
+        task.status = TaskStatus::Wip;
+        db.update(task.id(), task)?;
+    }
+    Ok(())
+}
+
+/// Removes the worktree, branch and session-config row, for `task done`/`task delete`/`project
+/// delete`. Does not kill the tmux session; it returns it (see the module doc).
+#[must_use = "the tmux session still needs killing"]
+pub fn teardown<'a>(
+    db: &Db,
+    project: &Project,
+    session_config: &'a SessionConfig,
+) -> Option<&'a str> {
+    remove_worktree_and_branch(
+        project,
+        session_config.worktree_path.as_deref(),
+        session_config.github_branch.as_deref(),
+    );
+    if let Some(id) = session_config.id
+        && let Err(e) = db.delete::<SessionConfig>(id)
+    {
+        eprintln!("warning: failed to delete session-config row: {e}");
+    }
+    session_config.tmux_session_name.as_deref()
+}
+
+/// The on-disk half of teardown, shared with [`unwind`] and [`open`]'s undo (worktree and branch but no row yet). Failures warn and carry on. The branch goes after the worktree, as `git::delete_branch`
+/// requires, and is kept (with a warning) while it has unmerged commits.
+pub(crate) fn remove_worktree_and_branch(
+    project: &Project,
+    worktree: Option<&str>,
+    branch: Option<&str>,
+) {
+    if let Some(worktree) = worktree
+        && let Err(e) = git::remove_worktree(&project.base_path, worktree)
+    {
+        eprintln!("warning: {e}");
+    }
+    if let Some(branch) = branch {
+        match git::delete_branch(&project.base_path, branch) {
+            Ok(true) => {}
+            Ok(false) => eprintln!(
+                "warning: kept branch '{branch}': it has commits that are not merged \
+                 (delete it with `git branch -D {branch}`)"
+            ),
+            Err(e) => eprintln!("warning: {e}"),
+        }
+    }
+}
+
+/// [`teardown`] for a lone session, killing at once; fine where nothing runs after.
+pub fn teardown_and_kill(
+    db: &Db,
+    mux: &dyn Multiplexer,
+    project: &Project,
+    session_config: &SessionConfig,
+) {
+    if let Some(name) = teardown(db, project, session_config) {
+        mux.kill_session(name);
+    }
+}
+
+/// Undoes a session set up half way: kills `tmux_session` first (it is detached and unattached,
+/// so this cannot take the running process with it), then removes the worktree, branch and row.
+pub fn unwind(
+    db: &Db,
+    mux: &dyn Multiplexer,
+    project: &Project,
+    config: &SessionConfig,
+    tmux_session: Option<&str>,
+) {
+    if let Some(name) = tmux_session {
+        mux.kill_session(name);
+    }
+    let _ = teardown(db, project, config);
 }
 
 #[cfg(test)]
@@ -65,6 +182,9 @@ mod tests {
         }
         let odd = fixtures::project("my/app");
         assert_eq!(tmux_name(&odd, &task(5, "x")), "my-app/5 x");
+        // every target separator of tmux is flattened in the project half too
+        let target = fixtures::project("web: a.b/c");
+        assert_eq!(tmux_name(&target, &task(1, "a*b?")), "web_ a_b-c/1 a_b_");
         assert_ne!(
             tmux_name(&web, &task(1, "login")),
             tmux_name(&web, &task(2, "login"))

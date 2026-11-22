@@ -10,9 +10,9 @@ use crate::error::{IterError, Result};
 use crate::locate::{self, current_task, require_git_repo, task_or_current};
 use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
 use crate::tmux::{Multiplexer, TmuxClient};
-use crate::utils::clock::{Closed, close_open_session, start_session};
-use crate::utils::workspace::{self, unwind_session_setup};
 use crate::wiki::ingest_job::Trigger;
+use crate::workspace;
+use crate::workspace::clock::{Closed, close_open_session, start_session};
 
 impl Run for SessionCommand {
     fn run(&self, app: &App) -> Result<()> {
@@ -77,7 +77,7 @@ fn session_new(
         }
     }
 
-    let tmux_session_name = tmux_session_name(&project, &task);
+    let tmux_session_name = workspace::tmux_name(&project, &task);
 
     if project.github {
         require_git_repo(&project)?;
@@ -87,52 +87,46 @@ fn session_new(
         return Err(IterError::TmuxSessionExists(tmux_session_name));
     }
 
-    let mut github_branch = None;
-    let mut worktree_path = None;
+    let mut config = match project.github && project.auto_branch && !no_branch {
+        true => workspace::open(db, &project, &task, branch_override)?,
+        false => SessionConfig {
+            id: None,
+            task_id,
+            tmux_session_name: None,
+            github_branch: None,
+            worktree_path: None,
+        },
+    };
+    let cwd = config
+        .worktree_path
+        .clone()
+        .unwrap_or_else(|| project.base_path.clone());
 
-    if project.github && project.auto_branch && !no_branch {
-        let (branch, path) = workspace::create_task_worktree(&project, &task, branch_override)?;
-        github_branch = Some(branch);
-        worktree_path = Some(path);
-    }
-
-    let cwd: &str = worktree_path.as_deref().unwrap_or(&project.base_path);
-
-    // until the row exists nothing else knows the worktree and branch, so a failure before the insert would leave them behind for good (retry: "branch already exists")
-    let final_tmux_name = if project.tmux {
-        tmux.start_tracked_session(&tmux_session_name, cwd)
+    // the worktree and branch are the row's: a failure from here on takes them down again (retry: "branch already exists")
+    if project.tmux {
+        tmux.start_tracked_session(&tmux_session_name, &cwd)
             .inspect_err(|_| {
-                unwind_session_setup(
-                    tmux,
-                    &project,
-                    worktree_path.as_deref(),
-                    github_branch.as_deref(),
-                    Some(&tmux_session_name),
-                )
+                workspace::unwind(db, tmux, &project, &config, Some(&tmux_session_name))
             })?;
         println!("session '{tmux_session_name}' started");
-        Some(tmux_session_name)
+        config.tmux_session_name = Some(tmux_session_name);
     } else {
         println!(
             "session started for '{task_ref}' at {cwd} (tmux disabled for this project -- use `iter session start`/`iter session stop`)"
         );
-        None
-    };
+    }
 
-    let session_config = SessionConfig {
-        id: None,
-        task_id,
-        tmux_session_name: final_tmux_name,
-        github_branch,
-        worktree_path,
-    };
-    db.insert(&session_config).inspect_err(|_| {
-        unwind_session_setup(
+    match config.id {
+        Some(id) => db.update(id, &config),
+        None => db.insert(&config).map(drop),
+    }
+    .inspect_err(|_| {
+        workspace::unwind(
+            db,
             tmux,
             &project,
-            session_config.worktree_path.as_deref(),
-            session_config.github_branch.as_deref(),
-            session_config.tmux_session_name.as_deref(),
+            &config,
+            config.tmux_session_name.as_deref(),
         )
     })?;
 
@@ -141,7 +135,7 @@ fn session_new(
     ingest::auto(app, &project, &task, Trigger::TaskStart);
 
     // attach last, once every row is written: the `client-attached` hook looks the session-config up by tmux name
-    if let Some(name) = &session_config.tmux_session_name
+    if let Some(name) = &config.tmux_session_name
         && let Err(e) = tmux.attach_session(name)
     {
         eprintln!("warning: couldn't attach to '{name}': {e}");
@@ -158,7 +152,7 @@ fn adopt_workspace(
     task: &mut Task,
     mut config: SessionConfig,
 ) -> Result<()> {
-    let name = tmux_session_name(project, task);
+    let name = workspace::tmux_name(project, task);
     if tmux.session_exists(&name) {
         return Err(IterError::TmuxSessionExists(name));
     }
@@ -169,7 +163,7 @@ fn adopt_workspace(
     if let Some(id) = config.id
         && let Err(e) = app.db.update(id, &config)
     {
-        unwind_session_setup(tmux, project, None, None, Some(&name));
+        tmux.kill_session(&name);
         return Err(e);
     }
     if task.status == TaskStatus::Queue {
@@ -181,24 +175,6 @@ fn adopt_workspace(
         eprintln!("the session is set up -- attach with: tmux attach -t '{name}'");
     }
     Ok(())
-}
-
-/// The tmux session name of a new session, `<project>/<id> <title>`, not `task_display`: tmux
-/// treats `/` as a hierarchy separator, so each half is flattened. The id keeps it unique when
-/// titles repeat. A tmux identifier, not a task reference; names already stored are read back from
-/// the database, never recomputed.
-fn tmux_session_name(project: &Project, task: &Task) -> String {
-    format!(
-        "{}/{} {}",
-        tmux_name_part(&project.name),
-        task.id(),
-        tmux_name_part(&task.name)
-    )
-}
-
-/// One half of a [`tmux_session_name`]; also flattens `:` and `.`, since every `-t` parses `session:window.pane` and `web: x` would be unreachable.
-fn tmux_name_part(name: &str) -> String {
-    name.replace('/', "-").replace([':', '.', '*', '?'], "_")
 }
 
 fn session_start(app: &App, task_ref: Option<&str>) -> Result<()> {
@@ -232,35 +208,4 @@ fn session_elapse(app: &App) -> Result<()> {
     let now = app.now;
     println!("{}", Duration(session.duration_minutes(now)));
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_name_part_has_no_tmux_target_separators() {
-        assert_eq!(tmux_name_part("web: a.b/c"), "web_ a_b-c");
-        assert_eq!(tmux_name_part("a*b?"), "a_b_");
-    }
-
-    /// R3: a new session is `<project>/<id> <title>`, each half flattened as before; equal titles
-    /// give different names.
-    #[test]
-    fn a_new_session_is_named_with_the_task_id() {
-        let web = crate::fixtures::project("web");
-        let task = |id, name: &str| Task {
-            id: Some(id),
-            ..crate::fixtures::task(1, name)
-        };
-        assert_eq!(tmux_session_name(&web, &task(42, "login")), "web/42 login");
-        assert_eq!(
-            tmux_session_name(&web, &task(7, "a: b.c/d")),
-            "web/7 a_ b_c-d"
-        );
-        assert_ne!(
-            tmux_session_name(&web, &task(1, "login")),
-            tmux_session_name(&web, &task(2, "login"))
-        );
-    }
 }

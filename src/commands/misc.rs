@@ -9,7 +9,7 @@ use crate::github::{GhCli, IssueTracker};
 use crate::locate::{current_task, linked_issue, require_github, task_or_current};
 use crate::models::{Project, SessionConfig, Task};
 use crate::tmux::{Multiplexer, TmuxClient};
-use crate::utils::clock::{
+use crate::workspace::clock::{
     client_left_tmux_session, close_stale_session, start_for_tmux_session, stop_for_tmux_session,
 };
 use std::path::Path;

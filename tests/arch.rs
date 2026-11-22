@@ -637,7 +637,6 @@ fn the_interface_asks_the_database_by_name_not_by_filter() {
 /// Step 4: `utils` is dissolved: `locate`, `workspace` and `reporting::gather` are out, and
 /// `crud`/`output` wait for the `cli` module of step 6.
 #[test]
-#[ignore = "isolation: round I3"]
 fn utils_keeps_only_what_waits_for_the_cli() {
     let left: Vec<String> = fs::read_dir(src_path("utils"))
         .map(|dir| {
