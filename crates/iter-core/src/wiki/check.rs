@@ -1,6 +1,6 @@
 //! `check`: the lint that needs no LLM; contradictions between pages are the agent's lint.
 
-use super::graph::{Node, Wiki, md_files};
+use super::graph::{Wiki, md_files};
 use super::ontology::{LevelKind, local, ns};
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Timelike};
 use oxigraph::model::NamedNode;
@@ -177,7 +177,7 @@ fn page_issues(wiki: &Wiki, from: usize, i: usize) -> Vec<Issue> {
         }
         None => {}
     }
-    for (prop, target) in relations(wiki, node) {
+    for (_, prop, target) in node.written(onto) {
         if let Some(t) = wiki.resolve(node.level, target)
             && let Some(m) = violation(wiki, prop, i, t)
         {
@@ -192,22 +192,6 @@ fn page_issues(wiki: &Wiki, from: usize, i: usize) -> Vec<Issue> {
         );
     }
     out
-}
-
-/// Every `(property, target)` a page writes: its front matter relations and its `[[links]]` (`iter:ref`).
-fn relations<'a>(
-    wiki: &'a Wiki,
-    node: &'a Node,
-) -> impl Iterator<Item = (NamedNode, &'a String)> + 'a {
-    let written = node
-        .front
-        .iter()
-        .flat_map(|f| &f.relations)
-        .flat_map(|(key, targets)| {
-            let prop = wiki.ontology.relation(key);
-            targets.iter().filter_map(move |t| Some((prop?.clone(), t)))
-        });
-    written.chain(node.links.iter().map(|link| (ns("ref"), link)))
 }
 
 /// Files under a level's `wiki/` that no class owns.

@@ -12,7 +12,7 @@ use oxigraph::model::{GraphName, GraphNameRef, Literal, NamedNode, NamedOrBlankN
 use oxigraph::sparql::{QueryResults, SparqlEvaluator};
 use oxigraph::store::Store;
 use std::collections::{HashMap, HashSet};
-use std::fmt::Write as _;
+use std::fmt::{Display, Write as _};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -40,6 +40,24 @@ pub struct Node {
     pub front_error: Option<String>,
     pub links: Vec<String>,
     pub modified: Option<SystemTime>,
+}
+
+impl Node {
+    /// What the page writes as `(via, property, target)`: its front matter relations (`via` is the key)
+    /// and its body links (`via` is `[[link]]`, the property `iter:ref`).
+    pub(super) fn written<'a>(
+        &'a self,
+        onto: &'a Ontology,
+    ) -> impl Iterator<Item = (&'a str, NamedNode, &'a String)> + 'a {
+        let relations =
+            (self.front.iter().flat_map(|f| &f.relations)).flat_map(|(key, targets)| {
+                let prop = onto.relation(key);
+                targets
+                    .iter()
+                    .filter_map(move |t| Some((key.as_str(), prop?.clone(), t)))
+            });
+        relations.chain(self.links.iter().map(|l| ("[[link]]", ns("ref"), l)))
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -79,8 +97,8 @@ const PREFIXES: &str = "PREFIX iter: <urn:iter:ns:>\n\
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n";
 
-fn failed(e: impl std::fmt::Display) -> IterError {
-    IterError::CommandFailed(e.to_string())
+fn failed(e: impl Display) -> IterError {
+    crate::error::failed(e.to_string())
 }
 
 /// `s` as an IRI path part: all but letters, digits and `-._~/` percent-encoded.
@@ -96,63 +114,56 @@ fn node_iri(label: &str, rel: &str) -> NamedNode {
     NamedNode::new_unchecked(format!("{NODE}{}/{}", encode(label), encode(rel)))
 }
 
+/// The files an ontology place holds, as `(path, id in the level)` sorted by id. A folder that
+/// leaves the level holds none: it would read (and, through a move, rewrite) files that are not the wiki's.
 fn files_of(dir: &Path, folder: &str) -> Vec<(PathBuf, String)> {
-    let mut out = Vec::new();
-    if folder == "." {
+    let mut out: Vec<(PathBuf, String)> = if folder == "." {
         // the root holds notes of days; any other file there is not ours
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                let stem = path.file_stem().and_then(|s| s.to_str());
-                let is_md = path.extension().is_some_and(|e| e == "md");
-                let link = entry.file_type().is_ok_and(|t| t.is_symlink());
-                if let (true, Some(stem)) = (is_md && path.is_file() && !link, stem)
-                    && parse_date(stem).is_some()
-                {
-                    out.push((path.clone(), stem.to_string()));
-                }
-            }
-        }
+        let entries = std::fs::read_dir(dir).into_iter().flatten().flatten();
+        entries
+            .filter(|e| !e.file_type().is_ok_and(|t| t.is_symlink()))
+            .map(|e| e.path())
+            .filter(|p| p.is_file() && p.extension().is_some_and(|e| e == "md"))
+            .filter_map(|p| {
+                let stem = p.file_stem()?.to_str()?.to_string();
+                parse_date(&stem)?;
+                Some((p, stem))
+            })
+            .collect()
     } else if !stays_inside(folder) {
-        // an ontology can name any folder; one that leaves the level would
-        // read (and, through a move, rewrite) files that are not the wiki's
+        Vec::new()
     } else if let Some(file) = folder.strip_suffix(".md") {
         let path = dir.join(folder);
-        if path.is_file() && !path.is_symlink() {
-            out.push((path, file.to_string()));
-        }
+        let held = path.is_file() && !path.is_symlink();
+        held.then(|| (path, file.to_string())).into_iter().collect()
     } else {
-        for path in md_files(&dir.join(folder)) {
-            if let Ok(rel) = path.strip_prefix(dir) {
-                let id: Vec<_> = rel
-                    .with_extension("")
+        md_files(&dir.join(folder))
+            .into_iter()
+            .filter_map(|path| {
+                let rel = path.strip_prefix(dir).ok()?.with_extension("");
+                let parts: Vec<_> = rel
                     .components()
-                    .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                    .map(|c| c.as_os_str().to_string_lossy())
                     .collect();
-                out.push((path, id.join("/")));
-            }
-        }
-    }
+                Some((path, parts.join("/")))
+            })
+            .collect()
+    };
     out.sort_by(|a, b| a.1.cmp(&b.1));
     out
 }
 
 fn stays_inside(folder: &str) -> bool {
-    Path::new(folder).components().all(|c| {
-        matches!(
-            c,
-            std::path::Component::Normal(_) | std::path::Component::CurDir
-        )
-    })
+    use std::path::Component::{CurDir, Normal};
+    Path::new(folder)
+        .components()
+        .all(|c| matches!(c, Normal(_) | CurDir))
 }
 
 /// Every `.md` under `at`, dotfiles skipped, links not followed (they could lead out).
 pub(super) fn md_files(at: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
-    let Ok(entries) = std::fs::read_dir(at) else {
-        return out;
-    };
-    for entry in entries.flatten() {
+    for entry in std::fs::read_dir(at).into_iter().flatten().flatten() {
         let path = entry.path();
         if entry.file_name().to_string_lossy().starts_with('.')
             || entry.file_type().is_ok_and(|t| t.is_symlink())
@@ -191,17 +202,10 @@ impl Wiki {
                 .chunks(chunk)
                 .map(|part| {
                     scope.spawn(move || {
-                        part.iter()
+                        (part.iter())
                             .map(|(li, place, path, rel)| {
                                 let level = &levels_ref[*li];
-                                read_node(
-                                    ontology_ref,
-                                    *li,
-                                    level,
-                                    place,
-                                    path.clone(),
-                                    rel.clone(),
-                                )
+                                read_node(ontology_ref, *li, level, place, path, rel)
                             })
                             .collect::<Vec<_>>()
                     })
@@ -212,14 +216,10 @@ impl Wiki {
                 .flat_map(|r| r.join().expect("a reader does not panic"))
                 .collect()
         });
-        let index = nodes
-            .iter()
-            .enumerate()
+        let index = (nodes.iter().enumerate())
             .map(|(i, n)| ((n.level, n.rel.clone()), i))
             .collect();
-        let by_iri = nodes
-            .iter()
-            .enumerate()
+        let by_iri = (nodes.iter().enumerate())
             .map(|(i, n)| (n.iri.as_str().to_string(), i))
             .collect();
         let mut wiki = Wiki {
@@ -274,42 +274,30 @@ impl Wiki {
     /// a property implied by a more specific one for the same target is left out. Sorted.
     pub fn edges_out(&self, node: usize) -> Vec<(String, usize)> {
         let subject = self.nodes[node].iri.as_ref();
-        let mut edges: Vec<(String, usize)> = Vec::new();
-        for quad in self
-            .store
+        let mut edges: Vec<(String, usize)> = (self.store)
             .quads_for_pattern(Some(subject.into()), None, None, None)
             .flatten()
-        {
-            let Term::NamedNode(object) = &quad.object else {
-                continue;
-            };
-            let (Some(&other), Some(local)) = (
-                self.by_iri.get(object.as_str()),
-                quad.predicate.as_str().strip_prefix(NS),
-            ) else {
-                continue;
-            };
-            edges.push((local.to_string(), other));
-        }
-        let implied: Vec<(String, usize)> = self
-            .ontology
-            .rules
-            .sub_property
-            .iter()
+            .filter_map(|quad| {
+                let Term::NamedNode(object) = &quad.object else {
+                    return None;
+                };
+                let local = quad.predicate.as_str().strip_prefix(NS)?;
+                Some((local.to_string(), *self.by_iri.get(object.as_str())?))
+            })
+            .collect();
+        let implied: Vec<(String, usize)> = (self.ontology.rules.sub_property.iter())
             .filter_map(|(sub, sup)| {
-                let (sub, sup) = (
+                Some((
                     sub.as_str().strip_prefix(NS)?,
                     sup.as_str().strip_prefix(NS)?,
-                );
-                Some(
-                    edges
-                        .iter()
-                        .filter(|(p, _)| p == sub)
-                        .map(|(_, o)| (sup.to_string(), *o))
-                        .collect::<Vec<_>>(),
-                )
+                ))
             })
-            .flatten()
+            .flat_map(|(sub, sup)| {
+                let targets = edges.iter().filter(move |(p, _)| p == sub);
+                targets
+                    .map(move |(_, o)| (sup.to_string(), *o))
+                    .collect::<Vec<_>>()
+            })
             .collect();
         edges.retain(|e| !implied.contains(e));
         edges.sort();
@@ -319,14 +307,12 @@ impl Wiki {
 
     /// Collects every fact, lets the rules derive the rest, and loads the store once: inserts are transactions, so thousands one by one cost seconds.
     fn fill(&mut self) -> Result<()> {
-        let mut facts: HashSet<Fact> = HashSet::new();
-        for t in self.ontology.graph.iter() {
-            facts.insert((
-                Term::from(t.subject.into_owned()),
-                t.predicate.into_owned(),
-                t.object.into_owned(),
-            ));
-        }
+        let mut facts: HashSet<Fact> = (self.ontology.graph.iter())
+            .map(|t| {
+                let subject = Term::from(t.subject.into_owned());
+                (subject, t.predicate.into_owned(), t.object.into_owned())
+            })
+            .collect();
         let mut add = |s: &NamedNode, p: &NamedNode, o: Term| {
             facts.insert((Term::from(s.clone()), p.clone(), o));
         };
@@ -342,45 +328,26 @@ impl Wiki {
         }
         let mut dangling = Vec::new();
         for (i, node) in self.nodes.iter().enumerate() {
+            let level = level_iri(&self.levels[node.level].label);
             add(&node.iri, &type_, node.class.clone().into());
             add(&node.iri, &label, lit(&node.title));
-            add(
-                &node.iri,
-                &in_,
-                level_iri(&self.levels[node.level].label).into(),
-            );
-            if let Some(front) = &node.front {
-                for (key, value) in front.scalars() {
-                    if let Some(v) = value {
-                        add(&node.iri, &ns(key), lit(v));
-                    }
-                }
-                for tag in &front.tags {
-                    add(&node.iri, &ns("tag"), lit(tag));
-                }
-                for (key, targets) in &front.relations {
-                    let Some(prop) = self.ontology.relation(key) else {
-                        continue;
-                    };
-                    for target in targets {
-                        match self.resolve(node.level, target) {
-                            Some(t) => add(&node.iri, prop, self.nodes[t].iri.clone().into()),
-                            None => dangling.push(Dangling {
-                                from: i,
-                                via: key.clone(),
-                                target: target.clone(),
-                            }),
-                        }
-                    }
+            add(&node.iri, &in_, level.into());
+            let front = node.front.as_ref();
+            for (key, value) in front.iter().flat_map(|f| f.scalars()) {
+                if let Some(v) = value {
+                    add(&node.iri, &ns(key), lit(v));
                 }
             }
-            for link in &node.links {
-                match self.resolve(node.level, link) {
-                    Some(t) => add(&node.iri, &ns("ref"), self.nodes[t].iri.clone().into()),
+            for tag in front.iter().flat_map(|f| &f.tags) {
+                add(&node.iri, &ns("tag"), lit(tag));
+            }
+            for (via, prop, target) in node.written(&self.ontology) {
+                match self.resolve(node.level, target) {
+                    Some(t) => add(&node.iri, &prop, self.nodes[t].iri.clone().into()),
                     None => dangling.push(Dangling {
                         from: i,
-                        via: "[[link]]".into(),
-                        target: link.clone(),
+                        via: via.to_string(),
+                        target: target.clone(),
                     }),
                 }
             }
@@ -400,27 +367,25 @@ impl Wiki {
         let prepared = SparqlEvaluator::new().parse_query(&text).map_err(failed)?;
         match prepared.on_store(&self.store).execute().map_err(failed)? {
             QueryResults::Solutions(solutions) => {
-                let vars: Vec<String> = solutions
-                    .variables()
-                    .iter()
+                let vars: Vec<String> = (solutions.variables().iter())
                     .map(|v| v.as_str().to_string())
                     .collect();
-                let mut rows = Vec::new();
-                for solution in solutions {
-                    let solution = solution.map_err(failed)?;
-                    rows.push(
-                        vars.iter()
+                let rows = solutions
+                    .map(|solution| {
+                        let solution = solution.map_err(failed)?;
+                        Ok(vars
+                            .iter()
                             .map(|v| solution.get(v.as_str()).map(term_text))
-                            .collect(),
-                    );
-                }
+                            .collect())
+                    })
+                    .collect::<Result<_>>()?;
                 Ok(Answer::Table(Table { vars, rows }))
             }
             QueryResults::Boolean(b) => Ok(Answer::Boolean(b)),
             QueryResults::Graph(triples) => {
                 let mut out = String::new();
                 for t in triples {
-                    let _ = write!(out, "{} .\n", t.map_err(failed)?);
+                    writeln!(out, "{} .", t.map_err(failed)?).expect("writing to a String");
                 }
                 Ok(Answer::Triples(out))
             }
@@ -446,33 +411,32 @@ pub(super) fn term_text(t: &Term) -> String {
     }
 }
 
+/// Reads one file as a node of `level`; a note (not a page) is listed, never read: it is the user's.
 fn read_node(
     ontology: &Ontology,
     li: usize,
     level: &Level,
     place: &Place,
-    path: PathBuf,
-    rel: String,
+    path: &Path,
+    rel: &str,
 ) -> Node {
-    let modified = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
-    let stem = rel.rsplit('/').next().unwrap_or(&rel).to_string();
+    let stem = rel.rsplit('/').next().unwrap_or(rel).to_string();
     let mut node = Node {
-        iri: node_iri(&level.label, &rel),
+        iri: node_iri(&level.label, rel),
         level: li,
         class: place.class.clone(),
         title: stem,
         front: None,
         front_error: None,
         links: Vec::new(),
-        modified,
-        rel,
-        path,
+        modified: std::fs::metadata(path).and_then(|m| m.modified()).ok(),
+        rel: rel.to_string(),
+        path: path.to_path_buf(),
     };
-    // notes are the user's: listed, never read
     if !ontology.pages.contains(&place.class) {
         return node;
     }
-    let Ok(content) = std::fs::read_to_string(&node.path) else {
+    let Ok(content) = std::fs::read_to_string(path) else {
         node.front_error = Some("the file cannot be read".into());
         return node;
     };
@@ -492,6 +456,7 @@ fn read_node(
 
 type Fact = (Term, NamedNode, Term);
 
+/// The rules by the term they fire on.
 struct Index<'a> {
     sub_class: HashMap<&'a NamedNode, Vec<&'a NamedNode>>,
     sub_property: HashMap<&'a NamedNode, Vec<&'a NamedNode>>,
@@ -500,6 +465,7 @@ struct Index<'a> {
     transitive: HashSet<&'a NamedNode>,
 }
 
+/// `pairs` grouped by their first term (and by their second too, with `both_ways`).
 fn by_first(
     pairs: &[(NamedNode, NamedNode)],
     both_ways: bool,
