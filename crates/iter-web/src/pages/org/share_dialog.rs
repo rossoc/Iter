@@ -14,29 +14,38 @@ use iter_core::{
     reporting::{DateRange, fmt_date, parse_day},
 };
 
+/// A closed set of words a form field can hold.
+pub trait Word: Copy + 'static {
+    const ALL: &'static [Self];
+    /// What the field is, for the refusal ("unknown {WHAT} 'x'").
+    const WHAT: &'static str;
+
+    fn as_str(self) -> &'static str;
+
+    fn parse(word: &str) -> Result<Self, String> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|w| w.as_str() == word)
+            .ok_or_else(|| format!("unknown {} '{word}'", Self::WHAT))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Modality {
     Copy,
     Push,
 }
 
-impl Modality {
-    pub fn as_str(self) -> &'static str {
+impl Word for Modality {
+    const ALL: &'static [Self] = &[Modality::Copy, Modality::Push];
+    const WHAT: &'static str = "way to share";
+
+    fn as_str(self) -> &'static str {
         match self {
             Modality::Copy => "copy",
             Modality::Push => "push",
         }
-    }
-}
-
-impl std::str::FromStr for Modality {
-    type Err = String;
-
-    fn from_str(word: &str) -> Result<Self, String> {
-        [Modality::Copy, Modality::Push]
-            .into_iter()
-            .find(|m| m.as_str() == word)
-            .ok_or_else(|| format!("unknown way to share '{word}'"))
     }
 }
 
@@ -47,15 +56,6 @@ pub enum ShareFormat {
 }
 
 impl ShareFormat {
-    pub const ALL: [ShareFormat; 2] = [ShareFormat::Worklog, ShareFormat::Status];
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            ShareFormat::Worklog => "worklog",
-            ShareFormat::Status => "status",
-        }
-    }
-
     pub fn label(self) -> &'static str {
         match self {
             ShareFormat::Worklog => "Worklog",
@@ -64,14 +64,15 @@ impl ShareFormat {
     }
 }
 
-impl std::str::FromStr for ShareFormat {
-    type Err = String;
+impl Word for ShareFormat {
+    const ALL: &'static [Self] = &[ShareFormat::Worklog, ShareFormat::Status];
+    const WHAT: &'static str = "format";
 
-    fn from_str(word: &str) -> Result<Self, String> {
-        Self::ALL
-            .into_iter()
-            .find(|f| f.as_str() == word)
-            .ok_or_else(|| format!("unknown format '{word}'"))
+    fn as_str(self) -> &'static str {
+        match self {
+            ShareFormat::Worklog => "worklog",
+            ShareFormat::Status => "status",
+        }
     }
 }
 
@@ -213,7 +214,10 @@ pub struct Preview {
 /// Without script both ways show with their button; `org.js` shows the chosen one only and copies in the page.
 #[component]
 pub async fn share_modal(dialog: &ShareDialog) -> Result<impl View> {
-    let formats = ShareFormat::ALL.map(|f| (f.as_str().to_string(), f.label().to_string()));
+    let formats = ShareFormat::ALL
+        .iter()
+        .map(|f| (f.as_str().to_string(), f.label().to_string()))
+        .collect::<Vec<_>>();
     Ok(view! {
         modal(id: "share-title", title: "Share this period", close: dialog.close.as_str(),
             <form class="form sharing" method="post" action=(dialog.action.as_str())
@@ -297,8 +301,30 @@ pub async fn preview_modal(
     })
 }
 
+impl Outcome {
+    /// The lines of a push, each with whether it failed; None for the other outcomes.
+    fn push_lines(&self) -> Option<Vec<(bool, String)>> {
+        match self {
+            Outcome::Recorded(lines) => Some(
+                lines
+                    .iter()
+                    .map(|l| (l.starts_with("FAILED"), l.clone()))
+                    .collect(),
+            ),
+            Outcome::Done(items) => Some(
+                items
+                    .iter()
+                    .map(|i| (i.error.is_some(), i.line()))
+                    .collect(),
+            ),
+            _ => None,
+        }
+    }
+}
+
 #[component]
 pub async fn share_outcome(outcome: &Outcome) -> Result<impl View> {
+    let pushed = outcome.push_lines();
     Ok(view! {
         <section class="share-result" aria-label="Share result">
             if let Outcome::Error(message) = outcome {
@@ -306,22 +332,13 @@ pub async fn share_outcome(outcome: &Outcome) -> Result<impl View> {
             } else if let Outcome::Copied(text) = outcome {
                 notice(id: "share-result", focus: true, "Copy this text:")
                 <textarea class="control share-text" readonly="" rows="8" aria-label="Text to copy">(text.as_str())</textarea>
-            } else if let Outcome::Recorded(lines) = outcome {
-                notice(error: lines.iter().any(|l| l.starts_with("FAILED")), id: "share-result", focus: true,
-                    (if lines.iter().any(|l| l.starts_with("FAILED")) { "Pushed, but some steps failed." } else { "Pushed." })
+            } else if let Some(lines) = &pushed {
+                notice(error: lines.iter().any(|l| l.0), id: "share-result", focus: true,
+                    (if lines.iter().any(|l| l.0) { "Pushed, but some steps failed." } else { "Pushed." })
                 )
                 <ul class="share-items">
-                    for line in lines.iter() {
-                        <li class=(if line.starts_with("FAILED") { "bad" } else { "" })>(line.as_str())</li>
-                    }
-                </ul>
-            } else if let Outcome::Done(items) = outcome {
-                notice(error: items.iter().any(|i| i.error.is_some()), id: "share-result", focus: true,
-                    (if items.iter().any(|i| i.error.is_some()) { "Pushed, but some steps failed." } else { "Pushed." })
-                )
-                <ul class="share-items">
-                    for item in items.iter() {
-                        <li class=(if item.error.is_some() { "bad" } else { "" })>(item.line())</li>
+                    for (failed, line) in lines.iter() {
+                        <li class=(if *failed { "bad" } else { "" })>(line.as_str())</li>
                     }
                 </ul>
             }
@@ -358,16 +375,16 @@ mod tests {
 
     #[test]
     fn the_words_of_the_form_round_trip() {
-        for m in [Modality::Copy, Modality::Push] {
-            assert_eq!(m.as_str().parse(), Ok(m));
+        for m in Modality::ALL {
+            assert_eq!(Modality::parse(m.as_str()), Ok(*m));
         }
         for f in ShareFormat::ALL {
-            assert_eq!(f.as_str().parse(), Ok(f));
+            assert_eq!(ShareFormat::parse(f.as_str()), Ok(*f));
         }
         assert_eq!(
-            "mail".parse::<Modality>(),
+            Modality::parse("mail"),
             Err("unknown way to share 'mail'".into())
         );
-        assert_eq!("".parse::<ShareFormat>(), Err("unknown format ''".into()));
+        assert_eq!(ShareFormat::parse(""), Err("unknown format ''".into()));
     }
 }

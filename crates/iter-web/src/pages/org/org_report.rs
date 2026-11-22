@@ -84,22 +84,14 @@ pub(crate) fn report_link(base: &str, from: Option<&str>, to: Option<&str>) -> S
     page_url(base, &[("tab", Some("report")), ("from", from), ("to", to)])
 }
 
-fn report_url(base: &str, range: &DateRange) -> String {
+/// The report of `range`; "All time" has an empty `from`.
+pub(crate) fn report_url(base: &str, range: &DateRange) -> String {
     let from = range.from.map(fmt_date).unwrap_or_default();
     report_link(base, Some(&from), Some(&fmt_date(range.to)))
 }
 
 fn share_url(base: &str, range: &DateRange) -> String {
-    let from = range.from.map(fmt_date).unwrap_or_default();
-    page_url(
-        base,
-        &[
-            ("tab", Some("report")),
-            ("from", Some(&from)),
-            ("to", Some(&fmt_date(range.to))),
-            ("share", Some("1")),
-        ],
-    )
+    format!("{}&share=1", report_url(base, range))
 }
 
 pub fn tab_url(base: &str, today: NaiveDate) -> String {
@@ -114,15 +106,19 @@ fn plural(n: usize, one: &str) -> String {
     }
 }
 
-pub fn status_list(report: &Report) -> String {
-    let mut out = String::new();
-    for p in &report.projects {
-        out.push_str(&format!("{}:\n", p.name));
-        for t in &p.tasks {
-            out.push_str(&format!("- {}: {}\n", t.name, t.status_label));
-        }
-    }
-    out.trim_end().to_string()
+fn status_list(report: &Report) -> String {
+    let lines: Vec<String> = report
+        .projects
+        .iter()
+        .flat_map(|p| {
+            let tasks = p
+                .tasks
+                .iter()
+                .map(|t| format!("- {}: {}", t.name, t.status_label));
+            std::iter::once(format!("{}:", p.name)).chain(tasks)
+        })
+        .collect();
+    lines.join("\n")
 }
 
 /// "All time" has no neighbours; nothing comes after a period that reaches today.
@@ -145,6 +141,23 @@ fn neighbours(range: &DateRange, today: NaiveDate) -> (Option<DateRange>, Option
     (prev, next)
 }
 
+/// A button to a neighbouring period; disabled when there is none.
+#[component]
+async fn step(
+    to: Option<String>,
+    label: &'static str,
+    rel: &'static str,
+    glyph: &'static str,
+) -> Result<impl View> {
+    Ok(view! {
+        if let Some(href) = &to {
+            <a class="button" href=(href.as_str()) aria-label=(label) rel=(rel)>(icon(glyph))</a>
+        } else {
+            <span class="button" aria-disabled="true" aria-label=(label)>(icon(glyph))</span>
+        }
+    })
+}
+
 #[component]
 async fn period_picker(base: &str, report: &Report, today: NaiveDate) -> Result<impl View> {
     let presets = [
@@ -165,26 +178,18 @@ async fn period_picker(base: &str, report: &Report, today: NaiveDate) -> Result<
     Ok(view! {
         <div class="period">
             <nav class="day-nav" aria-label="Change period">
-                if let Some(range) = &prev {
-                    <a class="button" href=(report_url(base, range)) aria-label="Previous period" rel="prev">(icon(CHEVRON_LEFT))</a>
-                } else {
-                    <span class="button" aria-disabled="true" aria-label="Previous period">(icon(CHEVRON_LEFT))</span>
-                }
-                if let Some(range) = &next {
-                    <a class="button" href=(report_url(base, range)) aria-label="Next period" rel="next">(icon(CHEVRON_RIGHT))</a>
-                } else {
-                    <span class="button" aria-disabled="true" aria-label="Next period">(icon(CHEVRON_RIGHT))</span>
-                }
+                step(to: prev.map(|r| report_url(base, &r)), label: "Previous period", rel: "prev", glyph: CHEVRON_LEFT)
+                step(to: next.map(|r| report_url(base, &r)), label: "Next period", rel: "next", glyph: CHEVRON_RIGHT)
             </nav>
             <nav class="presets" aria-label="Period">
                 for (label, range) in presets.iter() {
                     <a href=(report_url(base, range)) if *range == report.range { aria-current="true" }>(label.to_string())</a>
                 }
             </nav>
-            <form class="range" method="get" action=(base.to_string())>
+            <form class="range" method="get" action=(base)>
                 <input type="hidden" name="tab" value="report">
-                <label>"From" <input type="date" class="control" name="from" value=(from.clone())></label>
-                <label>"To" <input type="date" class="control" name="to" value=(to.clone())></label>
+                <label>"From" <input type="date" class="control" name="from" value=(from.as_str())></label>
+                <label>"To" <input type="date" class="control" name="to" value=(to.as_str())></label>
                 // Dates apply as they change (`org.js`); this button makes Enter submit, also without JavaScript.
                 <button type="submit" class="button small apply">"Apply"</button>
             </form>
@@ -293,7 +298,7 @@ pub async fn report_view(
 pub fn share_text(report: &Report, format: ShareFormat) -> String {
     match format {
         ShareFormat::Worklog => worklog_text(report.projects.iter().flat_map(|p| &p.tasks)),
-        ShareFormat::Status => crate::pages::org::org_report::status_list(report),
+        ShareFormat::Status => status_list(report),
     }
 }
 
