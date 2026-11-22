@@ -2,8 +2,7 @@
 
 use crate::{
     pages::board::{
-        agenda_cards::{Cards, Fold, NOT_SCHEDULED, side},
-        agenda_pick::{day_url, links},
+        agenda_cards::{Cards, Fold, NOT_SCHEDULED, day_url, links, side},
         board_cards::{CLOCK_FMT, CardCtx},
         board_page::{BoardPage, board_screen, load_board},
         pick::{Picked, moved_note, pick_fields},
@@ -56,21 +55,17 @@ fn now_line(now: NaiveDateTime, day: NaiveDate, h: usize) -> Option<Now> {
 }
 
 fn today_url(id: i64, today: NaiveDate, picked: Option<i64>, folded: bool) -> String {
-    with_side(today_link(id, today, picked), folded)
-}
-
-fn today_link(id: i64, today: NaiveDate, picked: Option<i64>) -> String {
-    match picked {
+    let link = match picked {
         Some(_) => day_url(id, today, picked),
         None => format!("{}#now", board_day_url(id, today)),
-    }
+    };
+    with_side(link, folded)
 }
 
 fn moved_to(task: &Picked) -> String {
-    match task.state() {
-        state if state.is_empty() => "Unscheduled".to_string(),
-        state => state,
-    }
+    Some(task.state())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "Unscheduled".into())
 }
 
 struct Model {

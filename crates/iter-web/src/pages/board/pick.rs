@@ -34,11 +34,10 @@ pub fn pick_fields(
     target: &str,
     back: Option<(&'static str, &str)>,
 ) -> Vec<(&'static str, String)> {
-    let mut fields = vec![("task_id", task.to_string()), ("target", target.into())];
-    if let Some((name, value)) = back {
-        fields.push((name, value.into()));
-    }
-    fields
+    [("task_id", task.to_string()), ("target", target.into())]
+        .into_iter()
+        .chain(back.map(|(name, value)| (name, value.into())))
+        .collect()
 }
 
 #[derive(Clone)]
@@ -50,10 +49,10 @@ impl PickLinks {
     }
 
     pub fn pick(&self, task: i64) -> String {
-        let mut url = page_url(&self.0, &[("pick", Some(&task.to_string()))]);
-        url.push('#');
-        url.push_str(PICK_ANCHOR);
-        url
+        format!(
+            "{}#{PICK_ANCHOR}",
+            page_url(&self.0, &[("pick", Some(&task.to_string()))])
+        )
     }
 
     pub fn cancel(&self, task: i64) -> String {

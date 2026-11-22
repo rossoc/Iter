@@ -23,18 +23,13 @@ impl Colors {
 
     /// Custom properties for the cards' edges; a color that is not `#rrggbb` is left out.
     pub fn style(&self) -> String {
-        let mut style = String::new();
-        for (name, color) in [("urgent", &self.urgent), ("important", &self.important)] {
-            // the database accepts any text as a color, and it ends up in a
-            // `style` attribute
-            if is_hex_color(color) {
-                if !style.is_empty() {
-                    style.push(';');
-                }
-                style.push_str(&format!("--{name}:{color}"));
-            }
-        }
-        style
+        // the database accepts any text as a color, and it ends up in a `style` attribute
+        [("urgent", &self.urgent), ("important", &self.important)]
+            .into_iter()
+            .filter(|(_, color)| is_hex_color(color))
+            .map(|(name, color)| format!("--{name}:{color}"))
+            .collect::<Vec<_>>()
+            .join(";")
     }
 }
 

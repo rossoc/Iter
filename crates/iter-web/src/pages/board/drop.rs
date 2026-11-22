@@ -30,10 +30,7 @@ pub fn drop_on(
 }
 
 pub fn back_or(done: Json<bool>, back: Option<String>) -> Result<Json<bool>> {
-    match back {
-        Some(url) => Err(see_other(url).into()),
-        None => Ok(done),
-    }
+    back.map_or(Ok(done), |url| Err(see_other(url).into()))
 }
 
 #[cfg(test)]

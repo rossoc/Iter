@@ -5,7 +5,6 @@ use crate::prelude::*;
 pub mod agenda;
 pub mod agenda_cards;
 pub mod agenda_drop;
-pub mod agenda_pick;
 pub mod board_cards;
 pub mod board_edit;
 pub mod board_info;

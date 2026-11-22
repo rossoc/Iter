@@ -2,7 +2,7 @@
 
 use crate::{
     pages::board::{
-        agenda_pick::links,
+        agenda_cards::links,
         drop::{Drop, back_or, drop_on},
     },
     prelude::*,
