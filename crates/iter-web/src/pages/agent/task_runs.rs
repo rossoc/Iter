@@ -42,6 +42,20 @@ pub(crate) async fn act(
     })
 }
 
+/// What can be done to a run now: start or drop a queued one, stop a running one.
+#[component]
+pub(crate) async fn run_acts(task_id: i64, run: &RunRecord) -> Result<impl View> {
+    let shown = run.shown_status();
+    Ok(view! {
+        if shown == "queued" {
+            act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
+            act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
+        } else if shown == "running" {
+            act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop the agent", svg: STOP)
+        }
+    })
+}
+
 #[component]
 pub(crate) async fn state_pill(run: &RunRecord) -> Result<impl View> {
     let shown = run.shown_status();
@@ -103,22 +117,32 @@ fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Instructio
     ))
 }
 
+/// The task's app, name, row and project; a task without a place for its folder has no runs to act on.
 fn world(id: i64) -> Result<(App, String, Task, Project)> {
     let db = fresh_db()?;
     let (task, project) = crate::load::task_with_project(&db, id)?;
-    // a task without a place for its folder has no runs to act on
     taskdir::of(&db, &project, &task)?;
     let name = task.label(&project).to_string();
     let app = App::over(db, chrono::Local::now().naive_local());
     Ok((app, name, task, project))
 }
 
+/// The instruction and spec the form asks for, among the task's layers.
+fn checked(
+    app: &App,
+    project: &Project,
+    task: &Task,
+    form: &RunForm,
+) -> Result<(Instruction, Spec)> {
+    let layers = instruction::layers_for_task(&app.db, project, task)?;
+    Ok(parse_run(form, &layers).map_err(bad_request)?)
+}
+
 #[route(POST "/task/{id}/runs")]
 pub(super) async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Response> {
     let id = path_id(cx)?;
     let (app, name, task, project) = world(id)?;
-    let layers = instruction::layers_for_task(&app.db, &project, &task)?;
-    let (found, spec) = parse_run(&form, &layers).map_err(bad_request)?;
+    let (found, spec) = checked(&app, &project, &task, &form)?;
     let n = solve::create(
         &app,
         &name,
@@ -132,8 +156,7 @@ pub(super) async fn create_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Res
     Err(see_other(agent_url(id, n)).into())
 }
 
-/// `GET /task/{id}/prompt?instruction=NAME`: the prompt that instruction makes
-/// for the task, and the model it prefers (if the harness offers it), as JSON.
+/// `GET /task/{id}/prompt?instruction=NAME`: the prompt that instruction makes for the task, and the model it prefers (if the harness offers it), as JSON.
 #[route(GET "/task/{id}/prompt")]
 pub(super) async fn prompt_of(cx: &Cx) -> Result<Response> {
     let id = path_id(cx)?;
@@ -172,8 +195,7 @@ pub(super) async fn edit_run(cx: &Cx, Form(form): Form<RunForm>) -> Result<Respo
     let id = path_id(cx)?;
     let n = *path_param::<N>(cx)?;
     let (app, name, task, project) = world(id)?;
-    let layers = instruction::layers_for_task(&app.db, &project, &task)?;
-    let (found, spec) = parse_run(&form, &layers).map_err(bad_request)?;
+    let (found, spec) = checked(&app, &project, &task, &form)?;
     solve::amend(&app, &name, n, &found.name, &spec, &form.prompt).map_err(refused)?;
     follow_up(&app, &name, n, form.action)?;
     Err(see_other(agent_url(id, n)).into())

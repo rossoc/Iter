@@ -4,7 +4,7 @@ use crate::{
     pages::agent::{
         instructions::{Use, usage},
         task_compose::{Compose, compose_form},
-        task_runs::{act, label_of, state_pill},
+        task_runs::{label_of, run_acts, state_pill},
     },
     parts::all::*,
     prelude::*,
@@ -126,16 +126,8 @@ pub(super) async fn detail_page(cx: &Cx) -> Result<impl View> {
 
 #[component]
 async fn actions(task_id: i64, run: &RunRecord) -> Result<impl View> {
-    let shown = run.shown_status();
     Ok(view! {
-        <div class="run-actions">
-            if shown == "queued" {
-                act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
-                act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
-            } else if shown == "running" {
-                act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop the agent", svg: STOP)
-            }
-        </div>
+        <div class="run-actions">run_acts(task_id: task_id, run: run)</div>
     })
 }
 

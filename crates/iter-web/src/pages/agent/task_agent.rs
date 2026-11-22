@@ -3,7 +3,7 @@
 use crate::{
     pages::agent::{
         task_compose::Compose,
-        task_runs::{act, label_of, state_pill},
+        task_runs::{label_of, run_acts, state_pill},
     },
     prelude::*,
 };
@@ -12,12 +12,13 @@ use iter_core::{
         instruction::{self, Layers},
         plan::{self, Item, Plan, State},
         run::{Harness, RunRecord},
+        task_prompt::prompt_for,
         taskdir::{self, TaskDir},
     },
     app::App,
     config::config,
     db::Db,
-    error::{IterError, Result as Loaded},
+    error::{AgentError, IterError, Result as Loaded},
     models::{Project, Task},
 };
 use serde::Deserialize;
@@ -61,22 +62,20 @@ fn docs(dir: &std::path::Path) -> Vec<Doc> {
         .collect()
 }
 
+#[derive(Default)]
 pub struct Files {
     pub notes: Vec<Doc>,
     pub sketches: Vec<Doc>,
 }
 
 pub fn files(db: &Db, project: &Project, task: &Task) -> Files {
-    match taskdir::of(db, project, task) {
-        Ok(dir) => Files {
+    taskdir::of(db, project, task).map_or_else(
+        |_| Files::default(),
+        |dir| Files {
             notes: docs(&dir.notes_dir()),
             sketches: docs(&dir.sketches_dir()),
         },
-        Err(_) => Files {
-            notes: Vec::new(),
-            sketches: Vec::new(),
-        },
-    }
+    )
 }
 
 #[derive(Default)]
@@ -142,6 +141,11 @@ async fn step_pill(state: State) -> Result<impl View> {
     Ok(view! {
         <span class=(pill_class(state))>(icon(glyph(state))) (state.label())</span>
     })
+}
+
+/// How many agents the task has had, for the Agent tab's count.
+pub fn run_count(db: &Db, project: &Project, task: &Task) -> usize {
+    taskdir::of(db, project, task).map_or(0, |dir| dir.runs().len())
 }
 
 pub fn plan_of(db: &Db, project: &Project, task: &Task) -> Plan {
@@ -288,25 +292,20 @@ async fn rail_item(
     current: Option<&str>,
     bar: bool,
 ) -> Result<impl View> {
+    let label = Child::new(view! {
+        <span class="name">(item.text.as_str())</span>
+        <span class="state">(item.state.label())</span>
+        if bar {
+            <span class="share" aria-hidden="true"><i style=(share(item.state))></i></span>
+        }
+    });
     Ok(view! {
         <li class=(item.state.label())>
             if item.id.is_empty() {
                 // written by hand and not numbered yet: it cannot be opened
-                <span class="loose">
-                    <span class="name">(item.text.as_str())</span>
-                    <span class="state">(item.state.label())</span>
-                    if bar {
-                        <span class="share" aria-hidden="true"><i style=(share(item.state))></i></span>
-                    }
-                </span>
+                <span class="loose">(label)</span>
             } else {
-                <a href=(task_step_url(task_id, &item.id)) if current == Some(item.id.as_str()) { aria-current="step" }>
-                    <span class="name">(item.text.as_str())</span>
-                    <span class="state">(item.state.label())</span>
-                    if bar {
-                        <span class="share" aria-hidden="true"><i style=(share(item.state))></i></span>
-                    }
-                </a>
+                <a href=(task_step_url(task_id, &item.id)) if current == Some(item.id.as_str()) { aria-current="step" }>(label)</a>
             }
         </li>
     })
@@ -438,6 +437,48 @@ fn offered(layers: &Layers, has_plan: bool) -> Vec<(String, String)> {
         .collect()
 }
 
+/// The form of a new agent: the instruction asked for (else `develop` or `plan`, whatever the folder offers first), its prompt made for the task.
+fn compose_new(app: &App, name: &str, open: &Open, layers: &Layers, has_plan: bool) -> Compose {
+    let (mut model, effort) = defaults();
+    let chosen = open
+        .instruction
+        .unwrap_or(if has_plan { "develop" } else { "plan" });
+    let blank = |model, error| Compose {
+        instruction: chosen.to_string(),
+        offered: Vec::new(),
+        run: None,
+        model,
+        effort: effort.clone(),
+        prompt: String::new(),
+        error,
+    };
+    let inst = instruction::find(chosen, layers)
+        .or_else(|| instruction::find("plan", layers))
+        .or_else(|| instruction::list(layers).into_iter().next());
+    let Some(inst) = inst else {
+        // nothing is built in: an empty config folder offers nothing to run
+        let missing = AgentError::InstructionNotFound {
+            name: chosen.to_string(),
+            path: instruction::file(&instruction::global().unwrap_or_default(), chosen),
+        };
+        return blank(model, Some(missing.to_string()));
+    };
+    let models = Harness::Claude.models(&config().agent.models);
+    model = instruction::preferred_model(&inst.front, &models).unwrap_or(model);
+    let made = prompt_for(app, Some(name), &inst.name, None, true, None, true);
+    let (prompt, error) = match made {
+        Ok(text) => (text, None),
+        Err(e) => (String::new(), Some(e.to_string())),
+    };
+    Compose {
+        instruction: inst.name,
+        offered: offered(layers, has_plan),
+        prompt,
+        error,
+        ..blank(model, None)
+    }
+}
+
 impl Roster {
     pub fn load(
         app: &App,
@@ -447,89 +488,39 @@ impl Roster {
         layers: &Layers,
         has_plan: bool,
     ) -> Roster {
-        let mut roster = Roster::default();
         let Some(dir) = dir else {
-            return roster;
+            return Roster::default();
         };
-        roster.runs = dir.runs().into_iter().rev().take(RUNS).collect();
-        let asked = open.run.and_then(|r| r.parse::<u32>().ok());
-        let found = asked.and_then(|n| roster.runs.iter().find(|r| r.n == n).cloned());
-        let (mut model, effort) = defaults();
+        let runs: Vec<RunRecord> = dir.runs().into_iter().rev().take(RUNS).collect();
         if open.new == Some("agent") {
-            let chosen = open
-                .instruction
-                .unwrap_or(if has_plan { "develop" } else { "plan" });
-            let inst = instruction::find(chosen, layers)
-                .or_else(|| instruction::find("plan", layers))
-                .or_else(|| instruction::list(layers).into_iter().next());
-            let Some(inst) = inst else {
-                // nothing is built in: an empty config folder offers nothing to run
-                roster.compose = Some(Compose {
-                    instruction: chosen.to_string(),
-                    offered: Vec::new(),
-                    run: None,
-                    model,
-                    effort,
-                    prompt: String::new(),
-                    error: Some(
-                        iter_core::error::AgentError::InstructionNotFound {
-                            name: chosen.to_string(),
-                            path: instruction::file(
-                                &instruction::global().unwrap_or_default(),
-                                chosen,
-                            ),
-                        }
-                        .to_string(),
-                    ),
-                });
-                return roster;
+            let compose = compose_new(app, name, open, layers, has_plan);
+            return Roster {
+                runs,
+                compose: Some(compose),
+                current: None,
             };
-            let models = Harness::Claude.models(&config().agent.models);
-            if let Some(m) = instruction::preferred_model(&inst.front, &models) {
-                model = m;
-            }
-            let (prompt, error) = match iter_core::agent::task_prompt::prompt_for(
-                app,
-                Some(name),
-                &inst.name,
-                None,
-                true,
-                None,
-                true,
-            ) {
-                Ok(text) => (text, None),
-                Err(e) => (String::new(), Some(e.to_string())),
-            };
-            roster.compose = Some(Compose {
-                instruction: inst.name.clone(),
-                offered: offered(layers, has_plan),
-                run: None,
-                model,
-                effort,
-                prompt,
-                error,
-            });
-        } else if let Some(run) = found {
-            roster.current = Some(run.n);
-            if run.is_queued() {
-                roster.compose = Some(Compose {
-                    instruction: run.instruction.clone(),
-                    offered: offered(layers, has_plan),
-                    run: Some(run.n),
-                    model: run.model.clone(),
-                    effort: run.effort.clone(),
-                    prompt: std::fs::read_to_string(dir.run_prompt_path(run.n)).unwrap_or_default(),
-                    error: None,
-                });
-            }
         }
-        roster
+        let asked = open.run.and_then(|r| r.parse::<u32>().ok());
+        let found = runs.iter().find(|r| Some(r.n) == asked);
+        let compose = found.filter(|r| r.is_queued()).map(|run| Compose {
+            instruction: run.instruction.clone(),
+            offered: offered(layers, has_plan),
+            run: Some(run.n),
+            model: run.model.clone(),
+            effort: run.effort.clone(),
+            prompt: std::fs::read_to_string(dir.run_prompt_path(run.n)).unwrap_or_default(),
+            error: None,
+        });
+        Roster {
+            current: found.map(|r| r.n),
+            compose,
+            runs,
+        }
     }
 }
 
 #[component]
 async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl View> {
-    let shown = run.shown_status();
     Ok(view! {
         table_row(class: if current { "current" } else { "" },
             cell(
@@ -543,14 +534,7 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
                 </span>
             )
             cell(state_pill(run: run))
-            cell(class: "acts",
-                if shown == "queued" {
-                    act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
-                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
-                } else if shown == "running" {
-                    act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop", svg: STOP)
-                }
-            )
+            cell(class: "acts", run_acts(task_id: task_id, run: run))
         )
     })
 }

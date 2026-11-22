@@ -11,10 +11,7 @@ enum Part {
 
 #[component]
 async fn edit_form(scope: &Scope, i: &Instruction) -> Result<impl View> {
-    let project = scope
-        .project_id()
-        .map(|p| p.to_string())
-        .unwrap_or_default();
+    let project = scope.project_field();
     let own = i.source == scope.own();
     let close = scope.url(&i.name);
     let action = format!("/instruction/{}", i.name);
