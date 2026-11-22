@@ -54,11 +54,7 @@ impl TaskDir {
     }
 
     pub fn read_plan(&self) -> AgentResult<Option<String>> {
-        match std::fs::read_to_string(self.plan_path()) {
-            Ok(text) => Ok(Some(text)),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(e.into()),
-        }
+        Ok(read_optional(&self.plan_path())?)
     }
 
     /// Replaces the plan atomically: a reader never sees half of it.
@@ -105,6 +101,15 @@ impl TaskDir {
             .collect();
         files.sort_by(|a, b| a.name.cmp(&b.name));
         files
+    }
+}
+
+/// The text of `path`; none when there is no such file.
+pub(super) fn read_optional(path: &Path) -> std::io::Result<Option<String>> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => Ok(Some(text)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e),
     }
 }
 

@@ -1,7 +1,7 @@
 //! A run: one headless agent working on a task in its worktree, kept as `runs/<n>.yaml`, `.prompt.md` and `.log` in the task's folder.
 
 use crate::agent::taskdir::TaskDir;
-use crate::error::AgentResult;
+use crate::error::{AgentError, AgentResult};
 use crate::process::{Runner, SYSTEM};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -432,14 +432,17 @@ impl TaskDir {
         }
     }
 
+    /// Run `n`, or [`AgentError::RunNotFound`].
+    pub fn run(&self, n: u32) -> AgentResult<RunRecord> {
+        self.read_run(n)?.ok_or(AgentError::RunNotFound(n))
+    }
+
     pub fn read_run(&self, n: u32) -> AgentResult<Option<RunRecord>> {
-        match std::fs::read_to_string(self.run_path(n)) {
-            Ok(text) => Ok(serde_yaml::from_str(&text)
-                .map(Some)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(e.into()),
-        }
+        let Some(text) = super::taskdir::read_optional(&self.run_path(n))? else {
+            return Ok(None);
+        };
+        let invalid = |e| std::io::Error::new(std::io::ErrorKind::InvalidData, e);
+        Ok(Some(serde_yaml::from_str(&text).map_err(invalid)?))
     }
 
     pub fn write_run(&self, run: &RunRecord) -> AgentResult<()> {
