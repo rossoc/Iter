@@ -1,11 +1,8 @@
 //! The footer of every page: wordmark and a second menu of organizations with
 //! their projects, boards, loose projects and settings. Markup and CSS only; data
-//! comes from `web/footer.rs`.
+//! comes from `pages/site/footer.rs`.
 
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 pub struct FooterLink {
     pub name: String,

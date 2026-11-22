@@ -1,11 +1,6 @@
 //! Daily notes: the Notes tab list (by month, latest day first) and links between days.
 
-use super::empty_line::empty_line;
-use super::table::{AddRow, cell, data_table, row, section_row};
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 /// One row of the list; `title` only when the note has its own.
 pub struct NoteItem<'a> {
@@ -40,7 +35,7 @@ pub async fn notes_tab(
                 for month in months.iter() {
                     section_row(label: month.label.as_str(), span: 2)
                     for n in month.items.iter() {
-                        row(
+                        table_row(
                             cell(class: "note-day",
                                 <a class="cover" href=(n.href.as_str())>
                                     <time datetime=(n.iso.as_str())>(n.day.as_str())</time>

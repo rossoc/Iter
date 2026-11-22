@@ -1,11 +1,7 @@
 //! A table of work sessions (when, how long, note), shared by the Organization report and the task page.
 
-use super::table::{AddRow, cell, data_table, row};
+use crate::prelude::*;
 use std::borrow::Cow;
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
 
 /// A point in time as shown, plus its machine form for `<time>` if known.
 pub struct Moment<'a> {
@@ -13,7 +9,7 @@ pub struct Moment<'a> {
     pub at: Option<String>,
 }
 
-/// One row, ready to show (mapping in `web/session_lines.rs`).
+/// One row, ready to show (mapping in `parts/session_lines.rs`).
 pub struct SessionLine<'a> {
     pub date: Option<Cow<'a, str>>,
     pub start: Moment<'a>,
@@ -25,7 +21,7 @@ pub struct SessionLine<'a> {
 #[component]
 async fn session_row(l: &SessionLine<'_>, dated: bool, show_end: bool) -> Result<impl View> {
     Ok(view! {
-        row(
+        table_row(
             if dated {
                 cell(class: "mono", (l.date.as_deref().unwrap_or_default()))
             }

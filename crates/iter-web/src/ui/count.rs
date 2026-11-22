@@ -1,9 +1,6 @@
 //! The count badge of a heading; a screen reader hears "(3 sessions)".
 
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 /// Screen-reader text: "1 task", "3 tasks".
 fn counted(n: usize, noun: &str) -> String {

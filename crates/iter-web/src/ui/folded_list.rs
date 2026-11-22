@@ -1,10 +1,6 @@
 //! A titled list that folds (a `<details>`); not a drop zone.
 
-use super::count::count_badge;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// `open` unfolds it (when what the page is about is inside).
 #[component]

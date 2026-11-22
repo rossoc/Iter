@@ -1,0 +1,96 @@
+//! Writing a note into a task's folder by hand: the pop-up over the Notes tab (`?tab=notes&new=note`) and its route.
+
+use crate::prelude::*;
+use iter_core::agent::taskdir;
+use serde::Deserialize;
+use std::{io::Write, path::Path};
+
+#[component]
+pub async fn note_modal(task_id: i64) -> Result<impl View> {
+    let task = task_url(task_id);
+    Ok(view! {
+        form_modal(id: "note-title", title: "New note", close: notes_tab_url(&task), action: format!("{task}/notes"), submit: "Add note",
+            field(name: "name", label: "Name", value: "", required: true, autofocus: true, identifier: true)
+            textarea(name: "text", label: "Note", value: "")
+        )
+    })
+}
+
+#[derive(Deserialize)]
+struct NoteForm {
+    name: String,
+    #[serde(default)]
+    text: String,
+}
+
+fn stem(name: &str) -> std::result::Result<String, String> {
+    iter_core::notes::stem(name).ok_or_else(|| "a note needs a name".into())
+}
+
+fn write(dir: &Path, form: &NoteForm) -> std::result::Result<(), String> {
+    let stem = stem(&form.name)?;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let text = crate::forms::text(&form.text);
+    let body = match text.trim().is_empty() {
+        true => format!("# {}\n", form.name.trim()),
+        false => text,
+    };
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(dir.join(format!("{stem}.md")))
+        .map_err(|e| match e.kind() {
+            std::io::ErrorKind::AlreadyExists => format!("a note called '{stem}' exists already"),
+            _ => e.to_string(),
+        })?;
+    file.write_all(body.as_bytes()).map_err(|e| e.to_string())
+}
+
+#[route(POST "/task/{id}/notes")]
+pub(super) async fn add_note(cx: &Cx, Form(form): Form<NoteForm>) -> Result<Response> {
+    let id = path_id(cx)?;
+    let db = fresh_db()?;
+    let (task, project) = crate::load::task_with_project(&db, id)?;
+    let dir = taskdir::of(&db, &project, &task)?;
+    write(&dir.notes_dir(), &form).map_err(bad_request)?;
+    Err(see_other(notes_tab_url(&task_url(id))).into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_name_makes_a_safe_file_stem() {
+        assert_eq!(stem("  Ideas for the API! ").unwrap(), "ideas-for-the-api");
+        assert_eq!(stem("../../etc/passwd").unwrap(), "etc-passwd");
+        assert_eq!(stem("a/b\\c").unwrap(), "a-b-c");
+        assert!(stem("   ").is_err());
+        assert!(stem("../..").is_err());
+    }
+
+    #[test]
+    fn a_note_is_written_once() {
+        let dir = iter_core::fixtures::scratch("note");
+        let form = |name: &str, text: &str| NoteForm {
+            name: name.into(),
+            text: text.into(),
+        };
+        write(&dir, &form("Idea", "some\r\ntext")).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("idea.md")).unwrap(),
+            "some\ntext"
+        );
+        assert!(
+            write(&dir, &form("idea", "again"))
+                .unwrap_err()
+                .contains("exists already")
+        );
+        write(&dir, &form("Empty one", "")).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("empty-one.md")).unwrap(),
+            "# Empty one\n"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

@@ -1,14 +1,7 @@
 //! One Eisenhower quadrant: a section with number, name, count and rule, holding
 //! a drop zone. Text carries the meaning, so color is never the only cue.
 
-use super::count::count_badge;
-use super::drop_zone::drop_zone;
-use super::empty_line::empty_line;
-use super::task_card::Edge;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// The element id of the quadrant a task is dropped on by `target`.
 fn dom_id(target: &str) -> String {

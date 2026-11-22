@@ -1,11 +1,6 @@
 //! The Tasks tab of an organization or project page: search box and task table.
 
-use super::filter_bar::{Search, filter_bar};
-use super::task_table::{TaskRow, task_table};
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 /// `rows` are the tasks passing the search, out of `total`; `add` leads the first row.
 #[component]

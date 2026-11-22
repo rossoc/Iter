@@ -1,10 +1,7 @@
 //! A place cards can be dropped: `target` is what `board.js` posts as the
 //! drop's target; `class` is the variant (`drop-list`: drawn as a box).
 
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 #[component]
 pub async fn drop_zone(

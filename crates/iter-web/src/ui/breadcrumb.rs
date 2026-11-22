@@ -1,11 +1,8 @@
-//! A trail of crumbs (built in `web/crumbs.rs`), the last being the page.
+//! A trail of crumbs (built in `parts/crumbs.rs`), the last being the page.
 //! `aria-current="page"` goes on the current tab if the page has tabs
 //! (`Crumb::label`), else on the last crumb (`Crumb::here`).
 
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 pub struct Crumb {
     pub label: String,

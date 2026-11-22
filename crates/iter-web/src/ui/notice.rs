@@ -1,11 +1,6 @@
 //! A boxed message: a hint or, as `error`, a problem.
 
-use super::field_ids::{ERROR_ID, field_id};
-use super::form_error::FormError;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// `focus` moves focus to the notice on load via `notice.js` (`autofocus`
 /// was skipped by Chromium on submit-back pages; an inline script would break the

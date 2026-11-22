@@ -1,10 +1,13 @@
 //! What the edit forms submit, and how it lands on a model.
 
-use iter_core::error::{IterError, Result};
-use iter_core::models::{Named, Settings};
+use iter_core::{
+    error::{IterError, Result},
+    models::{Named, Settings},
+};
 use serde::Deserialize;
 
 mod board;
+pub mod edit;
 mod org;
 mod project;
 mod task;
@@ -14,10 +17,10 @@ pub use org::OrgForm;
 pub use project::ProjectForm;
 pub use task::TaskForm;
 
-use super::edit::{DESCRIPTION, NAME};
+use edit::{DESCRIPTION, NAME};
 
 /// Present (as `on`) only when ticked: for `deserialize_with = "ticked"` on a `bool`.
-pub(super) fn ticked<'de, D: serde::Deserializer<'de>>(
+pub(crate) fn ticked<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> std::result::Result<bool, D::Error> {
     Option::<String>::deserialize(deserializer).map(|value| value.is_some())
@@ -135,7 +138,7 @@ pub const PROJECTS: &str = "project";
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::edit::EditForm;
+    use crate::forms::edit::EditForm;
     use iter_core::fixtures;
     use iter_core::models::{Organization, Task, TaskStatus};
 

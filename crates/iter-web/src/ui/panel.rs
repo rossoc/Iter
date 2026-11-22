@@ -1,13 +1,7 @@
 //! A titled aside of label / value rows; the caller decides what the rows say.
 
-use super::status::status;
-use super::tag_chips::{Chip, tag_chips};
-use super::{CHECK, MINUS, icon};
+use crate::prelude::*;
 use iter_core::models::TaskStatus;
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
 
 pub enum Row<'a> {
     Text(&'a str, String),
@@ -42,7 +36,7 @@ pub async fn panel(id: &str, title: &str, rows: &[Row<'_>]) -> Result<impl View>
             <h2 id=(id) class="label">(title)</h2>
             <dl>
                 for r in rows.iter() {
-                    row(r: r)
+                    panel_row(r: r)
                 }
             </dl>
         </aside>
@@ -50,7 +44,7 @@ pub async fn panel(id: &str, title: &str, rows: &[Row<'_>]) -> Result<impl View>
 }
 
 #[component]
-async fn row(r: &Row<'_>) -> Result<impl View> {
+async fn panel_row(r: &Row<'_>) -> Result<impl View> {
     Ok(view! {
         <dt>(r.label())</dt>
         if r.is_unset() {
@@ -60,7 +54,7 @@ async fn row(r: &Row<'_>) -> Result<impl View> {
                 Row::Text(_, value) => <dd class="mono">(value.as_str())</dd>,
                 Row::Flag(_, on) => flag(on: *on),
                 Row::Chips(_, chips) => <dd>tag_chips(chips: chips)</dd>,
-                Row::Status(_, state) => <dd>status(state: *state)</dd>,
+                Row::Status(_, state) => <dd>status_icon(state: *state)</dd>,
             }
         }
     })

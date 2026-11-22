@@ -1,9 +1,6 @@
 //! Section tabs with one sliding underline (`tabs.css`); the caller gives each tab its `href`.
 
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 pub struct Tab {
     label: &'static str,

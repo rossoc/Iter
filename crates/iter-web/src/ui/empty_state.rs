@@ -1,10 +1,6 @@
 //! "Nothing here" as a dashed box with an icon; the one-liner is `empty_line`.
 
-use super::icon;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// `svg` is one of the icon constants.
 #[component]

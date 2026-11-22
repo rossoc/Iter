@@ -1,11 +1,6 @@
 //! `.button` (look in `button.css`) and the "+" add row link.
 
-use super::{PLUS, icon};
-use topcoat::view::Child;
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 /// The "+" link that adds an entity: first row of a list or table, opens the New pop-up.
 #[component]

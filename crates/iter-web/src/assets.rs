@@ -1,9 +1,11 @@
 //! Static files are compiled in and served with an ETag and `no-cache`: the browser revalidates and gets a bodiless 304.
 
-use std::borrow::Cow;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::sync::OnceLock;
+use std::{
+    borrow::Cow,
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    sync::OnceLock,
+};
 use topcoat::{
     Result,
     context::Cx,

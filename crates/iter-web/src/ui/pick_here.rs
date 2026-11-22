@@ -1,12 +1,8 @@
 //! The pick-mode button that puts the picked task in a place: a form of hidden fields, no script.
 
-use super::button::post_button;
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
-/// `fields` are what the form posts (see `web/pick.rs`). A `slot` fills its place
+/// `fields` are what the form posts (see `pages/board/pick.rs`). A `slot` fills its place
 /// with a dashed box naming it; any other is a small button.
 #[component]
 pub async fn pick_here(

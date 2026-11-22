@@ -1,14 +1,10 @@
 //! The toasts: short notes in the top right corner, blue for a success and red for an
 //! error, gone after the configured seconds (`notifications` in `iter.yaml`). The region is
-//! in every frame; `toast.js` fills it from the flash cookie (`web/flash.rs`) and with
+//! in every frame; `toast.js` fills it from the flash cookie (`layers/flash.rs`) and with
 //! `window.iterToast(kind, text)`. Turned off, neither the region nor the script is there.
 
-use super::form_error::FormError;
+use crate::prelude::*;
 use iter_core::config::config;
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
 
 /// The region, live (`polite`) so a success is read out; an error toast that `toast.js`
 /// adds is `role="alert"`. A form's own refusal is rendered here already, without the

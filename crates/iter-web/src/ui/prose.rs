@@ -2,11 +2,9 @@
 //! is untrusted: raw HTML is shown as text, and links/images keep their URL only
 //! if `http(s)`, `mailto` or relative. Headings move down two levels under the page's `<h1>`/`<h2>`.
 
+use crate::prelude::*;
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd, html};
-use topcoat::{
-    Result,
-    view::{Unescaped, View, component, view},
-};
+use topcoat::view::Unescaped;
 
 /// CommonMark plus tables, strikethrough and task lists.
 fn options() -> Options {
@@ -72,7 +70,7 @@ pub(super) fn markdown(text: &str) -> String {
 
 /// Nothing when `text` is empty. `class`: `desc`, or the report's `pdesc` / `tdesc`.
 #[component]
-pub async fn description(text: &str, #[default("desc")] class: &str) -> Result<impl View> {
+pub async fn prose_text(text: &str, #[default("desc")] class: &str) -> Result<impl View> {
     let html = markdown(text);
     Ok(view! {
         if !text.trim().is_empty() {

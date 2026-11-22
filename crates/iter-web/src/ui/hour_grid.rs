@@ -1,10 +1,6 @@
 //! The hours of a day: rows of hour label and drop zone; today's current hour carries the now line.
 
-use super::drop_zone::drop_zone;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// The now line: how far into the hour (0 to 1) and its hidden text.
 pub struct Now {

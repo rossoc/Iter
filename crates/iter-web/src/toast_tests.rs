@@ -1,14 +1,13 @@
 //! Tests of the notification toasts (sketch `plan`, R3-R8): the flash cookie a POST sets, the
 //! refused navigational POST sent back with an error flash, the toast region and its assets.
 //!
-//! They go through the real router in process, as `guard.rs`'s `router_tests` do. A POST to
+//! They go through the real router in process, as `layers/guard.rs`'s `router_tests` do. A POST to
 //! `/settings` writes the config file, so each test runs again in a child process of this test
 //! binary whose `$XDG_CONFIG_HOME` and `$HOME` are a scratch folder: the user's own
 //! `iter.yaml` and database are never read or written.
 
 use crate::router;
-use std::path::Path;
-use std::process::Command;
+use std::{path::Path, process::Command};
 use topcoat::router::{Body, Method, StatusCode, request::Request, to_bytes};
 
 /// Set in the child: the test body runs there.

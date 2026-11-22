@@ -1,15 +1,11 @@
 //! A `fieldset` whose `legend` names its controls; used by `field::checklist`.
 
-use super::field_ids::{hint_id, invalid_cue};
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// `id` (with `hint`) feeds the fieldset's `aria-describedby`; `invalid` shows
 /// the [`invalid_cue`] outside the legend so the legend stays the name.
 #[component]
-pub async fn group(
+pub async fn field_group(
     title: &str,
     #[default] id: &str,
     #[default] hint: &str,

@@ -1,10 +1,6 @@
 //! A titled block of the Info body: a small-caps heading over its content.
 
-use super::count::count_badge;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// `id` is the heading's unique id; `count` adds a badge, `noun` is what a screen reader hears after it.
 #[component]

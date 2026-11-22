@@ -1,13 +1,9 @@
 //! The search palette: `/` (or the bar's button) opens a box with a query, matching
 //! pages and a live preview in a frame (bar, footer and palette hidden inside it).
 //! All script: `search.js` fills the list from `GET /search?q=`
-//! (`web/search_index.rs`); without script the button stays hidden.
+//! (`pages/site/search_index.rs`); without script the button stays hidden.
 
-use super::{BUILDING, FILE_TEXT, FOLDER, KANBAN, SEARCH, SQUARE_CHECK, icon};
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 #[component]
 pub async fn search_button() -> Result<impl View> {

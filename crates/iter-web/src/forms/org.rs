@@ -1,11 +1,12 @@
 //! The organization edit form.
 
 use super::{DESCRIPTION, NAME, PROJECTS, Pairs, SettingsForm, text};
-use crate::edit::EditForm;
-use crate::url::org_url;
-use iter_core::db::Db;
-use iter_core::error::Result;
-use iter_core::models::{Configured, Named, Organization};
+use crate::{forms::edit::EditForm, prelude::*};
+use iter_core::{
+    db::Db,
+    error::Result,
+    models::{Configured, Named, Organization},
+};
 
 /// The projects come as repeated [`PROJECTS`] fields, which a struct can't hold, so the raw pairs are read ([`Self::parse`]).
 pub struct OrgForm {

@@ -1,11 +1,6 @@
 //! A POST form: error box, "* Required" note, the controls, then submit and the way out.
 
-use super::form_error::FormError;
-use super::notice::error_box;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 #[component]
 async fn required_note() -> Result<impl View> {

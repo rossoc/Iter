@@ -2,7 +2,7 @@
 //   #toasts            the region; data-seconds is how long one stays (iter.yaml).
 //   .toast.ok/.error   one note, blue or red; an error one is role="alert".
 //   [data-echo]        a toast the server rendered (a form's refusal): only armed here.
-// The flash cookie (web/flash.rs) is `ok:<text>` or `error:<text>`, percent-encoded: it is
+// The flash cookie (layers/flash.rs) is `ok:<text>` or `error:<text>`, percent-encoded: it is
 // shown once and deleted. A toast pauses while hovered or focused and has a close button.
 // window.iterToast(kind, text) raises one; iterToast.next(kind, text) leaves one for the
 // next page (the cookie), for a script that reloads.
