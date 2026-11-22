@@ -4,7 +4,7 @@
 use super::graph::{Level, Wiki};
 use super::ontology::{LevelKind, Ontology};
 use crate::db::{Db, Table};
-use crate::error::{IterError, Result};
+use crate::error::{IterError, Result, failed};
 use crate::locate::{self, current_project, current_task};
 use crate::models::{Organization, Project, Task};
 use crate::notes;
@@ -26,35 +26,33 @@ enum Asked {
 }
 
 fn ask(db: &Db, spec: &Spec) -> Result<Asked> {
-    if let Some(reference) = &spec.task {
-        let (project, task) = locate::task(db, &reference.parse()?)?;
+    let task = |(project, task): (Project, Task)| {
         let org = db.org_of(&project)?;
-        return Ok(Asked::Task(project, task, org));
+        Ok(Asked::Task(project, task, org))
+    };
+    let project = |project: Project| {
+        let org = db.org_of(&project)?;
+        Ok(Asked::Project(project, org))
+    };
+    if let Some(reference) = &spec.task {
+        return task(locate::task(db, &reference.parse()?)?);
     }
     if let Some(name) = &spec.project {
-        let project = db.resolve::<Project>(name)?;
-        let org = db.org_of(&project)?;
-        return Ok(Asked::Project(project, org));
+        return project(db.resolve::<Project>(name)?);
     }
     if let Some(name) = &spec.org {
         return Ok(Asked::Organization(db.resolve::<Organization>(name)?));
     }
     // here: the current task's wiki, else (in a project's folder, a wiki ingest) the project's
     match current_task(db) {
-        Ok((project, task)) => {
-            let org = db.org_of(&project)?;
-            Ok(Asked::Task(project, task, org))
-        }
+        Ok(found) => task(found),
         Err(IterError::NoCurrentTask | IterError::UntrackedTmuxSession(_)) => {
-            let project = current_project(db).map_err(|e| match e {
-                IterError::NoCurrentProject => IterError::CommandFailed(
-                    "no current task or project: say which wiki with --task, --project or --org"
-                        .into(),
+            project(current_project(db).map_err(|e| match e {
+                IterError::NoCurrentProject => failed(
+                    "no current task or project: say which wiki with --task, --project or --org",
                 ),
                 other => other,
-            })?;
-            let org = db.org_of(&project)?;
-            Ok(Asked::Project(project, org))
+            })?)
         }
         Err(e) => Err(e),
     }
@@ -67,38 +65,37 @@ fn slug(name: &str, kind: &str, id: i64) -> String {
     }
 }
 
-struct Chain {
-    levels: Vec<Level>,
-}
+/// The levels of one scope, outermost first until [`Chain::innermost_first`] turns them round.
+struct Chain(Vec<Level>);
 
 impl Chain {
+    /// Adds a level; one whose notes folder is unknown is left out.
     fn push(&mut self, kind: LevelKind, label: &str, title: &str, dir: Option<PathBuf>) {
         let Some(dir) = dir else { return };
-        let parent = self.levels.len().checked_sub(1);
-        self.levels.push(Level {
+        self.0.push(Level {
             kind,
             label: label.to_string(),
             title: title.to_string(),
             dir,
-            parent,
+            parent: None,
         });
     }
 
+    /// Innermost first, each level's parent the next one.
     fn innermost_first(mut self) -> Vec<Level> {
-        let n = self.levels.len();
-        self.levels.reverse();
-        for level in &mut self.levels {
-            level.parent = level.parent.map(|p| n - 1 - p);
+        self.0.reverse();
+        let n = self.0.len();
+        for (i, level) in self.0.iter_mut().enumerate() {
+            level.parent = (i + 1 < n).then_some(i + 1);
         }
-        self.levels
+        self.0
     }
 }
 
 /// The levels `spec` sees, innermost first (index 0 is where ids are written from); an error if none has a folder.
 pub fn levels(db: &Db, spec: &Spec) -> Result<Vec<Level>> {
     let asked = ask(db, spec)?;
-    let mut chain = Chain { levels: Vec::new() };
-    let mut siblings = Vec::new();
+    let (mut chain, mut siblings) = (Chain(Vec::new()), Chain(Vec::new()));
     let (org, project, task) = match &asked {
         Asked::Task(p, t, o) => (o.as_ref(), Some(p), Some(t)),
         Asked::Project(p, o) => (o.as_ref(), Some(p), None),
@@ -110,21 +107,18 @@ pub fn levels(db: &Db, spec: &Spec) -> Result<Vec<Level>> {
     }
     let project_label = |p: &Project| {
         let own = slug(&p.name, "project", p.id());
-        match &org_label {
-            Some(o) => format!("{o}.{own}"),
-            None => own,
-        }
+        org_label
+            .as_ref()
+            .map_or(own.clone(), |o| format!("{o}.{own}"))
     };
     if let Some(p) = project {
         let label = project_label(p);
         let dir = notes::project_dir(p, &org.cloned());
-        if let Some(t) = task {
-            let task_level = dir.as_deref().map(|d| notes::task_dir(d, t.id()));
+        let task_level = task.map(|t| (t, dir.as_deref().map(|d| notes::task_dir(d, t.id()))));
+        chain.push(LevelKind::Project, &label, &p.name, dir);
+        if let Some((t, task_dir)) = task_level {
             let task_label = format!("{label}.task-{}", t.id());
-            chain.push(LevelKind::Project, &label, &p.name, dir);
-            chain.push(LevelKind::Task, &task_label, &t.name, task_level);
-        } else {
-            chain.push(LevelKind::Project, &label, &p.name, dir);
+            chain.push(LevelKind::Task, &task_label, &t.name, task_dir);
         }
     } else if spec.down
         && let Some(o) = org
@@ -132,28 +126,20 @@ pub fn levels(db: &Db, spec: &Spec) -> Result<Vec<Level>> {
         for p in db.list::<Project>()? {
             if p.organization_id == Some(o.id()) {
                 let dir = notes::project_dir(&p, &Some(o.clone()));
-                siblings.push((project_label(&p), p.name.clone(), dir));
+                siblings.push(LevelKind::Project, &project_label(&p), &p.name, dir);
             }
         }
     }
-    let org_index = chain.levels.len().checked_sub(1);
+    // the projects are siblings under the organization, the only level of the chain
+    let has_org = !chain.0.is_empty();
     let mut levels = chain.innermost_first();
-    for (label, title, dir) in siblings {
-        if let Some(dir) = dir {
-            levels.push(Level {
-                kind: LevelKind::Project,
-                label,
-                title,
-                dir,
-                // the org is the only level when the projects are siblings
-                parent: org_index.map(|_| 0),
-            });
-        }
-    }
+    levels.extend(siblings.0.into_iter().map(|level| Level {
+        parent: has_org.then_some(0),
+        ..level
+    }));
     if levels.is_empty() {
-        return Err(IterError::CommandFailed(
-            "no notes folder to keep a wiki in: set `notes_path` on the project or its organization"
-                .into(),
+        return Err(failed(
+            "no notes folder to keep a wiki in: set `notes_path` on the project or its organization",
         ));
     }
     Ok(levels)
