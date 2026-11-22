@@ -7,14 +7,11 @@ use std::{io::Write, path::Path};
 
 #[component]
 pub async fn note_modal(task_id: i64) -> Result<impl View> {
-    let close = notes_tab_url(&task_url(task_id));
-    let action = format!("{}/notes", task_url(task_id));
+    let task = task_url(task_id);
     Ok(view! {
-        modal(id: "note-title", title: "New note", close: close.as_str(),
-            form_shell(action: action.as_str(), error: None, cancel: close.as_str(), submit_label: "Add note",
-                field(name: "name", label: "Name", value: "", required: true, autofocus: true, identifier: true)
-                textarea(name: "text", label: "Note", value: "")
-            )
+        form_modal(id: "note-title", title: "New note", close: notes_tab_url(&task), action: format!("{task}/notes"), submit: "Add note",
+            field(name: "name", label: "Name", value: "", required: true, autofocus: true, identifier: true)
+            textarea(name: "text", label: "Note", value: "")
         )
     })
 }

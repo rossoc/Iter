@@ -27,3 +27,21 @@ pub async fn modal(
         </div>
     })
 }
+
+/// A pop-up holding one form: `modal` over `form_shell`, cancelling to `close`.
+#[component]
+pub async fn form_modal(
+    id: &str,
+    title: &str,
+    #[into] close: String,
+    #[into] action: String,
+    submit: &str,
+    #[default] error: Option<&FormError>,
+    child: Child<'_>,
+) -> Result<impl View> {
+    Ok(view! {
+        modal(id: id, title: title, close: close.as_str(),
+            form_shell(action: action, error: error, cancel: close.as_str(), submit_label: submit, (child))
+        )
+    })
+}

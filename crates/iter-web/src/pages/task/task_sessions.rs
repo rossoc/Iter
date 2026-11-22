@@ -7,17 +7,14 @@ use serde::Deserialize;
 
 #[component]
 pub async fn session_modal(task_id: i64) -> Result<impl View> {
-    let close = sessions_tab_url(&task_url(task_id));
-    let action = format!("{}/sessions", task_url(task_id));
+    let task = task_url(task_id);
     Ok(view! {
-        modal(id: "session-title", title: "New session", close: close.as_str(),
-            form_shell(action: action.as_str(), error: None, cancel: close.as_str(), submit_label: "Add session",
-                <div class="compose-pick">
-                    field(name: "start", label: "Start", value: "", input_type: "datetime-local", required: true, autofocus: true)
-                    field(name: "end", label: "End", value: "", input_type: "datetime-local", required: true)
-                </div>
-                textarea(name: "message", label: "Note", value: "")
-            )
+        form_modal(id: "session-title", title: "New session", close: sessions_tab_url(&task), action: format!("{task}/sessions"), submit: "Add session",
+            <div class="compose-pick">
+                field(name: "start", label: "Start", value: "", input_type: "datetime-local", required: true, autofocus: true)
+                field(name: "end", label: "End", value: "", input_type: "datetime-local", required: true)
+            </div>
+            textarea(name: "message", label: "Note", value: "")
         )
     })
 }

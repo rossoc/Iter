@@ -1,6 +1,5 @@
-//! What the two task pop-ups (`task_notes.rs`, `task_sessions.rs`) put on the page, pinned before
-//! their shared shape is merged (task 298, R7: "task modals"). The markup they must keep: the
-//! modal's id and title, the form's action, its fields, the submit label and the way back.
+//! What the two task pop-ups (`pages/task/task_notes.rs`, `task_sessions.rs`, both `form_modal`) put on
+//! the page: the modal's id and title, the form's action's action, its fields, the submit label and the way back.
 //!
 //! Like `toast_tests`, each test runs again in a child process whose config folder and database
 //! are a scratch folder, so the user's own are never read or written.
@@ -19,52 +18,54 @@ fn modal_page(tab: &str, new: &str) -> String {
     page.body
 }
 
-#[test]
-fn the_note_pop_up_asks_for_a_name_and_a_text() {
-    if isolated_in(
-        module_path!(),
-        "the_note_pop_up_asks_for_a_name_and_a_text",
-        None,
-    ) {
+/// Runs the test `name` isolated, then checks the pop-up of `tab`/`new` holds every `wanted` text and not `other`.
+fn pop_up(name: &str, tab: &str, new: &str, wanted: &[&str], other: &str) {
+    if isolated_in(module_path!(), name, None) {
         return;
     }
-    let page = modal_page("notes", "note");
-    for wanted in [
-        r#"id="note-title""#,
-        "New note",
-        r#"action="/task/1/notes""#,
-        r#"name="name""#,
-        r#"name="text""#,
-        "Add note",
-        "/task/1?tab=notes",
-    ] {
+    let page = modal_page(tab, new);
+    for wanted in wanted {
         assert!(page.contains(wanted), "{wanted} in the page:\n{page}");
     }
-    assert!(!page.contains("New session"), "only the one pop-up");
+    assert!(!page.contains(other), "only the one pop-up");
+}
+
+#[test]
+fn the_note_pop_up_asks_for_a_name_and_a_text() {
+    pop_up(
+        "the_note_pop_up_asks_for_a_name_and_a_text",
+        "notes",
+        "note",
+        &[
+            r#"id="note-title""#,
+            "New note",
+            r#"action="/task/1/notes""#,
+            r#"name="name""#,
+            r#"name="text""#,
+            "Add note",
+            "/task/1?tab=notes",
+        ],
+        "New session",
+    );
 }
 
 #[test]
 fn the_session_pop_up_asks_for_two_moments_and_a_note() {
-    if isolated_in(
-        module_path!(),
+    pop_up(
         "the_session_pop_up_asks_for_two_moments_and_a_note",
-        None,
-    ) {
-        return;
-    }
-    let page = modal_page("sessions", "session");
-    for wanted in [
-        r#"id="session-title""#,
-        "New session",
-        r#"action="/task/1/sessions""#,
-        r#"name="start""#,
-        r#"name="end""#,
-        r#"type="datetime-local""#,
-        r#"name="message""#,
-        "Add session",
-        "/task/1?tab=sessions",
-    ] {
-        assert!(page.contains(wanted), "{wanted} in the page:\n{page}");
-    }
-    assert!(!page.contains("New note"), "only the one pop-up");
+        "sessions",
+        "session",
+        &[
+            r#"id="session-title""#,
+            "New session",
+            r#"action="/task/1/sessions""#,
+            r#"name="start""#,
+            r#"name="end""#,
+            r#"type="datetime-local""#,
+            r#"name="message""#,
+            "Add session",
+            "/task/1?tab=sessions",
+        ],
+        "New note",
+    );
 }
