@@ -4,7 +4,9 @@ use crate::{
     assets::{Asset, serve},
     load::tasks_or_count,
     pages::org::{
-        org_report::{Report, report_link, report_view, share_dialog as share_dialog_of, tab_url},
+        org_report::{
+            self, Report, report_url, report_view, share_dialog as share_dialog_of, tab_url,
+        },
         share_dialog::{Outcome, ShareDialog, preview_modal, recorded, share_modal},
     },
     parts::all::*,
@@ -15,7 +17,6 @@ use iter_core::{
     db::{Db, Table},
     front::query::TaskQuery,
     models::{Configured, Organization, Project, Task},
-    reporting::fmt_date,
 };
 
 pub(super) fn assets(builder: RouterBuilder) -> RouterBuilder {
@@ -52,9 +53,7 @@ pub fn load(
     // the badge keeps the total; the rows are the ones the search lets by
     let tasks = TaskQuery::of(q).filter_named(&|ids| db.tag_names_for_tasks(ids), tasks)?;
     let report = match section {
-        Section::Report => Some(crate::pages::org::org_report::load(
-            db, &projects, from, to, now,
-        )?),
+        Section::Report => Some(org_report::load(db, &projects, from, to, now)?),
         _ => None,
     };
     let notes = NotesTab::load(iter_core::notes::org_dir(&org), section == Section::Notes);
@@ -106,11 +105,7 @@ pub(super) async fn show(cx: &Cx) -> Result<impl View> {
     let share_dialog = match (section, query.share.as_deref(), &page.report) {
         (Section::Report, Some(_), Some(report)) if !report.projects.is_empty() => {
             let base = org_url(id);
-            let close = report_link(
-                &base,
-                Some(&report.range.from.map(fmt_date).unwrap_or_default()),
-                Some(&fmt_date(report.range.to)),
-            );
+            let close = report_url(&base, &report.range);
             Some(share_dialog_of(&page.org, &base, report, close))
         }
         _ => None,
@@ -187,12 +182,7 @@ pub async fn screen(
     // a push preview is a pop-up too; closing it goes back to the report
     let preview = match (share, report) {
         (Some(Outcome::Preview(p)), Some(r)) => {
-            let close = report_link(
-                &base,
-                Some(&r.range.from.map(fmt_date).unwrap_or_default()),
-                Some(&fmt_date(r.range.to)),
-            );
-            Some((p.as_ref(), base.clone(), close))
+            Some((p.as_ref(), base.clone(), report_url(&base, &r.range)))
         }
         _ => None,
     };

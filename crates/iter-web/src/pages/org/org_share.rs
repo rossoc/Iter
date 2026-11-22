@@ -4,8 +4,8 @@
 use crate::{
     pages::org::{
         org::{Loaded, load as load_org, screen},
-        org_report::{report_link, share_text},
-        share_dialog::{Modality, Outcome, Preview, ShareForm, ShareFormat},
+        org_report::{self, report_link, share_text},
+        share_dialog::{Modality, Outcome, Preview, ShareForm, ShareFormat, Word},
     },
     parts::all::*,
     prelude::*,
@@ -55,18 +55,12 @@ fn answer(
         .get::<Organization>(id)?
         .ok_or_else(|| IterError::CommandFailed("no such organization".into()))?;
     let range = form.range(now)?;
-    let modality: Modality = form.modality.parse().map_err(IterError::CommandFailed)?;
+    let modality = Modality::parse(&form.modality).map_err(IterError::CommandFailed)?;
     match modality {
         Modality::Copy => {
             let projects = db.projects_in::<Organization>(id)?;
-            let report = crate::pages::org::org_report::load(
-                db,
-                &projects,
-                Some(&form.from),
-                Some(&form.to),
-                now,
-            )?;
-            let format: ShareFormat = form.format.parse().map_err(IterError::CommandFailed)?;
+            let report = org_report::load(db, &projects, Some(&form.from), Some(&form.to), now)?;
+            let format = ShareFormat::parse(&form.format).map_err(IterError::CommandFailed)?;
             Ok(Outcome::Copied(share_text(&report, format)))
         }
         Modality::Push => push_step(db, &org, range, form, now, connect, gh),
