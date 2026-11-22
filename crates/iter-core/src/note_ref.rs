@@ -138,14 +138,14 @@ fn no_notes() -> IterError {
 
 /// The level a daily note or a wiki page belongs to: a project, or an organization.
 enum Level {
-    Project(Project, Option<Organization>),
-    Organization(Organization),
+    Project(Box<(Project, Option<Organization>)>),
+    Organization(Box<Organization>),
 }
 
 impl Level {
     fn dir(&self) -> Result<PathBuf> {
         match self {
-            Level::Project(p, org) => notes::project_dir(p, org),
+            Level::Project(p) => notes::project_dir(&p.0, &p.1),
             Level::Organization(org) => notes::org_dir(org),
         }
         .ok_or_else(no_notes)
@@ -153,7 +153,7 @@ impl Level {
 
     fn kind(&self) -> LevelKind {
         match self {
-            Level::Project(..) => LevelKind::Project,
+            Level::Project(_) => LevelKind::Project,
             Level::Organization(_) => LevelKind::Organization,
         }
     }
@@ -176,14 +176,14 @@ fn project_in(db: &Db, name: &str, org: Option<&str>) -> Result<Project> {
 fn level(db: &Db, owners: &[String]) -> Result<Level> {
     let with_org = |p: Project| -> Result<Level> {
         let org = db.org_of(&p)?;
-        Ok(Level::Project(p, org))
+        Ok(Level::Project(Box::new((p, org))))
     };
     match owners {
         [] => with_org(current_project(db)?),
         // a project, else an organization of that name
         [one] => match db.find_by_name::<Project>(one)? {
             Some(p) => with_org(p),
-            None => Ok(Level::Organization(db.resolve::<Organization>(one)?)),
+            None => Ok(Level::Organization(Box::new(db.resolve::<Organization>(one)?))),
         },
         [org, project] => with_org(project_in(db, project, Some(org))?),
         _ => unreachable!("parse allows two owners at most"),
@@ -394,7 +394,7 @@ mod tests {
             format!("tasks/{id}/sketches/root-cause.md")
         );
         assert_eq!(
-            at(&format!("app/tasks/Fix it/note/a")),
+            at("app/tasks/Fix it/note/a"),
             format!("tasks/{id}/notes/a.md")
         );
         // a class the ontology does not place at the project level
