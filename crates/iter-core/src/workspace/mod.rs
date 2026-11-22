@@ -168,7 +168,7 @@ mod tests {
         }
     }
 
-    /// R3: `<project>/<id> <title>`, each half flattened; equal titles give different names.
+    /// `<project>/<id> <title>`, each half flattened; equal titles give different names.
     #[test]
     fn a_new_session_is_named_with_the_task_id() {
         let web = fixtures::project("web");
@@ -228,7 +228,7 @@ mod tests {
         (db, project, tasks)
     }
 
-    /// R3: branch and folder are `<id>-<slug>`, and the row has no tmux name yet.
+    /// Branch and folder are `<id>-<slug>`, and the row has no tmux name yet.
     #[test]
     fn open_makes_the_worktree_the_branch_and_the_row_with_the_id_in_the_slug() {
         let (db, project, tasks) = repo_world("ws-open");

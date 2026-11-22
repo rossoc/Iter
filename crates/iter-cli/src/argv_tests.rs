@@ -137,7 +137,7 @@ fn the_worker_command_line_parses_as_run_worker() {
     }
 }
 
-/// R5: `iter wiki pending --accept -m <msg>` commits the pages with that message.
+/// `iter wiki pending --accept -m <msg>` commits the pages with that message.
 #[test]
 fn accepting_with_a_message_uses_it() {
     let (db, _, notes) = repo("accept-message");
@@ -156,7 +156,7 @@ fn accepting_with_a_message_uses_it() {
     assert_eq!(last_subject(&notes), message);
 }
 
-/// R5: a message means nothing without `--accept`.
+/// A message means nothing without `--accept`.
 #[test]
 fn a_message_without_accept_is_refused() {
     assert!(parse(&["--accept", "--message", "x"]).is_ok());

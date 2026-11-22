@@ -1,4 +1,4 @@
-//! Tests of "Instructions should be defined in the config folder" (sketch `plan`, R1-R9).
+//! Tests of "Instructions should be defined in the config folder" (sketch `plan`).
 //!
 //! They go through what stays the same across the change: the command line as typed (`iter task
 //! solve -i ...`), the files on disk (run records, prompts, the repo's `instructions/`), and the
@@ -20,7 +20,7 @@ const SHIPPED: [&str; 7] = [
     "plan", "develop", "test", "check", "fix", "complete", "ingest",
 ];
 
-/// The repo's root, where `instructions/` lives (R8: read at run time, not `include_str!`).
+/// The repo's root, where `instructions/` lives (read at run time, not `include_str!`).
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -132,9 +132,7 @@ fn files(dir: &Path, ext: &str, out: &mut Vec<PathBuf>) {
     }
 }
 
-// --- R1 -----------------------------------------------------------------------------------
-
-/// T1 (R1): no agent instruction is compiled in; the seven live in the repo's `instructions/`.
+/// No agent instruction is compiled in; the seven live in the repo's `instructions/`.
 #[test]
 fn no_instruction_is_compiled_into_the_binary() {
     assert!(
@@ -162,9 +160,7 @@ fn no_instruction_is_compiled_into_the_binary() {
     }
 }
 
-// --- R3 -----------------------------------------------------------------------------------
-
-/// T3 (R3): `-i/--instruction` names the instruction, any name; `-k/--kind` is gone; `-i` is required.
+/// `-i/--instruction` names the instruction, any name; `-k/--kind` is gone; `-i` is required.
 #[test]
 fn the_cli_names_the_instruction_with_i() {
     for words in [
@@ -197,10 +193,8 @@ fn the_cli_names_the_instruction_with_i() {
     }
 }
 
-// --- R2 -----------------------------------------------------------------------------------
-
-/// T2 (R2), as the CLI looks: nearest first (task folder, then project notes); `{{kind}}` (R5)
-/// is the instruction's name; a name that is no built-in kind works (R3).
+/// as the CLI looks: nearest first (task folder, then project notes); `{{kind}}`
+/// is the instruction's name; a name that is no built-in kind works.
 #[test]
 fn the_cli_takes_the_nearest_instruction_of_any_name() {
     let (app, notes) = world("nearest");
@@ -216,7 +210,7 @@ fn the_cli_takes_the_nearest_instruction_of_any_name() {
     assert_eq!(run["instruction"].as_str(), Some("t-named"), "{run:?}");
 }
 
-/// T2 (R2): a name found in no layer is an error naming it and where the config folder was looked
+/// A name found in no layer is an error naming it and where the config folder was looked
 /// in (`<config>/instructions/<name>.md`); nothing is recorded, nothing built in stands in.
 #[test]
 fn an_instruction_found_nowhere_is_an_error_naming_the_config_path() {
@@ -237,9 +231,7 @@ fn an_instruction_found_nowhere_is_an_error_naming_the_config_path() {
     assert_eq!(runs_on_disk(&notes), 0);
 }
 
-// --- R4 -----------------------------------------------------------------------------------
-
-/// T4 (R4): the front matter's `worktree: true` decides the worktree; the name (`develop`) and a
+/// The front matter's `worktree: true` decides the worktree; the name (`develop`) and a
 /// `kind:` key no longer do. The project wants branches but its folder is no git repository, so
 /// a run that asks for a worktree is refused with that, and one that does not goes ahead.
 #[test]
@@ -290,7 +282,7 @@ fn worktree_in_the_front_matter_gives_the_run_a_worktree() {
     assert!(e.contains("is not a git repository"), "{e}");
 }
 
-/// T4 (R4, R6): `interactive: true` makes solve refuse the instruction, also as a subagent, and
+/// `interactive: true` makes solve refuse the instruction, also as a subagent, and
 /// point at `iter task prompt -i <name>`; a file named `complete` without it is a run like any other.
 #[test]
 fn interactive_in_the_front_matter_is_refused_as_a_run() {
@@ -310,7 +302,7 @@ fn interactive_in_the_front_matter_is_refused_as_a_run() {
     assert_eq!(record(&notes, 1)["instruction"].as_str(), Some("complete"));
 }
 
-/// R4: the shipped front matter says what the kinds used to: develop, test and fix get a
+/// The shipped front matter says what the kinds used to: develop, test and fix get a
 /// worktree, complete is interactive, and no other one is either.
 #[test]
 fn the_shipped_instructions_carry_worktree_and_interactive() {
@@ -332,9 +324,7 @@ fn the_shipped_instructions_carry_worktree_and_interactive() {
     }
 }
 
-// --- R5 -----------------------------------------------------------------------------------
-
-/// T5 (R5): a record from before (`kind`, no `instruction`, legacy names) loads with its name;
+/// A record from before (`kind`, no `instruction`, legacy names) loads with its name;
 /// one written now carries `instruction` and needs no `kind`.
 #[test]
 fn run_records_keep_loading_and_carry_the_instruction_name() {
@@ -371,9 +361,7 @@ fn run_records_keep_loading_and_carry_the_instruction_name() {
     assert_eq!(name_of(now), "review");
 }
 
-// --- R6 -----------------------------------------------------------------------------------
-
-/// T6 (R6): `complete` names its subagents with `-i`, and says `-k` nowhere.
+/// `complete` names its subagents with `-i`, and says `-k` nowhere.
 #[test]
 fn complete_names_its_subagents_with_i() {
     let path = shipped_dir().join("complete.md");
@@ -386,7 +374,7 @@ fn complete_names_its_subagents_with_i() {
     assert!(!text.contains("--kind"), "complete.md still says --kind");
 }
 
-/// R6: no hint in the code or in the docs (README, architecture) tells the user `-k`/`--kind`.
+/// No hint in the code or in the docs (README, architecture) tells the user `-k`/`--kind`.
 #[test]
 fn no_hint_says_k_or_kind() {
     let mut paths = Vec::new();
@@ -408,9 +396,7 @@ fn no_hint_says_k_or_kind() {
     assert!(found.is_empty(), "still -k/--kind:\n{}", found.join("\n"));
 }
 
-// --- R9 -----------------------------------------------------------------------------------
-
-/// R9: the README says how to install the instructions and names the front-matter keys.
+/// The README says how to install the instructions and names the front-matter keys.
 #[test]
 fn the_readme_tells_how_to_install_the_instructions() {
     let readme = std::fs::read_to_string(repo().join("README.md")).unwrap();

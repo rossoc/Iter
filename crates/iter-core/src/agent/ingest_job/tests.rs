@@ -127,7 +127,7 @@ fn an_ingest_needs_a_project_with_a_notes_folder() {
     assert!(Target::new(&db, project).is_err());
 }
 
-/// Characterisation (R7, `now()`): the ingest's stamp is the local time as `YYYY-MM-DDTHH:MM:SS`
+/// Characterisation: the ingest's stamp is the local time as `YYYY-MM-DDTHH:MM:SS`
 /// (it goes into file names with its colons removed).
 #[test]
 fn the_ingest_is_stamped_with_the_local_time_and_a_t() {

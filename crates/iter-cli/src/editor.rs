@@ -1,3 +1,6 @@
+//! Editing a record in `$EDITOR`: the YAML-front-matter buffer, the save-or-abort decision and the
+//! plain-text variant.
+
 use iter_core::config::config;
 use iter_core::error::{IterError, Result};
 use iter_core::models::MarkdownBody;

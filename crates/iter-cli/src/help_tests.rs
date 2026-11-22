@@ -1,4 +1,4 @@
-//! `--help` of every subcommand, pinned (task 298, R9: "the same commands and `--help`"). The
+//! `--help` of every subcommand, pinned ("the same commands and `--help`"). The
 //! reorganisation moves the argument types between modules and crates; none of that may change
 //! what a person reads. The snapshot is `crates/iter-cli/src/help_snapshot.txt`; after a change to the help on
 //! purpose, `ITER_UPDATE_HELP=1 cargo test help_tests` rewrites it.

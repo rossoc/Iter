@@ -1,4 +1,4 @@
-//! The migration that lets two tasks of a project share a title (task 298, R1). Every test starts
+//! The migration that lets two tasks of a project share a title. Every test starts
 //! from a database file in the shape of version 6, the last before it: `tasks` still has
 //! `UNIQUE (project_id, name)`, and tags, session configs and sessions hang off it. The rebuild
 //! drops and recreates `tasks`; with foreign keys on, that `DROP TABLE` would cascade-delete

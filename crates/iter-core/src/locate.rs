@@ -305,7 +305,7 @@ mod tests {
         task_in(db, &web, text).map(|task| task.id())
     }
 
-    /// R2, R3: what `locate::task` resolves, one row per form of reference.
+    /// What `locate::task` resolves, one row per form of reference.
     #[test]
     fn a_reference_resolves_to_its_task_by_id_title_or_label() {
         let db = world();
@@ -364,7 +364,7 @@ mod tests {
         }
     }
 
-    /// R2, R4: `--task`: an id of the project, else a title; another project's id is not found.
+    /// `--task`: an id of the project, else a title; another project's id is not found.
     #[test]
     fn a_task_of_the_project_is_found_by_id_then_by_title() {
         let db = world();
@@ -486,7 +486,7 @@ mod tests {
         std::fs::remove_dir_all(&p.root).unwrap();
     }
 
-    /// R3: a task is shown as `<project>/<title> #<id>`, and what is shown reads back.
+    /// A task is shown as `<project>/<title> #<id>`, and what is shown reads back.
     #[test]
     fn a_task_is_shown_with_its_id() {
         let db = world();

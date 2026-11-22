@@ -610,7 +610,7 @@ mod tests {
         assert_eq!(dir.runs().len(), 1);
     }
 
-    /// R2: the ingest of a closing task is a subagent run like the others, opened and closed.
+    /// The ingest of a closing task is a subagent run like the others, opened and closed.
     #[test]
     fn an_ingest_subagent_run_is_opened_and_closed() {
         let app = world("ingest");
@@ -646,7 +646,7 @@ mod tests {
         }
     }
 
-    /// Characterisation (R7, `now()`): a run's stamp is the local time as `YYYY-MM-DD HH:MM:SS`.
+    /// Characterisation: a run's stamp is the local time as `YYYY-MM-DD HH:MM:SS`.
     #[test]
     fn a_run_is_stamped_with_the_local_time_and_a_space() {
         let stamp = now();
