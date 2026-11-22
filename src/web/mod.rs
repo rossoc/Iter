@@ -33,6 +33,8 @@ mod instructions;
 mod layout;
 mod load;
 mod matrix;
+#[cfg(test)]
+mod modal_tests;
 mod notes;
 mod org;
 mod org_edit;
@@ -152,4 +154,18 @@ pub fn serve(port: u16, open: bool) -> Result<()> {
         topcoat::serve(listener, router()).await?;
         Ok(())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Characterisation (R7, `now()`): the web's clock is the local wall time without a zone.
+    #[test]
+    fn the_web_clock_is_the_local_wall_time() {
+        let off = (chrono::Local::now().naive_local() - now())
+            .num_seconds()
+            .abs();
+        assert!(off < 5, "{off}s from the local time");
+    }
 }

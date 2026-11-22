@@ -242,4 +242,24 @@ mod tests {
         assert_eq!(tmux_name_part("web: a.b/c"), "web_ a_b-c");
         assert_eq!(tmux_name_part("a*b?"), "a_b_");
     }
+
+    /// R3: a new session is `<project>/<id> <title>`, each half flattened as before; equal titles
+    /// give different names.
+    #[test]
+    fn a_new_session_is_named_with_the_task_id() {
+        let web = crate::fixtures::project("web");
+        let task = |id, name: &str| Task {
+            id: Some(id),
+            ..crate::fixtures::task(1, name)
+        };
+        assert_eq!(tmux_session_name(&web, &task(42, "login")), "web/42 login");
+        assert_eq!(
+            tmux_session_name(&web, &task(7, "a: b.c/d")),
+            "web/7 a_ b_c-d"
+        );
+        assert_ne!(
+            tmux_session_name(&web, &task(1, "login")),
+            tmux_session_name(&web, &task(2, "login"))
+        );
+    }
 }

@@ -81,6 +81,15 @@ pub enum IterError {
     #[error("expected <project>/<task>, got '{0}'")]
     InvalidTaskRef(String),
 
+    // stub: I1 (task ids): nothing returns it yet; the tests of R2 expect it.
+    #[allow(dead_code)]
+    #[error("{} tasks in '{project}' are titled '{title}': {} -- name one by its id", .ids.len(), ids_list(.ids))]
+    AmbiguousTask {
+        project: String,
+        title: String,
+        ids: Vec<i64>,
+    },
+
     #[error("invalid date value '{0}', expected YYYY-MM-DD")]
     InvalidDate(String),
 
@@ -199,6 +208,14 @@ fn article(kind: &str) -> &'static str {
     }
 }
 
+/// `#3, #9, #12`: the ids of [`IterError::AmbiguousTask`].
+fn ids_list(ids: &[i64]) -> String {
+    ids.iter()
+        .map(|id| format!("#{id}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// Where a name must be unique, for [`IterError::NameTaken`]'s message.
 fn name_scope(kind: &str) -> &'static str {
     if kind == "task" {
@@ -278,5 +295,19 @@ mod tests {
         for (error, expected) in cases {
             assert_eq!(error.to_string(), expected);
         }
+    }
+
+    /// R2: the error lists the `#<id>` of every match, so the user can name one.
+    #[test]
+    fn an_ambiguous_title_lists_the_ids_to_choose_from() {
+        let error = IterError::AmbiguousTask {
+            project: "web".into(),
+            title: "login".into(),
+            ids: vec![3, 9, 12],
+        };
+        assert_eq!(
+            error.to_string(),
+            "3 tasks in 'web' are titled 'login': #3, #9, #12 -- name one by its id"
+        );
     }
 }

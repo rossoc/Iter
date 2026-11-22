@@ -213,4 +213,12 @@ mod tests {
         assert_eq!(task_slug("!!! ---", 7), "task-7");
         assert_eq!(task_slug("", 3), "task-3");
     }
+
+    /// R3: the id leads the slug, so equal titles never share a branch or a worktree directory.
+    #[test]
+    fn a_slug_leads_with_the_task_id() {
+        assert_eq!(task_slug("Fix Login Bug!", 42), "42-fix-login-bug");
+        assert_ne!(task_slug("login", 1), task_slug("login", 2));
+        assert_eq!(task_slug("login", 12), "12-login");
+    }
 }

@@ -15,6 +15,8 @@ mod error;
 mod fixtures;
 mod git;
 mod github;
+#[cfg(test)]
+mod help_tests;
 mod md_edit;
 mod models;
 mod note_ref;

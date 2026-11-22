@@ -200,4 +200,18 @@ mod tests {
             [("source".to_string(), vec!["n1".to_string()])]
         );
     }
+
+    /// Characterisation (R7, YAML scalar): a front-matter scalar is trimmed text, a number or a
+    /// bool as written; a null, a list or a map is none.
+    #[test]
+    fn a_scalar_is_trimmed_text_a_number_or_a_bool() {
+        let value = |yaml: &str| serde_yaml::from_str::<Value>(yaml).unwrap();
+        assert_eq!(scalar(&value("'  padded  '")).as_deref(), Some("padded"));
+        assert_eq!(scalar(&value("42")).as_deref(), Some("42"));
+        assert_eq!(scalar(&value("1.5")).as_deref(), Some("1.5"));
+        assert_eq!(scalar(&value("true")).as_deref(), Some("true"));
+        for none in ["~", "[a]", "{a: b}"] {
+            assert_eq!(scalar(&value(none)), None, "{none}");
+        }
+    }
 }

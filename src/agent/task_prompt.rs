@@ -267,8 +267,28 @@ mod tests {
         std::fs::write(&file, "mine: {{task}}").unwrap();
         assert_eq!(
             prompt_text(&app, Some("app/Fix it"), "plan", Some(&file), false).unwrap(),
-            r"mine: app/Fix\ it"
+            "mine: 1"
         );
+    }
+
+    /// R3: `{{task}}` is the bare id: agents address a task by it, and a title may repeat. The
+    /// title is `{{task.name}}`.
+    #[test]
+    fn a_prompt_names_a_task_whose_title_repeats_by_its_id_only() {
+        let (app, notes) = world("repeat");
+        let twin = fixtures::add_task(&app.db, 1, "Fix it");
+        assert_eq!(twin, 2);
+        let file = notes.join("twin.md");
+        std::fs::write(&file, "{{task}}|{{task.id}}|{{task.name}}").unwrap();
+        for (given, id) in [("1", 1), ("2", 2), ("#2", 2)] {
+            assert_eq!(
+                prompt_text(&app, Some(given), "plan", Some(&file), false).unwrap(),
+                format!("{id}|{id}|Fix it"),
+                "{given}"
+            );
+        }
+        let e = prompt_text(&app, Some("app/Fix it"), "plan", Some(&file), false).unwrap_err();
+        assert!(e.to_string().contains("#1, #2"), "{e}");
     }
 
     /// R2, R3, R4: `-i ingest` carries the wiki ingest text for the task: the note waiting, the

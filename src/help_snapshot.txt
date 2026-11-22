@@ -1,0 +1,1966 @@
+===== iter
+A command-line time tracker for projects and tasks, with tmux session and GitHub issue integration.
+
+Usage: iter <COMMAND>
+
+Commands:
+  init          Create a project from the current directory (cwd becomes base_path)
+  new           Create a project from scratch in a new folder
+  clone         Create a project from a template project (copies its fields) or a git/GitHub repo (like `git clone`)
+  tag           Manage tags: coloured labels shared by every task
+  board         Manage boards: calendars that hold projects
+  organization  Manage organizations: groups of projects that share defaults [alias: org]
+  project       Manage projects; with no subcommand, lists every project by name
+  task          Manage tasks; with no subcommand, lists every unfinished (queue or wip) task
+  wiki          Read the wiki built from the notes: find the pages worth loading, follow their relations, query the graph, keep it consistent
+  note          Notes: today's daily note (alone), daily notes, a task's notes and sketches, wiki pages
+  session       Set up and track a task's session (tmux + git worktree/branch, and time spent)
+  comment       Post a message as a comment on a task's linked GitHub issue
+  t             Print `<project>/<task>` for the tmux session you're currently in
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+===== iter init
+Create a project from the current directory (cwd becomes base_path)
+
+Usage: iter init [OPTIONS]
+
+Options:
+  -o, --organization <ORGANIZATION>
+          Organization to put the project in; its settings become the project's starting defaults (optional -- a project need not belong to one)
+
+  -h, --help
+          Print help
+===== iter new
+Create a project from scratch in a new folder
+
+Usage: iter new [OPTIONS] <PATH>
+
+Arguments:
+  <PATH>
+          Directory to create; becomes the project's base_path
+
+Options:
+  -o, --organization <ORGANIZATION>
+          Organization to put the project in; its settings become the project's starting defaults (optional -- a project need not belong to one)
+
+  -h, --help
+          Print help
+===== iter clone
+Create a project from a template project (copies its fields) or a git/GitHub repo (like `git clone`)
+
+Usage: iter clone [OPTIONS] <SOURCE>
+
+Arguments:
+  <SOURCE>
+          An existing project's name, or a git remote URL / local repo path if no such project exists
+
+Options:
+  -o, --organization <ORGANIZATION>
+          Organization to put the project in; its settings become the project's starting defaults (optional -- a project need not belong to one)
+
+  -b, --board <BOARD>
+          Bind the new project to this board (when cloning a project, the clone otherwise lands on that project's board, if any)
+
+      --no-board
+          Leave the new project on no board, even if the project it was cloned from is on one
+
+  -h, --help
+          Print help
+===== iter tag
+Manage tags: coloured labels shared by every task
+
+Usage: iter tag <COMMAND>
+
+Commands:
+  new     Open a blank tag in nvim; saving & quitting creates it
+  edit    Edit an existing tag in nvim; saving & quitting updates it
+  delete  Delete a tag; it's removed from every task that had it
+  info    A tag's color and description
+  list    List every tag
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter tag new
+Open a blank tag in nvim; saving & quitting creates it
+
+Usage: iter tag new
+
+Options:
+  -h, --help
+          Print help
+===== iter tag edit
+Edit an existing tag in nvim; saving & quitting updates it
+
+Usage: iter tag edit <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter tag delete
+Delete a tag; it's removed from every task that had it
+
+Usage: iter tag delete <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter tag info
+A tag's color and description
+
+Usage: iter tag info <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter tag list
+List every tag
+
+Usage: iter tag list
+
+Options:
+  -h, --help
+          Print help
+===== iter board
+Manage boards: calendars that hold projects
+
+Usage: iter board <COMMAND>
+
+Commands:
+  new     Open a blank board in nvim; saving & quitting creates it
+  edit    Edit an existing board in nvim; saving & quitting updates it
+  delete  Delete a board; its projects are kept, no longer bound to one
+  info    A board's description and the projects bound to it
+  list    List every board
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter board new
+Open a blank board in nvim; saving & quitting creates it
+
+Usage: iter board new
+
+Options:
+  -h, --help
+          Print help
+===== iter board edit
+Edit an existing board in nvim; saving & quitting updates it
+
+Usage: iter board edit [NAME]
+
+Arguments:
+  [NAME]
+          Default: the board of the tmux session's project
+
+Options:
+  -h, --help
+          Print help
+===== iter board delete
+Delete a board; its projects are kept, no longer bound to one
+
+Usage: iter board delete [NAME]
+
+Arguments:
+  [NAME]
+          Default: the board of the tmux session's project
+
+Options:
+  -h, --help
+          Print help
+===== iter board info
+A board's description and the projects bound to it
+
+Usage: iter board info [NAME]
+
+Arguments:
+  [NAME]
+          Default: the board of the tmux session's project
+
+Options:
+  -h, --help
+          Print help
+===== iter board list
+List every board
+
+Usage: iter board list
+
+Options:
+  -h, --help
+          Print help
+===== iter organization
+Manage organizations: groups of projects that share defaults
+
+Usage: iter organization <COMMAND>
+
+Commands:
+  new     Open a blank organization in nvim; saving & quitting creates it
+  edit    Edit an existing organization (and which projects are in it) in nvim; saving & quitting updates it
+  delete  Delete an organization; its projects are kept, no longer in one
+  info    Time spent across the organization over a day or an interval, broken down per project and per task
+  key     Set (read from stdin) or clear the API key of the organization's time platform; it is kept in the OS keychain, never in the database
+  push    Push the worklog of a day or an interval (default: today) to the organization's time platform, and close and comment on the GitHub issues of the tasks completed in it
+  list    List every organization
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter organization new
+Open a blank organization in nvim; saving & quitting creates it
+
+Usage: iter organization new
+
+Options:
+  -h, --help
+          Print help
+===== iter organization edit
+Edit an existing organization (and which projects are in it) in nvim; saving & quitting updates it
+
+Usage: iter organization edit [NAME]
+
+Arguments:
+  [NAME]
+          Default: the organization of the tmux session's project
+
+Options:
+  -h, --help
+          Print help
+===== iter organization delete
+Delete an organization; its projects are kept, no longer in one
+
+Usage: iter organization delete [NAME]
+
+Arguments:
+  [NAME]
+          Default: the organization of the tmux session's project
+
+Options:
+  -h, --help
+          Print help
+===== iter organization info
+Time spent across the organization over a day or an interval, broken down per project and per task
+
+Usage: iter organization info [OPTIONS] [NAME]
+
+Arguments:
+  [NAME]
+          Default: the organization of the tmux session's project
+
+Options:
+      --date <DATE>
+          A single day to report on, YYYY-MM-DD (default: today)
+
+      --from <FROM>
+          First day of an interval, YYYY-MM-DD (default: no lower bound)
+
+      --to <TO>
+          Last day of an interval, YYYY-MM-DD (default: today)
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text:    A readable markdown report: YAML front matter, a `---` divider, then the description and a breakdown of the period's sessions
+          - yaml:    The same report as plain YAML, for piping somewhere else
+          - worklog: One line per task worked on in the period: `Completed <task>` when the task is done, `Worked on <task>` otherwise -- what is pushed to a time platform
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter organization key
+Set (read from stdin) or clear the API key of the organization's time platform; it is kept in the OS keychain, never in the database
+
+Usage: iter organization key [OPTIONS] [NAME]
+
+Arguments:
+  [NAME]
+          Default: the organization of the tmux session's project
+
+Options:
+      --clear
+          Remove the stored key instead of setting one
+
+  -h, --help
+          Print help
+===== iter organization push
+Push the worklog of a day or an interval (default: today) to the organization's time platform, and close and comment on the GitHub issues of the tasks completed in it
+
+Usage: iter organization push [OPTIONS] [NAME]
+
+Arguments:
+  [NAME]
+          Default: the organization of the tmux session's project
+
+Options:
+      --date <DATE>
+          A single day to report on, YYYY-MM-DD (default: today)
+
+      --from <FROM>
+          First day of an interval, YYYY-MM-DD (default: no lower bound)
+
+      --to <TO>
+          Last day of an interval, YYYY-MM-DD (default: today)
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text:    A readable markdown report: YAML front matter, a `---` divider, then the description and a breakdown of the period's sessions
+          - yaml:    The same report as plain YAML, for piping somewhere else
+          - worklog: One line per task worked on in the period: `Completed <task>` when the task is done, `Worked on <task>` otherwise -- what is pushed to a time platform
+
+          [default: text]
+
+      --dry-run
+          Show what would be sent and done, and send nothing
+
+      --force
+          Push even if this exact worklog was pushed before, without asking. Days the platform already has an entry for are never pushed
+
+      --platform-organization <PLATFORM_ORGANIZATION>
+          Log under this platform organization instead of the default
+
+      --activity <ACTIVITY>
+          Log under this activity instead of the default
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter organization list
+List every organization
+
+Usage: iter organization list
+
+Options:
+  -h, --help
+          Print help
+===== iter project
+Manage projects; with no subcommand, lists every project by name
+
+Usage: iter project [COMMAND]
+
+Commands:
+  new     Open a blank project in nvim; saving & quitting creates it
+  edit    Edit an existing project in nvim; saving & quitting updates it
+  delete  Delete a project (and its tasks, session-configs and sessions)
+  info    Name, description, and time spent (union of all its tasks) over a day or an interval, broken down per task
+  list    List every project
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter project new
+Open a blank project in nvim; saving & quitting creates it
+
+Usage: iter project new [OPTIONS]
+
+Options:
+  -o, --organization <ORGANIZATION>
+          Organization to put the project in; its settings become the project's starting defaults (optional -- a project need not belong to one)
+
+  -b, --board <BOARD>
+          Board to bind the project to (optional)
+
+  -h, --help
+          Print help
+===== iter project edit
+Edit an existing project in nvim; saving & quitting updates it
+
+Usage: iter project edit [OPTIONS] [NAME]
+
+Arguments:
+  [NAME]
+          Default: the project of the tmux session you're in
+
+Options:
+  -o, --organization <ORGANIZATION>
+          Move the project into this organization (its current organization, if any, is kept when this isn't given)
+
+  -b, --board <BOARD>
+          Bind the project to this board (its current board, if any, is kept when this isn't given)
+
+      --no-board
+          Unbind the project from its board
+
+  -h, --help
+          Print help
+===== iter project delete
+Delete a project (and its tasks, session-configs and sessions)
+
+Usage: iter project delete [NAME]
+
+Arguments:
+  [NAME]
+          Default: the project of the tmux session you're in
+
+Options:
+  -h, --help
+          Print help
+===== iter project info
+Name, description, and time spent (union of all its tasks) over a day or an interval, broken down per task
+
+Usage: iter project info [OPTIONS] [NAME]
+
+Arguments:
+  [NAME]
+          Default: the project of the tmux session you're in
+
+Options:
+      --date <DATE>
+          A single day to report on, YYYY-MM-DD (default: today)
+
+      --from <FROM>
+          First day of an interval, YYYY-MM-DD (default: no lower bound)
+
+      --to <TO>
+          Last day of an interval, YYYY-MM-DD (default: today)
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text:    A readable markdown report: YAML front matter, a `---` divider, then the description and a breakdown of the period's sessions
+          - yaml:    The same report as plain YAML, for piping somewhere else
+          - worklog: One line per task worked on in the period: `Completed <task>` when the task is done, `Worked on <task>` otherwise -- what is pushed to a time platform
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter project list
+List every project
+
+Usage: iter project list
+
+Options:
+  -h, --help
+          Print help
+===== iter task
+Manage tasks; with no subcommand, lists every unfinished (queue or wip) task
+
+Usage: iter task [COMMAND]
+
+Commands:
+  new      Open a new task in nvim (optionally pre-filled from a GitHub issue); saving & quitting creates it
+  edit     Edit an existing task in nvim; saving & quitting updates it
+  delete   Delete a task (and its session-config and sessions)
+  info     Name, description, and every session on a day or over an interval (default: today)
+  list     List tasks, optionally filtered by project and/or status
+  plan     The plan of a task: its goal, how, and a checklist with the state of every step. Alone it opens the plan in the editor
+  prompt   Print the prompt that tells an agent what to do with a task, from one of the instructions: plan it, work through its plan, fix it...
+  solve    Hand a task to an agent: it works on its own, headless, in the task's worktree, and leaves a log. Opens the editor first (agent, model, effort and the description it is given), unless --yes
+  runs     The runs of a task, or the log of one
+  done     Mark a task done: closes any open session, tears down its session-config (tmux session + worktree), and deletes that row
+  pull     Bring the project's GitHub issues down as tasks: an issue nothing tracks becomes a new task, and a tracked one hands its open/closed state to the task's status
+  push     Send the project's tasks up to GitHub: a task tracking no issue gets one opened for it, and a tracked issue is closed or reopened to match its task's status
+  weekday  Average hours per weekday spent on a task
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter task new
+Open a new task in nvim (optionally pre-filled from a GitHub issue); saving & quitting creates it
+
+Usage: iter task new [OPTIONS] [PROJECT]
+
+Arguments:
+  [PROJECT]
+          Project the task belongs to (default: the project of the tmux session you're in)
+
+Options:
+      --issue <ISSUE>
+          Pre-fill name/description/github_issue from this issue number
+
+  -h, --help
+          Print help
+===== iter task edit
+Edit an existing task in nvim; saving & quitting updates it
+
+Usage: iter task edit [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+  -h, --help
+          Print help
+===== iter task delete
+Delete a task (and its session-config and sessions)
+
+Usage: iter task delete [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+  -h, --help
+          Print help
+===== iter task info
+Name, description, and every session on a day or over an interval (default: today)
+
+Usage: iter task info [OPTIONS] [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+      --date <DATE>
+          A single day to report on, YYYY-MM-DD (default: today)
+
+      --from <FROM>
+          First day of an interval, YYYY-MM-DD (default: no lower bound)
+
+      --to <TO>
+          Last day of an interval, YYYY-MM-DD (default: today)
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text:    A readable markdown report: YAML front matter, a `---` divider, then the description and a breakdown of the period's sessions
+          - yaml:    The same report as plain YAML, for piping somewhere else
+          - worklog: One line per task worked on in the period: `Completed <task>` when the task is done, `Worked on <task>` otherwise -- what is pushed to a time platform
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter task list
+List tasks, optionally filtered by project and/or status
+
+Usage: iter task list [OPTIONS]
+
+Options:
+      --project <PROJECT>
+
+
+      --status <STATUS>
+          queue, wip, or done
+
+  -h, --help
+          Print help
+===== iter task plan
+The plan of a task: its goal, how, and a checklist with the state of every step. Alone it opens the plan in the editor
+
+Usage: iter task plan [OPTIONS] [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in). A name with a space needs a backslash: `app/Fix\ it`
+
+Options:
+  -s, --show
+          Print the plan and how far along it is
+
+      --stdin
+          Replace the plan with the one on standard input. Steps get their ids; a missing Goal or Checklist is a warning, not a refusal
+
+      --mark <STEP> <STATE>
+          Put one step in a state (todo, doing or done): `--mark s3 done`. Only its checkbox changes
+
+  -f, --format <FORMAT>
+          Output format of --show
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter task prompt
+Print the prompt that tells an agent what to do with a task, from one of the instructions: plan it, work through its plan, fix it...
+
+Usage: iter task prompt [OPTIONS] --instruction <INSTRUCTION> [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+  -i, --instruction <INSTRUCTION>
+          The instruction to follow: `instructions/<name>.md` in the task's folder, the project's or organization's notes, or iter's config folder (nearest first)
+
+      --template <TEMPLATE>
+          Use this template instead of the instruction's file
+
+      --no-onboarding
+          Leave out what the project's wiki knows about the task
+
+  -h, --help
+          Print help
+===== iter task solve
+Hand a task to an agent: it works on its own, headless, in the task's worktree, and leaves a log. Opens the editor first (agent, model, effort and the description it is given), unless --yes
+
+Usage: iter task solve [OPTIONS] --instruction <INSTRUCTION> [TASK] [-- <EXTRA>...]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+  [EXTRA]...
+          Passed to the harness as they are, after `--`
+
+Options:
+  -i, --instruction <INSTRUCTION>
+          The instruction the agent follows: `instructions/<name>.md` in the task's folder, the project's or organization's notes, or iter's config folder (nearest first)
+
+      --agent <AGENT>
+          The harness that runs the agent
+
+          [possible values: claude]
+
+      --model <MODEL>
+
+
+      --effort <EFFORT>
+          low, medium or high
+
+  -y, --yes
+          Skip the editor
+
+      --wait
+          Stay until the agent has finished instead of leaving it running
+
+      --subagent
+          For a subagent of the session you are in: start nothing, record the run and print its prompt. Close it with `iter task runs --close <n>` when the subagent is done. `--model` and `--effort` record what the subagent is started with (default: inherit)
+
+  -h, --help
+          Print help
+===== iter task runs
+The runs of a task, or the log of one
+
+Usage: iter task runs [OPTIONS] [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+      --log <LOG>
+          Print the log of this run
+
+      --close <CLOSE>
+          Close a subagent's run (`solve --subagent`) as `--status`
+
+      --status <STATUS>
+          How the closed run ended
+
+          [possible values: done, failed, cancelled]
+
+  -m, --message <MESSAGE>
+          What the subagent reported at the end, kept as the run's log (else standard input when it is not a terminal)
+
+  -h, --help
+          Print help
+===== iter task run-worker
+What a detached `solve` runs: the harness itself, to the end
+
+Usage: iter task run-worker <TASK_ID> <RUN> [-- <EXTRA>...]
+
+Arguments:
+  <TASK_ID>
+
+
+  <RUN>
+
+
+  [EXTRA]...
+
+
+Options:
+  -h, --help
+          Print help
+===== iter task done
+Mark a task done: closes any open session, tears down its session-config (tmux session + worktree), and deletes that row
+
+Usage: iter task done [OPTIONS] [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+      --save
+          Land the work first: merge the project's `default_branch` into the task's worktree, then the task's branch into `default_branch`. A merge that stops is left half-done for you to finish, and the task stays as it was
+
+  -h, --help
+          Print help
+===== iter task pull
+Bring the project's GitHub issues down as tasks: an issue nothing tracks becomes a new task, and a tracked one hands its open/closed state to the task's status
+
+Usage: iter task pull [OPTIONS] [PROJECT]
+
+Arguments:
+  [PROJECT]
+          Project to pull into (default: the project of the tmux session you're in)
+
+Options:
+      --task <TASK>
+          Pull only this one task, by name, from the issue it tracks (default: every issue in the repo)
+
+      --body
+          Also overwrite each task's description with its issue's body
+
+  -h, --help
+          Print help
+===== iter task push
+Send the project's tasks up to GitHub: a task tracking no issue gets one opened for it, and a tracked issue is closed or reopened to match its task's status
+
+Usage: iter task push [OPTIONS] [PROJECT]
+
+Arguments:
+  [PROJECT]
+          Project to push (default: the project of the tmux session you're in)
+
+Options:
+      --task <TASK>
+          Push only this one task, by name (default: every task in the project)
+
+      --body
+          Also overwrite each issue's body with its task's description
+
+  -h, --help
+          Print help
+===== iter task weekday
+Average hours per weekday spent on a task
+
+Usage: iter task weekday [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+  -h, --help
+          Print help
+===== iter wiki
+Read the wiki built from the notes: find the pages worth loading, follow their relations, query the graph, keep it consistent
+
+Usage: iter wiki <COMMAND>
+
+Commands:
+  find           Rank pages by how well their path, title, tags and description match the words, best first, until the token budget is spent
+  grep           Search the text of the pages for a regular expression
+  show           One page: `<path>` in the level you ask from, `<level>:<path>` in another
+  neighbors      The pages within a few relations of one, nearest first
+  check          Lint the wiki: dangling links, missing descriptions and tags, broken front matter, relations the ontology does not allow, and what to do next. Fails if there are errors
+  mv             Move a page inside its level, rewriting every reference to it. Only the levels in scope are rewritten: references from other tasks' folders or from an organization's projects are not (run `check` there)
+  sparql         Run a SPARQL query over the graph (`iter:`, `owl:`, `rdf:`, `rdfs:`, `xsd:` are declared). Reads only
+  export         The whole graph as N-Triples, with what the ontology derives
+  schema         The instructions for an agent working with the wiki, filled in from the ontology
+  ingest         Have an agent turn the notes that changed (or were never ingested) into pages. Its changes are left uncommitted, to be reviewed with `pending`. Needs the notes folder to be in a git repository
+  build-concept  Have an agent write a concept that includes the given ideas
+  pending        What the agents changed in the wiki and nobody has accepted yet
+  help           Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter wiki find
+Rank pages by how well their path, title, tags and description match the words, best first, until the token budget is spent
+
+Usage: iter wiki find [OPTIONS] <WORDS>...
+
+Arguments:
+  <WORDS>...
+          What to look for
+
+Options:
+  -b, --budget <BUDGET>
+          Stop after about this many tokens
+
+          [default: 800]
+
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki grep
+Search the text of the pages for a regular expression
+
+Usage: iter wiki grep [OPTIONS] <PATTERN>
+
+Arguments:
+  <PATTERN>
+
+
+Options:
+      --notes
+          Search the raw notes too
+
+      --case
+          Match case
+
+  -b, --budget <BUDGET>
+          Stop after about this many tokens
+
+          [default: 800]
+
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki show
+One page: `<path>` in the level you ask from, `<level>:<path>` in another
+
+Usage: iter wiki show [OPTIONS] <ID>
+
+Arguments:
+  <ID>
+
+
+Options:
+  -d, --depth <DEPTH>
+          How much of it
+
+          Possible values:
+          - description: What the page says in a line, its tags and where it stands
+          - summary:     And what it relates to, and its headings
+          - full:        And the whole text
+
+          [default: summary]
+
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki neighbors
+The pages within a few relations of one, nearest first
+
+Usage: iter wiki neighbors [OPTIONS] <ID>
+
+Arguments:
+  <ID>
+
+
+Options:
+      --hops <HOPS>
+          How many relations away
+
+          [default: 1]
+
+      --prop <PROP>
+          Only follow these relations (nb, include, source, referencedBy...)
+
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki check
+Lint the wiki: dangling links, missing descriptions and tags, broken front matter, relations the ontology does not allow, and what to do next. Fails if there are errors
+
+Usage: iter wiki check [OPTIONS]
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki mv
+Move a page inside its level, rewriting every reference to it. Only the levels in scope are rewritten: references from other tasks' folders or from an organization's projects are not (run `check` there)
+
+Usage: iter wiki mv [OPTIONS] <FROM> <TO>
+
+Arguments:
+  <FROM>
+          The page
+
+  <TO>
+          Its new path in the same level, without `.md`
+
+Options:
+      --dry-run
+          Say what would change and change nothing
+
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki sparql
+Run a SPARQL query over the graph (`iter:`, `owl:`, `rdf:`, `rdfs:`, `xsd:` are declared). Reads only
+
+Usage: iter wiki sparql [OPTIONS] <QUERY>
+
+Arguments:
+  <QUERY>
+          The query (or `-` for standard input)
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki export
+The whole graph as N-Triples, with what the ontology derives
+
+Usage: iter wiki export [OPTIONS]
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki schema
+The instructions for an agent working with the wiki, filled in from the ontology
+
+Usage: iter wiki schema [OPTIONS]
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>`
+
+  -p, --project <PROJECT>
+          A project: its wiki and its organization's
+
+  -o, --org <ORG>
+          An organization
+
+      --down
+          With an organization: also the wikis of its projects
+
+  -f, --format <FORMAT>
+          Output format
+
+          Possible values:
+          - text: Readable lines
+          - yaml: The same answer as YAML
+          - json: The same answer as JSON
+
+          [default: text]
+
+  -h, --help
+          Print help (see a summary with '-h')
+===== iter wiki ingest
+Have an agent turn the notes that changed (or were never ingested) into pages. Its changes are left uncommitted, to be reviewed with `pending`. Needs the notes folder to be in a git repository
+
+Usage: iter wiki ingest [OPTIONS] [-- <EXTRA>...]
+
+Arguments:
+  [EXTRA]...
+          Passed to the harness as they are, after `--`
+
+Options:
+  -p, --project <PROJECT>
+          A project (default: the one of the tmux session you're in)
+
+  -t, --task <TASK>
+          A finished task: its sketches are ingested too
+
+      --dry-run
+          Only list what is waiting and when it would run on its own
+
+      --detach
+          Leave the agent running and return
+
+      --agent <AGENT>
+          The harness that runs the agent
+
+          [possible values: claude]
+
+      --model <MODEL>
+          The model (the harness's own default when left out)
+
+  -h, --help
+          Print help
+===== iter wiki build-concept
+Have an agent write a concept that includes the given ideas
+
+Usage: iter wiki build-concept [OPTIONS] --name <NAME> <IDEAS> <IDEAS>... [-- <EXTRA>...]
+
+Arguments:
+  <IDEAS> <IDEAS>...
+          The ideas (`ideas/retry-budget`), at least two
+
+  [EXTRA]...
+          Passed to the harness as they are, after `--`
+
+Options:
+      --name <NAME>
+          The concept's file name, without `.md`
+
+  -p, --project <PROJECT>
+          A project (default: the one of the tmux session you're in)
+
+      --agent <AGENT>
+          The harness that runs the agent
+
+          [possible values: claude]
+
+      --model <MODEL>
+          The model (the harness's own default when left out)
+
+  -h, --help
+          Print help
+===== iter wiki pending
+What the agents changed in the wiki and nobody has accepted yet
+
+Usage: iter wiki pending [OPTIONS]
+
+Options:
+  -p, --project <PROJECT>
+          A project (default: the one of the tmux session you're in)
+
+      --accept
+          Commit the changes
+
+      --revert
+          Throw away every uncommitted change under wiki/, yours too
+
+  -m, --message <MESSAGE>
+          With --accept: the commit message (default `wiki: ingest`)
+
+  -h, --help
+          Print help
+===== iter note
+Notes: today's daily note (alone), daily notes, a task's notes and sketches, wiki pages
+
+Usage: iter note [COMMAND]
+
+Commands:
+  today      Make today's note if it is not there and print its path (also `iter note` alone)
+  list       List the daily notes, latest first
+  show       Print a daily note (default: today's)
+  sketch     The agent's sketches of a task (`tasks/<id>/sketches/`): its working memory
+  task       A task's own notes (`tasks/<id>/notes/`): the user's
+  idea       Wiki Ideas (`wiki/ideas/`): provisional hypotheses
+  concept    Wiki Concepts (`wiki/concepts/`): grounded pieces of knowledge
+  entity     Wiki Entities (`wiki/entities/`): people, tools, services
+  synthesis  Wiki Syntheses (`wiki/syntheses/`): analyses across pages
+  read       Print any document by its address
+  path       Print the path of any document by its address (it need not exist yet)
+  help       Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter note today
+Make today's note if it is not there and print its path (also `iter note` alone)
+
+Usage: iter note today [OPTIONS]
+
+Options:
+  -p, --project <PROJECT>
+
+
+  -o, --org <ORG>
+
+
+  -h, --help
+          Print help
+===== iter note list
+List the daily notes, latest first
+
+Usage: iter note list [OPTIONS]
+
+Options:
+  -p, --project <PROJECT>
+
+
+  -o, --org <ORG>
+
+
+  -h, --help
+          Print help
+===== iter note show
+Print a daily note (default: today's)
+
+Usage: iter note show [OPTIONS] [DATE]
+
+Arguments:
+  [DATE]
+          YYYY-MM-DD
+
+Options:
+  -p, --project <PROJECT>
+
+
+  -o, --org <ORG>
+
+
+  -h, --help
+          Print help
+===== iter note sketch
+The agent's sketches of a task (`tasks/<id>/sketches/`): its working memory
+
+Usage: iter note sketch [OPTIONS] <COMMAND>
+
+Commands:
+  list  The documents, one per line: name, then description or title
+  new   Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+  read  Print a document
+  path  Print a document's path
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note sketch list
+The documents, one per line: name, then description or title
+
+Usage: iter note sketch list [OPTIONS]
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note sketch new
+Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+
+Usage: iter note sketch new [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          The name; the file is its lowercase-and-dashes form
+
+Options:
+  -m, --message <MESSAGE>
+          The text
+
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -d, --description <DESCRIPTION>
+          Wiki pages: the one-line description (required unless the text has front matter)
+
+      --tags <TAGS>
+          Wiki pages: tags, comma-separated (required unless the text has front matter)
+
+      --append
+          Add the text at the end of an existing document (or make it)
+
+      --replace
+          Replace an existing document
+
+  -h, --help
+          Print help
+===== iter note sketch read
+Print a document
+
+Usage: iter note sketch read [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note sketch path
+Print a document's path
+
+Usage: iter note sketch path [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note task
+A task's own notes (`tasks/<id>/notes/`): the user's
+
+Usage: iter note task [OPTIONS] <COMMAND>
+
+Commands:
+  list  The documents, one per line: name, then description or title
+  new   Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+  read  Print a document
+  path  Print a document's path
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note task list
+The documents, one per line: name, then description or title
+
+Usage: iter note task list [OPTIONS]
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note task new
+Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+
+Usage: iter note task new [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          The name; the file is its lowercase-and-dashes form
+
+Options:
+  -m, --message <MESSAGE>
+          The text
+
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -d, --description <DESCRIPTION>
+          Wiki pages: the one-line description (required unless the text has front matter)
+
+      --tags <TAGS>
+          Wiki pages: tags, comma-separated (required unless the text has front matter)
+
+      --append
+          Add the text at the end of an existing document (or make it)
+
+      --replace
+          Replace an existing document
+
+  -h, --help
+          Print help
+===== iter note task read
+Print a document
+
+Usage: iter note task read [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note task path
+Print a document's path
+
+Usage: iter note task path [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` or the task's id
+
+  -h, --help
+          Print help
+===== iter note idea
+Wiki Ideas (`wiki/ideas/`): provisional hypotheses
+
+Usage: iter note idea [OPTIONS] <COMMAND>
+
+Commands:
+  list  The documents, one per line: name, then description or title
+  new   Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+  read  Print a document
+  path  Print a document's path
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -p, --project <PROJECT>
+
+
+  -o, --org <ORG>
+
+
+  -h, --help
+          Print help
+===== iter note idea list
+The documents, one per line: name, then description or title
+
+Usage: iter note idea list
+
+Options:
+  -h, --help
+          Print help
+===== iter note idea new
+Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+
+Usage: iter note idea new [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          The name; the file is its lowercase-and-dashes form
+
+Options:
+  -m, --message <MESSAGE>
+          The text
+
+  -d, --description <DESCRIPTION>
+          Wiki pages: the one-line description (required unless the text has front matter)
+
+      --tags <TAGS>
+          Wiki pages: tags, comma-separated (required unless the text has front matter)
+
+      --append
+          Add the text at the end of an existing document (or make it)
+
+      --replace
+          Replace an existing document
+
+  -h, --help
+          Print help
+===== iter note idea read
+Print a document
+
+Usage: iter note idea read <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note idea path
+Print a document's path
+
+Usage: iter note idea path <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note concept
+Wiki Concepts (`wiki/concepts/`): grounded pieces of knowledge
+
+Usage: iter note concept [OPTIONS] <COMMAND>
+
+Commands:
+  list  The documents, one per line: name, then description or title
+  new   Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+  read  Print a document
+  path  Print a document's path
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -p, --project <PROJECT>
+
+
+  -o, --org <ORG>
+
+
+  -h, --help
+          Print help
+===== iter note concept list
+The documents, one per line: name, then description or title
+
+Usage: iter note concept list
+
+Options:
+  -h, --help
+          Print help
+===== iter note concept new
+Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+
+Usage: iter note concept new [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          The name; the file is its lowercase-and-dashes form
+
+Options:
+  -m, --message <MESSAGE>
+          The text
+
+  -d, --description <DESCRIPTION>
+          Wiki pages: the one-line description (required unless the text has front matter)
+
+      --tags <TAGS>
+          Wiki pages: tags, comma-separated (required unless the text has front matter)
+
+      --append
+          Add the text at the end of an existing document (or make it)
+
+      --replace
+          Replace an existing document
+
+  -h, --help
+          Print help
+===== iter note concept read
+Print a document
+
+Usage: iter note concept read <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note concept path
+Print a document's path
+
+Usage: iter note concept path <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note entity
+Wiki Entities (`wiki/entities/`): people, tools, services
+
+Usage: iter note entity [OPTIONS] <COMMAND>
+
+Commands:
+  list  The documents, one per line: name, then description or title
+  new   Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+  read  Print a document
+  path  Print a document's path
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -p, --project <PROJECT>
+
+
+  -o, --org <ORG>
+
+
+  -h, --help
+          Print help
+===== iter note entity list
+The documents, one per line: name, then description or title
+
+Usage: iter note entity list
+
+Options:
+  -h, --help
+          Print help
+===== iter note entity new
+Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+
+Usage: iter note entity new [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          The name; the file is its lowercase-and-dashes form
+
+Options:
+  -m, --message <MESSAGE>
+          The text
+
+  -d, --description <DESCRIPTION>
+          Wiki pages: the one-line description (required unless the text has front matter)
+
+      --tags <TAGS>
+          Wiki pages: tags, comma-separated (required unless the text has front matter)
+
+      --append
+          Add the text at the end of an existing document (or make it)
+
+      --replace
+          Replace an existing document
+
+  -h, --help
+          Print help
+===== iter note entity read
+Print a document
+
+Usage: iter note entity read <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note entity path
+Print a document's path
+
+Usage: iter note entity path <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note synthesis
+Wiki Syntheses (`wiki/syntheses/`): analyses across pages
+
+Usage: iter note synthesis [OPTIONS] <COMMAND>
+
+Commands:
+  list  The documents, one per line: name, then description or title
+  new   Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+  read  Print a document
+  path  Print a document's path
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -p, --project <PROJECT>
+
+
+  -o, --org <ORG>
+
+
+  -h, --help
+          Print help
+===== iter note synthesis list
+The documents, one per line: name, then description or title
+
+Usage: iter note synthesis list
+
+Options:
+  -h, --help
+          Print help
+===== iter note synthesis new
+Write a new document. The text is `-m`, else standard input when it is not a terminal, else the editor. Refused if it exists, unless `--append` or `--replace`
+
+Usage: iter note synthesis new [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          The name; the file is its lowercase-and-dashes form
+
+Options:
+  -m, --message <MESSAGE>
+          The text
+
+  -d, --description <DESCRIPTION>
+          Wiki pages: the one-line description (required unless the text has front matter)
+
+      --tags <TAGS>
+          Wiki pages: tags, comma-separated (required unless the text has front matter)
+
+      --append
+          Add the text at the end of an existing document (or make it)
+
+      --replace
+          Replace an existing document
+
+  -h, --help
+          Print help
+===== iter note synthesis read
+Print a document
+
+Usage: iter note synthesis read <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note synthesis path
+Print a document's path
+
+Usage: iter note synthesis path <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -h, --help
+          Print help
+===== iter note read
+Print any document by its address
+
+Usage: iter note read <ADDRESS>
+
+Arguments:
+  <ADDRESS>
+          e.g. `sketch/cause`, `acme/app/wiki/concepts/backoff`, `app/tasks/7/note/ideas`
+
+Options:
+  -h, --help
+          Print help
+
+Addresses (what is left out comes from where you are):
+  [org/][project/]note[/YYYY-MM-DD]          a daily note (today)
+  [org/][project/]wiki/<class>/<name>        a wiki page (org/wiki/... for the organization's)
+  [org/][project/]tasks/<task>/sketch/<name> a task's sketch (note/<name>: its notes)
+  sketch/<name>, note/<name>                 the current task's
+===== iter note path
+Print the path of any document by its address (it need not exist yet)
+
+Usage: iter note path <ADDRESS>
+
+Arguments:
+  <ADDRESS>
+
+
+Options:
+  -h, --help
+          Print help
+
+Addresses (what is left out comes from where you are):
+  [org/][project/]note[/YYYY-MM-DD]          a daily note (today)
+  [org/][project/]wiki/<class>/<name>        a wiki page (org/wiki/... for the organization's)
+  [org/][project/]tasks/<task>/sketch/<name> a task's sketch (note/<name>: its notes)
+  sketch/<name>, note/<name>                 the current task's
+===== iter session
+Set up and track a task's session (tmux + git worktree/branch, and time spent)
+
+Usage: iter session <COMMAND>
+
+Commands:
+  new     Set up a session for a task: creates a git worktree/branch (unless the project has no github or auto_branch is off) and, if the project has tmux enabled, a tmux session named `<project>/<task>`
+  start   Manually start a session for a task (for tmux-less projects, or when the tmux hooks aren't in play)
+  stop    Manually end the open session for a task
+  elapse  Time spent so far on the currently open session of the task of the tmux session you're in
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter session new
+Set up a session for a task: creates a git worktree/branch (unless the project has no github or auto_branch is off) and, if the project has tmux enabled, a tmux session named `<project>/<task>`
+
+Usage: iter session new [OPTIONS] <TASK>
+
+Arguments:
+  <TASK>
+          `<project>/<task>` (completion offers only `queue` tasks)
+
+Options:
+  -b, --branch <BRANCH>
+          Override the branch name (default: the task's branch_prefix followed by its slugified name)
+
+      --no-branch
+          Skip branch/worktree creation entirely
+
+  -h, --help
+          Print help
+===== iter session start
+Manually start a session for a task (for tmux-less projects, or when the tmux hooks aren't in play)
+
+Usage: iter session start [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+  -h, --help
+          Print help
+===== iter session stop
+Manually end the open session for a task
+
+Usage: iter session stop [OPTIONS] [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+  -m, --message <MESSAGE>
+          Note stored alongside the closed session
+
+  -h, --help
+          Print help
+===== iter session elapse
+Time spent so far on the currently open session of the task of the tmux session you're in
+
+Usage: iter session elapse
+
+Options:
+  -h, --help
+          Print help
+===== iter comment
+Post a message as a comment on a task's linked GitHub issue
+
+Usage: iter comment --message <MESSAGE> [TASK]
+
+Arguments:
+  [TASK]
+          `<project>/<task>` (default: the task of the tmux session you're in)
+
+Options:
+  -m, --message <MESSAGE>
+          The comment body
+
+  -h, --help
+          Print help
+===== iter t
+Print `<project>/<task>` for the tmux session you're currently in
+
+Usage: iter t
+
+Options:
+  -h, --help
+          Print help
+===== iter internal
+Commands invoked by tmux hooks -- not meant to be run by hand
+
+Usage: iter internal <COMMAND>
+
+Commands:
+  hook         Called by a tmux hook; see `tmux::HOOKS` for which format variable fills which argument
+  kill-server  Stops the clock of every task with a tmux session, then kills the tmux server -- tmux has no hook of its own for the server exiting
+  restore      Re-links iter's sessions to a freshly started tmux server: recreates the tmux sessions it lacks, installs the hooks, closes the clocks the previous server left open and starts those of attached sessions. Meant for tmux-resurrect's `@resurrect-hook-post-restore-all`
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter internal hook
+Called by a tmux hook; see `tmux::HOOKS` for which format variable fills which argument
+
+Usage: iter internal hook <COMMAND>
+
+Commands:
+  client-session-changed  `client` now shows `session`, having left `previous` (empty on a first attach)
+  client-detached         `client` is gone; which session it was on is what `iter` recorded the last time it changed
+  session-closed          `session` no longer exists
+  help                    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter internal hook client-session-changed
+`client` now shows `session`, having left `previous` (empty on a first attach)
+
+Usage: iter internal hook client-session-changed <CLIENT> <SESSION> [PREVIOUS]
+
+Arguments:
+  <CLIENT>
+
+
+  <SESSION>
+
+
+  [PREVIOUS]
+===== iter internal hook client-detached
+`client` is gone; which session it was on is what `iter` recorded the last time it changed
+
+Usage: iter internal hook client-detached <CLIENT>
+
+Arguments:
+  <CLIENT>
+===== iter internal hook session-closed
+`session` no longer exists
+
+Usage: iter internal hook session-closed <SESSION>
+
+Arguments:
+  <SESSION>
+===== iter internal kill-server
+Stops the clock of every task with a tmux session, then kills the tmux server -- tmux has no hook of its own for the server exiting
+
+Usage: iter internal kill-server
+
+Options:
+  -h, --help
+          Print help
+===== iter internal restore
+Re-links iter's sessions to a freshly started tmux server: recreates the tmux sessions it lacks, installs the hooks, closes the clocks the previous server left open and starts those of attached sessions. Meant for tmux-resurrect's `@resurrect-hook-post-restore-all`
+
+Usage: iter internal restore
+
+Options:
+  -h, --help
+          Print help

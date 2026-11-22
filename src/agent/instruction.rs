@@ -617,4 +617,20 @@ mod tests {
         assert!(rename_target("review", "Bad Name").is_err());
         assert_eq!(rename_target("fix", "fix").unwrap(), None);
     }
+
+    /// Characterisation (R7, YAML scalar): an instruction's front-matter scalar is text exactly
+    /// as written (not trimmed), a number or a bool; a null, a list or a map is none.
+    #[test]
+    fn a_scalar_keeps_its_text_as_written() {
+        let value = |yaml: &str| serde_yaml::from_str::<Value>(yaml).unwrap();
+        assert_eq!(
+            scalar(&value("'  padded  '")).as_deref(),
+            Some("  padded  ")
+        );
+        assert_eq!(scalar(&value("42")).as_deref(), Some("42"));
+        assert_eq!(scalar(&value("false")).as_deref(), Some("false"));
+        for none in ["~", "[a]", "{a: b}"] {
+            assert_eq!(scalar(&value(none)), None, "{none}");
+        }
+    }
 }

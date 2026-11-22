@@ -551,8 +551,14 @@ mod tests {
         let results = webhook(&url).push(&two).unwrap();
         request.join().unwrap();
         assert_eq!(results.len(), 2);
-        assert_eq!((results[0].day.as_str(), results[0].duplicate), ("2026-09-05", true));
-        assert_eq!((results[1].day.as_str(), results[1].duplicate), ("2026-09-04", false));
+        assert_eq!(
+            (results[0].day.as_str(), results[0].duplicate),
+            ("2026-09-05", true)
+        );
+        assert_eq!(
+            (results[1].day.as_str(), results[1].duplicate),
+            ("2026-09-04", false)
+        );
         assert!(results.iter().all(EntryResult::accepted));
     }
 

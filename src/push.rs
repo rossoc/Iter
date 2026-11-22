@@ -393,7 +393,9 @@ pub fn execute(
                         .find(|e| e.day == result.day)
                         .map_or(0.0, |e| e.time);
                     let duplicate = match result.duplicate {
-                        true => " (the platform already had an entry that day: saved as a duplicate)",
+                        true => {
+                            " (the platform already had an entry that day: saved as a duplicate)"
+                        }
                         false => "",
                     };
                     items.push(Item::ok(format!(

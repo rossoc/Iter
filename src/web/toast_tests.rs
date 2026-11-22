@@ -45,6 +45,11 @@ fn settings_form(notifications: bool, seconds: &str) -> String {
 /// holding `yaml` as `iter.yaml` (none if `None`), asserts it passed, and returns `true`
 /// (the caller then returns). In the child: `false`, and the caller runs its body.
 fn isolated(name: &str, yaml: Option<&str>) -> bool {
+    isolated_in(module_path!(), name, yaml)
+}
+
+/// [`isolated`] for a test of another module: `module` is that file's `module_path!()`.
+pub(super) fn isolated_in(module: &str, name: &str, yaml: Option<&str>) -> bool {
     if std::env::var_os(CHILD).is_some() {
         return false;
     }
@@ -55,7 +60,7 @@ fn isolated(name: &str, yaml: Option<&str>) -> bool {
     if let Some(yaml) = yaml {
         std::fs::write(dir.join("iter.yaml"), yaml).expect("scratch config");
     }
-    let module = module_path!().split_once("::").map_or("", |(_, m)| m);
+    let module = module.split_once("::").map_or("", |(_, m)| m);
     let test = format!("{module}::{name}");
     let out = Command::new(std::env::current_exe().expect("the test binary"))
         .args([test.as_str(), "--exact", "--nocapture", "--test-threads=1"])
@@ -79,10 +84,10 @@ fn read(path: &Path) -> String {
     std::fs::read_to_string(path).unwrap_or_default()
 }
 
-struct Answer {
-    status: StatusCode,
+pub(super) struct Answer {
+    pub(super) status: StatusCode,
     headers: Vec<(String, String)>,
-    body: String,
+    pub(super) body: String,
 }
 
 impl Answer {
@@ -172,7 +177,7 @@ fn send(method: Method, path: &str, headers: &[(&str, &str)], body: &str) -> Ans
         })
 }
 
-fn get(path: &str) -> Answer {
+pub(super) fn get(path: &str) -> Answer {
     send(Method::GET, path, &[("host", HOST)], "")
 }
 
@@ -182,7 +187,13 @@ fn post(path: &str, body: &str, mode: &str, referer: Option<&str>) -> Answer {
     let mut headers: Vec<(&str, &str)> = FROM_A_TAB
         .iter()
         .copied()
-        .map(|(k, v)| if k == "sec-fetch-mode" { (k, mode) } else { (k, v) })
+        .map(|(k, v)| {
+            if k == "sec-fetch-mode" {
+                (k, mode)
+            } else {
+                (k, v)
+            }
+        })
         .collect();
     if let Some(referer) = referer {
         headers.push(("referer", referer));
@@ -280,7 +291,11 @@ fn a_refused_form_without_a_same_origin_referer_is_not_redirected() {
         Some("http://127.0.0.1:9999/task/1/edit"),
     ] {
         let answer = post(REFUSED, "name=x", "navigate", referer);
-        assert_eq!(answer.status, StatusCode::BAD_REQUEST, "referer {referer:?}");
+        assert_eq!(
+            answer.status,
+            StatusCode::BAD_REQUEST,
+            "referer {referer:?}"
+        );
         assert!(answer.header("location").is_none(), "referer {referer:?}");
     }
 }
@@ -472,7 +487,12 @@ fn a_refused_daily_note_raises_a_toast() {
     let path = format!("/project/{id}/notes/2026-01-05");
     let referer = format!("{ORIGIN}{path}?tab=edit");
     // front matter opened and never closed: `notes::check` refuses it
-    let refused = post(&path, "text=---%0Atitle%3A+x%0A", "navigate", Some(&referer));
+    let refused = post(
+        &path,
+        "text=---%0Atitle%3A+x%0A",
+        "navigate",
+        Some(&referer),
+    );
     assert_eq!(refused.status, StatusCode::OK, "{}", refused.body);
     let main_start = refused.body.find("<main").expect("main");
     let main_end = refused.body.find("</main>").expect("main");

@@ -281,23 +281,55 @@ mod tests {
         );
     }
 
-    /// Neither create (UNIQUE name) nor adopt (task already claimed).
+    /// R4: titles repeat, so a task that tracks another issue is no obstacle: the issue becomes a
+    /// task of its own. (It was a `Conflict` while a project's task titles were unique.)
     #[test]
-    fn a_title_clash_with_an_otherwise_linked_task_is_a_conflict() {
+    fn an_issue_whose_title_a_linked_task_has_becomes_a_new_task() {
         let tasks = Tasks::new(vec![task("login", Some(9), TaskStatus::Queue)]);
         assert_eq!(
             plan_pull(&tasks, &issue(4, "login", IssueState::Open), false),
-            Pull::Conflict { task: 0 }
+            Pull::Create {
+                status: TaskStatus::Queue
+            }
         );
     }
 
-    /// Two issues sharing a title: the first becomes a task, the second is a clash, so the pull does not fail on `UNIQUE (project_id, name)`.
+    /// R4: two issues sharing a title give two tasks: the first links the unlinked task of that
+    /// title, the second finds none left and creates.
     #[test]
-    fn a_second_issue_by_the_same_title_clashes_with_the_task_the_first_made() {
-        let tasks = Tasks::new(vec![task("duplicate", Some(1), TaskStatus::Queue)]);
+    fn a_second_issue_by_the_same_title_creates_a_task() {
+        let mut tasks = Tasks::new(vec![task("duplicate", None, TaskStatus::Queue)]);
+        let first = issue(1, "duplicate", IssueState::Open);
+        assert!(matches!(
+            plan_pull(&tasks, &first, false),
+            Pull::Update {
+                task: 0,
+                link: true,
+                ..
+            }
+        ));
+        tasks.link(0, first.number);
         assert_eq!(
             plan_pull(&tasks, &issue(2, "duplicate", IssueState::Open), false),
-            Pull::Conflict { task: 0 }
+            Pull::Create {
+                status: TaskStatus::Queue
+            }
+        );
+    }
+
+    /// R4: an issue is linked to an unlinked task only when exactly one has its title; with two
+    /// (or after the first of several issues took one) the choice is not ours: a new task.
+    #[test]
+    fn an_issue_is_linked_only_to_the_one_unlinked_task_of_its_title() {
+        let tasks = Tasks::new(vec![
+            task("login", None, TaskStatus::Queue),
+            task("login", None, TaskStatus::Queue),
+        ]);
+        assert_eq!(
+            plan_pull(&tasks, &issue(4, "login", IssueState::Open), false),
+            Pull::Create {
+                status: TaskStatus::Queue
+            }
         );
     }
 

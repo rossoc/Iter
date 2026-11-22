@@ -253,4 +253,14 @@ mod tests {
         assert_eq!(back_to("http://127.0.0.1:3000//evil.example/", host), None);
         assert_eq!(back_to("/task/1", host), None);
     }
+
+    /// Characterisation (R7, percent-encode): the flash cookie keeps the unreserved marks of
+    /// `encodeURIComponent` (`-_.!~*'()`) and encodes every other byte, `/` and UTF-8 included.
+    #[test]
+    fn the_cookie_value_keeps_the_uri_component_marks() {
+        assert_eq!(encode("ok:Saved a/b"), "ok%3ASaved%20a%2Fb");
+        assert_eq!(encode("-_.!~*'()"), "-_.!~*'()");
+        assert_eq!(encode("é\"#%"), "%C3%A9%22%23%25");
+        assert_eq!(encode(""), "");
+    }
 }

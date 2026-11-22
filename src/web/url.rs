@@ -409,4 +409,15 @@ mod tests {
         assert_eq!(NoteTab::of(None), NoteTab::Info);
         assert_eq!(NoteTab::of(Some("bogus")), NoteTab::Info);
     }
+
+    /// Characterisation (R7, percent-encode): a query value keeps only `-._~` and letters and
+    /// digits; the other marks `encodeURIComponent` keeps (`!*'()`) and `/` are encoded.
+    #[test]
+    fn a_query_value_keeps_only_the_rfc_unreserved_characters() {
+        assert_eq!(encode("a b/c"), "a%20b%2Fc");
+        assert_eq!(encode("-._~"), "-._~");
+        assert_eq!(encode("!*'()"), "%21%2A%27%28%29");
+        assert_eq!(encode("é&=+"), "%C3%A9%26%3D%2B");
+        assert_eq!(encode(""), "");
+    }
 }

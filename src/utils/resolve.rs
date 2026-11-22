@@ -336,4 +336,142 @@ mod tests {
         let _ = p.a;
         std::fs::remove_dir_all(&p.root).unwrap();
     }
+
+    /// Project `web` with tasks `login` (1) and `logout` (2); project `api` with `login` (3).
+    fn distinct_titles() -> Db {
+        let db = fixtures::db();
+        let web = db.insert(&fixtures::project("web")).unwrap();
+        let api = db.insert(&fixtures::project("api")).unwrap();
+        for (project, title) in [(web, "login"), (web, "logout"), (api, "login")] {
+            fixtures::add_task(&db, project, title);
+        }
+        db
+    }
+
+    /// Project `web` with two tasks titled `login` (1, 2) and one titled `logout` (3); project
+    /// `api` with a task titled `login` (4).
+    fn repeated_titles() -> Db {
+        let db = fixtures::db();
+        let web = db.insert(&fixtures::project("web")).unwrap();
+        let api = db.insert(&fixtures::project("api")).unwrap();
+        for (project, title) in [
+            (web, "login"),
+            (web, "login"),
+            (web, "logout"),
+            (api, "login"),
+        ] {
+            fixtures::add_task(&db, project, title);
+        }
+        db
+    }
+
+    fn found(db: &Db, text: &str) -> std::result::Result<i64, IterError> {
+        resolve_task(db, text).map(|(_, task)| task.id())
+    }
+
+    /// R2: a title that names one task of the project resolves; one that names several is
+    /// refused with an error that lists the `#<id>` of each.
+    #[test]
+    fn a_repeated_title_is_ambiguous_and_names_the_ids() {
+        let db = repeated_titles();
+        assert_eq!(found(&db, "web/logout").unwrap(), 3);
+        assert_eq!(
+            found(&db, "api/login").unwrap(),
+            4,
+            "unique in its own project"
+        );
+        match found(&db, "web/login") {
+            Err(IterError::AmbiguousTask {
+                project,
+                title,
+                ids,
+            }) => {
+                assert_eq!((project.as_str(), title.as_str()), ("web", "login"));
+                assert_eq!(ids, [1, 2]);
+            }
+            other => panic!("expected AmbiguousTask, got {other:?}"),
+        }
+        assert!(matches!(
+            found(&db, "web/missing"),
+            Err(IterError::TaskNotFound { .. })
+        ));
+    }
+
+    /// R2: `42` and `#42` always resolve, repeated title or not.
+    #[test]
+    fn an_id_with_or_without_the_hash_resolves() {
+        let db = distinct_titles();
+        for text in ["2", "#2"] {
+            assert_eq!(found(&db, text).unwrap(), 2, "{text}");
+        }
+        assert!(matches!(found(&db, "#99"), Err(IterError::NotFound { .. })));
+    }
+
+    /// R3: in a pasted label the id wins: the title may be stale, the project must match.
+    #[test]
+    fn in_a_label_the_id_wins_over_the_title() {
+        let db = distinct_titles();
+        assert_eq!(found(&db, "web/login #1").unwrap(), 1);
+        assert_eq!(
+            found(&db, "web/an old title #1").unwrap(),
+            1,
+            "renamed since"
+        );
+        assert!(
+            matches!(
+                found(&db, "api/login #1"),
+                Err(IterError::TaskNotFound { .. })
+            ),
+            "task 1 is not in `api`"
+        );
+        // a trailing `#<id>` is always the id, even where a task is titled `fix #12`
+        let web = db.resolve::<Project>("web").unwrap().id();
+        let odd = fixtures::add_task(&db, web, "fix #12");
+        assert_eq!(odd, 4);
+        assert!(matches!(
+            found(&db, "web/fix #12"),
+            Err(IterError::TaskNotFound { .. })
+        ));
+        assert_eq!(found(&db, "#4").unwrap(), 4, "reachable by its own id");
+    }
+
+    /// R3: a task is shown as `<project>/<title> #<id>`, and what is shown reads back.
+    #[test]
+    fn a_task_is_shown_with_its_id() {
+        let db = distinct_titles();
+        let (project, task) = resolve_task(&db, "2").unwrap();
+        assert_eq!(task_display(&project, &task), "web/logout #2");
+        assert_eq!(found(&db, &task_display(&project, &task)).unwrap(), 2);
+        let unlinked = IterError::NoLinkedIssue(task_display(&project, &task));
+        assert!(unlinked.to_string().contains("web/logout #2"), "{unlinked}");
+    }
+
+    /// R2, R4: `--task` of pull and push names a task of *that* project, by id or by title, and an
+    /// all-digit title still works as a title.
+    #[test]
+    fn a_task_of_the_project_is_found_by_id_or_by_title() {
+        let db = distinct_titles();
+        let web = db.resolve::<Project>("web").unwrap();
+        let id = |text: &str| find_task_or_err(&db, &web, text).map(|t| t.id());
+        assert_eq!(id("2").unwrap(), 2);
+        assert_eq!(id("#2").unwrap(), 2);
+        assert_eq!(id("logout").unwrap(), 2);
+        assert!(
+            matches!(id("3"), Err(IterError::TaskNotFound { .. })),
+            "task 3 is in `api`: `pull web --task 3` never acts on it"
+        );
+        let numeric = fixtures::add_task(&db, web.id(), "2024");
+        assert_eq!(id("2024").unwrap(), numeric, "no task 2024: the title");
+    }
+
+    /// R2: `--task <title>` of a repeated title is the same ambiguity.
+    #[test]
+    fn a_repeated_title_given_to_task_in_a_project_is_ambiguous() {
+        let db = repeated_titles();
+        let web = db.resolve::<Project>("web").unwrap();
+        assert!(matches!(
+            find_task_or_err(&db, &web, "login"),
+            Err(IterError::AmbiguousTask { .. })
+        ));
+    }
 }

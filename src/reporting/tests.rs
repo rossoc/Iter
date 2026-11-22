@@ -618,7 +618,11 @@ fn each_day_is_rounded_to_the_half_hour_after_the_pauses() {
         ],
     )]);
     let log = Worklog::build(&projects, &all, now(), 17, "acme", "dev");
-    let days: Vec<(&str, f64)> = log.entries.iter().map(|e| (e.day.as_str(), e.time)).collect();
+    let days: Vec<(&str, f64)> = log
+        .entries
+        .iter()
+        .map(|e| (e.day.as_str(), e.time))
+        .collect();
     assert_eq!(
         days,
         [

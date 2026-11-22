@@ -203,3 +203,16 @@ fn an_ingest_needs_a_project_with_a_notes_folder() {
     let project = db.get::<Project>(id).unwrap().unwrap();
     assert!(Target::new(&db, project).is_err());
 }
+
+/// Characterisation (R7, `now()`): the ingest's stamp is the local time as `YYYY-MM-DDTHH:MM:SS`
+/// (it goes into file names with its colons removed).
+#[test]
+fn the_ingest_is_stamped_with_the_local_time_and_a_t() {
+    let stamp = now();
+    assert_eq!(stamp.as_bytes()[10], b'T', "{stamp}");
+    let at = chrono::NaiveDateTime::parse_from_str(&stamp, "%Y-%m-%dT%H:%M:%S").unwrap();
+    let off = (chrono::Local::now().naive_local() - at)
+        .num_seconds()
+        .abs();
+    assert!(off < 5, "{stamp} is {off}s from now");
+}

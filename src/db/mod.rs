@@ -18,6 +18,8 @@ use std::path::Path;
 mod groups;
 mod migrate;
 mod pushes;
+#[cfg(test)]
+mod rebuild_tests;
 mod reporting;
 mod sessions;
 mod sqltypes;

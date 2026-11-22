@@ -400,8 +400,10 @@ fn task_refs_can_narrow_to_one_status() {
     );
 }
 
+/// R3: `task pull/push --task` completes the bare id of every task (the project is not known to
+/// the completer, so a title could name several); the help text, not the value, carries the title.
 #[test]
-fn task_names_are_distinct_and_sorted() {
+fn task_names_are_the_ids_of_every_task() {
     let db = db();
     let one = insert_project(&db, "one");
     let two = insert_project(&db, "two");
@@ -409,10 +411,40 @@ fn task_names_are_distinct_and_sorted() {
     insert_task(&db, two, "shared");
     insert_task(&db, one, "alone");
 
+    let mut values = db.task_names().expect("task names");
+    values.sort();
+    assert_eq!(values, ["1", "2", "3"]);
+}
+
+/// R3: a task is offered as `<project>/<title>` when that names it alone, and as its bare id
+/// when the title repeats (a completion must never hand the shell a value that is ambiguous).
+#[test]
+fn completion_offers_a_repeated_title_by_its_id() {
+    let db = db();
+    let web = insert_project(&db, "web");
+    let api = insert_project(&db, "api");
+    for (project, title) in [
+        (web, "login"),
+        (web, "login"),
+        (web, "logout"),
+        (api, "login"),
+    ] {
+        insert_task(&db, project, title);
+    }
     assert_eq!(
-        db.task_names().expect("task names"),
-        vec!["alone".to_string(), "shared".to_string()]
+        db.task_refs(None, &[]).expect("refs"),
+        ["api/login", "1", "2", "web/logout"]
     );
+}
+
+/// R3: a title that ends in `#<digits>` would be read back as an id, so it is offered by id.
+#[test]
+fn completion_offers_a_title_that_reads_like_a_label_by_its_id() {
+    let db = db();
+    let web = insert_project(&db, "web");
+    insert_task(&db, web, "fix #12");
+    insert_task(&db, web, "plain");
+    assert_eq!(db.task_refs(None, &[]).expect("refs"), ["1", "web/plain"]);
 }
 
 #[test]
@@ -790,10 +822,30 @@ fn a_task_with_a_session_cannot_move_to_another_project() {
     })
     .expect("config inserts");
     let err = db.move_task(task_id, &mut task, &from, &to).unwrap_err();
-    assert!(matches!(&err, IterError::TaskHasSession(n) if n == "alpha/build it"));
+    assert!(
+        matches!(&err, IterError::TaskHasSession(n) if *n == format!("alpha/build it #{task_id}"))
+    );
     assert_eq!(task.project_id, a, "a refused move leaves the task alone");
     db.move_task(task_id, &mut task, &from, &from)
         .expect("a session does not stop staying");
+}
+
+/// R1: the target project may already hold a task of that title.
+#[test]
+fn a_task_moves_into_a_project_that_has_a_task_of_its_title() {
+    let db = db();
+    let (a, b) = (insert_project(&db, "alpha"), insert_project(&db, "beta"));
+    let (from, to) = (
+        db.get::<Project>(a).unwrap().unwrap(),
+        db.get::<Project>(b).unwrap().unwrap(),
+    );
+    let task_id = insert_task(&db, a, "build it");
+    insert_task(&db, b, "build it");
+    let mut task = db.get::<Task>(task_id).unwrap().unwrap();
+    db.move_task(task_id, &mut task, &from, &to)
+        .expect("an equal title in the target is fine");
+    assert_eq!(task.project_id, b);
+    db.update(task_id, &task).expect("and so is writing it");
 }
 
 #[test]
@@ -1387,10 +1439,9 @@ fn a_taken_name_is_a_typed_error() {
     insert_task(&db, b, "t");
     let mut same = Task::template(a, String::new(), TaskStatus::Queue);
     same.name = "t".into();
-    assert!(matches!(
-        db.insert(&same),
-        Err(IterError::NameTaken { kind: "task" })
-    ));
+    // R1: titles repeat; a task is told apart by its id
+    let again = db.insert(&same).expect("an equal title is accepted");
+    assert_ne!(again, db.insert(&same).expect("and again"));
 }
 
 #[test]

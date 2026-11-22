@@ -468,4 +468,23 @@ mod tests {
         };
         assert_eq!(project_dir(&own, &Some(org)), Some(PathBuf::from("/mine")));
     }
+
+    /// Characterisation (R7, slug): a project whose name has no ASCII letter or digit gets
+    /// `project-<id>` inside its organization's notes folder, not an empty folder name.
+    #[test]
+    fn a_project_name_with_nothing_sluggable_is_kept_under_its_id() {
+        let org = Organization {
+            notes_path: "/notes".into(),
+            ..Organization::default()
+        };
+        let project = Project {
+            id: Some(7),
+            name: "設計".into(),
+            ..Project::default()
+        };
+        assert_eq!(
+            project_dir(&project, &Some(org)),
+            Some(PathBuf::from("/notes/project-7"))
+        );
+    }
 }

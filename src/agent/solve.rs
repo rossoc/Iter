@@ -662,4 +662,16 @@ mod tests {
             assert_eq!((task.status, stored.status), (after, after));
         }
     }
+
+    /// Characterisation (R7, `now()`): a run's stamp is the local time as `YYYY-MM-DD HH:MM:SS`.
+    #[test]
+    fn a_run_is_stamped_with_the_local_time_and_a_space() {
+        let stamp = now();
+        assert_eq!(stamp.as_bytes()[10], b' ', "{stamp}");
+        let at = chrono::NaiveDateTime::parse_from_str(&stamp, "%Y-%m-%d %H:%M:%S").unwrap();
+        let off = (chrono::Local::now().naive_local() - at)
+            .num_seconds()
+            .abs();
+        assert!(off < 5, "{stamp} is {off}s from now");
+    }
 }
