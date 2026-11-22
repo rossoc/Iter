@@ -99,14 +99,13 @@ impl Plan {
         p
     }
 
+    /// `(done, total)` of the steps under phase `phase`.
     pub fn phase_progress(&self, phase: usize) -> (usize, usize) {
-        let mine = self.items.iter().filter(|i| i.phase == Some(phase));
-        let (mut done, mut total) = (0, 0);
-        for i in mine {
-            total += 1;
-            done += (i.state == State::Done) as usize;
-        }
-        (done, total)
+        let mine = || self.items.iter().filter(|i| i.phase == Some(phase));
+        (
+            mine().filter(|i| i.state == State::Done).count(),
+            mine().count(),
+        )
     }
 
     pub fn item(&self, id: &str) -> Option<&Item> {
@@ -357,16 +356,12 @@ pub fn problems(content: &str) -> Vec<String> {
 }
 
 pub fn skeleton(description: &str) -> String {
-    let goal = description.trim();
-    let goal = goal.split("\n\n").next().unwrap_or("").trim();
-    format!(
-        "## Goal\n{}\n\n## How\n\n## Checklist\n- [ ] {{s1}} \n- [ ] {{s2}} (verify) \n",
-        if goal.is_empty() {
-            "What done looks like."
-        } else {
-            goal
-        }
-    )
+    let first_paragraph = description.trim().split("\n\n").next().unwrap_or("").trim();
+    let goal = match first_paragraph {
+        "" => "What done looks like.",
+        text => text,
+    };
+    format!("## Goal\n{goal}\n\n## How\n\n## Checklist\n- [ ] {{s1}} \n- [ ] {{s2}} (verify) \n")
 }
 
 #[cfg(test)]

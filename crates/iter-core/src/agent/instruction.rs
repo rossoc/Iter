@@ -98,21 +98,20 @@ pub fn parse_front(yaml: &str) -> AgentResult<Front> {
         Value::Mapping(m) => m,
         _ => return Err(AgentError::FrontMatterNotMapping),
     };
-    let get = |key: &str| map.get(key);
+    // a missing key and a `null` one are the same: unset
+    let get = |key: &str| map.get(key).filter(|v| !v.is_null());
     let text = |key: &str| -> AgentResult<Option<String>> {
-        match get(key) {
-            None | Some(Value::Null) => Ok(None),
-            Some(v) => yaml_scalar(v)
+        get(key).map_or(Ok(None), |v| {
+            yaml_scalar(v)
                 .map(Some)
-                .ok_or_else(|| AgentError::FrontMatterNotText(key.to_string())),
-        }
+                .ok_or_else(|| AgentError::FrontMatterNotText(key.to_string()))
+        })
     };
     let flag = |key: &str| -> AgentResult<bool> {
-        match get(key) {
-            None | Some(Value::Null) => Ok(false),
-            Some(Value::Bool(b)) => Ok(*b),
-            Some(_) => Err(AgentError::FrontMatterNotFlag(key.to_string())),
-        }
+        get(key).map_or(Ok(false), |v| {
+            v.as_bool()
+                .ok_or_else(|| AgentError::FrontMatterNotFlag(key.to_string()))
+        })
     };
     Ok(Front {
         description: text("description")?.unwrap_or_default(),
@@ -121,12 +120,9 @@ pub fn parse_front(yaml: &str) -> AgentResult<Front> {
         interactive: flag("interactive")?,
         mode: text("mode")?,
         temperature: text("temperature")?,
-        permission: match get("permission") {
-            None | Some(Value::Null) => None,
-            Some(v) => serde_yaml::to_string(v)
-                .ok()
-                .map(|s| s.trim_end().to_string()),
-        },
+        permission: get("permission")
+            .and_then(|v| serde_yaml::to_string(v).ok())
+            .map(|s| s.trim_end().to_string()),
     })
 }
 
@@ -321,6 +317,17 @@ fn text_value(text: &str) -> Option<Value> {
     (!text.is_empty()).then(|| Value::String(text.replace('\n', " ")))
 }
 
+/// A number when `value` reads as one, so `0.2` is written unquoted.
+fn number_or_text(value: Value) -> Value {
+    let Value::String(text) = &value else {
+        return value;
+    };
+    text.parse::<f64>()
+        .ok()
+        .and_then(|n| serde_yaml::to_value(n).ok())
+        .unwrap_or(value)
+}
+
 /// An instruction file from its fields: `existing`'s front matter with the fields written over it (empty removes a key, unknown keys stay), a blank line, the prompt.
 pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
     let mut map = existing
@@ -334,32 +341,19 @@ pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
     put(&mut map, "description", text_value(f.description));
     put(&mut map, "model", text_value(f.model));
     put(&mut map, "mode", text_value(f.mode));
-    let temperature = f.temperature.trim();
     put(
         &mut map,
         "temperature",
-        (!temperature.is_empty()).then(|| match temperature.parse::<f64>() {
-            Ok(n) => serde_yaml::to_value(n).unwrap_or(Value::String(temperature.into())),
-            Err(_) => Value::String(temperature.into()),
-        }),
+        text_value(f.temperature).map(number_or_text),
     );
     if let Some(worktree) = f.worktree {
         put(&mut map, "worktree", worktree.then_some(Value::Bool(true)));
     }
-    let permission = f.permission.trim();
-    put(
-        &mut map,
-        "permission",
-        if permission.is_empty() {
-            None
-        } else {
-            match serde_yaml::from_str::<Value>(permission) {
-                Ok(Value::Null) => None,
-                Ok(v) => Some(v),
-                Err(e) => return Err(AgentError::FieldPermission(e)),
-            }
-        },
-    );
+    let permission = match f.permission.trim() {
+        "" => None,
+        yaml => Some(serde_yaml::from_str::<Value>(yaml).map_err(AgentError::FieldPermission)?),
+    };
+    put(&mut map, "permission", permission.filter(|v| !v.is_null()));
     let prompt = f.prompt.replace("\r\n", "\n");
     let prompt = prompt.trim_matches('\n');
     if map.is_empty() {
@@ -382,11 +376,16 @@ mod tests {
 
     #[test]
     fn front_matter_is_split_from_the_prompt() {
-        assert_eq!(split("---\na: 1\n---\nBody\n"), (Some("a: 1\n"), "Body\n"));
-        assert_eq!(split("---\n---\nBody"), (Some(""), "Body"));
-        assert_eq!(split("no front"), (None, "no front"));
-        assert_eq!(split("---\nnever closed\n"), (None, "---\nnever closed\n"));
-        assert_eq!(split("---\na: 1\n---"), (Some("a: 1\n"), ""));
+        let cases = [
+            ("---\na: 1\n---\nBody\n", (Some("a: 1\n"), "Body\n")),
+            ("---\n---\nBody", (Some(""), "Body")),
+            ("no front", (None, "no front")),
+            ("---\nnever closed\n", (None, "---\nnever closed\n")),
+            ("---\na: 1\n---", (Some("a: 1\n"), "")),
+        ];
+        for (raw, want) in cases {
+            assert_eq!(split(raw), want, "{raw:?}");
+        }
     }
 
     #[test]
@@ -466,11 +465,16 @@ mod tests {
 
     #[test]
     fn what_cannot_be_kept_is_refused() {
-        assert!(check("fix", "---\ndescription: x\n---\nWork on {{task.name}}").is_ok());
-        assert!(check("fix", "Work on {{taks}}").is_err());
-        assert!(check("fix", "---\ndescription: x\n---\n\n").is_err());
-        assert!(check("fix", "---\nkind: dance\n---\nx").is_ok());
-        assert!(check("fix", "---\ninteractive: maybe\n---\nx").is_err());
+        let cases = [
+            ("---\ndescription: x\n---\nWork on {{task.name}}", true),
+            ("Work on {{taks}}", false),
+            ("---\ndescription: x\n---\n\n", false),
+            ("---\nkind: dance\n---\nx", true),
+            ("---\ninteractive: maybe\n---\nx", false),
+        ];
+        for (raw, kept) in cases {
+            assert_eq!(check("fix", raw).is_ok(), kept, "{raw:?}");
+        }
         assert!(
             valid_name("code-review")
                 && !valid_name("Code")
@@ -586,14 +590,16 @@ mod tests {
 
     #[test]
     fn a_name_can_change_to_any_valid_name() {
-        assert_eq!(rename_target("review", "review").unwrap(), None);
-        assert_eq!(rename_target("review", "  ").unwrap(), None);
-        assert_eq!(
-            rename_target("review", " audit ").unwrap(),
-            Some("audit".into())
-        );
+        let cases = [
+            ("review", "review", None),
+            ("review", "  ", None),
+            ("review", " audit ", Some("audit".to_string())),
+            ("fix", "fix", None),
+        ];
+        for (old, wanted, want) in cases {
+            assert_eq!(rename_target(old, wanted).unwrap(), want, "{wanted:?}");
+        }
         assert!(rename_target("review", "Bad Name").is_err());
-        assert_eq!(rename_target("fix", "fix").unwrap(), None);
     }
 
     /// Characterisation (R7, YAML scalar): an instruction's front-matter scalar is text exactly

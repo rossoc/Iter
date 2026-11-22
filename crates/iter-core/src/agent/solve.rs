@@ -3,6 +3,7 @@
 
 use super::ingest_job::{Auto, Trigger, auto};
 use crate::agent::exec;
+use crate::agent::instruction::Instruction;
 use crate::agent::run::{Harness, Invocation, RunRecord, Status};
 use crate::agent::task_prompt::{fill, instruction_for, locate};
 use crate::agent::taskdir::TaskDir;
@@ -92,6 +93,15 @@ pub fn start(
     Ok(n)
 }
 
+/// The instruction `name`, refused when it is interactive: a run is headless.
+fn headless(app: &App, project: &Project, task: &Task, name: &str) -> Result<Instruction> {
+    let found = instruction_for(app, project, task, name)?;
+    match found.front.interactive {
+        true => Err(AgentError::Interactive(name.to_string()).into()),
+        false => Ok(found),
+    }
+}
+
 /// Writes a run of the instruction `instruction` down without starting it (`queued`): its prompt
 /// is `prompt`, else the instruction's filled in. An interactive instruction is refused, and so is
 /// one found nowhere. `{{worktree}}` in the prompt is resolved at `begin`.
@@ -104,10 +114,7 @@ pub fn create(
     prompt: Option<&str>,
 ) -> Result<u32> {
     let (project, task, dir) = locate(app, Some(name))?;
-    let found = instruction_for(app, &project, &task, instruction)?;
-    if found.front.interactive {
-        return Err(AgentError::Interactive(instruction.to_string()).into());
-    }
+    let found = headless(app, &project, &task, instruction)?;
     dir.ensure()?;
     let text = match prompt {
         Some(text) if !text.trim().is_empty() => text.to_string(),
@@ -160,14 +167,11 @@ pub fn amend(
     prompt: &str,
 ) -> Result<()> {
     let (project, task, dir) = locate(app, Some(name))?;
-    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
+    let mut run = dir.run(n)?;
     if !run.is_queued() {
         return Err(AgentError::RunBegun(n).into());
     }
-    let found = instruction_for(app, &project, &task, instruction)?;
-    if found.front.interactive {
-        return Err(AgentError::Interactive(instruction.to_string()).into());
-    }
+    let found = headless(app, &project, &task, instruction)?;
     run.agent = spec.agent;
     run.model = spec.model.clone();
     run.effort = spec.effort.clone();
@@ -213,7 +217,7 @@ fn not_busy(dir: &TaskDir, name: &str) -> Result<()> {
 fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
     let (project, mut task, dir) = locate(app, Some(name))?;
     not_busy(&dir, name)?;
-    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
+    let mut run = dir.run(n)?;
     if !run.is_queued() {
         return Err(AgentError::RunNotQueued {
             run: n,
@@ -322,7 +326,7 @@ pub fn open_subagent(
 /// subagent said at the end) as its log. A run iter started closes itself and is refused.
 pub fn close(app: &App, name: &str, n: u32, status: Status, report: &str) -> Result<()> {
     let (_, _, dir) = locate(app, Some(name))?;
-    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
+    let mut run = dir.run(n)?;
     if !run.subagent {
         return Err(AgentError::RunNotSubagent(n).into());
     }
@@ -345,7 +349,7 @@ pub fn close(app: &App, name: &str, n: u32, status: Status, report: &str) -> Res
 /// Stops run `n`: a waiting one is dropped, a working one is told to stop; both end `cancelled`.
 pub fn cancel(app: &App, name: &str, n: u32) -> Result<()> {
     let (_, _, dir) = locate(app, Some(name))?;
-    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
+    let mut run = dir.run(n)?;
     let working = run.is_running();
     if !working && !run.is_queued() {
         return Err(AgentError::RunNotStoppable {
@@ -451,7 +455,7 @@ pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
         .get::<Project>(task.project_id)?
         .ok_or(AgentError::ProjectGone)?;
     let dir = crate::agent::taskdir::of(&app.db, &project, &task)?;
-    let mut run = dir.read_run(n)?.ok_or(AgentError::RunNotFound(n))?;
+    let mut run = dir.run(n)?;
     run.pid = Some(std::process::id());
     dir.write_run(&run)?;
     work(&project, task.id(), &dir, run, extra).map(|_| ())
