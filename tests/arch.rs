@@ -751,7 +751,6 @@ fn one_task_ref_grammar_and_no_name_keyed_helpers() {
 
 /// The migration runner finds the rebuild step by what it is: no hand-kept index into the list.
 #[test]
-#[ignore = "isolation: round I3"]
 fn the_rebuild_step_has_no_hand_kept_index() {
     let sources = sources();
     let migrate = file_of(&sources, "db/migrate.rs").expect("db/migrate.rs");

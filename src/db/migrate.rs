@@ -36,7 +36,9 @@ impl Db {
             let Some(step) = steps.get(done) else {
                 return Ok(());
             };
-            if had_tasks && done == Self::REBUILD {
+            if had_tasks
+                && std::ptr::fn_addr_eq(*step, Self::task_titles_repeat as fn(&Db) -> Result<()>)
+            {
                 self.keep_a_copy()?;
             }
             step(self)?;
@@ -45,11 +47,8 @@ impl Db {
         }
     }
 
-    /// Where [`Self::task_titles_repeat`], the step that rebuilds `tasks`, sits in [`Self::MIGRATIONS`].
-    const REBUILD: usize = 6;
-
-    /// Copies a database that held tasks when it was opened to `<db>.before-v7` before that
-    /// rebuild, once: an existing copy is kept, and no later step takes one. The copy is made on a second connection (`VACUUM INTO`
+    /// Copies a database that held tasks when it was opened to `<db>.before-v7` right before the
+    /// rebuild step ([`Self::task_titles_repeat`], found by identity), once: an existing copy is kept, and no later step takes one. The copy is made on a second connection (`VACUUM INTO`
     /// reads, so it runs beside our write lock) under a temporary name and renamed into place.
     fn keep_a_copy(&self) -> Result<()> {
         let Some(path) = self.conn.path().filter(|p| !p.is_empty()) else {
