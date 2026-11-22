@@ -1,0 +1,268 @@
+//! `iter project`, plus `iter init`, `iter new` and `iter clone`, which also create a project, all through [`create_project_interactively`] (one validation).
+
+use crate::Run;
+use crate::args::{ProjectCommand, ReportOpts};
+use crate::editor::edited;
+use crate::entity::update;
+use crate::output::list_names;
+use iter_core::app::App;
+use iter_core::config::config;
+use iter_core::db::Db;
+use iter_core::db::Table;
+use iter_core::error::Result;
+use iter_core::locate::project_or_current;
+use iter_core::models::{Board, Named, Organization, Project};
+use iter_core::reporting::{Header, ProjectInfo, print_report};
+use iter_core::reporting::{task_reports, total_minutes};
+use iter_core::tmux::{Multiplexer, TmuxClient};
+use iter_core::workspace::teardown;
+use iter_core::{git, scaffold};
+
+/// The one way a project is created: opens `template` in the editor, validates, lets `populate` make the directory the edited `base_path` names, and only then inserts the row;
+/// so no project names a directory that was never made, and none is made for a `base_path` the user changed. `cloned_from` only names the origin in the message.
+fn create_project_interactively(
+    db: &Db,
+    template: &Project,
+    cloned_from: Option<&str>,
+    populate: impl FnOnce(&str) -> Result<()>,
+) -> Result<()> {
+    edited(template, Project::KIND, "created", |mut project| {
+        scaffold::absolutise_base_path(&mut project)?;
+        project.validate()?;
+        populate(&project.base_path)?;
+        db.insert(&project)?;
+        Ok(match cloned_from {
+            Some(source) => format!(
+                "created project '{}' (cloned from '{source}')",
+                project.name
+            ),
+            None => format!("created project '{}'", project.name),
+        })
+    })
+}
+
+/// A blank project template seeded with `organization`'s defaults when one was named.
+fn new_project_template(db: &Db, organization: Option<&str>) -> Result<Project> {
+    let mut template = Project::template(&config().project);
+    if let Some(name) = organization {
+        template.inherit_from(&db.resolve::<Organization>(name)?);
+    }
+    Ok(template)
+}
+
+pub(crate) fn init_cmd(app: &App, organization: Option<&str>) -> Result<()> {
+    let db = &app.db;
+    let base_path = scaffold::absolute_path(".")?;
+    let mut template = new_project_template(db, organization)?;
+    // Detected from disk, so it wins over an inherited default: an
+    // organization saying "github" can't make a non-repo into one.
+    template.github = git::is_git_repo(&base_path);
+    template.base_path = base_path;
+    create_project_interactively(db, &template, None, |_| Ok(()))
+}
+
+pub(crate) fn new_cmd(app: &App, path: &str, organization: Option<&str>) -> Result<()> {
+    let db = &app.db;
+    let base_path = scaffold::absolute_path(path)?;
+
+    let mut template = new_project_template(db, organization)?;
+    template.name = scaffold::dir_name(&base_path);
+    template.github = git::is_git_repo(&base_path);
+    template.base_path = base_path;
+
+    // the directory is made from what comes back from the editor, not from the argument; quitting without saving leaves nothing to clean up
+    create_project_interactively(db, &template, None, |dest| {
+        Ok(std::fs::create_dir_all(dest)?)
+    })
+}
+
+/// `iter clone <source>`: clones a local project as a template when `source` names one, else clones `source` as a git remote or local repo.
+/// The clone stays on that project's board unless `--board` or `--no-board` says otherwise.
+pub(crate) fn clone_cmd(
+    app: &App,
+    source: &str,
+    organization: Option<&str>,
+    board: Option<&str>,
+    no_board: bool,
+) -> Result<()> {
+    let db = &app.db;
+    match db.find_by_name::<Project>(source)? {
+        // pre-fill from the source, name included so the user must change it; `base_path` is left blank. Its tasks and sessions are never touched
+        Some(source_project) => {
+            let mut template = source_project.clone();
+            template.id = None;
+            template.base_path = String::new();
+            // cloning keeps the source's settings: `--organization` only moves the copy, it does not re-seed defaults
+            if let Some(name) = organization {
+                template.organization_id = db.resolve::<Organization>(name)?.id;
+            }
+            template.board_id = chosen_board(db, board, no_board, source_project.board_id)?;
+            let files_from = source_project.base_path.clone();
+            create_project_interactively(db, &template, Some(&source_project.name), |dest| {
+                scaffold::copy_template(
+                    std::path::Path::new(&files_from),
+                    std::path::Path::new(dest),
+                )
+            })
+        }
+        // `git clone` creates the destination directory itself.
+        None => {
+            let mut template = new_project_template(db, organization)?;
+            template.github = true; // it is a repo, by construction
+            template.board_id = chosen_board(db, board, no_board, None)?;
+            create_project_interactively(db, &template, Some(source), |dest| {
+                git::clone_repo(source, dest)
+            })
+        }
+    }
+}
+
+fn chosen_board(
+    db: &Db,
+    board: Option<&str>,
+    no_board: bool,
+    current: Option<i64>,
+) -> Result<Option<i64>> {
+    Ok(match (board, no_board) {
+        (Some(name), _) => db.resolve::<Board>(name)?.id,
+        (None, true) => None,
+        (None, false) => current,
+    })
+}
+
+impl Run for ProjectCommand {
+    fn run(&self, app: &App) -> Result<()> {
+        match self {
+            Self::New {
+                organization,
+                board,
+            } => project_new(app, organization.as_deref(), board.as_deref()),
+            Self::Edit {
+                name,
+                organization,
+                board,
+                no_board,
+            } => project_edit(
+                app,
+                name.as_deref(),
+                organization.as_deref(),
+                board.as_deref(),
+                *no_board,
+            ),
+            Self::Delete { name } => project_delete(app, &TmuxClient::system(), name.as_deref()),
+            Self::Info { name, report } => project_info(app, name.as_deref(), report),
+            Self::List => project_list(app),
+        }
+    }
+}
+
+fn project_new(app: &App, organization: Option<&str>, board: Option<&str>) -> Result<()> {
+    let db = &app.db;
+    let mut template = new_project_template(db, organization)?;
+    if let Some(name) = board {
+        template.board_id = db.resolve::<Board>(name)?.id;
+    }
+    create_project_interactively(db, &template, None, |_| Ok(()))
+}
+
+fn project_edit(
+    app: &App,
+    name: Option<&str>,
+    organization: Option<&str>,
+    board: Option<&str>,
+    no_board: bool,
+) -> Result<()> {
+    let db = &app.db;
+    let stored = project_or_current(db, name)?;
+    let mut existing = stored.clone();
+    // `--organization` moves the project; without it membership is carried through
+    if let Some(name) = organization {
+        existing.organization_id = db.resolve::<Organization>(name)?.id;
+    }
+    // likewise the board; `--no-board` is the one way to leave it
+    existing.board_id = chosen_board(db, board, no_board, existing.board_id)?;
+    // neither is in the buffer, so a move is saved even if the buffer is untouched
+    let moved =
+        (existing.organization_id, existing.board_id) != (stored.organization_id, stored.board_id);
+    update(db, &existing, moved, scaffold::absolutise_base_path)
+}
+
+fn project_delete(app: &App, mux: &dyn Multiplexer, name: Option<&str>) -> Result<()> {
+    let db = &app.db;
+    let project = project_or_current(db, name)?;
+    let project_id = project.id();
+
+    let session_configs = db.session_configs_for_project(project_id)?;
+
+    // delete the row before tearing down tmux/worktrees: from inside one of those sessions `kill-session` takes this pane down too
+    db.delete::<Project>(project_id)?;
+
+    let tmux_sessions: Vec<&str> = session_configs
+        .iter()
+        .filter_map(|session_config| teardown(db, &project, session_config))
+        .collect();
+    println!("deleted project '{}'", project.name);
+
+    // killing goes last for the same reason: the first `kill-session` would take this process with it and strand later worktrees
+    for name in tmux_sessions {
+        mux.kill_session(name);
+    }
+    Ok(())
+}
+
+fn project_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> {
+    let db = &app.db;
+    let project = project_or_current(db, name)?;
+    let project_id = project.id();
+    let now = app.now;
+    let range = opts.range(now)?;
+
+    // the union of every task's sessions, so two tasks worked in parallel are not double-counted
+    let (tasks, sessions) = task_reports(db, project_id, range, now)?;
+    let total_minutes = total_minutes(&sessions, now);
+
+    let info = ProjectInfo {
+        header: Header::of(
+            project.name.clone(),
+            &project.description,
+            &project,
+            range,
+            total_minutes,
+        )?,
+        tasks,
+    };
+    print_report(&info, opts.format)
+}
+
+fn project_list(app: &App) -> Result<()> {
+    list_names::<Project>(&app.db)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use iter_core::fixtures;
+    use iter_core::models::{SessionConfig, Task};
+    use iter_core::process::fake::FakeRunner;
+
+    #[test]
+    fn deleting_a_project_removes_the_row_then_kills_its_tmux_sessions() {
+        let app = App::with_db(fixtures::db());
+        let project_id = app.db.insert(&fixtures::project("proj")).unwrap();
+        let task_id = app.db.insert(&fixtures::task(project_id, "t")).unwrap();
+        app.db
+            .insert(&SessionConfig {
+                id: None,
+                task_id,
+                tmux_session_name: Some("proj-t".into()),
+                github_branch: None,
+                worktree_path: None,
+            })
+            .unwrap();
+        let runner = FakeRunner::default();
+        project_delete(&app, &TmuxClient::new(&runner, false), Some("proj")).unwrap();
+        assert!(app.db.get::<Project>(project_id).unwrap().is_none());
+        assert!(app.db.get::<Task>(task_id).unwrap().is_none());
+        assert_eq!(runner.calls(), ["tmux kill-session -t =proj-t"]);
+    }
+}

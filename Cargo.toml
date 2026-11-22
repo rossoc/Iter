@@ -1,24 +1,16 @@
-[package]
-name = "Iter"
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+default-members = ["crates/iter-cli"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-description = "A command-line time tracker for projects and tasks, with tmux session and GitHub issue integration."
 
-[workspace]
-members = ["macros"]
-
-# Round I5, until the crates are split out (the split deletes this entry).
-[[test]]
-name = "arch_crates"
-path = "crates/iter-cli/tests/arch.rs"
-
-[features]
-default = ["web"]
-# `iter serve`: the local browser UI. Off for a CLI-only build.
-web = ["dep:topcoat", "dep:tokio", "dep:pulldown-cmark"]
-
-[dependencies]
-iter-macros = { path = "macros" }
+[workspace.dependencies]
+iter-macros = { path = "crates/iter-macros" }
+iter-core = { path = "crates/iter-core" }
+iter-web = { path = "crates/iter-web" }
 chrono = "0.4.37"
 clap = { version = "4.5.45", features = ["derive"] }
 clap_complete = { version = "4.6.9", features = ["unstable-dynamic"] }
@@ -40,10 +32,10 @@ sha1 = "0.11"
 # compression, cookies, sessions, fonts, assets and route discovery: about 120
 # more crates (brotli, h2's codecs, tungstenite, toml, time, rand), which
 # doubled a clean release build.
-topcoat = { version = "0.9", optional = true, default-features = false, features = ["router", "view", "serve"] }
-# Descriptions are markdown (`web/ui/prose.rs`); only its HTML writer.
-pulldown-cmark = { version = "0.13.4", optional = true, default-features = false, features = ["html"] }
-tokio = { version = "1", features = ["rt-multi-thread", "net"], optional = true }
+topcoat = { version = "0.9", default-features = false, features = ["router", "view", "serve"] }
+# Descriptions are markdown (`ui/prose.rs` in iter-web); only its HTML writer.
+pulldown-cmark = { version = "0.13.4", default-features = false, features = ["html"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net"] }
 ureq = "3.5.0"
 
 # A release rebuild reuses what did not change: most of its time is LLVM

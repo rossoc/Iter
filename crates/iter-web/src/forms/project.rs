@@ -1,0 +1,128 @@
+//! The project edit form.
+
+use super::{SettingsForm, text};
+use crate::edit::{EditForm, name_field};
+use crate::url::project_url;
+use iter_core::error::{IterError, Result};
+use iter_core::models::{Configured, Named, Project};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct ProjectForm {
+    pub name: String,
+    pub description: String,
+    pub base_path: String,
+    #[serde(default)]
+    pub notes_path: String,
+    pub organization: String,
+    #[serde(flatten)]
+    pub settings: SettingsForm,
+}
+
+impl ProjectForm {
+    pub const BASE_PATH: &'static str = "base_path";
+    pub const ORGANIZATION: &'static str = "organization";
+    pub const NOTES_PATH: &'static str = "notes_path";
+}
+
+impl EditForm for ProjectForm {
+    type Row = Project;
+    fn saved(id: i64) -> String {
+        project_url(id)
+    }
+
+    fn field(error: &IterError) -> Option<&'static str> {
+        match error {
+            IterError::EmptyBasePath => Some(Self::BASE_PATH),
+            _ => name_field(error),
+        }
+    }
+
+    fn apply(&self, mut project: Project) -> (Project, Result<()>) {
+        project.name = self.name.trim().to_string();
+        project.description = text(&self.description);
+        project.base_path = self.base_path.trim().to_string();
+        project.notes_path = self.notes_path.trim().to_string();
+        project.organization_id = self.organization.trim().parse().ok();
+        project.set_settings(self.settings.settings());
+        let valid = iter_core::scaffold::absolutise_base_path(&mut project)
+            .and_then(|()| project.validate());
+        (project, valid)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::edit::NAME;
+    use iter_core::fixtures;
+    use iter_core::models::Settings;
+
+    /// A taken name reads as a sentence, not as a database error.
+    #[test]
+    fn project_errors_name_their_field() {
+        assert_eq!(
+            ProjectForm::field(&IterError::EmptyBasePath),
+            Some(ProjectForm::BASE_PATH)
+        );
+        assert_eq!(
+            ProjectForm::field(&IterError::EmptyName("project")),
+            Some(NAME)
+        );
+        let db = fixtures::db();
+        let p = fixtures::project("p");
+        db.insert(&p).expect("first");
+        let taken = db.insert(&p).expect_err("same name");
+        assert_eq!(ProjectForm::field(&taken), Some(NAME));
+        assert_eq!(
+            ProjectForm::refusal(&taken).message,
+            "A project with this name already exists."
+        );
+        let other = IterError::CommandFailed("x".into());
+        assert_eq!(ProjectForm::field(&other), None);
+    }
+
+    #[test]
+    fn project_form_moves_between_organizations_and_requires_a_path() {
+        let form = |org: &str, path: &str| ProjectForm {
+            name: "p".into(),
+            description: String::new(),
+            base_path: path.into(),
+            notes_path: String::new(),
+            organization: org.into(),
+            settings: SettingsForm {
+                github: true,
+                tmux: false,
+                auto_branch: false,
+                branch_template: "feat/".into(),
+                default_branch: "main".into(),
+                github_project: String::new(),
+            },
+        };
+        let base = Project::template(&Settings::default());
+        let apply = |org: &str, path: &str| form(org, path).apply(base.clone());
+        let (p, valid) = apply("3", "/tmp/p");
+        assert!(valid.is_ok());
+        assert_eq!(p.organization_id, Some(3));
+        assert!(p.github && !p.tmux);
+        assert_eq!(apply("", "/tmp/p").0.organization_id, None);
+        assert!(matches!(apply("", " ").1, Err(IterError::EmptyBasePath)));
+    }
+
+    /// As a real submission arrives: a box is `on` when ticked, absent when not.
+    #[test]
+    fn a_project_submission_decodes_its_ticks_as_bools() {
+        let decode = |body: &str| {
+            let topcoat::router::content::Form(form) =
+                topcoat::router::content::Form::<ProjectForm>::from_bytes(body.as_bytes())
+                    .expect("decodes");
+            form.settings
+        };
+        let base = "name=p&description=&base_path=%2Ftmp%2Fp&organization=\
+                    &branch_template=f&default_branch=main&github_project=";
+        let ticked = decode(&format!("{base}&github=on&auto_branch=on"));
+        assert!(ticked.github && !ticked.tmux && ticked.auto_branch);
+        let none = decode(base);
+        assert!(!none.github && !none.tmux && !none.auto_branch);
+    }
+}

@@ -1,0 +1,103 @@
+//! The board edit form.
+
+use super::{DESCRIPTION, NAME, PROJECTS, Pairs, text};
+use crate::edit::EditForm;
+use crate::url::board_info_url;
+use iter_core::db::Db;
+use iter_core::error::Result;
+use iter_core::models::{Board, Named};
+
+pub struct BoardForm {
+    pub name: String,
+    pub description: String,
+    pub projects: Vec<i64>,
+}
+
+impl BoardForm {
+    pub fn parse(pairs: &[(String, String)]) -> BoardForm {
+        let pairs = Pairs(pairs);
+        BoardForm {
+            name: pairs.first(NAME),
+            description: pairs.first(DESCRIPTION),
+            projects: pairs.ids(PROJECTS),
+        }
+    }
+}
+
+impl EditForm for BoardForm {
+    type Row = Board;
+
+    fn saved(id: i64) -> String {
+        board_info_url(id)
+    }
+
+    fn apply(&self, mut board: Board) -> (Board, Result<()>) {
+        board.name = self.name.trim().to_string();
+        board.description = text(&self.description);
+        let valid = board.validate();
+        (board, valid)
+    }
+
+    fn save(&self, db: &Db, id: i64, board: &Board) -> Result<()> {
+        db.save_group(id, board, &self.projects)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::edit::NAME;
+    use iter_core::error::IterError;
+    use iter_core::fixtures;
+
+    fn pairs(v: &[(&str, &str)]) -> Vec<(String, String)> {
+        v.iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn a_board_form_reads_repeated_project_fields() {
+        let form = BoardForm::parse(&pairs(&[
+            ("name", " work "),
+            ("description", "a\r\nb"),
+            ("project", "3"),
+            ("project", "x"),
+            ("project", "5"),
+        ]));
+        assert_eq!(form.projects, [3, 5]);
+        let dup = BoardForm::parse(&pairs(&[
+            ("project", "5"),
+            ("project", "3"),
+            ("project", "5"),
+        ]));
+        assert_eq!(dup.projects, [3, 5]);
+        let board = Board {
+            id: Some(1),
+            ..fixtures::board("")
+        };
+        let (board, valid) = form.apply(board);
+        assert!(valid.is_ok());
+        assert_eq!(
+            (board.name.as_str(), board.description.as_str()),
+            ("work", "a\nb")
+        );
+        let (_, blank) = BoardForm::parse(&pairs(&[("name", " ")])).apply(board);
+        assert!(matches!(blank, Err(IterError::EmptyName("board"))));
+    }
+
+    #[test]
+    fn board_errors_name_their_field() {
+        let taken = IterError::NameTaken { kind: "board" };
+        assert_eq!(BoardForm::field(&taken), Some(NAME));
+        assert_eq!(
+            BoardForm::refusal(&taken).message,
+            "A board with this name already exists."
+        );
+        assert_eq!(BoardForm::field(&IterError::EmptyName("board")), Some(NAME));
+        assert_eq!(
+            BoardForm::field(&IterError::CommandFailed("x".into())),
+            None
+        );
+    }
+}

@@ -1,22 +1,17 @@
-//! The crate-split rules of the architecture (task 298, round I5, sketch `architecture` section 0).
-//!
-//! It reads the three manifests and `crates/*/src/**/*.rs` as text and runs no iter code, so it
-//! touches no tmux, config or database. Until the split (isolation step 8) it is registered from the
-//! root `Cargo.toml` as `[[test]] name = "arch_crates"` and fails because the crates are missing;
-//! the step that moves the crates deletes that entry (cargo then finds this file in
-//! `iter-cli/tests`) and folds the rules of the old `tests/arch.rs` in beside these.
+//! The architecture of the crates (task 298, sketch `architecture` section 0): the manifests, the
+//! names each crate may use, and, in [`layers`], the ranks of the core modules and the placement
+//! rules of the isolation steps. It reads the three manifests and `crates/*/src/**/*.rs` as text
+//! and runs no iter code, so it touches no tmux, config or database.
+
+#[path = "arch/layers.rs"]
+mod layers;
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// The workspace root: the package folder today, two levels above `iter-cli` after the split.
+/// The workspace root, two levels above `iter-cli`.
 fn root() -> PathBuf {
-    let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    if here.join("crates").is_dir() {
-        here
-    } else {
-        here.join("../..")
-    }
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
 fn crate_dir(name: &str) -> PathBuf {
@@ -82,11 +77,13 @@ fn sources(crate_name: &str) -> Vec<(PathBuf, String)> {
     out
 }
 
-/// Production code and tests alike: a name that must not appear anywhere in the crate.
+/// Production code and tests alike: a name that must not appear anywhere in the crate. A crate
+/// is named by a path (`iter_web::serve`): the bare word also starts `@iter_client_session_`.
 fn files_naming<'a>(files: &'a [(PathBuf, String)], word: &str) -> Vec<&'a Path> {
+    let path = format!("{word}::");
     files
         .iter()
-        .filter(|(_, text)| text.contains(word))
+        .filter(|(_, text)| text.contains(&path))
         .map(|(p, _)| p.as_path())
         .collect()
 }

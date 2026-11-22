@@ -1,0 +1,28 @@
+[package]
+name = "iter-cli"
+version.workspace = true
+edition.workspace = true
+description = "A command-line time tracker for projects and tasks, with tmux session and GitHub issue integration."
+
+[[bin]]
+name = "iter"
+path = "src/main.rs"
+
+[features]
+default = ["web"]
+# `iter serve`: the local browser UI. Off for a CLI-only build.
+web = ["dep:iter-web"]
+
+[dependencies]
+iter-core = { workspace = true, features = ["clap"] }
+iter-web = { workspace = true, optional = true }
+clap.workspace = true
+clap_complete.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+iter-core = { workspace = true, features = ["clap", "test-support"] }
+regex.workspace = true

@@ -3,28 +3,6 @@
 version = 4
 
 [[package]]
-name = "Iter"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap",
- "clap_complete",
- "iter-macros",
- "oxigraph",
- "pulldown-cmark",
- "regex",
- "rusqlite",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha1 0.11.0",
- "thiserror",
- "tokio",
- "topcoat",
- "ureq",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1005,12 +983,59 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 
 [[package]]
+name = "iter-cli"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "clap_complete",
+ "iter-core",
+ "iter-web",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
+name = "iter-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "iter-macros",
+ "oxigraph",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha1 0.11.0",
+ "thiserror",
+ "ureq",
+]
+
+[[package]]
 name = "iter-macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "iter-web"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "iter-core",
+ "pulldown-cmark",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+ "topcoat",
 ]
 
 [[package]]

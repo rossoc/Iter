@@ -1,0 +1,18 @@
+[package]
+name = "iter-web"
+version.workspace = true
+edition.workspace = true
+description = "`iter serve`: a browser UI over the database the CLI uses."
+
+[dependencies]
+iter-core.workspace = true
+topcoat.workspace = true
+tokio.workspace = true
+pulldown-cmark.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+
+[dev-dependencies]
+iter-core = { workspace = true, features = ["test-support"] }

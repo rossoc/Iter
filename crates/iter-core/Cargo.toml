@@ -1,0 +1,25 @@
+[package]
+name = "iter-core"
+version.workspace = true
+edition.workspace = true
+description = "Iter's core: the database, models, tmux, git, GitHub, agent runs and the wiki, with no front end."
+
+[features]
+# ValueEnum on `reporting::Format`, `retrieve::Depth`, `run::Harness` and `plan::State`, for the command line.
+clap = ["dep:clap"]
+# The fixtures and the fakes, for the tests of the other crates.
+test-support = []
+
+[dependencies]
+iter-macros.workspace = true
+chrono.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+oxigraph.workspace = true
+regex.workspace = true
+sha1.workspace = true
+ureq.workspace = true
+clap = { workspace = true, optional = true }

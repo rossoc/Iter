@@ -737,10 +737,15 @@ gets you tab-completion on project names (`project edit/delete/info`,
 
 ```sh
 cargo build --release
+cargo install --path crates/iter-cli
 ```
 
-The `iter serve` web UI is the default `web` feature and needs Rust 1.98+;
-`cargo build --release --no-default-features` builds the CLI alone.
+The code is a Cargo workspace: `iter-core` (the library every front end sits
+on), `iter-cli` (the `iter` binary), `iter-web` (`iter serve`) and
+`iter-macros`. `cargo build` builds the binary. The `iter serve` web UI is the
+default `web` feature of `iter-cli` and needs Rust 1.98+;
+`cargo build --release --no-default-features` builds the CLI alone. The tests
+are `cargo test --workspace` and `cargo test -p iter-cli --no-default-features`.
 
 To have every commit check that both test builds still compile, enable the
 pre-commit hook in `.githooks/` once per clone:
@@ -749,6 +754,6 @@ pre-commit hook in `.githooks/` once per clone:
 git config core.hooksPath .githooks
 ```
 
-It runs `cargo test --no-run` with `--features web` and with
-`--no-default-features`, and blocks the commit if either fails (skip once with
+It runs `cargo test --workspace --no-run` and
+`cargo test -p iter-cli --no-default-features --no-run`, and blocks the commit if either fails (skip once with
 `git commit --no-verify`).
