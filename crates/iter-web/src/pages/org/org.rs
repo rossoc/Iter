@@ -3,14 +3,9 @@
 use crate::{
     assets::{Asset, serve},
     load::tasks_or_count,
-    pages::{
-        org::{
-            org_report::{
-                Report, report_link, report_view, share_dialog as share_dialog_of, tab_url,
-            },
-            share_dialog::{Outcome, ShareDialog, preview_modal, recorded, share_modal},
-        },
-        site::daily_notes::{NotesTab, notes_section},
+    pages::org::{
+        org_report::{Report, report_link, report_view, share_dialog as share_dialog_of, tab_url},
+        share_dialog::{Outcome, ShareDialog, preview_modal, recorded, share_modal},
     },
     parts::all::*,
     prelude::*,

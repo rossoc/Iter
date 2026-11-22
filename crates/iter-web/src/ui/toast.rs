@@ -1,6 +1,6 @@
 //! The toasts: short notes in the top right corner, blue for a success and red for an
 //! error, gone after the configured seconds (`notifications` in `iter.yaml`). The region is
-//! in every frame; `toast.js` fills it from the flash cookie (`web/flash.rs`) and with
+//! in every frame; `toast.js` fills it from the flash cookie (`layers/flash.rs`) and with
 //! `window.iterToast(kind, text)`. Turned off, neither the region nor the script is there.
 
 use crate::prelude::*;

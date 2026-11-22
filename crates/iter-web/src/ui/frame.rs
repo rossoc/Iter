@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 
-/// The main nav `(label, href, icon)`; hrefs equal `web::url::BOARDS`/`SETTINGS` (tested in `web/url.rs`).
+/// The main nav `(label, href, icon)`; hrefs equal `url::BOARDS`/`SETTINGS` (tested in `url.rs`).
 pub const NAV: [(&str, &str, &str); 4] = [
     ("Board", "/boards", KANBAN),
     ("Agents", "/agents", BOT),

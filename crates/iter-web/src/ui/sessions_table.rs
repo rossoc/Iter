@@ -9,7 +9,7 @@ pub struct Moment<'a> {
     pub at: Option<String>,
 }
 
-/// One row, ready to show (mapping in `web/session_lines.rs`).
+/// One row, ready to show (mapping in `parts/session_lines.rs`).
 pub struct SessionLine<'a> {
     pub date: Option<Cow<'a, str>>,
     pub start: Moment<'a>,

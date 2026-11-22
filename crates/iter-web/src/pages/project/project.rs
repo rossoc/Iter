@@ -3,10 +3,7 @@
 use crate::pages::project::project_wiki;
 use crate::{
     load::{Parents, parents_of, tasks_or_count},
-    pages::{
-        project::project_wiki::{WikiTab, wiki_tab},
-        site::daily_notes::{NotesTab, notes_section},
-    },
+    pages::project::project_wiki::{WikiTab, wiki_tab},
     parts::all::*,
     prelude::*,
 };

@@ -10,7 +10,7 @@ fn split_leaf(path: &str) -> (&str, &str) {
     path.split_at(cut)
 }
 
-/// One row, ready to show (mapping in `web/project_rows.rs`).
+/// One row, ready to show (mapping in `parts/project_rows.rs`).
 pub struct ProjectItem<'a> {
     pub name: &'a str,
     pub href: String,

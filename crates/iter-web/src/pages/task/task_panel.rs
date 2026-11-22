@@ -1,5 +1,5 @@
 //! The Details aside of a task: a `Task` and its tags mapped onto the
-//! generic `ui::panel` rows (like `settings_panel.rs` for a `Settings`).
+//! generic `ui::panel` rows (like `parts/settings_panel.rs` for a `Settings`).
 
 use crate::{parts::all::*, prelude::*};
 use iter_core::models::{Tag, Task};

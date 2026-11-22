@@ -1,4 +1,4 @@
-//! The agenda's side of the pick mode (`pick.rs` is shared): its words and the day-keeping links.
+//! The agenda's side of the pick mode (`pages/board/pick.rs` is shared): its words and the day-keeping links.
 
 use crate::{
     pages::board::pick::{PickLinks, PickWords, Picked},

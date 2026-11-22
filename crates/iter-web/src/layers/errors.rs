@@ -1,4 +1,4 @@
-//! Pages for the 400 (id not a number) and 404 (names nothing) refusals; topcoat's own answer is a bare text body. Only GET is rewritten here: the drop script's `fetch` wants the status, and a refused form POST is sent back to its page with an error toast by `flash.rs`.
+//! Pages for the 400 (id not a number) and 404 (names nothing) refusals; topcoat's own answer is a bare text body. Only GET is rewritten here: the drop script's `fetch` wants the status, and a refused form POST is sent back to its page with an error toast by `layers/flash.rs`.
 
 use topcoat::{
     context::Cx,
@@ -17,7 +17,7 @@ fn document(title: &str, message: &str) -> String {
     )
 }
 
-/// Registered as a pathless layer (see `web::router`), not with a path: a
+/// Registered as a pathless layer (see `router`), not with a path: a
 /// layer with a path never runs for a request that matched no route, and
 /// the unmatched `/nope` is exactly the 404 that needs this page.
 pub fn error_pages<'a>(cx: &'a Cx, body: Body, next: Next<'a>) -> LayerFuture<'a> {

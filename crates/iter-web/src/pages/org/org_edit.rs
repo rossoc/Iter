@@ -6,10 +6,7 @@ use crate::{
         OrgForm,
         edit::{Loaded, load, submit},
     },
-    pages::{
-        org::{org_report::tab_url, platform_pick::platform_lists},
-        site::daily_notes::NotesTab,
-    },
+    pages::org::{org_report::tab_url, platform_pick::platform_lists},
     parts::all::*,
     prelude::*,
 };

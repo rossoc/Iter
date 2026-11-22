@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 
-/// One chip, ready to show (mapping in `web/task_rows.rs`); only a `#rrggbb` `color` is used.
+/// One chip, ready to show (mapping in `parts/task_rows.rs`); only a `#rrggbb` `color` is used.
 pub struct Chip<'a> {
     pub name: &'a str,
     pub color: &'a str,

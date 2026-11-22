@@ -1,4 +1,4 @@
-//! The system's folder picker (`osascript` on macOS, `zenity` elsewhere): a page cannot learn a picked folder's path, but the server runs on the user's machine (loopback only, `guard.rs`).
+//! The system's folder picker (`osascript` on macOS, `zenity` elsewhere): a page cannot learn a picked folder's path, but the server runs on the user's machine (loopback only, `layers/guard.rs`).
 
 use std::{
     path::{Path, PathBuf},

@@ -1,7 +1,7 @@
 //! What the "New project" and "New task" pop-ups need: where they open from (`Home`, `TaskHome`),
 //! what they show (`ProjectCreate`, `TaskCreate`) and the two views. Pure data and views, so a
 //! host page (organization, project, board) can show one without importing the module that
-//! handles its POST (`project_new.rs`, `task_new.rs`), which in turn renders the host.
+//! handles its POST (`pages/project/project_new.rs`, `pages/task/task_new.rs`), which in turn renders the host.
 
 use crate::{forms::{ProjectForm, TaskForm, edit::{DESCRIPTION, NAME}}, parts::all::*, prelude::*};
 use iter_core::{config::config, db::Table, git, models::{Board, Configured, Organization, Project, Settings, Task}};

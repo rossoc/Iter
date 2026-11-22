@@ -205,7 +205,7 @@ pub fn run_post_url(id: i64, n: u32) -> String {
     format!("{}/{n}", runs_url(id))
 }
 
-/// The URL and the routes (`task_runs.rs`) read the same words.
+/// The URL and the routes (`pages/agent/task_runs.rs`) read the same words.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunAction {
     Run,

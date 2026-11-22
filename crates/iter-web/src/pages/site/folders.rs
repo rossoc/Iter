@@ -14,7 +14,7 @@ struct PickStart {
     start: String,
 }
 
-/// Opens the chooser at the nearest existing folder of `start`: `{"path"}` chosen, `{}` cancelled, `{"unavailable": true}` no chooser. Same-origin only (`guard.rs`).
+/// Opens the chooser at the nearest existing folder of `start`: `{"path"}` chosen, `{}` cancelled, `{"unavailable": true}` no chooser. Same-origin only (`layers/guard.rs`).
 #[route(POST "/folders/pick")]
 pub(super) async fn pick_folder(cx: &Cx, Form(posted): Form<PickStart>) -> Result<Response> {
     let start = start_folder(&posted.start, &expand_home("~"));

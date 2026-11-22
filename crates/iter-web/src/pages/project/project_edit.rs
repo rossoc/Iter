@@ -6,7 +6,6 @@ use crate::{
         edit::{Loaded, load, submit},
     },
     load::org_in,
-    pages::site::daily_notes::NotesTab,
     parts::all::*,
     prelude::*,
 };

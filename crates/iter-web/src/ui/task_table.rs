@@ -8,7 +8,7 @@ pub struct ProjectLink<'a> {
     pub href: String,
 }
 
-/// One row, ready to show (mapping in `web/task_rows.rs`).
+/// One row, ready to show (mapping in `parts/task_rows.rs`).
 pub struct TaskRow<'a> {
     pub name: &'a str,
     pub href: String,
