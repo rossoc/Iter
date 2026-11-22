@@ -1,16 +1,17 @@
 //! The ontology (`ontology.ttl` plus a project's or organization's `wiki/ontology.ttl` extension) as an OWL graph,
-//! and what the wiki needs from it: folder of each class, relation keys, entailment rules.
+//! and what the wiki needs from it: the folder of each class, the relation keys and the entailment rules.
 
-use crate::error::{IterError, Result};
+use crate::error::{IterError, Result, failed};
 use oxigraph::io::{RdfFormat, RdfParser};
-use oxigraph::model::vocab::rdf as rdf_vocab;
 use oxigraph::model::vocab::{rdf, rdfs};
 use oxigraph::model::{Graph, NamedNode, NamedNodeRef, NamedOrBlankNodeRef, TermRef, TripleRef};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 const BASE: &str = include_str!("ontology.ttl");
 
+/// Namespace of the ontology's own terms (`iter:` in the Turtle).
 pub const NS: &str = "urn:iter:ns:";
+/// Prefix of the IRI of every level and page.
 pub const NODE: &str = "urn:iter:";
 const OWL: &str = "http://www.w3.org/2002/07/owl#";
 
@@ -22,6 +23,18 @@ fn owl(local: &str) -> NamedNode {
     NamedNode::new_unchecked(format!("{OWL}{local}"))
 }
 
+/// `iri` without the ontology namespace (`urn:iter:ns:Idea` is `Idea`).
+pub fn local(iri: &NamedNode) -> &str {
+    iri.as_str().strip_prefix(NS).unwrap_or(iri.as_str())
+}
+
+fn named(term: TermRef<'_>) -> Option<NamedNode> {
+    match term {
+        TermRef::NamedNode(n) => Some(n.into_owned()),
+        _ => None,
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum LevelKind {
     Organization,
@@ -30,6 +43,8 @@ pub enum LevelKind {
 }
 
 impl LevelKind {
+    const ALL: [LevelKind; 3] = [LevelKind::Organization, LevelKind::Project, LevelKind::Task];
+
     pub fn key(self) -> &'static str {
         match self {
             LevelKind::Organization => "organization",
@@ -39,9 +54,7 @@ impl LevelKind {
     }
 
     fn of(key: &str) -> Option<LevelKind> {
-        [LevelKind::Organization, LevelKind::Project, LevelKind::Task]
-            .into_iter()
-            .find(|k| k.key() == key)
+        Self::ALL.into_iter().find(|k| k.key() == key)
     }
 
     pub fn class(self) -> NamedNode {
@@ -96,12 +109,19 @@ impl Ontology {
         Ok(onto)
     }
 
+    /// The `(subject, text)` of every triple `?s iter:<predicate> "text"`.
+    fn texts(&self, predicate: &str) -> Vec<(NamedNode, String)> {
+        self.graph
+            .triples_for_predicate(&ns(predicate))
+            .filter_map(|t| match t.object {
+                TermRef::Literal(l) => Some((named(t.subject.into())?, l.value().to_string())),
+                _ => None,
+            })
+            .collect()
+    }
+
     fn derive(&mut self) -> Result<()> {
         let g = &self.graph;
-        let named = |t: TermRef<'_>| match t {
-            TermRef::NamedNode(n) => Some(n.into_owned()),
-            _ => None,
-        };
         let pairs = |p: NamedNodeRef<'_>| -> Vec<(NamedNode, NamedNode)> {
             g.triples_for_predicate(p)
                 .filter_map(|t| Some((named(t.subject.into())?, named(t.object)?)))
@@ -112,7 +132,6 @@ impl Ontology {
                 .filter_map(|s| named(s.into()))
                 .collect()
         };
-
         self.rules = Rules {
             sub_class: pairs(rdfs::SUB_CLASS_OF),
             sub_property: pairs(rdfs::SUB_PROPERTY_OF),
@@ -121,115 +140,83 @@ impl Ontology {
             transitive: typed(&owl("TransitiveProperty")),
         };
 
-        let mut places = Vec::new();
-        for t in g.triples_for_predicate(ns("place").as_ref()) {
-            let (Some(class), TermRef::Literal(lit)) = (named(t.subject.into()), t.object) else {
-                continue;
-            };
-            let Some((kind, folder)) = lit.value().split_once(':') else {
-                return Err(bad_place(lit.value()));
-            };
-            let Some(kind) = LevelKind::of(kind) else {
-                return Err(bad_place(lit.value()));
-            };
-            places.push(Place {
-                kind,
-                folder: folder.to_string(),
-                class,
-            });
-        }
-        places.sort_by(|a, b| (a.kind.key(), &a.folder).cmp(&(b.kind.key(), &b.folder)));
-        self.places = places;
+        self.places = self
+            .texts("place")
+            .into_iter()
+            .map(|(class, text)| {
+                let (kind, folder) = text.split_once(':').ok_or_else(|| bad_place(&text))?;
+                let kind = LevelKind::of(kind).ok_or_else(|| bad_place(&text))?;
+                let folder = folder.to_string();
+                Ok(Place {
+                    kind,
+                    folder,
+                    class,
+                })
+            })
+            .collect::<Result<_>>()?;
+        self.places
+            .sort_by(|a, b| (a.kind.key(), &a.folder).cmp(&(b.kind.key(), &b.folder)));
 
-        let mut authorable = Vec::new();
-        for t in g.triples_for_predicate(ns("authorable").as_ref()) {
-            let (Some(prop), TermRef::Literal(lit)) = (named(t.subject.into()), t.object) else {
-                continue;
-            };
-            if lit.value() == "true"
-                && let Some(key) = prop.as_str().strip_prefix(NS)
-            {
-                authorable.push((key.to_string(), prop.clone()));
-            }
-        }
-        authorable.sort();
-        self.authorable = authorable;
+        self.authorable = self
+            .texts("authorable")
+            .into_iter()
+            .filter(|(_, text)| text == "true")
+            .map(|(prop, _)| (local(&prop).to_string(), prop))
+            .collect();
+        self.authorable.sort();
 
-        let page = ns("Page");
-        self.pages = self.subclasses_of(&page);
+        self.pages = self.subclasses_of(&ns("Page"));
         Ok(())
     }
 
-    pub fn subclasses_of(&self, class: &NamedNode) -> HashSet<NamedNode> {
-        let mut below: HashMap<&NamedNode, Vec<&NamedNode>> = HashMap::new();
-        for (sub, sup) in &self.rules.sub_class {
-            below.entry(sup).or_default().push(sub);
-        }
+    /// `class` and every class below it (`up`: above it) through `rdfs:subClassOf`.
+    fn reach(&self, class: &NamedNode, up: bool) -> HashSet<NamedNode> {
         let mut seen = HashSet::from([class.clone()]);
         let mut todo = vec![class];
         while let Some(c) = todo.pop() {
-            for sub in below.get(c).into_iter().flatten() {
-                if seen.insert((*sub).clone()) {
-                    todo.push(sub);
+            for (sub, sup) in &self.rules.sub_class {
+                let (from, to) = if up { (sub, sup) } else { (sup, sub) };
+                if from == c && seen.insert(to.clone()) {
+                    todo.push(to);
                 }
             }
         }
         seen
     }
 
+    pub fn subclasses_of(&self, class: &NamedNode) -> HashSet<NamedNode> {
+        self.reach(class, false)
+    }
+
     pub fn superclasses_of(&self, class: &NamedNode) -> HashSet<NamedNode> {
-        let mut seen = HashSet::from([class.clone()]);
-        let mut todo = vec![class.clone()];
-        while let Some(c) = todo.pop() {
-            for (sub, sup) in &self.rules.sub_class {
-                if *sub == c && seen.insert(sup.clone()) {
-                    todo.push(sup.clone());
-                }
-            }
-        }
-        seen
+        self.reach(class, true)
     }
 
     pub fn constraint(&self, property: &NamedNode, which: NamedNodeRef<'_>) -> Vec<NamedNode> {
         self.graph
             .objects_for_subject_predicate(property, which)
-            .filter_map(|t| match t {
-                TermRef::NamedNode(n) => Some(n.into_owned()),
-                _ => None,
-            })
+            .filter_map(named)
             .collect()
     }
 
     /// The values `property` may take when its range is an `owl:oneOf` enumeration; `None` for any.
     pub fn allowed_values(&self, property: &NamedNode) -> Option<Vec<String>> {
-        let range = self
-            .graph
-            .objects_for_subject_predicate(property, rdfs::RANGE)
-            .find_map(|t| match t {
-                TermRef::NamedNode(n) => Some(n.into_owned()),
-                _ => None,
-            })?;
-        let one_of = owl("oneOf");
+        let range = self.constraint(property, rdfs::RANGE).into_iter().next()?;
         let mut list = self
             .graph
-            .object_for_subject_predicate(&range, one_of.as_ref())?;
+            .object_for_subject_predicate(&range, owl("oneOf").as_ref())?;
         let mut values = Vec::new();
-        while list != TermRef::NamedNode(rdf_vocab::NIL) {
+        while list != TermRef::NamedNode(rdf::NIL) {
             let cell: NamedOrBlankNodeRef<'_> = match list {
                 TermRef::NamedNode(n) => n.into(),
                 TermRef::BlankNode(b) => b.into(),
                 _ => return None,
             };
-            match self
-                .graph
-                .object_for_subject_predicate(cell, rdf_vocab::FIRST)?
-            {
+            match self.graph.object_for_subject_predicate(cell, rdf::FIRST)? {
                 TermRef::Literal(l) => values.push(l.value().to_string()),
                 _ => return None,
             }
-            list = self
-                .graph
-                .object_for_subject_predicate(cell, rdf_vocab::REST)?;
+            list = self.graph.object_for_subject_predicate(cell, rdf::REST)?;
         }
         Some(values)
     }
@@ -247,14 +234,14 @@ impl Ontology {
 }
 
 fn bad_place(value: &str) -> IterError {
-    IterError::CommandFailed(format!(
+    failed(format!(
         "the ontology has a bad iter:place \"{value}\" (expected \"<organization|project|task>:<folder>\")"
     ))
 }
 
 fn read_into(graph: &mut Graph, ttl: &str, what: &str) -> Result<()> {
     for quad in RdfParser::from_format(RdfFormat::Turtle).for_reader(ttl.as_bytes()) {
-        let quad = quad.map_err(|e| IterError::CommandFailed(format!("{what}: {e}")))?;
+        let quad = quad.map_err(|e| failed(format!("{what}: {e}")))?;
         graph.insert(TripleRef::new(&quad.subject, &quad.predicate, &quad.object));
     }
     Ok(())
