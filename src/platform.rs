@@ -2,6 +2,7 @@
 //! Every call carries `Authorization: Bearer <key>`, and the key never appears in an error: everything that comes back is redacted first.
 
 use crate::error::{IterError, Result};
+use crate::models::check_url;
 use crate::reporting::{Worklog, WorklogEntry, fmt_date};
 use crate::secret::Secret;
 use chrono::NaiveDate;
@@ -148,29 +149,6 @@ fn path_segment(text: &str) -> String {
         }
         out
     })
-}
-
-/// A platform URL is `https`, or `http` to this machine (local platform, test server), and has
-/// no userinfo: the API key goes out as a bearer token with every call, and a prefix check
-/// would accept `http://localhost:1@evil.com` or `http://localhost.evil.com`.
-pub fn check_url(url: &str) -> Result<()> {
-    let bad = |why: &str| {
-        IterError::Platform(format!(
-            "platform_url '{url}' {why} (the API key is sent with every request)"
-        ))
-    };
-    let uri: ureq::http::Uri = url.parse().map_err(|_| bad("is not a valid URL"))?;
-    let authority = uri
-        .authority()
-        .ok_or_else(|| bad("must start with https://"))?;
-    if authority.as_str().contains('@') {
-        return Err(bad("must not carry a user name or password"));
-    }
-    match uri.scheme_str() {
-        Some("https") => Ok(()),
-        Some("http") if matches!(uri.host(), Some("localhost" | "127.0.0.1" | "[::1]")) => Ok(()),
-        _ => Err(bad("must start with https://")),
-    }
 }
 
 fn agent(seconds: u64) -> ureq::Agent {

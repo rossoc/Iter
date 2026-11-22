@@ -6,10 +6,10 @@ use crate::app::App;
 use crate::args::{DocCommand, NoteCommand, NotesScope, TaskScope};
 use crate::commands::Run;
 use crate::error::{IterError, Result};
-use crate::md_edit::split_front;
 use crate::models::{Organization, TaskId, TaskRef};
 use crate::note_ref::{self, Address, Doc};
 use crate::notes;
+use crate::text::{opens_front, split_front};
 use crate::utils::resolve::resolve_project_or_current;
 use std::io::{IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
@@ -212,7 +212,7 @@ fn text_of(message: Option<&str>) -> Result<Option<String>> {
         stdin.read_to_string(&mut text)?;
         return Ok(Some(text));
     }
-    crate::md_edit::edit_text("")
+    crate::editor::edit_text("")
 }
 
 /// The whole file for a new document. A wiki page gets the front matter `iter wiki check` wants
@@ -239,8 +239,7 @@ fn compose(
             false => format!("{title}\n{body}"),
         });
     };
-    let split = split_front(text);
-    if split.opened && split.front.is_some() {
+    if opens_front(text) && split_front(text).front.is_some() {
         return Ok(body);
     }
     let (Some(description), false) = (
@@ -310,7 +309,7 @@ fn summary(text: &str) -> String {
     let split = split_front(text);
     let described = split
         .front
-        .filter(|_| split.opened)
+        .filter(|_| opens_front(text))
         .and_then(|front| serde_yaml::from_str::<serde_yaml::Mapping>(front).ok())
         .and_then(|m| m.get("description")?.as_str().map(str::to_string));
     described

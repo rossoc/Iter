@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// A text report: header scalars as fenced YAML front matter, then the markdown body (the shape `md_edit` opens things in).
+/// A text report: header scalars as fenced YAML front matter, then the markdown body (the shape `editor` opens things in).
 pub(super) fn document(header: &Header, md: Md) -> Result<String> {
     let mut front = header.clone();
     front.description = None; // it's the body below the front matter instead

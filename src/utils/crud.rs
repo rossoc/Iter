@@ -4,8 +4,8 @@
 //! and the message come from here.
 
 use crate::db::{Db, Table};
+use crate::editor::{edit_in_editor, edited, no_changes};
 use crate::error::Result;
-use crate::md_edit::{edit_in_editor, edited, no_changes};
 use crate::models::{Editable, GroupEdit, Named, Project, ProjectGroup};
 
 pub(crate) fn create<T: Named + Editable>(db: &Db, template: &T) -> Result<()> {

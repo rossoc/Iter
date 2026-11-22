@@ -4,7 +4,7 @@
 use super::graph::Wiki;
 use crate::error::{Result, failed};
 use crate::files::write_atomic;
-use crate::md_edit::split_closed;
+use crate::text::{Split, split_closed, strip_bom};
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -91,14 +91,13 @@ fn replace_links(body: &str, old: &str, new: &str) -> (String, usize) {
 
 fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
     // The byte-order mark, if any, is kept as it was.
-    let bom = &content[..content.len() - crate::md_edit::strip_bom(content).len()];
+    let bom = &content[..content.len() - strip_bom(content).len()];
     let (head, yaml, body) = match split_closed(content) {
-        Some((yaml, body)) => ("---\n", yaml.to_string(), body.to_string()),
-        None => (
-            "",
-            String::new(),
-            crate::md_edit::strip_bom(content).to_string(),
-        ),
+        Some(Split {
+            front: Some(yaml),
+            body,
+        }) => ("---\n", yaml.to_string(), body.to_string()),
+        _ => ("", String::new(), strip_bom(content).to_string()),
     };
     let (mut yaml, mut body, mut total) = (yaml, body, 0);
     for (old, new) in renames {

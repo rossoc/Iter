@@ -7,10 +7,11 @@ use crate::app::App;
 use crate::args::RunEnd;
 use crate::commands::ingest::say_auto;
 use crate::db::Table;
+use crate::editor::edit_text;
 use crate::error::AgentError;
 use crate::error::Result;
-use crate::md_edit::{edit_text, split_front};
 use crate::models::Project;
+use crate::text::split_front;
 use crate::wiki::ingest_job::Auto;
 
 struct Console;

@@ -51,12 +51,9 @@ pub fn now_as(format: &str) -> String {
     chrono::Local::now().format(format).to_string()
 }
 
-/// `content` without a leading byte-order mark. From `md_edit` in isolation step 2.
-// stub: I3 (`md_edit::strip_bom` still does the work)
-#[allow(dead_code)]
+/// `content` without a leading byte-order mark.
 pub fn strip_bom(content: &str) -> &str {
-    let _ = content;
-    unimplemented!("stub: I3")
+    content.strip_prefix('\u{feff}').unwrap_or(content)
 }
 
 /// Front matter and body of a markdown text: `front` is what lies between an optional opening
@@ -68,20 +65,34 @@ pub struct Split<'a> {
     pub body: &'a str,
 }
 
-/// Splits after an optional byte-order mark; an opening `---` is optional.
-// stub: I3 (`md_edit::split_front` still does the work)
-#[allow(dead_code)]
+/// Whether `content` opens with a `---` line (after an optional byte-order mark).
+pub fn opens_front(content: &str) -> bool {
+    strip_bom(content).starts_with("---\n")
+}
+
+/// Splits after an optional byte-order mark; the opening `---` is optional (see [`opens_front`]).
 pub fn split_front(content: &str) -> Split<'_> {
-    let _ = content;
-    unimplemented!("stub: I3")
+    let content = strip_bom(content);
+    let rest = content.strip_prefix("---\n").unwrap_or(content);
+    let mut consumed = 0;
+    for line in rest.split_inclusive('\n') {
+        if line.trim_end_matches('\n') == "---" {
+            return Split {
+                front: Some(&rest[..consumed]),
+                body: &rest[consumed + line.len()..],
+            };
+        }
+        consumed += line.len();
+    }
+    Split {
+        front: None,
+        body: rest,
+    }
 }
 
 /// [`split_front`] when `content` opens with `---` and a `---` line closes it, else `None`.
-// stub: I3 (`md_edit::split_closed` still does the work)
-#[allow(dead_code)]
 pub fn split_closed(content: &str) -> Option<Split<'_>> {
-    let _ = content;
-    unimplemented!("stub: I3")
+    Some(split_front(content)).filter(|s| s.front.is_some() && opens_front(content))
 }
 
 #[cfg(test)]
@@ -122,7 +133,7 @@ mod tests {
         assert!(!made.ends_with('-') && !made.starts_with('-'));
     }
 
-    /// Round I3 (step 2): the front-matter rule moves here from `md_edit`, the same cases and the
+    /// Round I3 (step 2): the front-matter rule moved here from the old `md_edit`, the same cases and the
     /// same exact divider, with the result as a [`Split`].
     #[test]
     fn front_matter_ends_at_the_first_exact_divider() {

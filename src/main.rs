@@ -10,6 +10,7 @@ mod commands;
 mod completion;
 mod config;
 mod db;
+mod editor;
 mod error;
 mod files;
 #[cfg(test)]
@@ -20,7 +21,6 @@ mod github;
 #[cfg(test)]
 mod help_tests;
 mod locate;
-mod md_edit;
 mod models;
 mod note_ref;
 mod notes;

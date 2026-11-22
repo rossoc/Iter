@@ -57,22 +57,36 @@ pub struct Organization {
     pub platform_activity: String,
 }
 
-/// A platform URL is `https`, or `http` to this machine, and carries no userinfo (the API key goes
-/// out with every call). Moves here from `platform` in isolation step 2.
-// stub: I3 (the real `platform::check_url` still does the work)
-#[allow(dead_code)]
+/// A platform URL is `https`, or `http` to this machine (local platform, test server), and has
+/// no userinfo: the API key goes out as a bearer token with every call, and a prefix check
+/// would accept `http://localhost:1@evil.com` or `http://localhost.evil.com`.
 pub fn check_url(url: &str) -> crate::error::Result<()> {
-    let _ = url;
-    unimplemented!("stub: I3")
+    let bad = |why: &str| {
+        crate::error::IterError::Platform(format!(
+            "platform_url '{url}' {why} (the API key is sent with every request)"
+        ))
+    };
+    let uri: ureq::http::Uri = url.parse().map_err(|_| bad("is not a valid URL"))?;
+    let authority = uri
+        .authority()
+        .ok_or_else(|| bad("must start with https://"))?;
+    if authority.as_str().contains('@') {
+        return Err(bad("must not carry a user name or password"));
+    }
+    match uri.scheme_str() {
+        Some("https") => Ok(()),
+        Some("http") if matches!(uri.host(), Some("localhost" | "127.0.0.1" | "[::1]")) => Ok(()),
+        _ => Err(bad("must start with https://")),
+    }
 }
 
 impl Organization {
-    /// Beyond a name: a platform URL passes [`crate::platform::check_url`].
+    /// Beyond a name: a platform URL passes [`check_url`].
     fn check(&mut self) -> crate::error::Result<()> {
         self.platform_url = self.platform_url.trim().to_string();
         match self.platform_url.as_str() {
             "" => Ok(()),
-            url => crate::platform::check_url(url),
+            url => check_url(url),
         }
     }
 

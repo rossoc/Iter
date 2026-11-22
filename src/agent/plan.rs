@@ -190,7 +190,7 @@ fn step(line: &str) -> Option<Step<'_>> {
 }
 
 fn body_start(content: &str) -> usize {
-    let Some((_, body)) = crate::md_edit::split_closed(content) else {
+    let Some(crate::text::Split { body, .. }) = crate::text::split_closed(content) else {
         return 0;
     };
     let head = &content[..content.len() - body.len()];

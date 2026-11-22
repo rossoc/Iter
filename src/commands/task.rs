@@ -8,10 +8,10 @@ use crate::commands::sync::{task_pull, task_push};
 use crate::commands::{Run, agent, solve};
 use crate::config::config;
 use crate::db::{Db, Table};
+use crate::editor::edited;
 use crate::error::{IterError, Result};
 use crate::git;
 use crate::github::{self, GhCli, IssueTracker};
-use crate::md_edit::edited;
 use crate::models::require_name;
 use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
 use crate::reporting::{

@@ -73,8 +73,8 @@ pub use crate::agent::prompt::file;
 
 /// The front matter (between a first line `---` and the next) and the prompt; no `---` means all prompt.
 pub fn split(raw: &str) -> (Option<&str>, &str) {
-    match crate::md_edit::split_closed(raw) {
-        Some((front, body)) => (Some(front), body),
+    match crate::text::split_closed(raw) {
+        Some(split) => (split.front, split.body),
         None => (None, raw),
     }
 }

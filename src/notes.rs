@@ -76,9 +76,10 @@ fn file_name(date: NaiveDate) -> String {
 /// sets a known key), so a note that starts with prose and has a `---` rule
 /// further down is left whole.
 fn split(content: &str) -> (FrontMatter, &str) {
-    let content = crate::md_edit::strip_bom(content);
-    let split = crate::md_edit::split_front(content);
-    let (opened, Some(front)) = (split.opened, split.front) else {
+    let content = text::strip_bom(content);
+    let split = text::split_front(content);
+    let opened = text::opens_front(content);
+    let Some(front) = split.front else {
         return (FrontMatter::default(), content);
     };
     match serde_yaml::from_str::<FrontMatter>(front) {
@@ -163,8 +164,8 @@ pub fn check(content: &str) -> Result<()> {
     if content.contains('\0') {
         return bad("it contains a NUL character");
     }
-    let split = crate::md_edit::split_front(content);
-    let opened = split.opened;
+    let split = text::split_front(content);
+    let opened = text::opens_front(content);
     match split.front {
         Some(front) => {
             let keyed = front.lines().any(|l| {
