@@ -3,7 +3,7 @@
 use crate::Run;
 use crate::args::{OrgPushArgs, OrganizationCommand, ReportOpts};
 use crate::entity::{create, delete_group, update_group};
-use crate::output::list_names;
+use crate::output::{list_names, report_header};
 use iter_core::app::App;
 use iter_core::config::config;
 use iter_core::db::Table;
@@ -14,8 +14,7 @@ use iter_core::models::Organization;
 use iter_core::platform::JsonWebhook;
 use iter_core::process::run_status;
 use iter_core::push::{self, Target};
-use iter_core::reporting::{Header, OrganizationInfo, print_report};
-use iter_core::reporting::{project_reports, total_minutes};
+use iter_core::reporting::{OrganizationInfo, print_report, project_reports};
 use iter_core::secret::{self, KeyStore, Keychain, Secret};
 use std::io::IsTerminal;
 
@@ -65,15 +64,13 @@ fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result
         now,
     )?;
 
-    // the union across projects, so an hour spent switching between two is not counted twice
-    let total_minutes = total_minutes(&all_sessions, now);
     let info = OrganizationInfo {
-        header: Header::of(
-            organization.name.clone(),
-            &organization.description,
+        header: report_header(
+            (organization.name.clone(), &organization.description),
             &organization,
             range,
-            total_minutes,
+            &all_sessions,
+            now,
         )?,
         projects,
     };

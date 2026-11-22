@@ -15,7 +15,7 @@ use crate::error::{IterError, Result, failed};
 use crate::locate::{self, current_project, current_task};
 use crate::models::{Organization, Project, Task};
 use crate::notes;
-use crate::wiki::ontology::{LevelKind, NS, Ontology};
+use crate::wiki::ontology::{self, LevelKind, Ontology};
 use chrono::NaiveDate;
 use std::path::PathBuf;
 
@@ -183,7 +183,9 @@ fn level(db: &Db, owners: &[String]) -> Result<Level> {
         // a project, else an organization of that name
         [one] => match db.find_by_name::<Project>(one)? {
             Some(p) => with_org(p),
-            None => Ok(Level::Organization(Box::new(db.resolve::<Organization>(one)?))),
+            None => Ok(Level::Organization(Box::new(
+                db.resolve::<Organization>(one)?,
+            ))),
         },
         [org, project] => with_org(project_in(db, project, Some(org))?),
         _ => unreachable!("parse allows two owners at most"),
@@ -231,13 +233,9 @@ pub fn page_folder(class: &str, kind: LevelKind, level_dir: &std::path::Path) ->
     places
         .iter()
         .find(|p| {
-            let local = p
-                .class
-                .as_str()
-                .strip_prefix(NS)
-                .unwrap_or(p.class.as_str());
             let folder = p.folder.rsplit('/').next().unwrap_or(&p.folder);
-            local.eq_ignore_ascii_case(&wanted) || folder.eq_ignore_ascii_case(&wanted)
+            ontology::local(&p.class).eq_ignore_ascii_case(&wanted)
+                || folder.eq_ignore_ascii_case(&wanted)
         })
         .map(|p| p.folder.clone())
         .ok_or_else(|| {
