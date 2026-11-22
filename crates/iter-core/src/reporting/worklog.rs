@@ -1,6 +1,7 @@
-//! Building a worklog: one entry per day, one line per task.
+//! The worklog: one entry per day, one line per task, as printed (`-f worklog`) and as pushed to a time platform.
 
 use super::*;
+use std::collections::BTreeMap;
 
 pub(super) fn one_line(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -50,7 +51,7 @@ impl Worklog {
         project: &str,
         activity: &str,
     ) -> Self {
-        let mut by_day: std::collections::BTreeMap<NaiveDate, Vec<Session>> = Default::default();
+        let mut by_day: BTreeMap<NaiveDate, Vec<Session>> = BTreeMap::new();
         for s in sessions {
             by_day.entry(s.start.date()).or_default().push(s.clone());
         }
@@ -92,8 +93,7 @@ impl Worklog {
     }
 
     pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string(self).map_err(|e| {
-            crate::error::IterError::CommandFailed(format!("could not encode the worklog: {e}"))
-        })
+        serde_json::to_string(self)
+            .map_err(|e| IterError::CommandFailed(format!("could not encode the worklog: {e}")))
     }
 }

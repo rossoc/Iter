@@ -1,15 +1,16 @@
-//! Pushing an organization's worklog to its time platform, and on to GitHub, in three steps shared by the CLI and the web page: [`plan`] (what would be sent; nothing leaves the machine),
-//! [`check`] (ledger and platform conflicts) and [`execute`] (platform first; only if it accepts, GitHub for completed tasks, then the ledger). See `doc/architecture_agent_wiki.md`.
+//! Pushing an organization's worklog to its time platform, and on to GitHub, in the steps the CLI and the web page share:
+//! [`plan`] (what would be sent; nothing leaves the machine), `check` (ledger and platform conflicts), `resolve` (the target's ids),
+//! [`prepare`] (those three, asking the platform once) and [`execute`] (platform first; only if it accepts, GitHub for completed tasks, then the ledger).
 
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::github::IssueTracker;
 use crate::models::{Organization, Project, Push, Task, TaskStatus};
-use crate::platform::PlatformItem;
-use crate::platform::TimePlatform;
-use crate::reporting::project_reports;
-use crate::reporting::{DateRange, Worklog, WorklogEntry, fmt_date, worklog_line};
+use crate::platform::{PlatformItem, TimePlatform};
+use crate::reporting::{
+    DateRange, Worklog, WorklogEntry, fmt_date, parse_day, project_reports, worklog_line,
+};
 use chrono::{NaiveDate, NaiveDateTime};
 use sha1::{Digest, Sha1};
 use std::fmt::Write;
@@ -56,11 +57,10 @@ pub fn fingerprint(worklog: &Worklog) -> Result<String> {
     if worklog.open {
         text.push_str("#open");
     }
-    let digest = Sha1::digest(text.as_bytes());
-    Ok(digest.iter().fold(String::new(), |mut out, byte| {
-        let _ = write!(out, "{byte:02x}");
-        out
-    }))
+    Ok(Sha1::digest(text.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 pub fn plan(
@@ -122,7 +122,7 @@ pub fn plan(
 
 impl Plan {
     pub fn days(&self) -> (NaiveDate, NaiveDate) {
-        let parse = |e: &WorklogEntry| NaiveDate::parse_from_str(&e.day, "%Y-%m-%d").ok();
+        let parse = |e: &WorklogEntry| parse_day(&e.day).ok();
         let first = self.worklog.entries.iter().find_map(parse);
         let last = self.worklog.entries.iter().rev().find_map(parse);
         (
@@ -328,6 +328,20 @@ impl Item {
     }
 }
 
+/// Closes the job's issue unless it is closed already, then comments; says which.
+fn finish_issue(gh: &dyn IssueTracker, job: &IssueJob) -> Result<&'static str> {
+    let closed = gh.is_closed(&job.repo_path, job.issue)?;
+    if !closed {
+        gh.close(&job.repo_path, job.issue)?;
+    }
+    gh.comment(&job.repo_path, job.issue, &job.line)?;
+    Ok(if closed {
+        "commented (already closed)"
+    } else {
+        "closed and commented"
+    })
+}
+
 /// Pushes the days of `plan` that `check` found free; days the platform holds are reported as failed items and the rest go through.
 /// A request refused as a whole is the returned error, GitHub untouched, no ledger row. Otherwise each entry's verdict and each GitHub issue of a task completed on an accepted day is an item; the ledger row records them all unless the platform took nothing.
 #[allow(clippy::too_many_arguments)]
@@ -420,18 +434,7 @@ pub fn execute(
             items.push(Item::ok(format!("{what}: done earlier")));
             continue;
         }
-        let step = || -> Result<String> {
-            let closed = gh.is_closed(&job.repo_path, job.issue)?;
-            if !closed {
-                gh.close(&job.repo_path, job.issue)?;
-            }
-            gh.comment(&job.repo_path, job.issue, &job.line)?;
-            Ok(match closed {
-                true => "commented (already closed)".to_string(),
-                false => "closed and commented".to_string(),
-            })
-        };
-        items.push(match step() {
+        items.push(match finish_issue(gh, job) {
             Ok(done) => Item::ok(format!("{what}: {done}")),
             Err(e) => Item::failed(what, e),
         });
@@ -459,55 +462,8 @@ pub fn execute(
 mod tests {
     use super::*;
     use crate::fixtures::{self, dt};
-    use crate::github::{Issue, IssueState};
+    use crate::github::fake::Recorder;
     use crate::platform::fake::FakePlatform;
-    use std::cell::RefCell;
-
-    #[derive(Default)]
-    struct FakeGh {
-        calls: RefCell<Vec<String>>,
-        closed: bool,
-        fail_comment: bool,
-    }
-
-    impl IssueTracker for FakeGh {
-        fn fetch(&self, _: &str, n: i64) -> Result<Issue> {
-            self.calls.borrow_mut().push(format!("view #{n}"));
-            Ok(Issue {
-                number: n,
-                title: String::new(),
-                body: String::new(),
-                state: match self.closed {
-                    true => IssueState::Closed,
-                    false => IssueState::Open,
-                },
-            })
-        }
-        fn set_state(&self, _: &str, n: i64, state: IssueState) -> Result<()> {
-            assert_eq!(state, IssueState::Closed);
-            self.calls.borrow_mut().push(format!("close #{n}"));
-            Ok(())
-        }
-        fn comment(&self, _: &str, n: i64, body: &str) -> Result<()> {
-            if self.fail_comment {
-                return Err(IterError::CommandFailed("gh down".into()));
-            }
-            self.calls.borrow_mut().push(format!("comment #{n} {body}"));
-            Ok(())
-        }
-        fn list(&self, _: &str) -> Result<Vec<Issue>> {
-            unreachable!("a push never lists issues")
-        }
-        fn create(&self, _: &str, _: &str, _: &str, _: &str) -> Result<i64> {
-            unreachable!("a push never opens issues")
-        }
-        fn set_body(&self, _: &str, _: i64, _: &str) -> Result<()> {
-            unreachable!("a push never edits issue bodies")
-        }
-        fn assign_self(&self, _: &str, _: i64) -> Result<()> {
-            unreachable!("a push never assigns")
-        }
-    }
 
     fn setup() -> (Db, Organization) {
         let db = fixtures::db();
@@ -556,11 +512,28 @@ mod tests {
         org: &Organization,
         plan: &Plan,
         platform: &FakePlatform,
-        gh: &FakeGh,
+        gh: &Recorder,
     ) -> Result<Vec<Item>> {
         let c = check(db, org, plan, platform)?;
         let ids = resolve(platform, &Target::of(org))?;
         execute(db, org, plan, &c, &ids, platform, gh, now())
+    }
+
+    /// [`execute`] what `prepare` found, against a tracker that accepts everything.
+    fn send(db: &Db, org: &Organization, prepared: &Prepared, platform: &FakePlatform) {
+        let ids = prepared.resolved().unwrap();
+        let gh = Recorder::default();
+        execute(
+            db,
+            org,
+            &prepared.plan,
+            &prepared.check,
+            ids,
+            platform,
+            &gh,
+            now(),
+        )
+        .unwrap();
     }
 
     fn a_task(db: &Db, org: &Organization) -> i64 {
@@ -608,7 +581,7 @@ mod tests {
     #[test]
     fn a_push_closes_comments_and_records_the_ledger() {
         let (db, org) = setup();
-        let (platform, gh) = (FakePlatform::default(), FakeGh::default());
+        let (platform, gh) = (FakePlatform::default(), Recorder::default());
         let plan = the_plan(&db, &org);
         let items = run(&db, &org, &plan, &platform, &gh).unwrap();
         assert!(items.iter().all(|i| i.error.is_none()), "{items:?}");
@@ -626,7 +599,7 @@ mod tests {
         let platform = FakePlatform::default();
         let first = the_plan(&db, &org);
         assert!(!check(&db, &org, &first, &platform).unwrap().already_pushed);
-        run(&db, &org, &first, &platform, &FakeGh::default()).unwrap();
+        run(&db, &org, &first, &platform, &Recorder::default()).unwrap();
 
         let again = the_plan(&db, &org);
         assert!(check(&db, &org, &again, &platform).unwrap().already_pushed);
@@ -655,11 +628,10 @@ mod tests {
             existing: plan.worklog.entries.clone(),
             ..Default::default()
         };
-        let gh = FakeGh::default();
+        let gh = Recorder::default();
         let c = check(&db, &org, &plan, &platform).unwrap();
         assert!(c.conflicts_on("2026-09-04") && c.conflict_lines()[0].contains("not pushed"));
-        let ids = resolve(&platform, &Target::of(&org)).unwrap();
-        let items = execute(&db, &org, &plan, &c, &ids, &platform, &gh, now()).unwrap();
+        let items = run(&db, &org, &plan, &platform, &gh).unwrap();
         assert!(platform.pushed.borrow().is_empty());
         assert!(gh.calls.borrow().is_empty());
         assert!(items.iter().all(|i| i.error.is_some()));
@@ -688,10 +660,8 @@ mod tests {
             existing: vec![taken],
             ..Default::default()
         };
-        let gh = FakeGh::default();
-        let c = check(&db, &org, &plan, &platform).unwrap();
-        let ids = resolve(&platform, &Target::of(&org)).unwrap();
-        let items = execute(&db, &org, &plan, &c, &ids, &platform, &gh, now()).unwrap();
+        let gh = Recorder::default();
+        let items = run(&db, &org, &plan, &platform, &gh).unwrap();
         let sent = platform.pushed.borrow();
         assert_eq!(sent[0].entries.len(), 1);
         assert_eq!(sent[0].entries[0].day, "2026-09-03");
@@ -713,7 +683,7 @@ mod tests {
             conflicts: vec!["2026-09-04".into()],
             ..Default::default()
         };
-        let gh = FakeGh::default();
+        let gh = Recorder::default();
         let plan = the_plan(&db, &org);
         let items = run(&db, &org, &plan, &platform, &gh).unwrap();
         assert!(items[0].error.as_deref().unwrap().contains("conflict"));
@@ -724,7 +694,7 @@ mod tests {
     #[test]
     fn an_already_closed_issue_is_not_closed_again() {
         let (db, org) = setup();
-        let gh = FakeGh {
+        let gh = Recorder {
             closed: true,
             ..Default::default()
         };
@@ -749,7 +719,7 @@ mod tests {
             refuse: Some("HTTP 500".into()),
             ..Default::default()
         };
-        let gh = FakeGh::default();
+        let gh = Recorder::default();
         let plan = the_plan(&db, &org);
         assert!(run(&db, &org, &plan, &platform, &gh).is_err());
         assert!(gh.calls.borrow().is_empty());
@@ -759,7 +729,7 @@ mod tests {
     #[test]
     fn a_github_failure_is_reported_per_item_and_still_recorded() {
         let (db, org) = setup();
-        let gh = FakeGh {
+        let gh = Recorder {
             fail_comment: true,
             ..Default::default()
         };
@@ -777,7 +747,7 @@ mod tests {
         let (db, org) = setup();
         let plan = the_plan(&db, &org);
         let first = FakePlatform::default();
-        let down = FakeGh {
+        let down = Recorder {
             fail_comment: true,
             ..Default::default()
         };
@@ -788,7 +758,7 @@ mod tests {
             ..Default::default()
         };
         assert!(!check(&db, &org, &plan, &second).unwrap().already_pushed);
-        let gh = FakeGh::default();
+        let gh = Recorder::default();
         let items = run(&db, &org, &plan, &second, &gh).unwrap();
 
         assert!(
@@ -845,24 +815,13 @@ mod tests {
     #[test]
     fn names_are_sent_as_the_platforms_ids() {
         let (db, org) = setup();
-        let _plan = the_plan(&db, &org);
         let platform = FakePlatform {
             projects: vec![PlatformItem::new("p1", "ACME")],
             activities: vec![PlatformItem::new("a1", "Dev")],
             ..Default::default()
         };
         let prepared = prepare(&db, &org, range(), now(), &Target::of(&org), &platform).unwrap();
-        execute(
-            &db,
-            &org,
-            &prepared.plan,
-            &prepared.check,
-            prepared.resolved().unwrap(),
-            &platform,
-            &FakeGh::default(),
-            now(),
-        )
-        .unwrap();
+        send(&db, &org, &prepared, &platform);
         let sent = platform.pushed.borrow();
         assert!(
             sent[0]
@@ -894,17 +853,7 @@ mod tests {
             "one round-trip each"
         );
         assert!(prepared.warnings.is_empty());
-        execute(
-            &db,
-            &org,
-            &prepared.plan,
-            &prepared.check,
-            prepared.resolved().unwrap(),
-            &platform,
-            &FakeGh::default(),
-            now(),
-        )
-        .unwrap();
+        send(&db, &org, &prepared, &platform);
         assert_eq!(
             platform.calls.borrow().len(),
             4,

@@ -116,16 +116,11 @@ struct Results {
     results: Vec<EntryResult>,
 }
 
+/// The reply of `/projects` or `/projects/<id>/activities`: one list, under either key.
 #[derive(Deserialize)]
-struct Projects {
-    #[serde(default)]
-    projects: Vec<PlatformItem>,
-}
-
-#[derive(Deserialize)]
-struct Activities {
-    #[serde(default)]
-    activities: Vec<PlatformItem>,
+struct Listing {
+    #[serde(default, alias = "projects", alias = "activities")]
+    items: Vec<PlatformItem>,
 }
 
 pub trait TimePlatform {
@@ -190,13 +185,6 @@ impl JsonWebhook {
         IterError::Platform(self.key.redact(what))
     }
 
-    fn finish(
-        &self,
-        response: std::result::Result<ureq::http::Response<ureq::Body>, ureq::Error>,
-    ) -> Result<String> {
-        Ok(self.read(response, false)?.unwrap_or_default())
-    }
-
     /// The body of a 2xx response, `None` when the endpoint is absent (404, 405, 501), or the error a refusal makes.
     fn read(
         &self,
@@ -219,21 +207,21 @@ impl JsonWebhook {
         Err(self.fail(&format!("HTTP {}: {shown}", status.as_u16())))
     }
 
-    fn get(&self, url: &str, query: &[(&str, String)]) -> Result<String> {
-        Ok(self.get_or_missing(url, query, false)?.unwrap_or_default())
-    }
-
-    fn get_or_missing(
-        &self,
-        url: &str,
-        query: &[(&str, String)],
-        missing_ok: bool,
-    ) -> Result<Option<String>> {
+    /// A GET with the bearer key; `None` only when `missing_ok` and the endpoint is absent.
+    fn get(&self, url: &str, query: &[(&str, String)], missing_ok: bool) -> Result<Option<String>> {
         let mut request = self.agent.get(url).header("Authorization", self.bearer());
         for (k, v) in query {
             request = request.query(k, v);
         }
         self.read(request.call(), missing_ok)
+    }
+
+    /// The items at `url`; a platform without that endpoint lists nothing.
+    fn list(&self, url: &str) -> Result<Vec<PlatformItem>> {
+        match self.get(url, &[], true)? {
+            Some(body) => Ok(self.parse::<Listing>(&body)?.items),
+            None => Ok(Vec::new()),
+        }
     }
 
     fn parse<T: serde::de::DeserializeOwned>(&self, body: &str) -> Result<T> {
@@ -266,7 +254,7 @@ impl TimePlatform for JsonWebhook {
             .header("Authorization", self.bearer())
             .content_type("application/json")
             .send(body);
-        let reply = self.finish(response)?;
+        let reply = self.read(response, false)?.unwrap_or_default();
         // an empty reply is "all accepted"; any other unrecognised reply (a proxy's or captive portal's HTML) is not, so nothing is recorded as pushed on its strength
         let mut results = match reply.trim() {
             "" => Vec::new(),
@@ -300,7 +288,8 @@ impl TimePlatform for JsonWebhook {
             if page > 1 {
                 query.push(("page", page.to_string()));
             }
-            let body = self.get(&format!("{}/time-entries", self.url), &query)?;
+            let url = format!("{}/time-entries", self.url);
+            let body = self.get(&url, &query, false)?.unwrap_or_default();
             let got = self.parse::<Entries>(&body)?;
             out.extend(got.entries.into_iter().map(WorklogEntry::from));
             if !got.has_more {
@@ -315,23 +304,12 @@ impl TimePlatform for JsonWebhook {
     }
 
     fn projects(&self) -> Result<Vec<PlatformItem>> {
-        // No such endpoint: the platform does not list its projects.
-        match self.get_or_missing(&format!("{}/projects", self.url), &[], true)? {
-            Some(body) => Ok(self.parse::<Projects>(&body)?.projects),
-            None => Ok(Vec::new()),
-        }
+        self.list(&format!("{}/projects", self.url))
     }
 
     fn activities(&self, project_id: &str) -> Result<Vec<PlatformItem>> {
-        let url = format!(
-            "{}/projects/{}/activities",
-            self.url,
-            path_segment(project_id)
-        );
-        match self.get_or_missing(&url, &[], true)? {
-            Some(body) => Ok(self.parse::<Activities>(&body)?.activities),
-            None => Ok(Vec::new()),
-        }
+        let id = path_segment(project_id);
+        self.list(&format!("{}/projects/{id}/activities", self.url))
     }
 }
 
@@ -399,14 +377,14 @@ mod tests {
 
     const KEY: &str = "s3cr3t-key-123";
 
-    fn stub_all(bodies: Vec<String>) -> (String, std::thread::JoinHandle<Vec<String>>) {
-        serve("200 OK", bodies)
-    }
-
     fn stub(status: &str, body: &str) -> (String, std::thread::JoinHandle<String>) {
         let (url, handle) = serve(status, vec![body.to_string()]);
         let one = std::thread::spawn(move || handle.join().unwrap().remove(0));
         (url, one)
+    }
+
+    fn serve_pages(bodies: Vec<String>) -> (String, std::thread::JoinHandle<Vec<String>>) {
+        serve("200 OK", bodies)
     }
 
     fn serve(status: &str, bodies: Vec<String>) -> (String, std::thread::JoinHandle<Vec<String>>) {
@@ -561,7 +539,7 @@ mod tests {
     #[test]
     fn a_fetch_that_hits_the_page_cap_is_an_error() {
         let page = r#"{"page":1,"total":9,"entries":[],"has_more":true,"page_size":1}"#;
-        let (url, handle) = stub_all(vec![page.to_string(); MAX_PAGES as usize]);
+        let (url, handle) = serve_pages(vec![page.to_string(); MAX_PAGES as usize]);
         let day = NaiveDate::from_ymd_opt(2026, 9, 4).unwrap();
         let err = webhook(&url).fetch(day, day).unwrap_err();
         handle.join().unwrap();
@@ -586,19 +564,21 @@ mod tests {
     }
 
     #[test]
-    fn a_refusal_shows_its_body_without_the_key() {
-        let (url, _) = stub("401 Unauthorized", &format!("bad token {KEY}"));
-        let err = webhook(&url).push(&log()).unwrap_err().to_string();
-        assert!(err.contains("HTTP 401"), "{err}");
-        assert!(err.contains("bad token ***"), "{err}");
-        assert!(!err.contains(KEY));
-    }
-
-    #[test]
-    fn a_server_error_is_an_error_too() {
-        let (url, _) = stub("500 Internal Server Error", "boom");
-        let err = webhook(&url).push(&log()).unwrap_err().to_string();
-        assert!(err.contains("HTTP 500") && err.contains("boom"), "{err}");
+    fn a_refusal_shows_its_status_and_body_without_the_key() {
+        for (status, body, shown) in [
+            (
+                "401 Unauthorized",
+                format!("bad token {KEY}"),
+                "bad token ***",
+            ),
+            ("500 Internal Server Error", "boom".into(), "boom"),
+        ] {
+            let (url, _) = stub(status, &body);
+            let err = webhook(&url).push(&log()).unwrap_err().to_string();
+            assert!(err.contains(&format!("HTTP {}", &status[..3])), "{err}");
+            assert!(err.contains(shown), "{err}");
+            assert!(!err.contains(KEY));
+        }
     }
 
     #[test]
@@ -641,7 +621,8 @@ mod tests {
                 r#"{{"entries":[{{"date":"{date}","time":60,"note":"","project":"p","activity":"a"}}],"has_more":{more}}}"#
             )
         };
-        let (url, requests) = stub_all(vec![page(true, "2026-09-03"), page(false, "2026-09-04")]);
+        let (url, requests) =
+            serve_pages(vec![page(true, "2026-09-03"), page(false, "2026-09-04")]);
         let got = webhook(&url)
             .fetch(
                 NaiveDate::from_ymd_opt(2026, 9, 3).unwrap(),

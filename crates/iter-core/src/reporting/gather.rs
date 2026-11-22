@@ -11,8 +11,7 @@ use crate::models::{Project, Session, Task};
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
 
-/// Total minutes across `sessions`, with the pause threshold from the config; `reporting`'s own
-/// [`merged_total_minutes`] takes an explicit gap so it is testable.
+/// Total minutes across `sessions`, with the pause threshold from the config; [`merged_total_minutes`] takes an explicit gap.
 pub fn total_minutes(sessions: &[Session], now: NaiveDateTime) -> i64 {
     merged_total_minutes(sessions, now, config().pause_gap_minutes)
 }
@@ -77,12 +76,17 @@ fn build_task_reports(
     (reports, all)
 }
 
-fn group_by_task(sessions: Vec<Session>) -> HashMap<i64, Vec<Session>> {
-    let mut by_task: HashMap<i64, Vec<Session>> = HashMap::new();
-    for session in sessions {
-        by_task.entry(session.task_id).or_default().push(session);
+/// `items` grouped by `key`, each group in the order given.
+fn grouped<T>(items: Vec<T>, key: impl Fn(&T) -> i64) -> HashMap<i64, Vec<T>> {
+    let mut groups: HashMap<i64, Vec<T>> = HashMap::new();
+    for item in items {
+        groups.entry(key(&item)).or_default().push(item);
     }
-    by_task
+    groups
+}
+
+fn sessions_by_task(sessions: Vec<Session>) -> HashMap<i64, Vec<Session>> {
+    grouped(sessions, |s| s.task_id)
 }
 
 /// One `TaskReport` per task of `project_id` with a session in `range`; two queries in all.
@@ -90,10 +94,10 @@ pub fn task_reports(
     db: &Db,
     project_id: i64,
     range: DateRange,
-    now: chrono::NaiveDateTime,
+    now: NaiveDateTime,
 ) -> Result<(Vec<TaskReport>, Vec<Session>)> {
     let mut by_task =
-        group_by_task(db.sessions_for_projects_in_range(&[project_id], range.from, range.to)?);
+        sessions_by_task(db.sessions_for_projects_in_range(&[project_id], range.from, range.to)?);
     let tasks = db.tasks_for_project(project_id)?;
     Ok(build_task_reports(
         tasks,
@@ -112,11 +116,9 @@ pub fn project_reports(
     now: NaiveDateTime,
 ) -> Result<(Vec<ProjectReport>, Vec<Session>)> {
     let ids: Vec<i64> = projects.iter().map(Project::id).collect();
-    let mut by_task = group_by_task(db.sessions_for_projects_in_range(&ids, range.from, range.to)?);
-    let mut tasks_of: HashMap<i64, Vec<Task>> = HashMap::new();
-    for task in db.tasks_for_projects(&ids)? {
-        tasks_of.entry(task.project_id).or_default().push(task);
-    }
+    let mut by_task =
+        sessions_by_task(db.sessions_for_projects_in_range(&ids, range.from, range.to)?);
+    let mut tasks_of = grouped(db.tasks_for_projects(&ids)?, |t| t.project_id);
     let dated = range.single_day().is_none();
 
     let mut reports = Vec::new();
