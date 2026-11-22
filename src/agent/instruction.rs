@@ -5,6 +5,7 @@
 use crate::agent::error::{AgentError, AgentResult};
 #[cfg(feature = "web")]
 use crate::agent::prompt::{self, Context};
+use crate::utils::text::yaml_scalar;
 use serde_yaml::Value;
 #[cfg(feature = "web")]
 use std::path::Path;
@@ -93,15 +94,6 @@ pub struct Front {
     pub permission: Option<String>,
 }
 
-fn scalar(v: &Value) -> Option<String> {
-    match v {
-        Value::String(s) => Some(s.clone()),
-        Value::Number(n) => Some(n.to_string()),
-        Value::Bool(b) => Some(b.to_string()),
-        _ => None,
-    }
-}
-
 pub fn parse_front(yaml: &str) -> AgentResult<Front> {
     let value: Value = serde_yaml::from_str(yaml).map_err(AgentError::FrontMatterUnreadable)?;
     let map = match value {
@@ -113,7 +105,7 @@ pub fn parse_front(yaml: &str) -> AgentResult<Front> {
     let text = |key: &str| -> AgentResult<Option<String>> {
         match get(key) {
             None | Some(Value::Null) => Ok(None),
-            Some(v) => scalar(v)
+            Some(v) => yaml_scalar(v)
                 .map(Some)
                 .ok_or_else(|| AgentError::FrontMatterNotText(key.to_string())),
         }
@@ -624,13 +616,13 @@ mod tests {
     fn a_scalar_keeps_its_text_as_written() {
         let value = |yaml: &str| serde_yaml::from_str::<Value>(yaml).unwrap();
         assert_eq!(
-            scalar(&value("'  padded  '")).as_deref(),
+            yaml_scalar(&value("'  padded  '")).as_deref(),
             Some("  padded  ")
         );
-        assert_eq!(scalar(&value("42")).as_deref(), Some("42"));
-        assert_eq!(scalar(&value("false")).as_deref(), Some("false"));
+        assert_eq!(yaml_scalar(&value("42")).as_deref(), Some("42"));
+        assert_eq!(yaml_scalar(&value("false")).as_deref(), Some("false"));
         for none in ["~", "[a]", "{a: b}"] {
-            assert_eq!(scalar(&value(none)), None, "{none}");
+            assert_eq!(yaml_scalar(&value(none)), None, "{none}");
         }
     }
 }

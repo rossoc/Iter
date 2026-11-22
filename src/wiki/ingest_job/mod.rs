@@ -10,6 +10,7 @@ use crate::db::{Db, Table};
 use crate::error::Result;
 use crate::models::{Project, Task};
 use crate::process;
+use crate::utils::text::now_as;
 use crate::wiki::graph::Wiki;
 use crate::wiki::ingest::{self, Mode};
 use crate::wiki::scope::{self, Spec};
@@ -128,7 +129,7 @@ pub fn task_ingest_text(db: &Db, project: &Project, task: &Task) -> Option<Strin
 }
 
 pub fn now() -> String {
-    chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()
+    now_as("%Y-%m-%dT%H:%M:%S")
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

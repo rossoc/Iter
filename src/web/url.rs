@@ -3,6 +3,7 @@
 
 use super::task_query::DEFAULT;
 use crate::reporting::fmt_date;
+use crate::utils::text::percent_encode;
 use chrono::NaiveDate;
 
 pub fn page_url(base: &str, params: &[(&str, Option<&str>)]) -> String {
@@ -21,15 +22,7 @@ pub fn page_url(base: &str, params: &[(&str, Option<&str>)]) -> String {
 }
 
 fn encode(value: &str) -> String {
-    let mut out = String::new();
-    for b in value.bytes() {
-        if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
-            out.push(b as char);
-        } else {
-            out.push_str(&format!("%{b:02X}"));
-        }
-    }
-    out
+    percent_encode(value, b"-._~")
 }
 
 pub const SETTINGS: &str = "/settings";

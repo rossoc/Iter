@@ -11,6 +11,7 @@ use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::git;
 use crate::models::{Project, SessionConfig, Task, TaskStatus};
+use crate::utils::text::now_as;
 use crate::utils::workspace::create_task_worktree;
 use crate::wiki::ingest_job::{Auto, Trigger, auto};
 use serde::{Deserialize, Serialize};
@@ -99,7 +100,7 @@ fn start_work(app: &App, task: &mut Task) -> Result<()> {
 }
 
 fn now() -> String {
-    chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+    now_as("%Y-%m-%d %H:%M:%S")
 }
 
 /// Starts a run of the instruction `instruction` on `name` (`create` then `begin`), detached unless `wait`; returns its number. One run at a time per task.

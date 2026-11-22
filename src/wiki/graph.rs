@@ -5,6 +5,7 @@ use super::frontmatter::{self, Front};
 use super::ontology::{LevelKind, NODE, NS, Ontology, Place, Rules, ns};
 use crate::error::{IterError, Result};
 use crate::notes::parse_date;
+use crate::utils::text::percent_encode;
 use oxigraph::io::RdfFormat;
 use oxigraph::model::vocab::{rdf, rdfs};
 use oxigraph::model::{GraphName, GraphNameRef, Literal, NamedNode, NamedOrBlankNode, Quad, Term};
@@ -84,15 +85,7 @@ fn failed(e: impl std::fmt::Display) -> IterError {
 
 /// `s` as an IRI path part: all but letters, digits and `-._~/` percent-encoded.
 fn encode(s: &str) -> String {
-    let mut out = String::new();
-    for b in s.bytes() {
-        if b.is_ascii_alphanumeric() || b"-._~/".contains(&b) {
-            out.push(b as char);
-        } else {
-            let _ = write!(out, "%{b:02X}");
-        }
-    }
-    out
+    percent_encode(s, b"-._~/")
 }
 
 pub(super) fn level_iri(label: &str) -> NamedNode {

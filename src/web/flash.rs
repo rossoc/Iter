@@ -6,6 +6,7 @@
 //! `notifications.enabled: false` nothing here happens.
 
 use crate::config::config;
+use crate::utils::text::percent_encode;
 use topcoat::{
     Result,
     context::Cx,
@@ -102,15 +103,7 @@ fn cookie(kind: Kind, message: &str) -> String {
 }
 
 fn encode(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for byte in text.bytes() {
-        if byte.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&byte) {
-            out.push(byte as char);
-        } else {
-            out.push_str(&format!("%{byte:02X}"));
-        }
-    }
-    out
+    percent_encode(text, b"-_.!~*'()")
 }
 
 /// The path (and query) of `referer` when it is a page of this server (`host`, plain http),

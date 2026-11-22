@@ -2,6 +2,7 @@
 //! `iter:authorable` ontology properties are relations; any other key goes to `unknown` for `check`. A note is never parsed.
 
 use crate::md_edit::{split_closed, strip_bom};
+use crate::utils::text::yaml_scalar;
 use serde_yaml::Value;
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -43,13 +44,9 @@ pub fn split(content: &str) -> Split<'_> {
     }
 }
 
+/// A scalar as text, trimmed.
 fn scalar(v: &Value) -> Option<String> {
-    match v {
-        Value::String(s) => Some(s.trim().to_string()),
-        Value::Number(n) => Some(n.to_string()),
-        Value::Bool(b) => Some(b.to_string()),
-        _ => None,
-    }
+    yaml_scalar(v).map(|s| s.trim().to_string())
 }
 
 fn strings(v: &Value) -> Option<Vec<String>> {
