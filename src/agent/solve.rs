@@ -12,7 +12,7 @@ use crate::error::{IterError, Result};
 use crate::git;
 use crate::models::{Project, Task};
 use crate::text::now_as;
-use crate::wiki::ingest_job::{Auto, Trigger, auto};
+use super::ingest_job::{Auto, Trigger, auto};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 

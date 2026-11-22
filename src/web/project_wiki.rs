@@ -10,7 +10,7 @@ use super::{Id, fresh_db};
 use crate::db::{Db, Table};
 use crate::models::Project;
 use crate::wiki::ingest::Mode;
-use crate::wiki::ingest_job::{self, Review};
+use crate::agent::ingest_job::{self, Review};
 use topcoat::{
     Result,
     context::Cx,

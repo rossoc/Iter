@@ -10,7 +10,7 @@ use crate::error::{IterError, Result};
 use crate::locate::{self, current_task, require_git_repo, task_or_current};
 use crate::models::{Duration, SessionConfig, TaskStatus};
 use crate::tmux::{Multiplexer, TmuxClient};
-use crate::wiki::ingest_job::Trigger;
+use crate::agent::ingest_job::Trigger;
 use crate::workspace;
 use crate::workspace::clock::{Closed, close_open_session, start_session};
 

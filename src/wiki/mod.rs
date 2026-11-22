@@ -6,7 +6,6 @@ pub mod check;
 pub mod frontmatter;
 pub mod graph;
 pub mod ingest;
-pub mod ingest_job;
 pub mod mv;
 pub mod ontology;
 pub mod retrieve;

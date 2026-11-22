@@ -21,7 +21,7 @@ use crate::reporting::{
 };
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::output::print_yaml;
-use crate::wiki::ingest_job::{self, Trigger};
+use crate::agent::ingest_job::{self, Trigger};
 use crate::workspace::clock::close_open_session;
 use crate::workspace::teardown_and_kill;
 

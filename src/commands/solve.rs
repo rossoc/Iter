@@ -12,7 +12,7 @@ use crate::error::AgentError;
 use crate::error::Result;
 use crate::models::Project;
 use crate::text::split_front;
-use crate::wiki::ingest_job::Auto;
+use crate::agent::ingest_job::Auto;
 
 struct Console;
 

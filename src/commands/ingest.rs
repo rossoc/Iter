@@ -1,4 +1,4 @@
-//! `iter wiki ingest`, `build-concept` and `pending`: agents writing the wiki and the review of what they wrote (`wiki::ingest_job`).
+//! `iter wiki ingest`, `build-concept` and `pending`: agents writing the wiki and the review of what they wrote (`agent::ingest_job`).
 
 use crate::app::App;
 use crate::args::HarnessOpts;
@@ -8,7 +8,7 @@ use crate::error::{IterError, Result};
 use crate::locate::{self, project_or_current};
 use crate::models::{Project, Task};
 use crate::wiki::ingest;
-use crate::wiki::ingest_job::{
+use crate::agent::ingest_job::{
     Auto, HarnessChoice, JobText, Target, Trigger, auto as wiki_auto, busy, changes, run_agent,
     settle_with, spawn_ingest,
 };

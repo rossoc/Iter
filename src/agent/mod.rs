@@ -4,6 +4,7 @@
 #[cfg(test)]
 mod config_instructions_tests;
 pub mod exec;
+pub mod ingest_job;
 pub mod instruction;
 pub mod plan;
 pub mod prompt;
