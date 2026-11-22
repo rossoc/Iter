@@ -544,33 +544,47 @@ mod tests {
         }
     }
 
+    const IDEA: &str = "<urn:iter:acme.app/wiki/ideas/retry>";
+    const CONCEPT: &str = "<urn:iter:acme.app/wiki/concepts/backoff>";
+    const NOTE: &str = "<urn:iter:acme.app/2026-10-27>";
+    const PLAN: &str = "<urn:iter:acme.app.task-7/plan>";
+
+    /// `(ASK pattern, is it true)` on the fixture: the class comes from the folder, front matter
+    /// and links become triples, and the OWL rules derive the rest.
     #[test]
-    fn the_class_comes_from_the_folder() {
-        let w = build(&fixture("class"));
-        assert!(ask(
-            &w,
-            "ASK { <urn:iter:acme.app/wiki/ideas/retry> a iter:Idea }"
-        ));
-        assert!(ask(
-            &w,
-            "ASK { <urn:iter:acme.app/wiki/concepts/backoff> a iter:Concept }"
-        ));
-        assert!(ask(
-            &w,
-            "ASK { <urn:iter:acme.app/2026-10-27> a iter:Note }"
-        ));
-        assert!(ask(
-            &w,
-            "ASK { <urn:iter:acme.app.task-7/plan> a iter:Plan }"
-        ));
-        assert!(ask(
-            &w,
-            "ASK { <urn:iter:acme.app.task-7/plan> a iter:Page }"
-        ));
-        assert!(!ask(
-            &w,
-            "ASK { <urn:iter:acme.app/2026-10-27> a iter:Page }"
-        ));
+    fn the_graph_answers_what_the_files_and_the_rules_say() {
+        let w = build(&fixture("asks"));
+        let cases = [
+            (format!("{IDEA} a iter:Idea"), true),
+            (format!("{CONCEPT} a iter:Concept"), true),
+            (format!("{NOTE} a iter:Note"), true),
+            (format!("{PLAN} a iter:Plan"), true),
+            (format!("{PLAN} a iter:Page"), true),
+            (format!("{NOTE} a iter:Page"), false),
+            (
+                format!(
+                    "{IDEA} iter:description \"Retries need a budget\" ; iter:tag \"net\" ; iter:source {NOTE}"
+                ),
+                true,
+            ),
+            (format!("{IDEA} iter:ref {CONCEPT}"), true),
+            (format!("{IDEA} rdfs:label \"Retry budget\""), true),
+            (format!("{CONCEPT} iter:ref {IDEA}"), true),
+            (format!("{IDEA} iter:includedIn {CONCEPT}"), true),
+            (format!("{IDEA} iter:referencedBy {CONCEPT}"), true),
+            (format!("{IDEA} iter:in <urn:iter:acme>"), true),
+            (
+                "<urn:iter:acme.app.task-7> iter:in <urn:iter:acme>".into(),
+                true,
+            ),
+        ];
+        for (pattern, expected) in cases {
+            assert_eq!(
+                ask(&w, &format!("ASK {{ {pattern} }}")),
+                expected,
+                "{pattern}"
+            );
+        }
     }
 
     #[test]
@@ -582,52 +596,6 @@ mod tests {
             .find(|n| n.rel == "2026-10-27")
             .expect("note");
         assert!(note.front.is_none() && note.front_error.is_none() && note.links.is_empty());
-    }
-
-    #[test]
-    fn front_matter_and_links_become_triples() {
-        let w = build(&fixture("triples"));
-        let idea = "<urn:iter:acme.app/wiki/ideas/retry>";
-        assert!(ask(
-            &w,
-            &format!(
-                "ASK {{ {idea} iter:description \"Retries need a budget\" ; iter:tag \"net\" ; iter:source <urn:iter:acme.app/2026-10-27> }}"
-            )
-        ));
-        assert!(ask(
-            &w,
-            &format!("ASK {{ {idea} iter:ref <urn:iter:acme.app/wiki/concepts/backoff> }}")
-        ));
-        assert!(ask(
-            &w,
-            &format!("ASK {{ {idea} rdfs:label \"Retry budget\" }}")
-        ));
-    }
-
-    #[test]
-    fn the_owl_rules_derive_the_rest() {
-        let w = build(&fixture("rules"));
-        let (idea, concept) = (
-            "<urn:iter:acme.app/wiki/ideas/retry>",
-            "<urn:iter:acme.app/wiki/concepts/backoff>",
-        );
-        assert!(ask(&w, &format!("ASK {{ {concept} iter:ref {idea} }}")));
-        assert!(ask(
-            &w,
-            &format!("ASK {{ {idea} iter:includedIn {concept} }}")
-        ));
-        assert!(ask(
-            &w,
-            &format!("ASK {{ {idea} iter:referencedBy {concept} }}")
-        ));
-        assert!(ask(
-            &w,
-            &format!("ASK {{ {idea} iter:in <urn:iter:acme> }}")
-        ));
-        assert!(ask(
-            &w,
-            "ASK { <urn:iter:acme.app.task-7> iter:in <urn:iter:acme> }"
-        ));
     }
 
     #[test]
