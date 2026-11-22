@@ -13,7 +13,7 @@
 macro_rules! components {
     ($($m:ident),* $(,)?) => {
         $(pub mod $m;)*
-        pub mod all {
+        pub(crate) mod all {
             $(pub use super::$m::*;)*
         }
     };
