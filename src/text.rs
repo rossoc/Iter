@@ -51,6 +51,39 @@ pub fn now_as(format: &str) -> String {
     chrono::Local::now().format(format).to_string()
 }
 
+/// `content` without a leading byte-order mark. From `md_edit` in isolation step 2.
+// stub: I3 (`md_edit::strip_bom` still does the work)
+#[allow(dead_code)]
+pub fn strip_bom(content: &str) -> &str {
+    let _ = content;
+    unimplemented!("stub: I3")
+}
+
+/// Front matter and body of a markdown text: `front` is what lies between an optional opening
+/// `---` line and the first line that is exactly `---` (its last newline included), `body` what
+/// follows; with no such line `front` is `None` and `body` all that follows the opening.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Split<'a> {
+    pub front: Option<&'a str>,
+    pub body: &'a str,
+}
+
+/// Splits after an optional byte-order mark; an opening `---` is optional.
+// stub: I3 (`md_edit::split_front` still does the work)
+#[allow(dead_code)]
+pub fn split_front(content: &str) -> Split<'_> {
+    let _ = content;
+    unimplemented!("stub: I3")
+}
+
+/// [`split_front`] when `content` opens with `---` and a `---` line closes it, else `None`.
+// stub: I3 (`md_edit::split_closed` still does the work)
+#[allow(dead_code)]
+pub fn split_closed(content: &str) -> Option<Split<'_>> {
+    let _ = content;
+    unimplemented!("stub: I3")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,5 +120,60 @@ mod tests {
         let made = slug(&long);
         assert_eq!(made.len(), 40 * 5 - 1);
         assert!(!made.ends_with('-') && !made.starts_with('-'));
+    }
+
+    /// Round I3 (step 2): the front-matter rule moves here from `md_edit`, the same cases and the
+    /// same exact divider, with the result as a [`Split`].
+    #[test]
+    fn front_matter_ends_at_the_first_exact_divider() {
+        let closed = |front: &'static str, body: &'static str| {
+            Some(Split {
+                front: Some(front),
+                body,
+            })
+        };
+        for (text, expected) in [
+            ("---\na: 1\n---\nBody\n", closed("a: 1\n", "Body\n")),
+            ("---\n---\nBody", closed("", "Body")),
+            ("---\na: 1\n---", closed("a: 1\n", "")),
+            ("\u{feff}---\na: 1\n---\nb", closed("a: 1\n", "b")),
+            ("---\nnever closed\n", None),
+            ("a: 1\n---\nb", None),
+            ("---\na: 1\n--- \nb", None),
+        ] {
+            assert_eq!(split_closed(text), expected, "{text:?}");
+        }
+    }
+
+    #[test]
+    fn a_split_without_the_opening_line_still_finds_the_divider() {
+        assert_eq!(
+            split_front("a: 1\n---\nb"),
+            Split {
+                front: Some("a: 1\n"),
+                body: "b"
+            }
+        );
+        assert_eq!(
+            split_front("---\nnever closed\n"),
+            Split {
+                front: None,
+                body: "never closed\n"
+            }
+        );
+        assert_eq!(
+            split_front("plain"),
+            Split {
+                front: None,
+                body: "plain"
+            }
+        );
+    }
+
+    #[test]
+    fn only_a_leading_byte_order_mark_is_stripped() {
+        assert_eq!(strip_bom("\u{feff}text"), "text");
+        assert_eq!(strip_bom("text\u{feff}"), "text\u{feff}");
+        assert_eq!(strip_bom(""), "");
     }
 }

@@ -138,3 +138,64 @@ pub fn install_instructions(dir: &std::path::Path) {
         std::fs::write(to.join(format!("{name}.md")), shipped(name)).expect("instruction copied");
     }
 }
+
+/// Set in the child of [`in_scratch_config`].
+const CHILD: &str = "ITER_SCRATCH_CONFIG_CHILD";
+
+/// For a test that reads or opens the process-wide config. In the parent: runs test `name` of
+/// the module `module` (`module_path!()`) again in a child of the test binary whose
+/// `$XDG_CONFIG_HOME` and `$HOME` are a scratch folder holding `yaml` as `iter.yaml` (none if
+/// `None`), asserts it passed and returns `true`: the caller returns. In the child: `false`, the
+/// caller runs its body. The user's own config and database are never read.
+pub fn in_scratch_config(module: &str, name: &str, yaml: Option<&str>) -> bool {
+    if std::env::var_os(CHILD).is_some() {
+        return false;
+    }
+    let home = scratch(&format!("cfg-{}", name.replace("::", "-")));
+    let config_home = home.join("config");
+    let dir = config_home.join("iter");
+    std::fs::create_dir_all(&dir).expect("scratch config folder");
+    if let Some(yaml) = yaml {
+        std::fs::write(dir.join("iter.yaml"), yaml).expect("scratch config");
+    }
+    let module = module.split_once("::").map_or("", |(_, m)| m);
+    let test = format!("{module}::{name}");
+    let out = std::process::Command::new(std::env::current_exe().expect("the test binary"))
+        .args([test.as_str(), "--exact", "--nocapture", "--test-threads=1"])
+        .env(CHILD, "1")
+        .env("XDG_CONFIG_HOME", &config_home)
+        .env("HOME", &home)
+        .output()
+        .expect("the test binary runs");
+    let _ = std::fs::remove_dir_all(&home);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success() && stdout.contains("1 passed"),
+        "{test} in a scratch config folder failed:\n--- stdout\n{stdout}\n--- stderr\n{stderr}"
+    );
+    true
+}
+
+/// A scratch git repository on `main` with one empty commit, or `None` where `git` is missing.
+pub fn git_repo(tag: &str) -> Option<PathBuf> {
+    let dir = scratch(tag);
+    std::fs::create_dir_all(&dir).ok()?;
+    let git = |args: &[&str]| {
+        std::process::Command::new("git")
+            .args([
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "-c",
+                "commit.gpgsign=false",
+            ])
+            .args(args)
+            .current_dir(&dir)
+            .output()
+            .is_ok_and(|o| o.status.success())
+    };
+    (git(&["init", "-q", "-b", "main"]) && git(&["commit", "-q", "--allow-empty", "-m", "a"]))
+        .then_some(dir)
+}

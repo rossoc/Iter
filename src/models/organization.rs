@@ -57,6 +57,15 @@ pub struct Organization {
     pub platform_activity: String,
 }
 
+/// A platform URL is `https`, or `http` to this machine, and carries no userinfo (the API key goes
+/// out with every call). Moves here from `platform` in isolation step 2.
+// stub: I3 (the real `platform::check_url` still does the work)
+#[allow(dead_code)]
+pub fn check_url(url: &str) -> crate::error::Result<()> {
+    let _ = url;
+    unimplemented!("stub: I3")
+}
+
 impl Organization {
     /// Beyond a name: a platform URL passes [`crate::platform::check_url`].
     fn check(&mut self) -> crate::error::Result<()> {
@@ -113,5 +122,35 @@ mod tests {
         assert!(!checked("http://127.0.0.1.evil.com"));
         assert!(!checked("https://user:pw@time.example.com"));
         assert!(!checked("localhost"));
+    }
+
+    /// Round I3 (step 2): the URL rule is `models::check_url`, with the cases `platform` pins now.
+    /// Each accepted URL and each refusal (with the part of the message that says why).
+    #[test]
+    fn check_url_lives_in_models_and_refuses_what_would_leak_the_key() {
+        use crate::models::check_url;
+        for ok in [
+            "https://time.example.com/api",
+            "http://127.0.0.1:8080",
+            "http://localhost/api",
+            "http://[::1]:8080",
+        ] {
+            assert!(check_url(ok).is_ok(), "{ok}");
+        }
+        for (bad, why) in [
+            ("http://time.example.com", "must start with https://"),
+            ("http://localhost.evil.com", "must start with https://"),
+            ("ftp://x", "must start with https://"),
+            ("localhost", "must start with https://"),
+            ("http://localhost:1@evil.com", "user name or password"),
+            ("https://user:pw@time.example.com", "user name or password"),
+            ("not a url", "not a valid URL"),
+        ] {
+            let message = check_url(bad).unwrap_err().to_string();
+            assert!(
+                message.contains(why) && message.contains(bad),
+                "{bad}: {message}"
+            );
+        }
     }
 }

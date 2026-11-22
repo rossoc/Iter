@@ -14,10 +14,12 @@ mod error;
 mod files;
 #[cfg(test)]
 mod fixtures;
+mod front;
 mod git;
 mod github;
 #[cfg(test)]
 mod help_tests;
+mod locate;
 mod md_edit;
 mod models;
 mod note_ref;
@@ -35,6 +37,7 @@ mod utils;
 #[cfg(feature = "web")]
 mod web;
 mod wiki;
+mod workspace;
 
 use app::App;
 use args::{Args, Command, ProjectCommand};

@@ -3,8 +3,9 @@
 //!
 //! Comments and `#[cfg(test)]` items are stripped before anything is counted, as `deps.py` does,
 //! so a rule is about production code only. Each rule is its own test; while isolation is open
-//! the ones not true yet carry `#[ignore = "isolation: round I3"]` (step 6, the `cli` module, makes
-//! them true) and whoever makes a rule true removes its `ignore`; the others guard what holds today. Run one with
+//! the ones not true yet carry `#[ignore = "isolation: round I<n>"]` (the round of sketch `plan`
+//! that makes them true) and whoever makes a rule true removes its `ignore`; the others guard
+//! what holds today. Run one with
 //! `cargo test --test arch -- --ignored <name>`: it only reads files.
 
 use regex::Regex;
@@ -337,7 +338,7 @@ fn show(
 }
 
 #[test]
-#[ignore = "isolation: round I3"]
+#[ignore = "isolation: round I4"]
 fn no_cycle_between_top_level_modules() {
     let graph = imports(&sources());
     let nodes: BTreeSet<&String> = graph
@@ -377,7 +378,7 @@ fn no_cycle_between_top_level_modules() {
 }
 
 #[test]
-#[ignore = "isolation: round I3"]
+#[ignore = "isolation: round I4"]
 fn every_module_is_in_the_design_and_imports_only_lower_ranks() {
     let sources = sources();
     let graph = imports(&sources);
@@ -410,7 +411,7 @@ fn every_module_is_in_the_design_and_imports_only_lower_ranks() {
 }
 
 #[test]
-#[ignore = "isolation: round I3"]
+#[ignore = "isolation: round I4"]
 fn the_core_imports_nothing_from_the_interface() {
     let graph = imports(&sources());
     let bad: Vec<String> = graph
@@ -498,6 +499,279 @@ fn the_core_has_no_web_feature_gate() {
         .map(|s| format!("{}: {} gates", s.file, gate.find_iter(&s.scan.full).count()))
         .collect();
     assert!(bad.is_empty(), "{}:\n{}", bad.len(), bad.join("\n"));
+}
+
+// ---- Round I3 (isolation steps 2-4): the rules each step makes true -------------------------
+
+/// The production source `file` (a path under `src/`, like `models/task_ref.rs`), if it exists.
+fn file_of<'a>(sources: &'a [Source], file: &str) -> Option<&'a Source> {
+    sources.iter().find(|s| s.file == file)
+}
+
+fn src_path(rel: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join(rel)
+}
+
+/// Every top-level module `module` names in production code.
+fn imported_by(sources: &[Source], module: &str) -> BTreeSet<String> {
+    imports(sources)
+        .remove(module)
+        .map(|to| to.into_keys().collect())
+        .unwrap_or_default()
+}
+
+/// Names of the files (under `src/`) whose production text matches `pattern`.
+fn files_matching(sources: &[Source], pattern: &str) -> Vec<String> {
+    let re = Regex::new(pattern).expect("regex");
+    sources
+        .iter()
+        .filter(|s| re.is_match(&s.scan.blank))
+        .map(|s| s.file.clone())
+        .collect()
+}
+
+fn none(what: &str, found: Vec<String>) {
+    assert!(found.is_empty(), "{what}: {}", found.join(", "));
+}
+
+/// Step 2: `models` is a leaf over `error`, `text`, `files` and `process`: `check_url` is its own
+/// (not `platform`'s) and the row types hold no dependency on the storage or the clients.
+#[test]
+#[ignore = "isolation: round I3"]
+fn models_imports_only_the_leaves() {
+    let found = imported_by(&sources(), "models");
+    let allowed: BTreeSet<String> = ["error", "text", "files", "process"]
+        .map(String::from)
+        .into();
+    let extra: Vec<_> = found.difference(&allowed).cloned().collect();
+    assert!(extra.is_empty(), "models imports {}", extra.join(", "));
+}
+
+/// Step 2: `#[derive(Table)]` emits paths the text scan above cannot see, so read the macro.
+#[test]
+#[ignore = "isolation: round I3"]
+fn the_table_derive_names_models_and_not_db() {
+    let text = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("macros/src/lib.rs"))
+        .expect("the macros crate");
+    assert!(
+        !text.contains("crate::db"),
+        "the derive emits `crate::db::..`: an upward edge"
+    );
+    assert!(text.contains("crate::models::sqltypes"));
+}
+
+/// Step 2: the SQLite conversions live with the row types, and `md_edit` is split into `text` (the
+/// pure half) and `editor` (the launch half).
+#[test]
+#[ignore = "isolation: round I3"]
+fn sqltypes_sit_in_models_and_md_edit_is_split() {
+    assert!(
+        src_path("models/sqltypes.rs").exists(),
+        "models/sqltypes.rs"
+    );
+    assert!(!src_path("db/sqltypes.rs").exists(), "db/sqltypes.rs");
+    assert!(src_path("models/traits.rs").exists(), "models/traits.rs");
+    assert!(!src_path("md_edit.rs").exists(), "md_edit.rs");
+    assert!(src_path("editor.rs").exists(), "editor.rs");
+}
+
+/// Step 3: a library does not exit the process. `config::load` and `App::open` return errors and
+/// only `main` (in the interface) turns one into an exit code.
+#[test]
+#[ignore = "isolation: round I3"]
+fn only_the_interface_exits_the_process() {
+    let sources = sources();
+    let found: Vec<String> = sources
+        .iter()
+        .filter(|s| s.module().is_none_or(|m| !is_interface(m)))
+        .filter(|s| s.module().is_some())
+        .filter(|s| s.scan.blank.contains("process::exit"))
+        .map(|s| s.file.clone())
+        .collect();
+    none("exits the process", found);
+}
+
+/// Step 3: `open_db` and the exiting `App::new` are gone; `db` no longer reads the config.
+#[test]
+#[ignore = "isolation: round I3"]
+fn the_database_does_not_open_itself_from_the_config() {
+    let sources = sources();
+    none(
+        "`open_db`/`App::new` remain",
+        files_matching(&sources, r"\bfn open_db\b|\bApp::new\(|\bopen_db\("),
+    );
+    let found = imported_by(&sources, "db");
+    for up in ["config", "app", "utils"] {
+        assert!(!found.contains(up), "db imports {up}");
+    }
+}
+
+/// Step 3: the secret store is told the old and the new name; it does not read a row.
+#[test]
+#[ignore = "isolation: round I3"]
+fn secret_does_not_read_the_database() {
+    let found = imported_by(&sources(), "secret");
+    assert!(!found.contains("db"), "secret imports db");
+    assert!(!found.contains("models"), "secret imports models");
+}
+
+/// Step 3: what the interface asked `db` through a SQL filter, it asks through the typed
+/// accessors of the design; the filter-taking one is not public.
+#[test]
+#[ignore = "isolation: round I3"]
+fn the_interface_asks_the_database_by_name_not_by_filter() {
+    let sources = sources();
+    let interface: Vec<_> = sources
+        .iter()
+        .filter(|s| s.module().is_some_and(is_interface))
+        .collect();
+    let found: Vec<_> = interface
+        .iter()
+        .filter(|s| s.scan.blank.contains("first_by_name"))
+        .map(|s| s.file.clone())
+        .collect();
+    none("the interface passes a SQL filter", found);
+    let db = sources
+        .iter()
+        .filter(|s| s.module() == Some("db"))
+        .map(|s| s.scan.blank.as_str())
+        .collect::<String>();
+    for api in ["fn first<", "fn require<", "fn task_with_project"] {
+        assert!(db.contains(api), "db lacks `{api}`");
+    }
+}
+
+/// Step 4: `utils` is dissolved: `locate`, `workspace` and `reporting::gather` are out, and
+/// `crud`/`output` wait for the `cli` module of step 6.
+#[test]
+#[ignore = "isolation: round I3"]
+fn utils_keeps_only_what_waits_for_the_cli() {
+    let left: Vec<String> = fs::read_dir(src_path("utils"))
+        .map(|dir| {
+            dir.flatten()
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .filter(|name| !["mod.rs", "crud.rs", "output.rs"].contains(&name.as_str()))
+                .collect()
+        })
+        .unwrap_or_default();
+    none("still in utils/", left);
+    assert!(
+        src_path("locate.rs").exists() || src_path("locate").is_dir(),
+        "locate"
+    );
+    assert!(
+        src_path("workspace.rs").exists() || src_path("workspace").is_dir(),
+        "workspace"
+    );
+}
+
+/// Step 4: `front` is what a front end shows, as data: four files out of `web`, with no markup,
+/// no URL, no DOM id, and nothing above `models`.
+#[test]
+#[ignore = "isolation: round I3"]
+fn front_is_pure_data_moved_out_of_web() {
+    let sources = sources();
+    for (front, web) in [
+        ("query", "task_query"),
+        ("search", "search"),
+        ("matrix", "quadrants"),
+        ("day", "agenda_day"),
+    ] {
+        assert!(
+            src_path(&format!("front/{front}.rs")).exists(),
+            "front/{front}.rs"
+        );
+        assert!(!src_path(&format!("web/{web}.rs")).exists(), "web/{web}.rs");
+    }
+    assert!(
+        src_path("web/folder_picker.rs").exists(),
+        "the OS dialog stays in the web"
+    );
+    let markup = Regex::new(r"topcoat|view!|crate::web|\bhref\b").expect("regex");
+    let mut bad = Vec::new();
+    for s in sources.iter().filter(|s| s.module() == Some("front")) {
+        if markup.is_match(&s.scan.blank) {
+            bad.push(format!("{}: markup or a web import", s.file));
+        }
+        // a URL path or a DOM id written as a literal
+        bad.extend(
+            s.scan
+                .strings
+                .iter()
+                .filter(|t| t.starts_with('/') || t.starts_with("q-") || t.starts_with("http"))
+                .map(|t| format!("{}: {t:?}", s.file)),
+        );
+    }
+    none("front is not pure data", bad);
+    let found = imported_by(&sources, "front");
+    let allowed: BTreeSet<String> = ["error", "models", "text"].map(String::from).into();
+    let extra: Vec<_> = found.difference(&allowed).cloned().collect();
+    assert!(extra.is_empty(), "front imports {}", extra.join(", "));
+}
+
+/// Task ids: the id is written and read in `models/task_ref.rs` only; its field is private, so no
+/// caller builds one by hand.
+#[test]
+#[ignore = "isolation: round I3"]
+fn the_task_id_field_is_private_to_the_task_ref_module() {
+    let sources = sources();
+    let home = file_of(&sources, "models/task_ref.rs").expect("models/task_ref.rs");
+    assert!(
+        !Regex::new(r"struct TaskId\(\s*pub")
+            .expect("regex")
+            .is_match(&home.scan.blank),
+        "`TaskId`'s field is public"
+    );
+    let elsewhere: Vec<String> = sources
+        .iter()
+        .filter(|s| s.file != home.file && s.scan.blank.contains("TaskId("))
+        .map(|s| s.file.clone())
+        .collect();
+    none("builds or takes apart a `TaskId`", elsewhere);
+}
+
+/// Task ids: one grammar. No hand parser of `#<id>` beside `TaskRef`, and the name-keyed helpers
+/// of sketch `architecture` section 5 are gone (`locate::task`/`task_in`, `Db::tasks_titled` and
+/// `Db::task_labels` replace them; completion picks between the labels of one query).
+#[test]
+#[ignore = "isolation: round I3"]
+fn one_task_ref_grammar_and_no_name_keyed_helpers() {
+    let sources = sources();
+    let by_hand: Vec<String> = sources
+        .iter()
+        .filter(|s| s.file != "models/task_ref.rs")
+        .filter(|s| s.scan.blank.contains("split_label"))
+        .map(|s| s.file.clone())
+        .collect();
+    none("parses a label by hand", by_hand);
+    none(
+        "a name-keyed helper remains",
+        files_matching(
+            &sources,
+            r"\bfn (task_ref|split_task_ref|parse_task_ref|task_display|find_task_or_err|find_tasks?|task_refs|task_names|resolve_task)\b",
+        ),
+    );
+    let db: String = sources
+        .iter()
+        .filter(|s| s.module() == Some("db"))
+        .map(|s| s.scan.blank.as_str())
+        .collect();
+    assert!(db.contains("fn tasks_titled"), "db lacks `tasks_titled`");
+    assert!(db.contains("fn task_labels"), "db lacks `task_labels`");
+}
+
+/// The migration runner finds the rebuild step by what it is: no hand-kept index into the list.
+#[test]
+#[ignore = "isolation: round I3"]
+fn the_rebuild_step_has_no_hand_kept_index() {
+    let sources = sources();
+    let migrate = file_of(&sources, "db/migrate.rs").expect("db/migrate.rs");
+    assert!(
+        !Regex::new(r"const REBUILD\b")
+            .expect("regex")
+            .is_match(&migrate.scan.blank),
+        "`REBUILD` is an index kept by hand"
+    );
 }
 
 /// The scanner is what every rule stands on, so it is tested while the rules are ignored.

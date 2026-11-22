@@ -15,7 +15,8 @@ mod task;
 mod task_ref;
 
 pub use board::{Board, Card};
-pub use organization::Organization;
+#[allow(unused_imports)] // stub: I3
+pub use organization::{Organization, check_url};
 pub use project::Project;
 pub use push::Push;
 pub use session::Session;

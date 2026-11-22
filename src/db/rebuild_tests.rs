@@ -388,3 +388,27 @@ fn a_failing_rebuild_keeps_the_old_database_and_foreign_keys_on() {
     assert_eq!(count(&db.conn, "sessions"), 3);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Round I3: the copy is taken right before the rebuild step wherever it sits in the list (the
+/// runner finds it by what it is, not by a hand-kept index). A step before it runs first, so the
+/// copy holds the old tasks table at the version just before the rebuild.
+#[test]
+fn the_copy_is_taken_right_before_the_rebuild_wherever_it_sits() {
+    let dir = fixtures::scratch("rebuild-found-by-identity");
+    let path = old_database(&dir, 6, true);
+    let (old, _) = Db::MIGRATIONS.split_at(6);
+    let mut steps = old.to_vec();
+    steps.push(noop_step);
+    steps.push(Db::task_titles_repeat);
+    let conn = Connection::open(&path).expect("opens");
+    let db = Db { conn };
+    db.migrate_steps(&steps).expect("migrates");
+    assert_eq!(db.user_version().unwrap(), 8);
+    let copy = Connection::open(backup_of(&path)).expect("a copy was made");
+    let version: i64 = copy
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, 7, "the noop step ran, the rebuild had not");
+    assert_eq!(ids(&copy, "tasks"), [1, 2, 5]);
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -186,6 +186,14 @@ fn parse(text: &str) -> std::result::Result<Config, serde_yaml::Error> {
     Ok(serde_yaml::from_str::<Option<Config>>(text)?.unwrap_or_default())
 }
 
+/// Reads the config file once and holds it for [`config`]; an unreadable or invalid file is an
+/// error the caller reports (a library never exits the process). Called by `App::open`.
+// stub: I3 (`config()` still loads lazily and exits)
+#[allow(dead_code)]
+pub fn load() -> Result<&'static Config> {
+    unimplemented!("stub: I3")
+}
+
 /// The process's config, replaceable by the settings page; each value is leaked once so
 /// `config()` can hand out `&'static` (a few hundred bytes per save).
 static CONFIG: OnceLock<RwLock<&'static Config>> = OnceLock::new();
@@ -434,5 +442,38 @@ mod tests {
             !text.contains("db_path"),
             "an unset database path is not written"
         );
+    }
+
+    /// Round I3 (step 3): `load` returns what it read, `config()` then hands out the same value.
+    #[test]
+    fn load_reads_the_file_once_and_config_returns_it() {
+        let name = "load_reads_the_file_once_and_config_returns_it";
+        if crate::fixtures::in_scratch_config(module_path!(), name, Some("pause_gap_minutes: 42\n"))
+        {
+            return;
+        }
+        let loaded = load().expect("loads");
+        assert_eq!(loaded.pause_gap_minutes, 42);
+        assert!(std::ptr::eq(loaded, config()));
+    }
+
+    /// A bad file is an error value (`InvalidConfig`), where `config()` used to exit the process.
+    #[test]
+    fn load_reports_an_invalid_file_instead_of_exiting() {
+        let name = "load_reports_an_invalid_file_instead_of_exiting";
+        if crate::fixtures::in_scratch_config(module_path!(), name, Some("pause_gap: 5\n")) {
+            return;
+        }
+        assert!(matches!(load(), Err(IterError::InvalidConfig { .. })));
+    }
+
+    /// Reading the config before `load` is a bug in the caller, and says so by panicking.
+    #[test]
+    fn config_before_load_is_a_bug_that_panics() {
+        let name = "config_before_load_is_a_bug_that_panics";
+        if crate::fixtures::in_scratch_config(module_path!(), name, None) {
+            return;
+        }
+        assert!(std::panic::catch_unwind(config).is_err());
     }
 }
