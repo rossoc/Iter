@@ -7,6 +7,11 @@ description = "A command-line time tracker for projects and tasks, with tmux ses
 [workspace]
 members = ["macros"]
 
+# Round I5, until the crates are split out (the split deletes this entry).
+[[test]]
+name = "arch_crates"
+path = "crates/iter-cli/tests/arch.rs"
+
 [features]
 default = ["web"]
 # `iter serve`: the local browser UI. Off for a CLI-only build.
