@@ -1,4 +1,4 @@
-//! Tests of the notification toasts (sketch `plan`, R3-R8): the flash cookie a POST sets, the
+//! Tests of the notification toasts: the flash cookie a POST sets, the
 //! refused navigational POST sent back with an error flash, the toast region and its assets.
 //!
 //! They go through the real router in process, as `layers/guard.rs`'s `router_tests` do. A POST to
@@ -246,7 +246,7 @@ fn assert_flash_cookie_attributes(attributes: &str) {
 /// A refused POST that touches nothing: `x` is not a task id, so the answer is a 400.
 const REFUSED: &str = "/task/x/edit";
 
-/// R3: a saved form redirects (303) and the answer sets the short-lived, script-readable
+/// a saved form redirects (303) and the answer sets the short-lived, script-readable
 /// flash cookie with a success message.
 #[test]
 fn a_saved_form_redirects_with_a_success_flash() {
@@ -256,7 +256,7 @@ fn a_saved_form_redirects_with_a_success_flash() {
     assert_success_flash(&post_settings(&settings_form(true, "5")));
 }
 
-/// R4: a POST refused with a 400 from a form goes back (303) to the same-origin page it came
+/// a POST refused with a 400 from a form goes back (303) to the same-origin page it came
 /// from, with an error flash carrying the refusal's own message; a script's `fetch` still
 /// gets the 400 and its message, and no cookie.
 #[test]
@@ -294,7 +294,7 @@ fn a_refused_form_goes_back_with_an_error_flash() {
     );
 }
 
-/// R4, the edge: without a `Referer`, or with one from another site, there is nowhere safe to
+/// without a `Referer`, or with one from another site, there is nowhere safe to
 /// go back to, and the refusal stays the bare 400 page (no open redirect).
 #[test]
 fn a_refused_form_without_a_same_origin_referer_is_not_redirected() {
@@ -320,7 +320,7 @@ fn a_refused_form_without_a_same_origin_referer_is_not_redirected() {
     }
 }
 
-/// R7: with `enabled: false` a saved form sets no cookie, and a refused form raises no toast.
+/// with `enabled: false` a saved form sets no cookie, and a refused form raises no toast.
 #[test]
 fn turned_off_there_is_no_cookie_and_no_toast() {
     if isolated(
@@ -342,7 +342,7 @@ fn turned_off_there_is_no_cookie_and_no_toast() {
     );
 }
 
-/// R5 (and R2's fields): every framed page has the top-right toast region, announced
+/// every framed page has the top-right toast region, announced
 /// (`aria-live`), with the configured seconds as a `data-` attribute, and loads `/toast.js`,
 /// which is served and defines `window.iterToast`; the stylesheet has the two kinds.
 #[test]
@@ -393,7 +393,7 @@ fn every_page_has_the_toast_region_and_its_script() {
     assert!(css.contains(".toast.ok") && css.contains(".toast.error"));
 }
 
-/// R6: a form sent back with an error also raises a red toast with the same message, beside
+/// a form sent back with an error also raises a red toast with the same message, beside
 /// the inline error box (which stays, in `<main>`).
 #[test]
 fn a_form_error_also_raises_a_toast() {
@@ -405,7 +405,7 @@ fn a_form_error_also_raises_a_toast() {
     assert_inline_and_toast(&refused, "Editor cannot be empty.");
 }
 
-/// R8: the settings page no longer shows its own "Saved." notice; the toast says it.
+/// the settings page no longer shows its own "Saved." notice; the toast says it.
 #[test]
 fn the_settings_page_has_no_saved_notice() {
     if isolated("the_settings_page_has_no_saved_notice", None) {
@@ -416,7 +416,7 @@ fn the_settings_page_has_no_saved_notice() {
     assert!(!page.body.contains("id=\"saved\""), "no inline notice");
 }
 
-/// R11: the save that turns the toasts on is told so with a blue toast: the layer reads
+/// the save that turns the toasts on is told so with a blue toast: the layer reads
 /// `notifications.enabled` after the handler has saved the new config.
 #[test]
 fn the_save_that_turns_toasts_on_shows_one() {
@@ -444,7 +444,7 @@ fn the_save_that_turns_toasts_off_sets_no_cookie() {
     assert!(saved.cookies().is_empty(), "{:?}", saved.headers);
 }
 
-/// R12: a refused daily-note edit raises the red toast like every other form: the message is
+/// a refused daily-note edit raises the red toast like every other form: the message is
 /// in the inline box (in `<main>`) and in the frame's toast region (outside it).
 #[test]
 fn a_refused_daily_note_raises_a_toast() {

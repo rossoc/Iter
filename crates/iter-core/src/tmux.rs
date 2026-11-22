@@ -104,7 +104,7 @@ impl<'a> TmuxClient<'a> {
 
     /// Whether `event`'s installed hook already passes the format variables `args` calls
     /// for. Comparing variables, not the whole action, keeps a `tmux.conf` hook current and
-    /// replaces one from an old `iter` that passed `#{hook_session_name}` everywhere.
+    /// replaces one from an old `iter` that passed `#{session_name}` everywhere.
     fn hook_is_current(&self, event: &str, args: &str) -> bool {
         // no tmux, or no such option: install ours
         self.output(&["show-options", "-gv", event])

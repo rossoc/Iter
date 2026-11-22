@@ -246,7 +246,7 @@ mod tests {
         assert_eq!(back_to("/task/1", host), None);
     }
 
-    /// Characterisation (R7, percent-encode): the flash cookie keeps the unreserved marks of
+    /// Characterisation: the flash cookie keeps the unreserved marks of
     /// `encodeURIComponent` (`-_.!~*'()`) and encodes every other byte, `/` and UTF-8 included.
     #[test]
     fn the_cookie_value_keeps_the_uri_component_marks() {

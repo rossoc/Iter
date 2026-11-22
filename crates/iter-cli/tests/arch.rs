@@ -1,5 +1,5 @@
-//! The architecture of the crates (task 298, sketch `architecture` section 0): the manifests, the
-//! names each crate may use, and, in [`layers`], the ranks of the core modules and the placement
+//! The architecture of the crates: the manifests, the names each crate may use, and, in
+//! [`layers`], the ranks of the core modules and the placement
 //! rules of the isolation steps. It reads the three manifests and `crates/*/src/**/*.rs` as text
 //! and runs no iter code, so it touches no tmux, config or database.
 

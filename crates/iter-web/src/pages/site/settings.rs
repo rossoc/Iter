@@ -235,7 +235,7 @@ mod tests {
         assert_eq!(refused(page("vim", "17", "queue", "main")), None);
     }
 
-    /// The `name` of the "Seconds shown" field (R2). A literal, so the tests compile before it exists.
+    /// The `name` of the "Seconds shown" field. A literal, so the tests compile before it exists.
     const SECONDS: &str = "notification_seconds";
 
     /// A submission as the browser posts it: a valid form plus `extra`; the "Notifications"
@@ -255,7 +255,7 @@ mod tests {
         serde_yaml::to_value(config).expect("writes")["notifications"].clone()
     }
 
-    /// R2: the checkbox and the seconds are saved into the config.
+    /// The checkbox and the seconds are saved into the config.
     #[test]
     fn the_notification_fields_change_the_config() {
         let on = posted(&[("notifications", "on"), (SECONDS, " 12 ")])
@@ -277,7 +277,7 @@ mod tests {
         );
     }
 
-    /// R2: the seconds are a whole number from 1 to 60, else refused on that field.
+    /// The seconds are a whole number from 1 to 60, else refused on that field.
     #[test]
     fn seconds_outside_one_to_sixty_are_refused_on_their_field() {
         for bad in ["0", "61", "x", "-3", "2.5", ""] {

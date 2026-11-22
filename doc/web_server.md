@@ -6,28 +6,28 @@ A local topcoat server (`crates/iter-web/src/`), bound to loopback only, showing
 
 Nothing is cached or copied. Every request opens the configured database file itself (WAL plus a busy timeout, so it coexists with a concurrent `iter` command), reads and writes through the same `Db` methods the CLI uses, and drops the connection. A `rusqlite::Connection` is not `Sync`, which is the other reason to open one per request.
 
-Those SQLite calls block (up to 5 s of `busy_timeout` when the CLI holds the write lock). `blocking.rs` therefore runs each request inside `block_in_place`: the runtime moves the worker's other tasks to another thread first. One layer, no change to any handler. It needs the multi-threaded runtime that `serve` builds.
+Those SQLite calls block (up to 5 s of `busy_timeout` when the CLI holds the write lock). `layers/blocking.rs` therefore runs each request inside `block_in_place`: the runtime moves the worker's other tasks to another thread first. One layer, no change to any handler. It needs the multi-threaded runtime that `serve` builds.
 
-The layers, outermost first: `blocking::off_the_workers`, `guard::security_headers`, `guard::local_only`, `errors::error_pages`. Each page or route module exposes a `register` function that `mod.rs::router` folds into the builder.
+The layers, outermost first: `blocking::off_the_workers`, `guard::security_headers`, `guard::local_only`, `flash::flash`, `errors::error_pages` (all in `layers/`). Each page folder exposes a `routes` function that `lib.rs::router` folds into the builder.
 
 ## Route map
 
 | Area | Routes | Module |
 | --- | --- | --- |
-| Home, settings | `/`, `/settings` | `home.rs`, `settings.rs` |
-| Organization | `/org/{id}` (tabs), `/org/{id}/edit`, `/org/{id}/share` (POST), `/org/{id}/notes/{date}`, `/org/{id}/platform-activities` (POST, JSON) | `org*.rs`, `daily_notes.rs`, `platform_pick.rs` |
-| Project | `/project/{id}` (tabs), `/project/{id}/edit`, `/project/{id}/task/new`, `/project/{id}/notes/{date}` | `project*.rs`, `daily_notes.rs` |
-| Task | `/task/{id}` (tabs), `/task/{id}/edit`, `POST /task/new`, `/task/{id}/{notes,sessions,runs,plan/{step},wiki/{action}}` (POST), `/task/{id}/prompt` (JSON) | `task*.rs` |
-| Agents | `/agents`, `/agent/{id}/{n}`, `POST /task/{id}/runs/{n}[/run|/cancel]` | `agents.rs`, `task_runs.rs` |
-| Boards | `/boards`, `/board/{id}` (agenda), `/board/{id}/matrix`, `/board/{id}/info`, `/board/{id}/edit`, `POST /board/{id}/{schedule,matrix}` | `board*.rs`, `agenda*.rs`, `matrix.rs`, `drop.rs` |
-| Instructions | `/instructions`, `/instruction/{name}` | `instructions/` |
-| Misc | `GET /search?q=` (JSON), `POST /folders/pick`, `/style.css`, `/board.js`, `/org.js`, `/platform.js`, `/favicon.ico` | `search_index.rs`, `folders.rs`, `assets.rs` |
+| Home, settings | `/`, `/settings` | `pages/site/home.rs`, `settings.rs` |
+| Organization | `/org/{id}` (tabs), `/org/{id}/edit`, `/org/{id}/share` (POST), `/org/{id}/notes/{date}`, `/org/{id}/platform-activities` (POST, JSON) | `pages/org/`, `pages/site/daily_notes.rs` |
+| Project | `/project/{id}` (tabs), `/project/{id}/edit`, `/project/{id}/task/new`, `/project/{id}/notes/{date}` | `pages/project/`, `pages/site/daily_notes.rs` |
+| Task | `/task/{id}` (tabs), `/task/{id}/edit`, `POST /task/new`, `/task/{id}/{notes,sessions,runs,plan/{step},wiki/{action}}` (POST), `/task/{id}/prompt` (JSON) | `pages/task/` |
+| Agents | `/agents`, `/agent/{id}/{n}`, `POST /task/{id}/runs/{n}[/run|/cancel]` | `pages/agent/agents.rs`, `task_runs.rs` |
+| Boards | `/boards`, `/board/{id}` (agenda), `/board/{id}/matrix`, `/board/{id}/info`, `/board/{id}/edit`, `POST /board/{id}/{schedule,matrix}` | `pages/board/` |
+| Instructions | `/instructions`, `/instruction/{name}` | `pages/agent/instructions/` |
+| Misc | `GET /search?q=` (JSON), `POST /folders/pick`, `/style.css`, `/board.js`, `/org.js`, `/platform.js`, `/favicon.ico` | `pages/site/search_index.rs`, `pages/site/folders.rs`, `assets.rs` |
 
-The `{id}` of every route with one must be a number, else a 400 (`path_param!` in `mod.rs`). Static files are compiled in and served with an ETag and `Cache-Control: no-cache`: the browser revalidates and gets a bodiless 304.
+The `{id}` of every route with one must be a number, else a 400 (`path_param` in the page folders). Static files are compiled in and served with an ETag and `Cache-Control: no-cache`: the browser revalidates and gets a bodiless 304.
 
 ## Tabs and pop-ups through query parameters
 
-A page with sections (organization, project, task, note, agent) selects one with `?tab=`; an unknown or missing value is Info. `sections.rs` owns the parsing and builds the tab rows; `url.rs` is the only place URLs are concatenated; `ui/tabs.rs` only draws.
+A page with sections (organization, project, task, note, agent) selects one with `?tab=`; an unknown or missing value is Info. `parts/sections.rs` owns the parsing and builds the tab rows; `url.rs` is the only place URLs are concatenated; `ui/tabs.rs` only draws.
 
 A pop-up is the same page with a parameter, so it works without JavaScript and closes by linking back:
 

@@ -1,4 +1,4 @@
-//! The layering rules inside the crates (task 298, R5): the ranks of the core modules, no import
+//! The layering rules inside the crates: the ranks of the core modules, no import
 //! cycle, no SQL in the interface, and the placement rules of each isolation step, read from the
 //! source text of `crates/iter-core/src`, `crates/iter-cli/src` and `crates/iter-web/src`. The
 //! compiler already keeps the core from importing the interface and `iter-web` from importing
@@ -485,7 +485,7 @@ fn sql_and_rusqlite_stay_in_the_storage_modules() {
     assert!(bad.is_empty(), "{}:\n{}", bad.len(), bad.join("\n"));
 }
 
-// ---- Round I3 (isolation steps 2-4): the rules each step makes true -------------------------
+// ---- Where the isolated pieces live: models, App::open, locate, workspace, front ----
 
 /// The production source `file` (a path under `src/`, like `models/task_ref.rs`), if it exists.
 fn file_of<'a>(sources: &'a [Source], file: &str) -> Option<&'a Source> {
@@ -745,7 +745,7 @@ fn the_rebuild_step_has_no_hand_kept_index() {
     );
 }
 
-// ---- Round I4 (isolation steps 5-6): `agent::ingest_job` and the `cli` module -----------------
+// ---- `agent::ingest_job` and the `cli` module ----
 
 /// Every `.rs` file of the three crates as `(path, raw text)`, test files included: the rules
 /// below are about where code that drives the command line may sit, and its tests count. A path is

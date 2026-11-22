@@ -26,7 +26,7 @@ turn models into display rows; `crates/iter-web/src/ui/` has the components they
 Page chrome
 - `frame(title, error, current, dialog, child)`: top bar, skip link, main pane.
   `dialog` is a pop-up: bar and main become `inert`. Used by every page.
-- `site_footer(FooterData)`: wordmark and second menu; data from `web/footer.rs`.
+- `site_footer(FooterData)`: wordmark and second menu; data from `pages/site/footer.rs`.
 - `page_header` (kicker, title, actions) and `lede`; `breadcrumb(&[Crumb])`
   (`Crumb::link`, `label`, `here`: `aria-current` sits on the tab if the page
   has tabs, else the last crumb); `tabs(label, &[Tab])` with a sliding underline.
@@ -41,17 +41,17 @@ Content blocks
 - `labelled_section(id, label, count, noun)` and `mono_value`: a small-caps
   heading over content (Info bodies). `panel(id, title, &[Row])`: label/value
   aside; `Row::{Text, Flag, Chips, Status}`.
-- `description(text, class)` / `markdown`: markdown rendered with raw HTML
+- `prose_text(text, class)`: markdown rendered with raw HTML
   escaped, only `http(s)`, `mailto` and relative URLs kept, headings shifted two
   levels down.
-- `tag_chips`, `status` (icon plus word), `count_badge(n, noun)` (a screen
+- `tag_chips`, `status_icon` (icon plus word), `count_badge(n, noun)` (a screen
   reader hears "(3 sessions)"), `empty_line`, `empty_state(svg)`, `notice` /
   `error_box`, `toasts` (the frame's top-right region; `doc/web.md`, Notifications), `group_card` and `card_grid` (Home, Boards), `folded_list`.
 
 Tables and lists
 - `data_table(caption, columns, actions, class, headed, add, empty, child)`: the
   one template for every list. A tinted add row (`AddRow::link(href, label)` to a
-  `?new=` pop-up, or `AddRow::post(action, label)`), the child rows (`row`,
+  `?new=` pop-up, or `AddRow::post(action, label)`), the child rows (`table_row`,
   `cell`, `col_head`, `section_row`), and `empty: Some("No notes yet.")` renders
   the `tr.no-rows` last row (defined once in `table.css`; pages draw no "No ...
   yet." of their own). Each element repeats its table `role`, as narrow screens
@@ -70,7 +70,7 @@ Forms
 - `form_shell(action, error, cancel, submit_label, lead, child)`: the POST form
   with error box, "* Required" note, controls, Save and Cancel. `lead` comes
   before the error box (New project's hidden default submit).
-- `field`, `textarea`, `select`, `checkbox`, `checklist`, `group`: every control
+- `field`, `textarea`, `select`, `checkbox`, `checklist`, `field_group`: every control
   has a real `<label for>` (`field_id`) and takes the form's error to set
   `aria-invalid` / `aria-describedby` and the `invalid_cue`. `field` takes
   `identifier`, `autofocus` (a pop-up's first control), `beside` (a control on

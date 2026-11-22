@@ -4,7 +4,7 @@
 
 - Left: the results (an icon per kind: board, organization, project, task, note; title with matched letters marked, path and status). Right: the selected page in an `<iframe>` (same origin, so interactive). Under 900px the preview is hidden; under 600px the box is the whole screen.
 - Inside the frame `search.js` only adds `.in-preview` to `<html>`; `search.css` hides `.bar`, `.skip`, `.site-foot` and the palette there, so the preview shows the page content only.
-- Results: `GET /search?q=` (`web/search_index.rs`) builds an entry for every board, organization, project, task and note, and `web/search.rs::search` ranks them.
+- Results: `GET /search?q=` (`pages/site/search_index.rs`) builds an entry for every board, organization, project, task and note, and `front::search::search` (in the core) ranks them.
 
 ## Query
 

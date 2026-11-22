@@ -1,6 +1,6 @@
 # The Agents tab (`/task/{id}?tab=agent`)
 
-The third tab of the task page (Info, Sessions, Agents, Notes, Wiki, Settings); its badge is the number of agents. It shows the agents that work on the task and the plan's steps. Code: `crates/iter-web/src/pages/agent/task_agent.rs` (the tab, the plan, the files), `crates/iter-web/src/pages/agent/task_runs.rs` (the agents), rules in `crates/iter-web/src/ui/steps.css`; the files and their format are `crates/iter-core/src/agent/`.
+The third tab of the task page (Info, Sessions, Agents, Notes, Settings); its badge is the number of agents. It shows the agents that work on the task and the plan's steps. Code: `crates/iter-web/src/pages/agent/task_agent.rs` (the tab, the plan, the files), `crates/iter-web/src/pages/agent/task_runs.rs` (the agents), rules in `crates/iter-web/src/ui/steps.css`; the files and their format are `crates/iter-core/src/agent/`.
 
 ## What it shows
 

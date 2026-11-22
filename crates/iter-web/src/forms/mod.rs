@@ -150,7 +150,7 @@ mod tests {
         let project = fixtures::add_project(&db, "p");
         let mut task = Task::template(project, String::new(), TaskStatus::Queue);
         task.name = "t".into();
-        // R1: an equal title is not refused; the second task has its own id
+        // an equal title is not refused; the second task has its own id
         let first = db.insert(&task).expect("first task");
         let second = db.insert(&task).expect("an equal title is accepted");
         assert_ne!(first, second);

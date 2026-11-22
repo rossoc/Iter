@@ -1,4 +1,4 @@
-//! The pairs a form posts, read by name: the first value, whether a box is ticked, the ids of a checklist.
+//! The pairs a form posts, read by name: the first value of a key and the ids of a checklist.
 
 /// The submitted `(name, value)` pairs of a form, read by name.
 pub(crate) struct Pairs<'a>(pub(super) &'a [(String, String)]);

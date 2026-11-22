@@ -401,7 +401,7 @@ mod tests {
         assert_eq!(NoteTab::of(Some("bogus")), NoteTab::Info);
     }
 
-    /// Characterisation (R7, percent-encode): a query value keeps only `-._~` and letters and
+    /// Characterisation: a query value keeps only `-._~` and letters and
     /// digits; the other marks `encodeURIComponent` keeps (`!*'()`) and `/` are encoded.
     #[test]
     fn a_query_value_keeps_only_the_rfc_unreserved_characters() {
