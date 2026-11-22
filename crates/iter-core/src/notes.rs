@@ -66,7 +66,8 @@ pub fn parse_date(text: &str) -> Option<NaiveDate> {
         .flatten()
 }
 
-fn file_name(date: NaiveDate) -> String {
+/// The file of the note of `date`: `YYYY-MM-DD.md`.
+pub(crate) fn file_name(date: NaiveDate) -> String {
     format!("{}.md", date.format("%Y-%m-%d"))
 }
 
@@ -89,21 +90,21 @@ fn split(content: &str) -> (FrontMatter, &str) {
     }
 }
 
+/// `field` trimmed, or `fallback` when it is missing or blank.
+fn or_else_blank(field: Option<String>, fallback: impl FnOnce() -> String) -> String {
+    field
+        .map(|f| f.trim().to_string())
+        .filter(|f| !f.is_empty())
+        .unwrap_or_else(fallback)
+}
+
+/// The note of `date` that `content` reads as; a `date:` in the file is ignored, the file name is the day.
 pub fn parse(date: NaiveDate, content: &str) -> Note {
     let (front, body) = split(content);
-    let _ = front.date; // the file name is the day; a date in the file may be stale
     Note {
         date,
-        title: front
-            .title
-            .map(|t| t.trim().to_string())
-            .filter(|t| !t.is_empty())
-            .unwrap_or_else(|| default_title(date)),
-        layout: front
-            .layout
-            .map(|l| l.trim().to_string())
-            .filter(|l| !l.is_empty())
-            .unwrap_or_else(|| DEFAULT_LAYOUT.to_string()),
+        title: or_else_blank(front.title, || default_title(date)),
+        layout: or_else_blank(front.layout, || DEFAULT_LAYOUT.into()),
         body: body.trim().to_string(),
     }
 }
@@ -128,10 +129,7 @@ pub fn list(dir: &Path) -> Vec<Note> {
 
 pub fn count(dir: &Path) -> usize {
     std::fs::read_dir(dir).map_or(0, |entries| {
-        entries
-            .filter_map(|e| e.ok())
-            .filter(|e| is_note_file(&e.path()))
-            .count()
+        entries.filter_map(|e| note_day(&e.ok()?.path())).count()
     })
 }
 
@@ -139,13 +137,8 @@ fn note_day(path: &Path) -> Option<NaiveDate> {
     parse_date(path.file_stem()?.to_str()?).filter(|_| path.extension().is_some_and(|e| e == "md"))
 }
 
-fn is_note_file(path: &Path) -> bool {
-    note_day(path).is_some()
-}
-
 pub fn get(dir: &Path, date: NaiveDate) -> Option<Note> {
-    let content = std::fs::read_to_string(dir.join(file_name(date))).ok()?;
-    Some(parse(date, &content))
+    raw(dir, date).map(|content| parse(date, &content))
 }
 
 pub fn raw(dir: &Path, date: NaiveDate) -> Option<String> {

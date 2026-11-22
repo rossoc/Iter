@@ -1,3 +1,6 @@
+//! The one error type, [`IterError`], and the agent workflow's [`AgentError`] that converts into it:
+//! each variant's message is what the CLI prints, so they read as a whole line.
+
 use std::path::PathBuf;
 use thiserror::Error;
 

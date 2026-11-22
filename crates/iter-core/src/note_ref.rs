@@ -11,7 +11,7 @@
 
 use crate::agent::taskdir;
 use crate::db::Db;
-use crate::error::{IterError, Result};
+use crate::error::{IterError, Result, failed};
 use crate::locate::{self, current_project, current_task};
 use crate::models::{Organization, Project, Task};
 use crate::notes;
@@ -56,7 +56,7 @@ impl Address {
 }
 
 fn bad(text: &str, why: &str) -> IterError {
-    IterError::CommandFailed(format!("'{text}' is not a note address: {why}"))
+    failed(format!("'{text}' is not a note address: {why}"))
 }
 
 fn is_sketch(word: &str) -> bool {
@@ -88,7 +88,7 @@ pub fn parse(text: &str) -> Result<Address> {
                 || notes::parse_date(p).is_some()
         })
         .ok_or_else(|| bad(text, "say note, wiki, tasks or sketch"))?;
-    let owners: Vec<String> = parts[..start].iter().map(|p| p.to_string()).collect();
+    let owners: Vec<String> = parts[..start].iter().map(ToString::to_string).collect();
     if owners.len() > 2 {
         return Err(bad(
             text,
@@ -133,7 +133,7 @@ pub struct Located {
 }
 
 fn no_notes() -> IterError {
-    IterError::CommandFailed("no notes folder: set `notes_path` on it or its organization".into())
+    failed("no notes folder: set `notes_path` on it or its organization")
 }
 
 /// The level a daily note or a wiki page belongs to: a project, or an organization.
@@ -165,7 +165,7 @@ fn project_in(db: &Db, name: &str, org: Option<&str>) -> Result<Project> {
     if let Some(org) = org {
         let belongs = db.org_of(&project)?.is_some_and(|o| o.name == org);
         if !belongs {
-            return Err(IterError::CommandFailed(format!(
+            return Err(failed(format!(
                 "project '{name}' is not in organization '{org}'"
             )));
         }
@@ -193,9 +193,7 @@ fn level(db: &Db, owners: &[String]) -> Result<Level> {
 fn task_of(db: &Db, owners: &[String], task: Option<&str>) -> Result<(Project, Task)> {
     let Some(task) = task else {
         if !owners.is_empty() {
-            return Err(IterError::CommandFailed(
-                "name the task: <project>/tasks/<task>/...".into(),
-            ));
+            return Err(failed("name the task: <project>/tasks/<task>/..."));
         }
         return current_task(db);
     };
@@ -206,21 +204,17 @@ fn task_of(db: &Db, owners: &[String], task: Option<&str>) -> Result<(Project, T
         [org, project] => project_in(db, project, Some(org))?,
         _ => unreachable!("parse allows two owners at most"),
     };
-    match task.parse::<i64>() {
-        Ok(_) => {
-            let (p, t) = locate::task(db, &task.parse()?)?;
-            match p.id == project.id {
-                true => Ok((p, t)),
-                false => Err(IterError::CommandFailed(format!(
-                    "task {task} is not in project '{}'",
-                    project.name
-                ))),
-            }
-        }
-        Err(_) => {
-            let t = locate::task_in(db, &project, task)?;
-            Ok((project, t))
-        }
+    let Ok(_) = task.parse::<i64>() else {
+        let t = locate::task_in(db, &project, task)?;
+        return Ok((project, t));
+    };
+    let (p, t) = locate::task(db, &task.parse()?)?;
+    match p.id == project.id {
+        true => Ok((p, t)),
+        false => Err(failed(format!(
+            "task {task} is not in project '{}'",
+            project.name
+        ))),
     }
 }
 
@@ -251,7 +245,7 @@ pub fn page_folder(class: &str, kind: LevelKind, level_dir: &std::path::Path) ->
                 .iter()
                 .map(|p| p.folder.trim_start_matches("wiki/"))
                 .collect();
-            IterError::CommandFailed(format!(
+            failed(format!(
                 "no wiki class '{class}' for {} (the ontology has: {})",
                 kind.key(),
                 known.join(", ")
@@ -266,8 +260,7 @@ fn file_in(dir: &std::path::Path, name: &str) -> Result<PathBuf> {
     if exact.is_file() {
         return Ok(exact);
     }
-    let stem = notes::stem(name)
-        .ok_or_else(|| IterError::CommandFailed(format!("'{name}' is not a name")))?;
+    let stem = notes::stem(name).ok_or_else(|| failed(format!("'{name}' is not a name")))?;
     Ok(dir.join(format!("{stem}.md")))
 }
 
@@ -276,18 +269,15 @@ pub fn locate(db: &Db, address: &Address, today: NaiveDate) -> Result<Located> {
     let doc = address
         .doc
         .clone()
-        .ok_or_else(|| IterError::CommandFailed("which document?".into()))?;
+        .ok_or_else(|| failed("which document?"))?;
     let name = address.name.as_deref();
     match doc {
         Doc::Daily(day) => {
             let level = level(db, &address.owners)?;
             let dir = level.dir()?;
             let day = day.unwrap_or(today);
-            let file = dir.join(format!("{}.md", day.format("%Y-%m-%d")));
-            Ok(Located {
-                dir,
-                file: Some(file),
-            })
+            let file = Some(dir.join(notes::file_name(day)));
+            Ok(Located { dir, file })
         }
         Doc::Page(class) => {
             let level = level(db, &address.owners)?;

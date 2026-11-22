@@ -1,12 +1,17 @@
-//! Filesystem helpers shared across modules.
+//! Filesystem helpers shared across modules: atomic writes, and files only their user can read.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// A number no earlier call of this process got: makes a temp name unique.
+fn unique() -> u64 {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
 
 /// Writes through a uniquely named file beside `target`, then renames it over.
 pub(crate) fn write_whole(dir: &Path, target: &Path, text: &str) -> std::io::Result<()> {
-    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = dir.join(format!(".write.{}.{n}.tmp", std::process::id()));
+    let tmp = dir.join(format!(".write.{}.{}.tmp", std::process::id(), unique()));
     std::fs::write(&tmp, text)?;
     std::fs::rename(&tmp, target).inspect_err(|_| {
         let _ = std::fs::remove_file(&tmp);
@@ -36,15 +41,14 @@ pub(crate) fn write_private(path: &Path, text: impl AsRef<str>) -> std::io::Resu
 
 /// A new editor buffer holding `text` in the temp folder: a name no other file has (`create_new`,
 /// so a planted file or symlink of that name is never followed), readable by the user alone.
-pub fn temp_buffer(text: &str) -> std::io::Result<std::path::PathBuf> {
+pub fn temp_buffer(text: &str) -> std::io::Result<PathBuf> {
     use std::io::Write;
-    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     loop {
-        let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path = std::env::temp_dir().join(format!(
-            "iter-edit-{}-{}-{n}.md",
+            "iter-edit-{}-{}-{}.md",
             std::process::id(),
-            chrono::Local::now().format("%Y%m%d%H%M%S%f")
+            chrono::Local::now().format("%Y%m%d%H%M%S%f"),
+            unique()
         ));
         match private_options().create_new(true).open(&path) {
             Ok(mut file) => {
