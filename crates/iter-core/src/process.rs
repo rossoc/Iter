@@ -1,10 +1,11 @@
-//! Running external tools (`git`, `gh`, `tmux`, `nvim`). A failure is either unspawnable
-//! (`IterError::Spawn`) or a nonzero exit (`IterError::CommandFailed`, whose message names the
-//! command); these helpers draw that distinction once.
+//! Running external tools (`git`, `gh`, `tmux`, `nvim`) and quoting for the shell. A failure is
+//! either unspawnable (`IterError::Spawn`) or a nonzero exit (`IterError::CommandFailed`, whose
+//! message names the command); the free functions draw that distinction once, [`Runner`] lets a
+//! fake stand in for them, and [`Tool`] binds a binary to its directory.
 
 use crate::error::{IterError, Result};
 use std::ffi::OsStr;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn command<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -> Command {
     let mut command = Command::new(tool);
@@ -17,29 +18,8 @@ fn command<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -
 
 /// Names a failed invocation, e.g. `git worktree add -b feat/x /tmp/x failed`.
 fn failure_message<S: AsRef<OsStr>>(tool: &str, args: &[S]) -> String {
-    let args: Vec<String> = args
-        .iter()
-        .map(|a| a.as_ref().to_string_lossy().into_owned())
-        .collect();
+    let args: Vec<_> = args.iter().map(|a| a.as_ref().to_string_lossy()).collect();
     format!("{tool} {} failed", args.join(" "))
-}
-
-/// `Ok` for a zero exit, else the error naming the command: shared by [`run`] and [`Runner::run`].
-fn exited_zero<S: AsRef<OsStr>>(tool: &str, args: &[S], success: bool) -> Result<()> {
-    match success {
-        true => Ok(()),
-        false => Err(IterError::CommandFailed(failure_message(tool, args))),
-    }
-}
-
-/// `output` trimmed, `None` when empty or failed: shared by [`output_trimmed`] and [`Runner::output_trimmed`].
-fn trimmed(output: Result<String>) -> Option<String> {
-    let output = output.ok()?;
-    let value = output.trim();
-    match value.is_empty() {
-        true => None,
-        false => Some(value.to_string()),
-    }
 }
 
 /// Runs `tool` with inherited stdio and reports whether it exited zero. Only a spawn failure is
@@ -55,11 +35,6 @@ pub fn run_status<S: AsRef<OsStr>>(
     Ok(status.success())
 }
 
-/// Runs `tool` as [`run_status`] does, but treats a nonzero exit as an error.
-pub fn run<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -> Result<()> {
-    exited_zero(tool, args, run_status(tool, dir, args)?)
-}
-
 /// Captures stdout verbatim (untrimmed). A nonzero exit reports `stderr` with the command.
 pub fn output<S: AsRef<OsStr>>(
     tool: &'static str,
@@ -71,11 +46,10 @@ pub fn output<S: AsRef<OsStr>>(
         .map_err(|source| IterError::Spawn { tool, source })?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stderr = stderr.trim();
         let message = failure_message(tool, args);
-        return Err(IterError::CommandFailed(match stderr.is_empty() {
-            true => message,
-            false => format!("{message}: {stderr}"),
+        return Err(IterError::CommandFailed(match stderr.trim() {
+            "" => message,
+            stderr => format!("{message}: {stderr}"),
         }));
     }
     // Moves the buffer rather than copying: `gh issue list` output can run to megabytes.
@@ -83,28 +57,18 @@ pub fn output<S: AsRef<OsStr>>(
         .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned()))
 }
 
-/// [`output`] trimmed; every failure, including empty output, is `None`.
-pub fn output_trimmed<S: AsRef<OsStr>>(
-    tool: &'static str,
-    dir: Option<&str>,
-    args: &[S],
-) -> Option<String> {
-    trimmed(output(tool, dir, args))
-}
-
 /// Whether `tool` ran and exited zero, silently. For probes where "couldn't run" and "said no"
 /// mean the same.
 pub fn succeeds<S: AsRef<OsStr>>(tool: &'static str, dir: Option<&str>, args: &[S]) -> bool {
     command(tool, dir, args)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .status()
         .is_ok_and(|status| status.success())
 }
 
-/// An external binary `iter` drives, bound to its run directory. It only saves call sites from
-/// repeating the tool name and `dir`; the free functions above hold the failure policies. Not
-/// object-safe on purpose.
+/// An external binary `iter` drives, bound to its run directory: it saves call sites from
+/// repeating the tool name and `dir`, and runs through [`SYSTEM`].
 pub trait Tool {
     const BIN: &'static str;
 
@@ -113,23 +77,22 @@ pub trait Tool {
         None
     }
 
-    fn run<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<()> {
-        run(Self::BIN, self.dir(), args)
+    fn run(&self, args: &[&str]) -> Result<()> {
+        SYSTEM.run(Self::BIN, self.dir(), args)
     }
 
-    /// [`run_status`] for a tool: a nonzero exit is an answer, not a failure (a merge stopping on a
-    /// conflict, whose output is the report).
-    fn run_status<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<bool> {
-        run_status(Self::BIN, self.dir(), args)
+    /// [`Runner::run_status`] for a tool: a nonzero exit is an answer, not a failure (a merge
+    /// stopping on a conflict, whose output is the report).
+    fn run_status(&self, args: &[&str]) -> Result<bool> {
+        SYSTEM.run_status(Self::BIN, self.dir(), args)
     }
 
-    fn output_trimmed<S: AsRef<OsStr>>(&self, args: &[S]) -> Option<String> {
-        output_trimmed(Self::BIN, self.dir(), args)
+    fn output_trimmed(&self, args: &[&str]) -> Option<String> {
+        SYSTEM.output_trimmed(Self::BIN, self.dir(), args)
     }
 }
 
-/// `git`, in the repository at the given path -- or, for `clone`, wherever
-/// the process already is.
+/// `git`, in the repository at the given path -- or, for `clone`, wherever the process already is.
 pub struct Git<'a>(pub Option<&'a str>);
 
 impl Tool for Git<'_> {
@@ -140,8 +103,8 @@ impl Tool for Git<'_> {
     }
 }
 
-/// The command runner behind the tool clients (`GhCli`, `TmuxClient`): object-safe, so a fake can
-/// record argv instead of spawning.
+/// The command runner behind the tool clients (`GhCli`, `TmuxClient`) and [`Tool`]: object-safe,
+/// so a fake can record argv instead of spawning.
 pub trait Runner {
     /// See [`run_status`].
     fn run_status(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<bool>;
@@ -150,22 +113,27 @@ pub trait Runner {
     /// See [`succeeds`].
     fn succeeds(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> bool;
 
-    /// See [`run`].
+    /// A nonzero exit is an error naming the command.
     fn run(&self, tool: &'static str, dir: Option<&str>, args: &[&str]) -> Result<()> {
-        exited_zero(tool, args, self.run_status(tool, dir, args)?)
+        match self.run_status(tool, dir, args)? {
+            true => Ok(()),
+            false => Err(IterError::CommandFailed(failure_message(tool, args))),
+        }
     }
 
-    /// See [`output_trimmed`].
+    /// [`Runner::output`] trimmed; every failure, including empty output, is `None`.
     fn output_trimmed(
         &self,
         tool: &'static str,
         dir: Option<&str>,
         args: &[&str],
     ) -> Option<String> {
-        trimmed(self.output(tool, dir, args))
+        let output = self.output(tool, dir, args).ok()?;
+        Some(output.trim().to_string()).filter(|value| !value.is_empty())
     }
 }
 
+/// Spawns the real processes, through the free functions above.
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {

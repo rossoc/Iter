@@ -189,11 +189,11 @@ mod tests {
         assert_eq!(sessions[0].end, Some(at(11, 30, 0)));
     }
 
-    /// No save, or one from before the session started: there's no known
-    /// end, so the session goes rather than running to the restart.
+    /// No save, one from before the session started, or one within a minute of it (a blip): there
+    /// is no known end, so the session goes rather than running to the restart.
     #[test]
     fn a_stale_session_without_a_usable_save_is_deleted() {
-        for save in [None, Some(at(8, 0, 0))] {
+        for save in [None, Some(at(8, 0, 0)), Some(at(9, 0, 30))] {
             let (db, task_id) = open_at_nine();
             let closed =
                 close_stale_session(&db, task_id, at(18, 0, 0), save).expect("closing succeeds");
@@ -241,13 +241,5 @@ mod tests {
                 .iter()
                 .any(|c| c.starts_with("tmux show-options"))
         );
-    }
-
-    #[test]
-    fn a_stale_session_saved_within_a_minute_of_starting_is_deleted() {
-        let (db, task_id) = open_at_nine();
-        let closed = close_stale_session(&db, task_id, at(18, 0, 0), Some(at(9, 0, 30)))
-            .expect("closing succeeds");
-        assert_eq!(closed, Closed::Discarded);
     }
 }

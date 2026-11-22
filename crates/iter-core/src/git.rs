@@ -1,5 +1,8 @@
-use crate::error::Result;
-use crate::process::{Git, Tool};
+//! The git operations iter performs on a project: worktrees, branches, merges and clones, each a
+//! thin call through [`Git`]; a failing probe answers "no" rather than erroring.
+
+use crate::error::{IterError, Result};
+use crate::process::{self, Git, Tool};
 use std::path::Path;
 
 /// Whether `path` has a `.git` entry (a directory in a repo, a file in a worktree checkout).
@@ -27,19 +30,19 @@ pub fn remove_worktree(base_path: &str, worktree_path: &str) -> Result<()> {
 
 /// A branch name starting with `-` would be read by git as an option.
 fn refuse_option(name: &str) -> Result<()> {
-    if name.starts_with('-') {
-        return Err(crate::error::IterError::CommandFailed(format!(
+    match name.starts_with('-') {
+        true => Err(IterError::CommandFailed(format!(
             "invalid branch name '{name}'"
-        )));
+        ))),
+        false => Ok(()),
     }
-    Ok(())
 }
 
 /// Whether every commit of `branch` is already in what `base_path` has checked out (merged, or
 /// never committed to). A failing probe says no, so nothing is deleted on a doubt.
 pub fn is_merged(base_path: &str, branch: &str) -> bool {
     refuse_option(branch).is_ok()
-        && crate::process::succeeds(
+        && process::succeeds(
             Git::BIN,
             Some(base_path),
             &["merge-base", "--is-ancestor", branch, "HEAD"],
@@ -80,30 +83,9 @@ pub fn clone_repo(source: &str, dest: &str) -> Result<()> {
 mod tests {
     use super::*;
 
-    /// A throwaway repo with one commit on `main`; `None` when git is not installed.
-    fn repo(name: &str) -> Option<std::path::PathBuf> {
-        let dir = crate::fixtures::scratch(name);
-        let git = |args: &[&str]| {
-            std::process::Command::new("git")
-                .args([
-                    "-c",
-                    "user.name=t",
-                    "-c",
-                    "user.email=t@t",
-                    "-c",
-                    "commit.gpgsign=false",
-                ])
-                .args(args)
-                .current_dir(&dir)
-                .output()
-                .is_ok_and(|o| o.status.success())
-        };
-        (git(&["init", "-q", "-b", "main"]) && git(&["commit", "-q", "--allow-empty", "-m", "a"]))
-            .then_some(dir)
-    }
-
-    fn git_in(dir: &Path, args: &[&str]) {
-        let ok = std::process::Command::new("git")
+    /// Runs git in `dir` as a committer; whether it succeeded.
+    fn git_in(dir: &Path, args: &[&str]) -> bool {
+        std::process::Command::new("git")
             .args([
                 "-c",
                 "user.name=t",
@@ -114,10 +96,20 @@ mod tests {
             ])
             .args(args)
             .current_dir(dir)
-            .status()
-            .unwrap()
-            .success();
-        assert!(ok, "git {args:?}");
+            .output()
+            .is_ok_and(|o| o.status.success())
+    }
+
+    /// A throwaway repo with one commit on `main`; `None` when git is not installed.
+    fn repo(name: &str) -> Option<std::path::PathBuf> {
+        let dir = crate::fixtures::scratch(name);
+        (git_in(&dir, &["init", "-q", "-b", "main"])
+            && git_in(&dir, &["commit", "-q", "--allow-empty", "-m", "a"]))
+        .then_some(dir)
+    }
+
+    fn run(dir: &Path, args: &[&str]) {
+        assert!(git_in(dir, args), "git {args:?}");
     }
 
     #[test]
@@ -126,16 +118,16 @@ mod tests {
             return;
         };
         let base = dir.to_str().unwrap();
-        git_in(&dir, &["checkout", "-q", "-b", "feat/x"]);
-        git_in(&dir, &["commit", "-q", "--allow-empty", "-m", "work"]);
-        git_in(&dir, &["checkout", "-q", "main"]);
+        run(&dir, &["checkout", "-q", "-b", "feat/x"]);
+        run(&dir, &["commit", "-q", "--allow-empty", "-m", "work"]);
+        run(&dir, &["checkout", "-q", "main"]);
 
         assert!(!delete_branch(base, "feat/x").unwrap());
-        assert!(succeeds("feat/x", base), "the branch is still there");
+        assert!(exists("feat/x", base), "the branch is still there");
 
-        git_in(&dir, &["merge", "-q", "feat/x"]);
+        run(&dir, &["merge", "-q", "feat/x"]);
         assert!(delete_branch(base, "feat/x").unwrap());
-        assert!(!succeeds("feat/x", base));
+        assert!(!exists("feat/x", base));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -143,27 +135,24 @@ mod tests {
     fn a_branch_with_no_commits_of_its_own_is_deleted() {
         let Some(dir) = repo("git-fresh") else { return };
         let base = dir.to_str().unwrap();
-        git_in(&dir, &["branch", "feat/y"]);
+        run(&dir, &["branch", "feat/y"]);
         assert!(delete_branch(base, "feat/y").unwrap());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
-    fn succeeds(branch: &str, base: &str) -> bool {
-        crate::process::succeeds(
+    fn exists(branch: &str, base: &str) -> bool {
+        process::succeeds(
             "git",
             Some(base),
             &["rev-parse", "--verify", "--quiet", branch],
         )
     }
 
+    /// The template up to the placeholder; one without a placeholder is the whole thing.
     #[test]
     fn branch_prefix_is_the_template_up_to_the_placeholder() {
-        assert_eq!(branch_prefix("feat/{task}"), "feat/");
-        assert_eq!(branch_prefix("{task}"), "");
-    }
-
-    #[test]
-    fn branch_prefix_of_a_placeholderless_template_is_the_whole_thing() {
-        assert_eq!(branch_prefix("wip/"), "wip/");
+        for (template, prefix) in [("feat/{task}", "feat/"), ("{task}", ""), ("wip/", "wip/")] {
+            assert_eq!(branch_prefix(template), prefix, "{template}");
+        }
     }
 }

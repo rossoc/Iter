@@ -1,5 +1,8 @@
-use crate::error::Result;
-use crate::process::{Runner, SYSTEM};
+//! The terminal multiplexer: the [`Multiplexer`] trait the commands use, its [`TmuxClient`] over a
+//! [`Runner`] (so tests drive a fake, never a server), and the hooks iter installs to time sessions.
+
+use crate::error::{IterError, Result};
+use crate::process::{Runner, SYSTEM, host, shell_word};
 use chrono::{DateTime, Local, NaiveDateTime};
 use std::path::{Path, PathBuf};
 
@@ -57,19 +60,13 @@ pub trait Multiplexer {
 
     /// [`Multiplexer::ensure_hooks_installed`] for the running binary.
     fn install_hooks_for_current_exe(&self) -> Result<()> {
-        let iter_bin = crate::process::host()?.to_string_lossy().to_string();
-        self.ensure_hooks_installed(&iter_bin)
+        self.ensure_hooks_installed(&host()?.to_string_lossy())
     }
 }
 
 /// A target naming exactly this session: a bare name matches by prefix and treats `*`/`?` as globs.
 fn exact(name: &str) -> String {
     format!("={name}")
-}
-
-/// Whether this process runs inside a tmux client (which must switch, not attach).
-fn inside_tmux() -> bool {
-    std::env::var_os("TMUX").is_some()
 }
 
 /// The `tmux` binary, driven through a [`Runner`].
@@ -82,7 +79,8 @@ impl TmuxClient<'static> {
     pub fn system() -> Self {
         TmuxClient {
             runner: &SYSTEM,
-            inside: inside_tmux(),
+            // inside a tmux client, attaching must switch instead
+            inside: std::env::var_os("TMUX").is_some(),
         }
     }
 }
@@ -108,10 +106,11 @@ impl<'a> TmuxClient<'a> {
     /// for. Comparing variables, not the whole action, keeps a `tmux.conf` hook current and
     /// replaces one from an old `iter` that passed `#{hook_session_name}` everywhere.
     fn hook_is_current(&self, event: &str, args: &str) -> bool {
-        let Ok(existing) = self.output(&["show-options", "-gv", event]) else {
-            return false; // no tmux, or no such option: install ours
-        };
-        !existing.trim().is_empty() && format_variables(&existing) == format_variables(args)
+        // no tmux, or no such option: install ours
+        self.output(&["show-options", "-gv", event])
+            .is_ok_and(|hook| {
+                !hook.trim().is_empty() && format_variables(&hook) == format_variables(args)
+            })
     }
 }
 
@@ -125,10 +124,9 @@ impl Multiplexer for TmuxClient<'_> {
     }
 
     fn attach_session(&self, name: &str) -> Result<()> {
-        let verb = if self.inside {
-            "switch-client"
-        } else {
-            "attach-session"
+        let verb = match self.inside {
+            true => "switch-client",
+            false => "attach-session",
         };
         self.run(&[verb, "-t", &exact(name)])
     }
@@ -149,12 +147,14 @@ impl Multiplexer for TmuxClient<'_> {
     }
 
     fn any_client_attached(&self, session: &str) -> bool {
-        let target = exact(session);
-        let Ok(clients) = self.output(&["list-clients", "-t", &target, "-F", "#{client_name}"])
-        else {
-            return false;
-        };
-        !clients.trim().is_empty()
+        self.output(&[
+            "list-clients",
+            "-t",
+            &exact(session),
+            "-F",
+            "#{client_name}",
+        ])
+        .is_ok_and(|clients| !clients.trim().is_empty())
     }
 
     fn current_session_name(&self) -> Option<String> {
@@ -178,7 +178,7 @@ impl Multiplexer for TmuxClient<'_> {
 
     fn ensure_hooks_installed(&self, iter_bin: &str) -> Result<()> {
         if iter_bin.contains('\'') {
-            return Err(crate::error::IterError::CommandFailed(format!(
+            return Err(IterError::CommandFailed(format!(
                 "cannot install the tmux hooks for a binary path containing a quote: {iter_bin}"
             )));
         }
@@ -212,10 +212,8 @@ impl Multiplexer for TmuxClient<'_> {
     fn last_resurrect_save(&self) -> Option<NaiveDateTime> {
         let home = std::env::var("HOME").ok()?;
         let dir = match self.output_trimmed(&["show-options", "-gqv", "@resurrect-dir"]) {
-            Some(dir) if !dir.is_empty() => {
-                crate::config::expand_home(&dir.replace("$HOME", &home))
-            }
-            _ => {
+            Some(dir) => crate::config::expand_home(&dir.replace("$HOME", &home)),
+            None => {
                 let legacy = Path::new(&home).join(".tmux/resurrect");
                 match legacy.is_dir() {
                     true => legacy,
@@ -232,8 +230,8 @@ impl Multiplexer for TmuxClient<'_> {
     }
 }
 
-/// The one free-function form left, over the real `tmux`: `resolve::current_task` has no client to hand
-/// (threading one through every task-or-current lookup is deferred).
+/// [`Multiplexer::current_session_name`] over the real `tmux`, for `locate::current_task`, which has
+/// no client to hand.
 pub fn current_session_name() -> Option<String> {
     TmuxClient::system().current_session_name()
 }
@@ -279,7 +277,7 @@ fn format_variables(action: &str) -> Vec<&str> {
 /// The `set-hook` body for one entry of [`HOOKS`]; split out so variables are testable.
 fn hook_action(iter_bin: &str, event: &str, variables: &str) -> String {
     // Inside the action's single quotes a `'` cannot be written; the rest is shell-quoted.
-    let bin = crate::process::shell_word(iter_bin);
+    let bin = shell_word(iter_bin);
     let args = hook_args(event, variables).join(" ");
     format!("run-shell '{bin} {args}'")
 }
@@ -309,74 +307,58 @@ mod tests {
         }
     }
 
-    fn action_for(event: &str) -> String {
-        let (event, args) = HOOKS
+    fn variables_of(event: &str) -> &'static str {
+        HOOKS
             .iter()
             .find(|(name, _)| *name == event)
-            .unwrap_or_else(|| panic!("{event} is not an installed hook"));
-        hook_action("/usr/bin/iter", event, args)
+            .unwrap_or_else(|| panic!("{event} is not an installed hook"))
+            .1
     }
 
-    /// `#{hook_client}` is the only name `client-detached` has; `#{client_name}` can differ on a switch.
+    fn action_for(event: &str) -> String {
+        hook_action("/usr/bin/iter", event, variables_of(event))
+    }
+
+    /// What each hook is told. `#{hook_client}` is the only name `client-detached` has
+    /// (`#{client_name}` can differ on a switch, `#{session_name}` is the most recently active
+    /// session); on `session-closed` `#{session_name}` names the session the client moved to;
+    /// `client-session-changed` records the new session and closes the one left, so needs both.
     #[test]
-    fn the_client_hooks_are_told_the_client_by_hook_client() {
-        for event in ["client-session-changed", "client-detached"] {
+    fn each_hook_is_told_the_variables_that_name_what_it_needs() {
+        for (event, variables) in [
+            (
+                "client-session-changed",
+                vec!["hook_client", "session_name", "client_last_session"],
+            ),
+            ("client-detached", vec!["hook_client"]),
+            ("session-closed", vec!["hook_session_name"]),
+        ] {
             let action = action_for(event);
-            assert!(action.contains("#{q:hook_client}"), "{event}: {action}");
+            assert_eq!(format_variables(&action), variables, "{event}: {action}");
             assert!(!action.contains("client_name"), "{event}: {action}");
         }
     }
 
-    /// Guards `client-detached` being told `#{session_name}` (the most recently active session).
+    /// A `tmux.conf` hook with a stable path and its own quoting still counts as current; one from
+    /// an older `iter`, which passed `#{session_name}` everywhere, does not and is replaced.
     #[test]
-    fn client_detached_is_not_told_a_session() {
-        assert_eq!(
-            format_variables(&action_for("client-detached")),
-            vec!["hook_client"]
-        );
-    }
-
-    /// On `session-closed`, `#{session_name}` names the session the client moved to.
-    #[test]
-    fn session_closed_is_told_the_session_by_hook_session_name() {
-        let action = action_for("session-closed");
-        assert!(action.contains("#{q:hook_session_name}"), "{action}");
-        assert!(
-            !action.contains("session_name}") || action.contains("hook_session_name}"),
-            "{action}"
-        );
-    }
-
-    /// `client-session-changed` records the new session and closes the one left, so needs both.
-    #[test]
-    fn client_session_changed_is_told_the_session_and_the_one_left() {
-        assert_eq!(
-            format_variables(&action_for("client-session-changed")),
-            vec!["hook_client", "session_name", "client_last_session"]
-        );
-    }
-
-    /// A `tmux.conf` hook with a stable path and its own quoting still counts as current.
-    #[test]
-    fn a_conf_written_hook_counts_as_current() {
-        let (_, args) = HOOKS
-            .iter()
-            .find(|(name, _)| *name == "client-session-changed")
-            .expect("the hook is installed");
-        let from_conf = "run-shell \"~/bin/iter internal hook client-session-changed \
-                         '#{hook_client}' '#{session_name}' '#{client_last_session}'\"";
-        assert_eq!(format_variables(from_conf), format_variables(args));
-    }
-
-    /// An old `iter` hook does not, and is replaced.
-    #[test]
-    fn a_stale_hook_from_an_older_iter_is_not_current() {
-        let (_, args) = HOOKS
-            .iter()
-            .find(|(name, _)| *name == "client-detached")
-            .expect("the hook is installed");
-        let stale = "run-shell '/old/iter internal hook client-detached \"#{session_name}\"'";
-        assert_ne!(format_variables(stale), format_variables(args));
+    fn a_hook_is_current_by_its_variables_not_its_spelling() {
+        for (event, hook, current) in [
+            (
+                "client-session-changed",
+                "run-shell \"~/bin/iter internal hook client-session-changed \
+                 '#{hook_client}' '#{session_name}' '#{client_last_session}'\"",
+                true,
+            ),
+            (
+                "client-detached",
+                "run-shell '/old/iter internal hook client-detached \"#{session_name}\"'",
+                false,
+            ),
+        ] {
+            let same = format_variables(hook) == format_variables(variables_of(event));
+            assert_eq!(same, current, "{event}");
+        }
     }
 
     #[test]
