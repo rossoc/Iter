@@ -3,26 +3,30 @@
 
 use super::frontmatter;
 use super::graph::{Node, Wiki};
-use super::ontology::NS;
-use crate::error::{IterError, Result};
+use super::ontology::local;
+use crate::error::{Result, failed};
 use regex::RegexBuilder;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
 
+/// Rough cost of `text` in tokens: four bytes each.
 pub(super) fn tokens(text: &str) -> usize {
     text.len().div_ceil(4)
 }
 
 fn class_name(node: &Node) -> String {
-    node.class
-        .as_str()
-        .strip_prefix(NS)
-        .unwrap_or(node.class.as_str())
-        .to_string()
+    local(&node.class).to_string()
 }
 
 fn description_of(node: &Node) -> Option<String> {
     node.front.as_ref().and_then(|f| f.description.clone())
+}
+
+fn tags_of(node: &Node) -> Vec<String> {
+    node.front
+        .as_ref()
+        .map(|f| f.tags.clone())
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -61,55 +65,55 @@ fn words(text: &str) -> Vec<String> {
         .collect()
 }
 
+/// How well `words` match a page's path, title, tags and description, and what matched; `None` if nothing did.
+fn score(node: &Node, words: &[String]) -> Option<(u32, Vec<String>)> {
+    let (path, title) = (node.rel.to_lowercase(), node.title.to_lowercase());
+    let description = description_of(node).unwrap_or_default().to_lowercase();
+    let tags: Vec<String> = tags_of(node).iter().map(|t| t.to_lowercase()).collect();
+    let (mut score, mut why, mut matched) = (0, Vec::<String>::new(), 0);
+    for word in words {
+        let w = word.as_str();
+        let tag = match (
+            tags.iter().any(|t| t == w),
+            tags.iter().any(|t| t.contains(w)),
+        ) {
+            (true, _) => 4,
+            (_, true) => 2,
+            _ => 0,
+        };
+        let points = [
+            (tag, "tag"),
+            (3 * u32::from(path.contains(w)), "path"),
+            (3 * u32::from(title.contains(w)), "title"),
+            (2 * u32::from(description.contains(w)), "description"),
+        ];
+        let found: Vec<_> = points.iter().filter(|(p, _)| *p > 0).collect();
+        for (p, what) in &found {
+            score += p;
+            if !why.iter().any(|w| w == what) {
+                why.push(what.to_string());
+            }
+        }
+        matched += usize::from(!found.is_empty());
+    }
+    // a page that answers every word beats one that answers some
+    let bonus = if matched == words.len() {
+        words.len() as u32
+    } else {
+        0
+    };
+    (score > 0).then_some((score + bonus, why))
+}
+
 /// Ranks files by how well `query`'s words match path, title, tags and description, best first, until `budget` tokens are spent (the best hit is always returned). A note matches by name only.
 pub fn find(wiki: &Wiki, from: usize, query: &str, budget: usize) -> Found {
     let words = words(query);
-    let mut scored: Vec<(u32, usize, Vec<String>)> = Vec::new();
-    for (i, node) in wiki.nodes.iter().enumerate() {
-        let path = node.rel.to_lowercase();
-        let title = node.title.to_lowercase();
-        let front = node.front.as_ref();
-        let description = front
-            .and_then(|f| f.description.as_deref())
-            .unwrap_or("")
-            .to_lowercase();
-        let tags: Vec<String> = front
-            .map(|f| f.tags.iter().map(|t| t.to_lowercase()).collect())
-            .unwrap_or_default();
-        let (mut score, mut why, mut matched) = (0, Vec::<String>::new(), 0);
-        for word in &words {
-            let mut hit = false;
-            let mut add = |points: u32, what: &str| {
-                score += points;
-                hit = true;
-                if !why.iter().any(|w| w == what) {
-                    why.push(what.to_string());
-                }
-            };
-            if tags.iter().any(|t| t == word) {
-                add(4, "tag");
-            } else if tags.iter().any(|t| t.contains(word.as_str())) {
-                add(2, "tag");
-            }
-            if path.contains(word.as_str()) {
-                add(3, "path");
-            }
-            if title.contains(word.as_str()) {
-                add(3, "title");
-            }
-            if description.contains(word.as_str()) {
-                add(2, "description");
-            }
-            matched += hit as usize;
-        }
-        if score > 0 {
-            // a page that answers every word beats one that answers some
-            if matched == words.len() {
-                score += words.len() as u32;
-            }
-            scored.push((score, i, why));
-        }
-    }
+    let mut scored: Vec<(u32, usize, Vec<String>)> = (wiki.nodes.iter().enumerate())
+        .filter_map(|(i, node)| {
+            let (score, why) = score(node, &words)?;
+            Some((score, i, why))
+        })
+        .collect();
     scored.sort_by(|a, b| {
         b.0.cmp(&a.0)
             .then_with(|| wiki.nodes[a.1].rel.cmp(&wiki.nodes[b.1].rel))
@@ -124,11 +128,7 @@ pub fn find(wiki: &Wiki, from: usize, query: &str, budget: usize) -> Found {
             class: class_name(node),
             title: node.title.clone(),
             description: description_of(node),
-            tags: node
-                .front
-                .as_ref()
-                .map(|f| f.tags.clone())
-                .unwrap_or_default(),
+            tags: tags_of(node),
             score,
             why,
         };
@@ -169,7 +169,7 @@ pub fn grep(
     let re = RegexBuilder::new(pattern)
         .case_insensitive(!case)
         .build()
-        .map_err(|e| IterError::CommandFailed(format!("bad pattern: {e}")))?;
+        .map_err(|e| failed(format!("bad pattern: {e}")))?;
     let (mut matches, mut spent, mut left_out) = (Vec::new(), 0, 0);
     for (i, node) in wiki.nodes.iter().enumerate() {
         if !notes && !wiki.ontology.pages.contains(&node.class) {
@@ -178,23 +178,19 @@ pub fn grep(
         let Ok(content) = std::fs::read_to_string(&node.path) else {
             continue;
         };
-        for (n, line) in content.lines().enumerate() {
-            if !re.is_match(line) {
-                continue;
-            }
-            let text: String = line.trim().chars().take(160).collect();
+        for (n, line) in content.lines().enumerate().filter(|(_, l)| re.is_match(l)) {
             let m = Match {
                 id: wiki.id(i, from),
                 line: n + 1,
-                text,
+                text: line.trim().chars().take(160).collect(),
             };
             let cost = tokens(&m.id) + tokens(&m.text) + 2;
             if !matches.is_empty() && spent + cost > budget {
                 left_out += 1;
-                continue;
+            } else {
+                spent += cost;
+                matches.push(m);
             }
-            spent += cost;
-            matches.push(m);
         }
     }
     Ok(Grepped { matches, left_out })
@@ -261,8 +257,7 @@ pub fn show(wiki: &Wiki, from: usize, node: usize, depth: Depth) -> Result<Shown
     let content = std::fs::read_to_string(&n.path)?;
     let body = frontmatter::split(&content).body;
     shown.relations = Some(
-        wiki.edges_out(node)
-            .into_iter()
+        (wiki.edges_out(node).into_iter())
             .map(|(prop, other)| Related {
                 prop,
                 id: wiki.id(other, from),
@@ -270,7 +265,7 @@ pub fn show(wiki: &Wiki, from: usize, node: usize, depth: Depth) -> Result<Shown
             .collect(),
     );
     shown.outline = Some(
-        body.lines()
+        (body.lines())
             .filter(|l| l.starts_with('#'))
             .map(|l| l.trim().to_string())
             .collect(),
@@ -321,23 +316,19 @@ pub fn neighbors(
                 }
             }
         }
-        let mut batch: Vec<Neighbor> = reached
-            .iter()
-            .map(|(&other, (via, at))| {
-                let node = &wiki.nodes[other];
-                Neighbor {
-                    id: wiki.id(other, from),
-                    class: class_name(node),
-                    description: description_of(node),
-                    hop,
-                    via: via.clone(),
-                    from: wiki.id(*at, from),
-                }
+        let mut batch: Vec<Neighbor> = (reached.iter())
+            .map(|(&other, (via, at))| Neighbor {
+                id: wiki.id(other, from),
+                class: class_name(&wiki.nodes[other]),
+                description: description_of(&wiki.nodes[other]),
+                hop,
+                via: via.clone(),
+                from: wiki.id(*at, from),
             })
             .collect();
         batch.sort_by(|a, b| {
-            let nb = |n: &Neighbor| !n.via.iter().any(|p| p == "nb");
-            nb(a).cmp(&nb(b)).then_with(|| a.id.cmp(&b.id))
+            let plain = |n: &Neighbor| !n.via.iter().any(|p| p == "nb");
+            plain(a).cmp(&plain(b)).then_with(|| a.id.cmp(&b.id))
         });
         seen.extend(reached.keys());
         frontier = reached.into_keys().collect();
