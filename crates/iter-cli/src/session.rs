@@ -28,8 +28,8 @@ impl Run for SessionCommand {
                 branch.as_deref(),
                 *no_branch,
             ),
-            Self::Start { task } => session_start(app, task.as_deref()),
-            Self::Stop { task, message } => session_stop(app, task.as_deref(), message.as_deref()),
+            Self::Start { task } => session_start(app, task.name()),
+            Self::Stop { task, message } => session_stop(app, task.name(), message.as_deref()),
             Self::Elapse => session_elapse(app),
         }
     }

@@ -386,7 +386,7 @@ fn complete_names_its_subagents_with_i() {
 #[test]
 fn no_hint_says_k_or_kind() {
     let mut paths = Vec::new();
-    files(&repo().join("src"), "rs", &mut paths);
+    files(&repo().join("crates"), "rs", &mut paths);
     paths.retain(|p| !p.ends_with("config_instructions_tests.rs"));
     paths.push(repo().join("README.md"));
     paths.push(repo().join("doc/architecture_agent_wiki.md"));

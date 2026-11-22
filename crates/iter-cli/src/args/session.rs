@@ -25,16 +25,14 @@ pub enum SessionCommand {
     /// Manually start a session for a task (for tmux-less projects, or when
     /// the tmux hooks aren't in play)
     Start {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
     },
 
     /// Manually end the open session for a task
     Stop {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
 
         /// Note stored alongside the closed session
         #[clap(short = 'm', long = "message")]

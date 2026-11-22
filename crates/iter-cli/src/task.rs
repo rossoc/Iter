@@ -1,7 +1,7 @@
 //! `iter task` -- the CRUD and reporting half. The GitHub sync half is
 //! [`super::sync`].
 
-use crate::args::{ReportOpts, RunEnd, TaskCommand};
+use crate::args::{ReportOpts, TaskCommand};
 use crate::editor::edited;
 use crate::ingest;
 use crate::output::print_yaml;
@@ -25,14 +25,14 @@ use iter_core::tmux::{Multiplexer, TmuxClient};
 use iter_core::workspace::clock::close_open_session;
 use iter_core::workspace::teardown_and_kill;
 
-/// Bare `iter task` (unfinished work across projects) is handled in `main`: no `TaskCommand` variant expresses it.
+/// Bare `iter task` (unfinished work across projects) is handled in `run::run`: no `TaskCommand` variant expresses it.
 impl Run for TaskCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
             Self::New { project, issue } => task_new(app, project.as_deref(), *issue),
-            Self::Edit { task } => task_edit(app, task.as_deref()),
-            Self::Delete { task } => task_delete(app, &TmuxClient::system(), task.as_deref()),
-            Self::Info { task, report } => task_info(app, task.as_deref(), report),
+            Self::Edit { task } => task_edit(app, task.name()),
+            Self::Delete { task } => task_delete(app, &TmuxClient::system(), task.name()),
+            Self::Info { task, report } => task_info(app, task.name(), report),
             Self::List { project, status } => {
                 let statuses = match status {
                     Some(s) => vec![
@@ -43,111 +43,32 @@ impl Run for TaskCommand {
                 };
                 task_list(app, project.as_deref(), &statuses)
             }
-            Self::Plan {
-                task,
-                show,
-                stdin,
-                mark,
-                format,
-            } => agent::plan(
-                app,
-                &agent::PlanRequest {
-                    task: task.as_deref(),
-                    show: *show,
-                    stdin: *stdin,
-                    mark,
-                    format: *format,
-                },
-            ),
-            Self::Prompt {
-                task,
-                instruction,
-                template,
-                no_onboarding,
-            } => agent::prompt_cmd(
-                app,
-                task.as_deref(),
-                instruction,
-                template.as_deref(),
-                !*no_onboarding,
-            ),
-            Self::Solve {
-                task,
-                instruction,
-                agent,
-                model,
-                effort,
-                yes,
-                wait,
-                subagent,
-                extra,
-            } => match subagent {
-                true => solve::subagent(
-                    app,
-                    task.as_deref(),
-                    instruction,
-                    model.as_deref(),
-                    effort.as_deref(),
-                ),
-                false => solve::solve(
-                    app,
-                    &solve::SolveRequest {
-                        task: task.as_deref(),
-                        instruction,
-                        agent: *agent,
-                        model: model.as_deref(),
-                        effort: effort.as_deref(),
-                        yes: *yes,
-                        wait: *wait,
-                        extra,
-                    },
-                ),
-            },
-            Self::Runs {
-                task,
-                close: Some(n),
-                status,
-                message,
-                ..
-            } => solve::close_run(
-                app,
-                task.as_deref(),
-                *n,
-                status.unwrap_or(RunEnd::Done),
-                message.as_deref(),
-            ),
-            Self::Runs { task, log, .. } => solve::runs(app, task.as_deref(), *log),
+            Self::Plan(a) => agent::plan(app, a),
+            Self::Prompt(a) => agent::prompt_cmd(app, a),
+            Self::Solve(a) if a.subagent => solve::subagent(app, a),
+            Self::Solve(a) => solve::solve(app, a),
+            Self::Runs(a) => solve::runs(app, a),
             Self::RunWorker {
                 task_id,
                 run,
                 extra,
             } => iter_core::agent::solve::worker(app, *task_id, *run, extra),
-            Self::Done { task, save } => {
-                task_done(app, &TmuxClient::system(), task.as_deref(), *save)
-            }
-            Self::Pull {
-                project,
-                task,
-                body,
-            } => task_pull(
+            Self::Done { task, save } => task_done(app, &TmuxClient::system(), task.name(), *save),
+            Self::Pull(a) => task_pull(
                 app,
                 &GhCli::system(),
-                project.as_deref(),
-                task.as_deref(),
-                *body,
+                a.project.as_deref(),
+                a.task.as_deref(),
+                a.body,
             ),
-            Self::Push {
-                project,
-                task,
-                body,
-            } => task_push(
+            Self::Push(a) => task_push(
                 app,
                 &GhCli::system(),
-                project.as_deref(),
-                task.as_deref(),
-                *body,
+                a.project.as_deref(),
+                a.task.as_deref(),
+                a.body,
             ),
-            Self::Weekday { task } => task_weekday(app, task.as_deref()),
+            Self::Weekday { task } => task_weekday(app, task.name()),
         }
     }
 }

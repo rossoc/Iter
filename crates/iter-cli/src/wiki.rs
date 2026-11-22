@@ -57,13 +57,13 @@ impl Run for WikiCommand {
                 emit(scope.format, &found, || {
                     let mut out = String::new();
                     for m in &found.matches {
-                        let _ = write!(out, "{}:{}: {}\n", m.id, m.line, m.text);
+                        let _ = writeln!(out, "{}:{}: {}", m.id, m.line, m.text);
                     }
                     if found.matches.is_empty() {
                         out.push_str("No matches.\n");
                     }
                     if found.left_out > 0 {
-                        let _ = write!(out, "... {} more (raise --budget)\n", found.left_out);
+                        let _ = writeln!(out, "... {} more (raise --budget)", found.left_out);
                     }
                     out
                 })
@@ -85,9 +85,9 @@ impl Run for WikiCommand {
                     let mut out = String::new();
                     for n in &near {
                         let said = n.description.as_deref().unwrap_or("");
-                        let _ = write!(
+                        let _ = writeln!(
                             out,
-                            "{} {:<13} {}  [{}]  {said}\n",
+                            "{} {:<13} {}  [{}]  {said}",
                             n.hop,
                             n.via.join(","),
                             n.id,
@@ -114,9 +114,9 @@ impl Run for WikiCommand {
                     for i in &issues {
                         let severity = format!("{:?}", i.severity).to_lowercase();
                         let _ =
-                            write!(out, "{severity:<8}{:<16} {}: {}\n", i.code, i.id, i.message);
+                            writeln!(out, "{severity:<8}{:<16} {}: {}", i.code, i.id, i.message);
                     }
-                    let _ = write!(out, "{errors} errors, {warnings} warnings, {infos} to do\n");
+                    let _ = writeln!(out, "{errors} errors, {warnings} warnings, {infos} to do");
                     out
                 })?;
                 match errors {
@@ -139,7 +139,7 @@ impl Run for WikiCommand {
                     let verb = if *dry_run { "would move" } else { "moved" };
                     let mut out = format!("{verb} {} -> {}\n", moved.from, moved.to);
                     for r in &moved.rewrites {
-                        let _ = write!(out, "  {} reference(s) in {}\n", r.references, r.id);
+                        let _ = writeln!(out, "  {} reference(s) in {}", r.references, r.id);
                     }
                     out
                 })
@@ -217,13 +217,13 @@ fn find_text(found: &retrieve::Found) -> String {
         if !h.tags.is_empty() {
             let _ = write!(out, "  #{}", h.tags.join(" #"));
         }
-        let _ = write!(out, "  ({})\n", h.why.join(", "));
+        let _ = writeln!(out, "  ({})", h.why.join(", "));
     }
     if found.hits.is_empty() {
         out.push_str("No matches.\n");
     }
     if found.left_out > 0 {
-        let _ = write!(out, "... {} more (raise --budget)\n", found.left_out);
+        let _ = writeln!(out, "... {} more (raise --budget)", found.left_out);
     }
     out
 }
@@ -232,7 +232,7 @@ fn show_text(s: &Shown) -> String {
     let mut out = format!("{}  [{}]\n{}\n", s.id, s.class, s.title);
     let mut line = |key: &str, value: Option<&str>| {
         if let Some(v) = value {
-            let _ = write!(out, "{key}: {v}\n");
+            let _ = writeln!(out, "{key}: {v}");
         }
     };
     line("description", s.description.as_deref());
@@ -246,13 +246,13 @@ fn show_text(s: &Shown) -> String {
     if let Some(relations) = &s.relations {
         out.push_str("relations:\n");
         for r in relations {
-            let _ = write!(out, "  {:<13} {}\n", r.prop, r.id);
+            let _ = writeln!(out, "  {:<13} {}", r.prop, r.id);
         }
     }
     if let Some(outline) = &s.outline {
         out.push_str("outline:\n");
         for h in outline {
-            let _ = write!(out, "  {h}\n");
+            let _ = writeln!(out, "  {h}");
         }
     }
     if let Some(content) = &s.content {
@@ -267,7 +267,7 @@ fn answer_text(answer: &Answer) -> String {
             let mut out = format!("{}\n", t.vars.join("\t"));
             for row in &t.rows {
                 let cells: Vec<&str> = row.iter().map(|c| c.as_deref().unwrap_or("")).collect();
-                let _ = write!(out, "{}\n", cells.join("\t"));
+                let _ = writeln!(out, "{}", cells.join("\t"));
             }
             out
         }

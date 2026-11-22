@@ -1,7 +1,7 @@
 //! `iter organization` -- grouping projects and reporting across them.
 
 use crate::Run;
-use crate::args::{OrganizationCommand, ReportOpts};
+use crate::args::{OrgPushArgs, OrganizationCommand, ReportOpts};
 use crate::entity::{create, delete_group, update_group};
 use crate::output::list_names;
 use iter_core::app::App;
@@ -24,7 +24,7 @@ impl Run for OrganizationCommand {
         match self {
             Self::New => create(&app.db, &Organization::template(&config().project)),
             Self::Edit { name } => {
-                let existing = organization(app, name)?;
+                let existing = group_or_current::<Organization>(&app.db, name.name())?;
                 let (id, old) = (existing.id(), existing.name.clone());
                 update_group(&app.db, existing)?;
                 // an edit that was cancelled or failed has the same name
@@ -34,41 +34,19 @@ impl Run for OrganizationCommand {
                 }
             }
             Self::Delete { name } => {
-                let existing = organization(app, name)?;
+                let existing = group_or_current::<Organization>(&app.db, name.name())?;
                 delete_group(&app.db, &existing)?;
                 // the key is kept by name: with the organization gone, nothing
                 // could reach it again (best effort: the row is already gone)
                 let _ = Keychain.delete(&existing.name);
                 Ok(())
             }
-            Self::Info { name, report } => organization_info(app, name.as_deref(), report),
-            Self::Key { name, clear } => org_key(app, name.as_deref(), *clear),
-            Self::Push {
-                name,
-                report,
-                dry_run,
-                force,
-                platform_organization,
-                activity,
-            } => org_push(
-                app,
-                name.as_deref(),
-                report,
-                PushFlags {
-                    dry_run: *dry_run,
-                    force: *force,
-                    organization: platform_organization.as_deref(),
-                    activity: activity.as_deref(),
-                },
-            ),
+            Self::Info { name, report } => organization_info(app, name.name(), report),
+            Self::Key { name, clear } => org_key(app, name.name(), *clear),
+            Self::Push(args) => org_push(app, args),
             Self::List => list_names::<Organization>(&app.db),
         }
     }
-}
-
-/// An explicit organization name, else the one the tmux session's project is in.
-fn organization(app: &App, name: &Option<String>) -> Result<Organization> {
-    group_or_current(&app.db, name.as_deref())
 }
 
 /// The organization's report for a period: every project worked on, its tasks and the sessions behind them;
@@ -153,13 +131,6 @@ fn red(text: &str) -> String {
     }
 }
 
-struct PushFlags<'a> {
-    dry_run: bool,
-    force: bool,
-    organization: Option<&'a str>,
-    activity: Option<&'a str>,
-}
-
 /// The plan, the platform's warnings about the target, and the days it already holds.
 fn show(prepared: &push::Prepared) {
     print!("{}", prepared.plan.preview());
@@ -171,49 +142,39 @@ fn show(prepared: &push::Prepared) {
     }
 }
 
-fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) -> Result<()> {
+fn org_push(app: &App, args: &OrgPushArgs) -> Result<()> {
     let db = &app.db;
-    let organization: Organization = group_or_current(db, name)?;
+    let organization: Organization = group_or_current(db, args.name.name())?;
     if organization.platform_url.trim().is_empty() {
         return Err(IterError::CommandFailed(format!(
             "organization '{}' has no time platform URL: set platform_url with `iter org edit`",
             organization.name
         )));
     }
-    let range = opts.range(app.now)?;
+    let range = args.report.range(app.now)?;
     let mut target = Target::of(&organization);
-    if let Some(value) = flags.organization {
-        target.organization = value.to_string();
+    if let Some(value) = &args.platform_organization {
+        target.organization = value.clone();
     }
-    if let Some(value) = flags.activity {
-        target.activity = value.to_string();
+    if let Some(value) = &args.activity {
+        target.activity = value.clone();
     }
+    let prepare = |platform: &JsonWebhook| {
+        push::prepare(db, &organization, range, app.now, &target, platform)
+    };
     // the platform is asked what it already holds (read-only), so a dry run shows conflicts too
     let platform = secret::resolve_env(&Keychain, &organization.name)
         .and_then(|key| JsonWebhook::new(&organization.platform_url, key));
-    let prepared = match (&platform, flags.dry_run) {
-        (Ok(platform), false) => Some(push::prepare(
-            db,
-            &organization,
-            range,
-            app.now,
-            &target,
-            platform,
-        )?),
-        (Ok(platform), true) => {
-            match push::prepare(db, &organization, range, app.now, &target, platform) {
-                Ok(prepared) => Some(prepared),
-                Err(e) => {
-                    eprintln!("warning: {e}");
-                    None
-                }
-            }
-        }
+    let prepared = match (&platform, args.dry_run) {
+        (Ok(platform), false) => Some(prepare(platform)?),
+        (Ok(platform), true) => prepare(platform)
+            .map_err(|e| eprintln!("warning: {e}"))
+            .ok(),
         (Err(_), true) => None,
         (Err(e), false) => return Err(IterError::Platform(e.to_string())),
     };
 
-    if flags.dry_run {
+    if args.dry_run {
         match &prepared {
             Some(prepared) => show(prepared),
             None => {
@@ -233,7 +194,7 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
     };
     show(prepared);
     if let Some(line) = prepared.check.already_pushed_line()
-        && !flags.force
+        && !args.force
     {
         println!("\n{line}");
         if !confirm("Push anyway?") {

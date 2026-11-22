@@ -1,7 +1,8 @@
 //! `iter task plan` and `iter task prompt`: what the command line says about the plan and the prompts; the files are `agent::taskdir`'s.
 
+use crate::args::{PlanArgs, PromptArgs};
 use crate::editor::edit_text;
-use crate::output::{Format as DataFormat, emit};
+use crate::output::emit;
 use iter_core::agent::plan::{self, Plan, Progress, State};
 use iter_core::agent::task_prompt::{locate, prompt_text};
 use iter_core::agent::taskdir::{TaskDir, mark_step, save_plan};
@@ -12,7 +13,6 @@ use iter_core::error::Result;
 use serde::Serialize;
 use std::fmt::Write as _;
 use std::io::Read;
-use std::path::Path;
 
 #[derive(Serialize)]
 struct PlanView {
@@ -51,23 +51,14 @@ fn progress_line(p: &Progress) -> String {
     line
 }
 
-/// What `iter task plan` was asked: alone it edits (or, with no terminal to edit in, prints: an
-/// agent asking for its plan must not wait on an editor it cannot see), `--show` prints, `--stdin`
-/// replaces, `--mark` ticks a step.
-pub struct PlanRequest<'a> {
-    pub task: Option<&'a str>,
-    pub show: bool,
-    pub stdin: bool,
-    /// `[step, state]`, or empty.
-    pub mark: &'a [String],
-    pub format: DataFormat,
-}
-
-pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
-    let (project, task, dir) = locate(app, req.task)?;
+/// `iter task plan`: alone it edits (or, with no terminal to edit in, prints: an agent asking for
+/// its plan must not wait on an editor it cannot see), `--show` prints, `--stdin` replaces,
+/// `--mark` ticks a step.
+pub fn plan(app: &App, req: &PlanArgs) -> Result<()> {
+    let (project, task, dir) = locate(app, req.task.as_deref())?;
     let name = task.label(&project).to_string();
     let word = task.id().to_string();
-    if let [step, state] = req.mark {
+    if let [step, state] = req.mark.as_slice() {
         let state = <State as clap::ValueEnum>::from_str(state, true)
             .map_err(|_| AgentError::UnknownState(state.clone()))?;
         let p = mark_step(&dir, step, state)?;
@@ -109,16 +100,18 @@ pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
     Ok(())
 }
 
-pub fn prompt_cmd(
-    app: &App,
-    task: Option<&str>,
-    instruction: &str,
-    template: Option<&Path>,
-    onboarding_wanted: bool,
-) -> Result<()> {
+/// `iter task prompt`: the prompt for the instruction, as it is, on standard output.
+pub fn prompt_cmd(app: &App, a: &PromptArgs) -> Result<()> {
+    let template = a.template.as_deref();
     print!(
         "{}",
-        prompt_text(app, task, instruction, template, onboarding_wanted)?
+        prompt_text(
+            app,
+            a.task.name(),
+            &a.instruction,
+            template,
+            !a.no_onboarding
+        )?
     );
     Ok(())
 }
