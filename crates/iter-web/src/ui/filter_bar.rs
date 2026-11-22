@@ -3,10 +3,7 @@
 //! needs no script: hover shows the syntax, click focuses it and keeps it shown
 //! (`:focus-within`); Escape closes it (`filter_bar.js`).
 
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 pub(super) const FILTER_ID: &str = "filter-q";
 

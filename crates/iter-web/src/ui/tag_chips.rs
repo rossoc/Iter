@@ -1,10 +1,6 @@
 //! Colored chips; the text color comes from `ink.rs`.
 
-use super::ink::chip_style;
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 /// One chip, ready to show (mapping in `web/task_rows.rs`); only a `#rrggbb` `color` is used.
 pub struct Chip<'a> {

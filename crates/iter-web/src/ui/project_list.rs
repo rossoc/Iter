@@ -1,11 +1,7 @@
 //! Projects as `data_table` rows (or a plain list in a card): name link, then
 //! the path in mono, leaf strong and directories muted; a long path loses its start.
 
-use super::table::{AddRow, cell, data_table, row};
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 /// `path` split after the last `/`: directories, then the leaf.
 fn split_leaf(path: &str) -> (&str, &str) {
@@ -56,7 +52,7 @@ pub async fn project_list(
         } else {
             data_table(caption: "Projects", columns: &["Project", "Path"], class: "projects inline", headed: false, add: add, empty: empty,
                 for p in items.iter() {
-                    row(
+                    table_row(
                         cell(<a class="u" href=(p.href.as_str())>(p.name)</a>)
                         cell(class: "path-cell", path_span(path: &p.path))
                     )

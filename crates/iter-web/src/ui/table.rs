@@ -4,11 +4,7 @@
 //! its native semantics as a `role`, because browsers drop them when narrow
 //! screens lay rows out as boxes; a headerless table is named by its caption.
 
-use super::button::{add_link, add_post};
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// The first row, which adds an entity: a link to the New pop-up or a posting button.
 pub struct AddRow<'a> {
@@ -91,7 +87,7 @@ pub async fn data_table(
 }
 
 #[component]
-pub async fn row(#[default] class: &str, child: Child<'_>) -> Result<impl View> {
+pub async fn table_row(#[default] class: &str, child: Child<'_>) -> Result<impl View> {
     Ok(view! {
         <tr if !class.is_empty() { class=(class) } role="row">(child)</tr>
     })

@@ -1,11 +1,7 @@
 //! The folded Unscheduled column: a thin strip showing the name, task count and an
 //! overdue dot. A link back to the open column and a drop zone (unschedules).
 
-use super::{PANEL_RIGHT, icon};
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 /// The screen-reader name: "Show Backlog, 3 tasks, 1 overdue" (`total` includes overdue).
 fn name(label: &str, total: usize, overdue: usize) -> String {

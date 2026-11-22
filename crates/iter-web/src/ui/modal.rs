@@ -4,11 +4,7 @@
 //! backdrop). `/modal.js` adds Esc and the focus trap; without it Esc does
 //! nothing and Tab can leave the pop-up.
 
-use super::{X, icon};
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// `id` is the heading's unique id; `close` the URL without the modal; children are the body (a form).
 #[component]

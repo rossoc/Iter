@@ -1,11 +1,7 @@
 //! A task's status as a glyph pill: icon (decorative) plus the word.
 
-use super::{CIRCLE, CIRCLE_CHECK, HALF, icon};
+use crate::prelude::*;
 use iter_core::models::TaskStatus;
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
 
 fn glyph(state: TaskStatus) -> &'static str {
     match state {
@@ -24,7 +20,7 @@ fn class(state: TaskStatus) -> &'static str {
 }
 
 #[component]
-pub async fn status(state: TaskStatus) -> Result<impl View> {
+pub async fn status_icon(state: TaskStatus) -> Result<impl View> {
     Ok(view! {
         <span class=(class(state))>
             (icon(glyph(state)))

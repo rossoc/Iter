@@ -1,13 +1,6 @@
 //! The frame: the top bar and the centered main pane.
 
-use super::form_error::FormError;
-use super::search::{palette, search_button};
-use super::toast::toasts;
-use super::{BOT, FILE_TEXT, KANBAN, MARK, SLIDERS, icon};
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// The main nav `(label, href, icon)`; hrefs equal `web::url::BOARDS`/`SETTINGS` (tested in `web/url.rs`).
 pub const NAV: [(&str, &str, &str); 4] = [

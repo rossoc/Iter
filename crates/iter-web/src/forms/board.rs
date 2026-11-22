@@ -1,8 +1,8 @@
 //! The board edit form.
 
 use super::{DESCRIPTION, NAME, PROJECTS, Pairs, text};
-use crate::edit::EditForm;
-use crate::url::board_info_url;
+use crate::forms::edit::EditForm;
+use crate::prelude::*;
 use iter_core::db::Db;
 use iter_core::error::Result;
 use iter_core::models::{Board, Named};
@@ -46,7 +46,7 @@ impl EditForm for BoardForm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::edit::NAME;
+    use crate::forms::edit::NAME;
     use iter_core::error::IterError;
     use iter_core::fixtures;
 

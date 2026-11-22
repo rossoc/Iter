@@ -1,57 +1,55 @@
 //! Shared components, one file per feature with its rules in a `.css` next to
 //! it; see `doc/web_components.md`. `/style.css` is `base.css`, every component
-//! sheet and `org.css`, concatenated at compile time (`web/layout.rs` links it).
+//! sheet and `org.css`, concatenated at compile time (`pages/site/document.rs` links it).
 
-// A component shares its module's name (`frame::frame`): import it from the module.
-pub mod breadcrumb;
-pub mod button;
-pub mod count;
-pub mod day_nav;
-pub mod drop_zone;
-pub mod empty_line;
-pub mod empty_state;
-pub mod field;
-pub mod field_ids;
-pub mod filter_bar;
-pub mod folded_list;
-pub mod form;
-pub mod form_error;
-pub mod frame;
-pub mod group;
-pub mod group_card;
-pub mod hour_grid;
-mod icons;
-mod ink;
-pub mod labelled;
-pub mod layout;
-pub mod modal;
-pub mod notes;
-pub mod notice;
-pub mod page_header;
-pub mod panel;
-pub mod pick_bar;
-pub mod pick_here;
-pub mod project_list;
-pub mod prose;
-pub mod quadrant;
-pub mod search;
-pub mod sessions_table;
-pub mod side_rail;
-pub mod site_footer;
-pub mod status;
-pub mod table;
-pub mod tabs;
-pub mod tag_chips;
-pub mod task_card;
-pub mod task_table;
-pub mod tasks_tab;
-pub mod toast;
-pub mod unplaced_list;
+components!(
+    icons,
+    ink,
+    breadcrumb,
+    button,
+    count,
+    day_nav,
+    drop_zone,
+    empty_line,
+    empty_state,
+    field,
+    field_ids,
+    filter_bar,
+    folded_list,
+    form,
+    form_error,
+    frame,
+    group,
+    group_card,
+    hour_grid,
+    labelled,
+    layout,
+    modal,
+    notes,
+    notice,
+    page_header,
+    panel,
+    pick_bar,
+    pick_here,
+    project_list,
+    prose,
+    quadrant,
+    search,
+    sessions_table,
+    side_rail,
+    site_footer,
+    status,
+    table,
+    tabs,
+    tag_chips,
+    task_card,
+    task_table,
+    tasks_tab,
+    toast,
+    unplaced_list
+);
 
-pub use breadcrumb::Crumb;
-pub use icons::*;
-
-use super::assets::{Asset, serve};
+use crate::assets::{Asset, serve};
 use topcoat::router::RouterBuilder;
 
 // Order is the cascade: later sheets win, `org.css` last.

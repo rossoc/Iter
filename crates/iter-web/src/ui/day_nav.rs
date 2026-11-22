@@ -1,11 +1,7 @@
 //! A day's heading with previous, Today and next links. With script the title
 //! opens the date picker; without, a hidden button submits the date input.
 
-use super::{CALENDAR, CHEVRON_LEFT, CHEVRON_RIGHT, icon};
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// A link to another day; `label` is its accessible name.
 #[derive(Clone)]

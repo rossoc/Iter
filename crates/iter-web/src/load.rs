@@ -1,9 +1,9 @@
 //! Lookups shared by several pages' `load` functions.
 
+use crate::prelude::*;
 use iter_core::db::{Db, Table};
 use iter_core::models::{Board, Card, Organization, Project, ProjectGroup, Task};
 use std::collections::HashMap;
-use topcoat::router::error::RouterErrorExt;
 
 pub fn org_in<'a>(orgs: &'a [Organization], project: &Project) -> Option<&'a Organization> {
     let id = project.organization_id?;

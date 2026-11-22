@@ -1,136 +1,63 @@
 //! `iter serve`: a browser UI over the same database the CLI uses; one connection per request.
 //! Architecture and route map: `doc/web_server.md`. The one public item is [`serve`].
+//!
+//! A module imports only modules before it in this order: `cx`, `url`, `assets`, `layers`, then
+//! `prelude` and `ui`, then `load` and `forms`, then `parts`, then `pages`.
 
-// The organization report view (`org.rs`) nests several components; the compiler's `Send` check
-// on the resulting future needs more than the default depth of 128.
+// The organization report view (`pages/org/org.rs`) nests several components; the compiler's
+// `Send` check on the resulting future needs more than the default depth of 128.
 #![recursion_limit = "256"]
 
-mod agenda;
-mod agenda_cards;
-mod agenda_drop;
-mod agenda_pick;
-mod agents;
+/// Declares the modules of a folder of components and its `all` glob: a component shares its
+/// module's name (`frame::frame`), so the glob lives one level down.
+macro_rules! components {
+    ($($m:ident),* $(,)?) => {
+        $(pub mod $m;)*
+        pub mod all {
+            $(pub use super::$m::*;)*
+        }
+    };
+}
+
 mod assets;
-mod blocking;
-mod board_cards;
-mod board_edit;
-mod board_header;
-mod board_info;
-mod board_page;
-mod boards;
-mod create;
-mod crumbs;
-mod daily_notes;
-mod drop;
-mod edit;
-mod edit_page;
-mod errors;
-mod flash;
-mod folder_picker;
-mod folders;
-mod footer;
+mod cx;
 mod forms;
-mod guard;
-mod home;
-mod instructions;
-mod layout;
+mod layers;
 mod load;
-mod matrix;
 #[cfg(test)]
 mod modal_tests;
-mod notes;
-mod org;
-mod org_edit;
-mod org_report;
-mod org_share;
-mod pick;
-mod platform_pick;
-mod project;
-mod project_edit;
-mod project_new;
-mod project_options;
-mod project_rows;
-mod project_wiki;
-mod search_index;
-mod sections;
-mod session_lines;
-mod settings;
-mod settings_fields;
-mod settings_panel;
-mod share_dialog;
-mod task;
-mod task_agent;
-mod task_compose;
-mod task_edit;
-mod task_fields;
-mod task_new;
-mod task_notes;
-mod task_panel;
-mod task_rows;
-mod task_runs;
-mod task_sessions;
-mod text;
+mod pages;
+mod parts;
+mod prelude;
 #[cfg(test)]
 mod toast_tests;
 mod ui;
 mod url;
 
-use iter_core::db::Db;
 use iter_core::error::Result;
-use topcoat::router::{LayerFn, Router, path_param};
-
-// The `{id}` of every route with one: a number, else a 400.
-path_param!(id: i64, error = bad_request);
-
-fn fresh_db() -> topcoat::Result<Db> {
-    Ok(iter_core::app::App::open()?.db)
-}
-
-fn now() -> chrono::NaiveDateTime {
-    chrono::Local::now().naive_local()
-}
+use topcoat::router::{LayerFn, Router};
 
 fn router() -> Router {
     let builder = Router::builder()
-        .layer(blocking::off_the_workers)
-        .layer(guard::security_headers)
-        .layer(guard::local_only)
-        .layer(flash::flash)
-        .layer(LayerFn::new(None::<&'static str>, errors::error_pages));
+        .layer(layers::blocking::off_the_workers)
+        .layer(layers::guard::security_headers)
+        .layer(layers::guard::local_only)
+        .layer(layers::flash::flash)
+        .layer(LayerFn::new(
+            None::<&'static str>,
+            layers::errors::error_pages,
+        ));
     [
-        layout::register,
-        home::register,
+        pages::site::routes,
         ui::register,
-        org::register,
-        project::register,
-        project_wiki::register,
-        task::register,
-        task_agent::register,
-        task_runs::register,
-        agents::register,
-        task_notes::register,
-        task_sessions::register,
-        daily_notes::register,
-        org_edit::register,
-        org_share::register,
-        platform_pick::register,
-        project_edit::register,
-        instructions::register,
-        project_new::register,
-        folders::register,
-        task_edit::register,
-        task_new::register,
-        boards::register,
-        matrix::register,
-        agenda::register,
-        agenda_drop::register,
-        board_info::register,
-        board_edit::register,
-        settings::register,
-        search_index::register,
+        pages::org::routes,
+        pages::project::routes,
+        pages::task::routes,
+        pages::agent::routes,
+        pages::board::routes,
     ]
     .into_iter()
-    .fold(builder, |builder, register| register(builder))
+    .fold(builder, |builder, routes| routes(builder))
     .build()
 }
 
@@ -154,18 +81,4 @@ pub fn serve(port: u16, open: bool) -> Result<()> {
         topcoat::serve(listener, router()).await?;
         Ok(())
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Characterisation (R7, `now()`): the web's clock is the local wall time without a zone.
-    #[test]
-    fn the_web_clock_is_the_local_wall_time() {
-        let off = (chrono::Local::now().naive_local() - now())
-            .num_seconds()
-            .abs();
-        assert!(off < 5, "{off}s from the local time");
-    }
 }

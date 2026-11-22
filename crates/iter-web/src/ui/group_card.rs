@@ -1,12 +1,6 @@
 //! The overview card (Home, Boards) and the grid that holds the cards.
 
-use super::empty_line::empty_line;
-use super::project_list::{ProjectItem, project_list};
-use super::{ARROW, icon};
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// The cards of a page, as a responsive grid.
 #[component]

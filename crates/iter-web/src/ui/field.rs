@@ -1,15 +1,7 @@
 //! Form controls. Each has a real `<label for>` (id from [`field_id`]), so only
 //! `aria-describedby`, `aria-invalid` and `aria-required` are needed.
 
-use super::empty_line::empty_line;
-use super::field_ids::{ERROR_ID, field_id, hint_id, invalid_cue};
-use super::form_error::{FormError, is_about};
-use super::group::group;
-use super::icons::{FOLDER, icon};
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// A control's `aria-describedby`: its hint and, if the error is about it, the error notice.
 fn described_by(id: &str, hint: &str, invalid: bool) -> String {
@@ -192,7 +184,7 @@ pub async fn checklist(
     let invalid = is_about(error, name);
     let described = described_by(&id, hint, invalid);
     Ok(view! {
-        group(id: &id, title: label, hint: hint, described: &described, invalid: invalid,
+        field_group(id: &id, title: label, hint: hint, described: &described, invalid: invalid,
             if options.is_empty() {
                 empty_line((empty))
             }

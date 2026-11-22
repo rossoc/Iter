@@ -2,10 +2,7 @@
 //! their projects, boards, loose projects and settings. Markup and CSS only; data
 //! comes from `web/footer.rs`.
 
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 pub struct FooterLink {
     pub name: String,

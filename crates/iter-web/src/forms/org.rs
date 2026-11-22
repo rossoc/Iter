@@ -1,8 +1,8 @@
 //! The organization edit form.
 
 use super::{DESCRIPTION, NAME, PROJECTS, Pairs, SettingsForm, text};
-use crate::edit::EditForm;
-use crate::url::org_url;
+use crate::forms::edit::EditForm;
+use crate::prelude::*;
 use iter_core::db::Db;
 use iter_core::error::Result;
 use iter_core::models::{Configured, Named, Organization};

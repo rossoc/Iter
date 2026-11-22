@@ -1,8 +1,9 @@
 //! The project edit form.
 
 use super::{SettingsForm, text};
-use crate::edit::{EditForm, name_field};
-use crate::url::project_url;
+use crate::forms::edit::EditForm;
+use crate::forms::edit::name_field;
+use crate::prelude::*;
 use iter_core::error::{IterError, Result};
 use iter_core::models::{Configured, Named, Project};
 use serde::Deserialize;
@@ -54,7 +55,7 @@ impl EditForm for ProjectForm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::edit::NAME;
+    use crate::forms::edit::NAME;
     use iter_core::fixtures;
     use iter_core::models::Settings;
 

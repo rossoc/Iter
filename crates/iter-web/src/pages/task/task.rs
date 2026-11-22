@@ -1,0 +1,178 @@
+//! The task page (`/task/{id}`): route, loading and view, built from shared components.
+
+use crate::load::Parents;
+use crate::load::parents_of;
+use crate::pages::agent::task_agent;
+use crate::pages::agent::task_agent::AgentTab;
+use crate::pages::agent::task_agent::agent_tab;
+use crate::pages::agent::task_agent::files_block;
+use crate::pages::agent::task_agent::plan_block;
+use crate::pages::agent::task_compose::compose_modal;
+use crate::pages::task::task_notes::note_modal;
+use crate::pages::task::task_panel::task_panel;
+use crate::pages::task::task_sessions::session_modal;
+use crate::parts::all::*;
+use crate::prelude::*;
+use chrono::NaiveDateTime;
+use iter_core::agent::taskdir;
+use iter_core::db::{Db, Table};
+use iter_core::models::{Session, Tag, Task};
+
+pub struct Loaded {
+    pub task: Task,
+    pub parents: Parents,
+    pub sessions: Vec<Session>,
+    pub tags: Vec<Tag>,
+}
+
+pub fn load(db: &Db, id: i64) -> Result<Loaded> {
+    let task = db.get::<Task>(id)?.ok_or_not_found()?;
+    let parents = parents_of(db, task.project_id)?;
+    let sessions = db.sessions_for_task(id)?;
+    let tags = db.tags_for_task(id)?;
+    Ok(Loaded {
+        task,
+        parents,
+        sessions,
+        tags,
+    })
+}
+
+#[page("/task/{id}")]
+pub(super) async fn show(cx: &Cx) -> Result<impl View> {
+    let id = path_id(cx)?;
+    let query = query_params::<TabQuery>(cx)?;
+    let section = TaskSection::of(query.tab.as_deref());
+    let db = fresh_db()?;
+    let page = load(&db, id)?;
+    // the wiki was a tab of the task; it is the project's
+    if query.tab.as_deref() == Some("wiki") {
+        let project = page.parents.project.id();
+        return Err(see_other(wiki_tab_url(&project_url(project))).into());
+    }
+    let agent = match section {
+        TaskSection::Agent => {
+            // the prompts of a new agent are made with the commands' own code, which wants an app
+            let app = iter_core::app::App::over(fresh_db()?, chrono::Local::now().naive_local());
+            let open = task_agent::Open {
+                step: query.step.as_deref(),
+                run: query.run.as_deref(),
+                new: query.new.as_deref(),
+                instruction: query.instruction.as_deref(),
+            };
+            Some(task_agent::load(
+                &app,
+                &page.parents.project,
+                &page.task,
+                &open,
+            )?)
+        }
+        _ => None,
+    };
+    let files = match section {
+        TaskSection::Notes => Some(task_agent::files(&db, &page.parents.project, &page.task)),
+        _ => None,
+    };
+    let plan = (section == TaskSection::Info)
+        .then(|| task_agent::plan_of(&db, &page.parents.project, &page.task));
+    let agents = taskdir::of(&db, &page.parents.project, &page.task)
+        .map(|d| d.runs().len())
+        .unwrap_or(0);
+    let add_session = section == TaskSection::Sessions && query.new.as_deref() == Some("session");
+    let add_note = section == TaskSection::Notes && query.new.as_deref() == Some("note");
+    let now = now();
+    Ok(view! {
+        screen(page: &page, section: section, now: now, agent: agent.as_ref(), files: files.as_ref(), add_session: add_session, add_note: add_note, plan: plan.as_ref(), agents: agents)
+    })
+}
+
+/// Oldest first, the order the work happened in: the open session, if any, is the last row.
+#[component]
+async fn sessions_block(
+    task: &Task,
+    sessions: &[Session],
+    now: NaiveDateTime,
+) -> Result<impl View> {
+    let lines = task_lines(sessions, now);
+    let caption = format!("Sessions of {}", task.name);
+    let add = page_url(
+        &sessions_tab_url(&task_url(task.id())),
+        &[("new", Some("session"))],
+    );
+    Ok(view! {
+        sessions_table(lines: &lines, caption: &caption, show_end: true, add: Some(add), empty: lines.is_empty().then_some("No sessions yet."))
+    })
+}
+
+#[component]
+async fn task_info(
+    task: &Task,
+    tags: &[Tag],
+    plan: Option<&iter_core::agent::plan::Plan>,
+) -> Result<impl View> {
+    Ok(view! {
+        info_columns(
+            <div>
+                prose_text(text: &task.description)
+                plan_block(task_id: task.id(), plan: plan)
+            </div>
+            task_panel(task: task, tags: tags)
+        )
+    })
+}
+
+#[component]
+pub async fn screen(
+    page: &Loaded,
+    section: TaskSection,
+    now: NaiveDateTime,
+    #[default] agent: Option<&AgentTab>,
+    #[default] files: Option<&task_agent::Files>,
+    #[default] add_session: bool,
+    #[default] add_note: bool,
+    #[default] plan: Option<&iter_core::agent::plan::Plan>,
+    #[default] agents: usize,
+) -> Result<impl View> {
+    let Loaded {
+        task,
+        parents,
+        sessions: rows,
+        tags,
+    } = page;
+    let items = task_tabs(&task_url(task.id()), section, rows.len(), agents);
+    let new_note = page_url(
+        &notes_tab_url(&task_url(task.id())),
+        &[("new", Some("note"))],
+    );
+    // The page has tabs, so the current tab is the current item and the
+    // page's own crumb is plain text.
+    let crumbs = trail(&parents.org, Some(&parents.project), Crumb::label("Task"));
+    let parts = [section.title("Task"), task.name.as_str()];
+    let dialog = if add_session && section == TaskSection::Sessions {
+        Some(Child::new(view! { session_modal(task_id: task.id()) }))
+    } else if add_note && section == TaskSection::Notes {
+        Some(Child::new(view! { note_modal(task_id: task.id()) }))
+    } else {
+        agent
+            .and_then(|a| a.roster.compose.as_ref())
+            .map(|c| Child::new(view! { compose_modal(task_id: task.id(), c: c) }))
+    };
+    Ok(view! {
+        frame(
+            title: &parts,
+            dialog: dialog,
+            page_header(title: &task.name, kicker: Kicker::Crumbs(&crumbs))
+            tabs(label: "Sections", items: &items)
+            if section == TaskSection::Sessions {
+                sessions_block(task: task, sessions: rows, now: now)
+            } else if let (TaskSection::Agent, Some(agent)) = (section, agent) {
+                agent_tab(task_id: task.id(), agent: agent)
+            } else if let (TaskSection::Notes, Some(files)) = (section, files) {
+                files_block(label: "Notes", noun: "notes", docs: &files.notes, add: Some(AddRow::link(&new_note, "New note\u{2026}")))
+                files_block(label: "Sketches", noun: "sketches", docs: &files.sketches)
+            } else {
+                task_info(task: task, tags: tags, plan: plan)
+            }
+        )
+    })
+}

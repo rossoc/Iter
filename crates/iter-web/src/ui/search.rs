@@ -3,11 +3,7 @@
 //! All script: `search.js` fills the list from `GET /search?q=`
 //! (`web/search_index.rs`); without script the button stays hidden.
 
-use super::{BUILDING, FILE_TEXT, FOLDER, KANBAN, SEARCH, SQUARE_CHECK, icon};
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
+use crate::prelude::*;
 
 #[component]
 pub async fn search_button() -> Result<impl View> {

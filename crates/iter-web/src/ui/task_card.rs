@@ -2,12 +2,8 @@
 //! one action link. `board.js` drags it: a card with `data-task` is made
 //! draggable by the script, and is a plain card without.
 
-use super::status::status;
+use crate::prelude::*;
 use iter_core::models::{Priority, TaskStatus};
-use topcoat::{
-    Result,
-    view::{View, component, view},
-};
 
 /// The colored left edge for priority; never the only cue (a chip says it too).
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -98,7 +94,7 @@ pub async fn task_card(card: CardView<'_>, #[default] draggable: bool) -> Result
                     <span class="mono">(card.time.as_str())</span>
                 }
                 if let Some(state) = card.status {
-                    status(state: state)
+                    status_icon(state: state)
                 }
                 if let Some(action) = &card.action {
                     <a class="tcard-act" href=(action.href.as_str())>

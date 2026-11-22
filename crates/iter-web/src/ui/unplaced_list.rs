@@ -1,13 +1,7 @@
 //! A titled drop zone of tasks not yet placed; a card dropped in is taken off the
 //! day or out of the quadrants (`target` is what `board.js` posts).
 
-use super::count::count_badge;
-use super::drop_zone::drop_zone;
-use super::empty_line::empty_line;
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// `target` is empty on the agenda (unschedule). It is a labelled region unless
 /// `alone` in an aside labelled itself (one landmark, not two). `collapsible`

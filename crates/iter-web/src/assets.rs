@@ -1,20 +1,25 @@
 //! Static files are compiled in and served with an ETag and `no-cache`: the browser revalidates and gets a bodiless 304.
 
+use crate::prelude::*;
 use std::borrow::Cow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::OnceLock;
-use topcoat::{
-    Result,
-    context::Cx,
-    router::{
-        Body, HeaderValue, Method, Methods, Path, Route, RouteFuture, RouteId, RouterBuilder,
-        StatusCode,
-        header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, IF_NONE_MATCH},
-        request::headers,
-        response::{IntoResponse, Response},
-    },
-};
+use topcoat::router::Body;
+use topcoat::router::HeaderValue;
+use topcoat::router::Method;
+use topcoat::router::Methods;
+use topcoat::router::Path;
+use topcoat::router::Route;
+use topcoat::router::RouteFuture;
+use topcoat::router::RouteId;
+use topcoat::router::StatusCode;
+use topcoat::router::header::CACHE_CONTROL;
+use topcoat::router::header::CONTENT_TYPE;
+use topcoat::router::header::ETAG;
+use topcoat::router::header::IF_NONE_MATCH;
+use topcoat::router::request::headers;
+use topcoat::router::response::IntoResponse;
 
 /// Registers one `GET` route per `(path, asset)`.
 pub fn serve(builder: RouterBuilder, table: &[(&'static str, &'static Asset)]) -> RouterBuilder {

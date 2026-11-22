@@ -1,10 +1,7 @@
 //! The pick-mode banner (moving a task without dragging); `#pick` is where the
 //! card's link lands so the keyboard starts here.
 
-use topcoat::{
-    Result,
-    view::{Child, View, component, view},
-};
+use crate::prelude::*;
 
 /// Where a card's pick link lands (`#pick`).
 pub const PICK_ANCHOR: &str = "pick";
