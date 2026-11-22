@@ -34,13 +34,13 @@ pub fn branch_prefix(template: &str) -> String {
 }
 
 /// The slug of a task's branch *and* worktree directory (one slug, so uniqueness for one holds for
-/// the other). A name with no ASCII letters or digits falls back to the task id: an empty slug makes
-/// a bare-prefix branch git refuses and a worktree path equal to `.iter-worktrees` itself.
+/// the other): `<id>-<title slug>`. The id makes it unique though titles repeat. A title with no
+/// ASCII letters or digits leaves the bare `task-<id>`: an empty slug would make a bare-prefix
+/// branch git refuses and a worktree path equal to `.iter-worktrees` itself.
 pub fn task_slug(name: &str, task_id: i64) -> String {
-    let slug = slugify(name);
-    match slug.is_empty() {
-        true => format!("task-{task_id}"),
-        false => slug,
+    match slugify(name).as_str() {
+        "" => format!("task-{task_id}"),
+        slug => format!("{task_id}-{slug}"),
     }
 }
 

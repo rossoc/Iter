@@ -8,7 +8,9 @@ impl Db {
     pub fn move_task(&self, id: i64, task: &mut Task, from: &Project, to: &Project) -> Result<()> {
         if to.id() != from.id() {
             if self.find_session_config_by_task(id)?.is_some() {
-                return Err(IterError::TaskHasSession(task_ref(&from.name, &task.name)));
+                return Err(IterError::TaskHasSession(task_label(
+                    &from.name, &task.name, id,
+                )));
             }
             task.project_id = to.id();
         }
@@ -39,7 +41,7 @@ impl Db {
         Ok(tasks
             .into_iter()
             .map(|(project, task)| Card {
-                label: task_ref(&project, &task.name),
+                label: format!("{project}/{}", task.name),
                 priority: priorities.get(&task.id()).copied().unwrap_or_default(),
                 task,
             })
@@ -181,10 +183,11 @@ impl Db {
         })
     }
 
-    pub fn find_task(&self, project_id: i64, task_name: &str) -> Result<Option<Task>> {
-        self.find_one(
-            "WHERE project_id = ?1 AND name = ?2",
-            params![project_id, task_name],
+    /// The tasks of a project titled `title` (titles may repeat), by id.
+    pub fn find_tasks(&self, project_id: i64, title: &str) -> Result<Vec<Task>> {
+        self.find_all(
+            "WHERE project_id = ?1 AND name = ?2 ORDER BY id",
+            params![project_id, title],
         )
     }
 
@@ -228,11 +231,16 @@ impl Db {
         Ok(names)
     }
 
-    /// Every task as a [`task_ref`], in `<project>/<task>` order, optionally narrowed by project
-    /// and/or statuses (empty `statuses` = all). One join: this runs on every TAB.
+    /// What completion offers for a task, in `<project>/<title>` order, optionally narrowed by
+    /// project and/or statuses (empty `statuses` = all): `<project>/<title>` where that names it
+    /// alone, else its bare id (a repeated title, or one that reads like a `#<id>` label, would
+    /// resolve to the wrong task or to none). One join: this runs on every TAB.
     pub fn task_refs(&self, project: Option<&str>, statuses: &[TaskStatus]) -> Result<Vec<String>> {
         let mut sql = String::from(
-            "SELECT p.name, t.name FROM tasks t JOIN projects p ON p.id = t.project_id",
+            "SELECT p.name, t.name, t.id,
+                    (SELECT COUNT(*) FROM tasks s
+                     WHERE s.project_id = t.project_id AND s.name = t.name)
+             FROM tasks t JOIN projects p ON p.id = t.project_id",
         );
         let mut clauses = Vec::new();
         if project.is_some() {
@@ -246,7 +254,7 @@ impl Db {
             sql.push_str(" WHERE ");
             sql.push_str(&clauses.join(" AND "));
         }
-        sql.push_str(" ORDER BY p.name, t.name");
+        sql.push_str(" ORDER BY p.name, t.name, t.id");
 
         // Anonymous `?` so the filters compose.
         let mut values: Vec<Value> = Vec::new();
@@ -254,17 +262,21 @@ impl Db {
         values.extend(statuses.iter().map(|s| Value::Text(s.as_str().to_string())));
 
         self.query_all(&sql, params_from_iter(values), |row| {
-            Ok(task_ref(
-                &row.get::<_, String>(0)?,
-                &row.get::<_, String>(1)?,
-            ))
+            let (project, title, id, same_title): (String, String, i64, i64) =
+                (row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?);
+            let alone = same_title == 1 && split_label(&title).is_none();
+            Ok(match alone {
+                true => format!("{project}/{title}"),
+                false => id.to_string(),
+            })
         })
     }
 
-    /// Every distinct task name, sorted: what `task pull/push --task` completes (a bare name).
+    /// The id of every task, sorted: what `task pull/push --task` completes (the project is not
+    /// known to the completer, so a title could name several).
     pub fn task_names(&self) -> Result<Vec<String>> {
-        self.query_all("SELECT DISTINCT name FROM tasks ORDER BY name", [], |row| {
-            row.get(0)
+        self.query_all("SELECT id FROM tasks ORDER BY id", [], |row| {
+            Ok(row.get::<_, i64>(0)?.to_string())
         })
     }
 }

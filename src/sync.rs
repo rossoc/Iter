@@ -8,12 +8,13 @@ use std::ops::Index;
 use crate::github::{Issue, IssueState, status_for_issue_state};
 use crate::models::{Task, TaskStatus};
 
-/// A project's tasks indexed by issue number and title, so each issue is planned with two lookups. The caller keeps it current as the pull goes ([`Tasks::push`], [`Tasks::link`]).
+/// A project's tasks indexed by issue number, and by title for those that track no issue yet, so each issue is planned with two lookups. The caller keeps it current as the pull goes ([`Tasks::push`], [`Tasks::link`]).
 #[derive(Debug, Default)]
 pub struct Tasks {
     tasks: Vec<Task>,
     by_issue: HashMap<i64, usize>,
-    by_name: HashMap<String, usize>,
+    /// Per title, the tasks that track no issue (titles repeat; each links to at most one issue).
+    unlinked: HashMap<String, Vec<usize>>,
 }
 
 impl Tasks {
@@ -25,12 +26,18 @@ impl Tasks {
         indexed
     }
 
-    /// Adds `task` under its name and issue; a name or number already taken keeps pointing at the first task.
+    /// Adds `task` under its issue, or under its title while it has none; a number already taken keeps pointing at the first task.
     pub fn push(&mut self, task: Task) {
         let index = self.tasks.len();
-        self.by_name.entry(task.name.clone()).or_insert(index);
-        if let Some(number) = task.github_issue {
-            self.by_issue.entry(number).or_insert(index);
+        match task.github_issue {
+            Some(number) => {
+                self.by_issue.entry(number).or_insert(index);
+            }
+            None => self
+                .unlinked
+                .entry(task.name.clone())
+                .or_default()
+                .push(index),
         }
         self.tasks.push(task);
     }
@@ -38,7 +45,11 @@ impl Tasks {
     /// Indexes the task at `index` under `issue`, which the caller is linking it to, and hands the task back for that write.
     pub fn link(&mut self, index: usize, issue: i64) -> &mut Task {
         self.by_issue.entry(issue).or_insert(index);
-        &mut self.tasks[index]
+        let task = &mut self.tasks[index];
+        if let Some(waiting) = self.unlinked.get_mut(&task.name) {
+            waiting.retain(|&i| i != index);
+        }
+        task
     }
 }
 
@@ -53,7 +64,7 @@ impl Index<usize> for Tasks {
 /// What `pull` does about one issue. `task` is an index into the `tasks` planned against, not a borrow, so the caller can write the row and keep its copy in step.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Pull {
-    /// Nothing tracks this issue and no task shares its title: it becomes a new task at `status`, taking the issue body as description.
+    /// Nothing tracks this issue and no single unlinked task has its title: it becomes a new task at `status`, taking the issue body as description.
     Create {
         status: TaskStatus,
     },
@@ -61,7 +72,7 @@ pub enum Pull {
     /// An existing task to write back; at least one of the three is set, else `Unchanged`.
     Update {
         task: usize,
-        /// The task has the issue's exact title but no issue number (the same work entered on both sides): linking beats creating a duplicate.
+        /// The one task with the issue's exact title and no issue number (the same work entered on both sides): linking beats creating a duplicate.
         link: bool,
         /// Set when the issue's open/closed state changes the status.
         status: Option<TaskStatus>,
@@ -70,24 +81,18 @@ pub enum Pull {
     },
 
     Unchanged,
-
-    /// A task has this issue's title but tracks a different issue: reported and left alone (two issues sharing a title land here too).
-    Conflict {
-        task: usize,
-    },
 }
 
-/// What `pull` should do about `issue`. The issue number is the identity (names and titles are editable), so a link survives renames; the title is consulted only for an issue no task has claimed.
+/// What `pull` should do about `issue`. The issue number is the identity (names and titles are editable), so a link survives renames; the title is consulted only for an issue no task has claimed, and only when it names one unlinked task.
 pub fn plan_pull(tasks: &Tasks, issue: &Issue, body: bool) -> Pull {
     if let Some(&index) = tasks.by_issue.get(&issue.number) {
         return plan_update(tasks, index, issue, false, body);
     }
-    match tasks.by_name.get(&issue.title).copied() {
-        Some(index) if tasks[index].github_issue.is_some() => Pull::Conflict { task: index },
-        Some(index) => plan_update(tasks, index, issue, true, body),
+    match tasks.unlinked.get(&issue.title).map(Vec::as_slice) {
+        Some(&[index]) => plan_update(tasks, index, issue, true, body),
         // A brand-new task starts from `queue`, so a closed issue arrives
         // as `done` and an open one as `queue`.
-        None => Pull::Create {
+        _ => Pull::Create {
             status: status_for_issue_state(TaskStatus::Queue, issue.state),
         },
     }

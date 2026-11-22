@@ -755,8 +755,9 @@ fn task_round_trips_and_is_found_by_project_and_name() {
     let task_id = insert_task(&db, project_id, "build it");
 
     let found = db
-        .find_task(project_id, "build it")
+        .find_tasks(project_id, "build it")
         .expect("lookup succeeds")
+        .pop()
         .expect("the task just inserted exists");
     assert_eq!(found.id, Some(task_id));
     assert_eq!(found.project_id, project_id);
@@ -1406,8 +1407,10 @@ fn save_task_writes_the_row_and_its_tags_together() {
     task.name = "z".into();
     let bare = db.save_task(None, &task, &[]).expect("bare");
     assert!(db.tags_for_task(bare).expect("tags").is_empty());
-    // A duplicate name is refused and leaves nothing behind.
-    assert!(db.save_task(None, &task, &urgent).is_err());
+    // A tag that does not exist is refused and leaves no task behind (titles may repeat now).
+    let before = db.tasks_for_project(project).expect("rows").len();
+    assert!(db.save_task(None, &task, &[9999]).is_err());
+    assert_eq!(db.tasks_for_project(project).expect("rows").len(), before);
 }
 
 #[cfg(feature = "web")]
@@ -1573,8 +1576,9 @@ fn task_schedule_round_trips_and_migrates_onto_an_old_tasks_table() {
     task.duration = Some(Duration(90));
     db.insert(&task).expect("insert");
     let found = db
-        .find_task(project_id, "scheduled")
+        .find_tasks(project_id, "scheduled")
         .expect("lookup")
+        .pop()
         .expect("exists");
     assert_eq!(found.start_time, Some(dt("2026-09-28 09:30")));
     assert_eq!(found.duration, Some(Duration(90)));

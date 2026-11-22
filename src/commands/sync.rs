@@ -59,7 +59,7 @@ pub(crate) fn task_pull(
     let branch_prefix = git::branch_prefix(&project.branch_template);
 
     let issues = issues_to_pull(gh, db, &project, task_name)?;
-    // read once, then kept current: each issue is planned against what the ones before did, so two issues sharing a title read as a clash
+    // read once, then kept current: each issue is planned against what the ones before did, so a second issue sharing a title finds the unlinked task already taken and creates its own
     let mut tasks = sync::Tasks::new(db.tasks_for_project(project_id)?);
 
     let (mut created, mut updated) = (0, 0);
@@ -105,14 +105,6 @@ pub(crate) fn task_pull(
                     updated += 1;
                 }
                 sync::Pull::Unchanged => {}
-                sync::Pull::Conflict { task } => eprintln!(
-                    "warning: issue #{} skipped -- task '{}' has the same name but tracks issue #{}",
-                    issue.number,
-                    task_display(&project, &tasks[task]),
-                    tasks[task]
-                        .github_issue
-                        .expect("a conflicting task is a linked one")
-                ),
             }
         }
         Ok(())

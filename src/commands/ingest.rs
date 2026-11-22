@@ -3,9 +3,9 @@
 use crate::agent::error::AgentError;
 use crate::app::App;
 use crate::args::HarnessOpts;
+use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::models::{Project, Task};
-use crate::utils::resolve::task_display;
 use crate::utils::resolve::{resolve_project_or_current, resolve_task};
 use crate::wiki::ingest;
 use crate::wiki::ingest_job::{
@@ -92,7 +92,7 @@ pub fn ingest(
     let name = task
         .as_ref()
         .filter(|_| sketches.is_some())
-        .map(|t| task_display(&target.project, t));
+        .map(|t| t.id().to_string());
     let prompt = ingest::ingest_prompt(&text.job(&target), &waiting, name.as_deref());
     println!(
         "ingesting {} notes of {}...",

@@ -2,10 +2,10 @@
 
 use crate::agent::error::AgentError;
 use crate::agent::plan::{self, Plan, Progress, State};
-use crate::agent::prompt;
 use crate::agent::task_prompt::{locate, prompt_text};
 use crate::agent::taskdir::{TaskDir, mark_step, save_plan};
 use crate::app::App;
+use crate::db::Table;
 use crate::error::Result;
 use crate::md_edit::edit_text;
 use crate::utils::output::{Format as DataFormat, emit};
@@ -67,7 +67,7 @@ pub struct PlanRequest<'a> {
 pub fn plan(app: &App, req: &PlanRequest) -> Result<()> {
     let (project, task, dir) = locate(app, req.task)?;
     let name = task_display(&project, &task);
-    let word = prompt::shell_word(&name);
+    let word = task.id().to_string();
     if let [step, state] = req.mark {
         let state = <State as clap::ValueEnum>::from_str(state, true)
             .map_err(|_| AgentError::UnknownState(state.clone()))?;

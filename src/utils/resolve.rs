@@ -3,12 +3,14 @@
 
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::models::{Project, ProjectGroup, Task, split_task_ref, task_ref};
+use crate::models::{
+    Project, ProjectGroup, Task, bare_id, split_label, split_task_ref, task_label,
+};
 use crate::{git, tmux};
 
-/// A task as `<project>/<task>`, the syntax [`parse_task_ref`] reads back.
+/// A task as `<project>/<title> #<id>`, which [`resolve_task`] reads back.
 pub(crate) fn task_display(project: &Project, task: &Task) -> String {
-    task_ref(&project.name, &task.name)
+    task_label(&project.name, &task.name, task.id())
 }
 
 /// The task's issue number, or the "no linked issue" error.
@@ -21,23 +23,21 @@ pub(crate) fn parse_task_ref(reference: &str) -> Result<(&str, &str)> {
     split_task_ref(reference).ok_or_else(|| IterError::InvalidTaskRef(reference.to_string()))
 }
 
-/// A task by `<project>/<task>`, or by its number (`12`: what a command run
-/// by an agent says, with no space to quote).
-pub(crate) fn resolve_task(db: &Db, task_ref: &str) -> Result<(Project, Task)> {
-    if !task_ref.is_empty()
-        && task_ref.bytes().all(|b| b.is_ascii_digit())
-        && let Ok(id) = task_ref.parse::<i64>()
-    {
+/// A task by its id (`12` or `#12`: what a command run by an agent says, with no space to quote),
+/// or by `<project>/<title>` (refused when the title repeats) or `<project>/<title> #<id>` (the id
+/// wins over a stale title).
+pub(crate) fn resolve_task(db: &Db, text: &str) -> Result<(Project, Task)> {
+    if let Some(id) = bare_id(text) {
         let task: Task = db.get(id)?.ok_or_else(|| IterError::NotFound {
             kind: "task",
-            name: task_ref.to_string(),
+            name: text.to_string(),
         })?;
         let project = follow(db, task.project_id, "project", "task")?;
         return Ok((project, task));
     }
-    let (project_name, task_name) = parse_task_ref(task_ref)?;
+    let (project_name, rest) = parse_task_ref(text)?;
     let project = db.resolve::<Project>(project_name)?;
-    let task = find_task_or_err(db, &project, task_name)?;
+    let task = find_task_or_err(db, &project, rest)?;
     Ok((project, task))
 }
 
@@ -198,12 +198,44 @@ pub(crate) fn resolve_group_or_current<G: ProjectGroup>(db: &Db, name: Option<&s
     follow(db, id, G::KIND, "project")
 }
 
-pub(crate) fn find_task_or_err(db: &Db, project: &Project, name: &str) -> Result<Task> {
-    db.find_task(project.id(), name)?
-        .ok_or_else(|| IterError::TaskNotFound {
+/// A task of `project` by what `--task` or a path says: `#12`, `<title> #12`, a plain `12` (the id
+/// when the project has that task, else a title) or a title, which must be unique.
+pub(crate) fn find_task_or_err(db: &Db, project: &Project, text: &str) -> Result<Task> {
+    let in_project = |id| {
+        db.get::<Task>(id)
+            .map(|task| task.filter(|t| t.project_id == project.id()))
+    };
+    let labelled = match text.starts_with('#') {
+        true => bare_id(text),
+        false => split_label(text).map(|(_, id)| id),
+    };
+    if let Some(id) = labelled {
+        return in_project(id)?.ok_or_else(|| IterError::TaskNotFound {
             project: project.name.clone(),
-            task: name.to_string(),
-        })
+            task: text.to_string(),
+        });
+    }
+    match bare_id(text).map(in_project).transpose()?.flatten() {
+        Some(task) => Ok(task),
+        None => one_titled(db, project, text),
+    }
+}
+
+/// The one task of `project` titled `title`; the ids of the several are in the error.
+fn one_titled(db: &Db, project: &Project, title: &str) -> Result<Task> {
+    let mut found = db.find_tasks(project.id(), title)?;
+    match found.len() {
+        0 => Err(IterError::TaskNotFound {
+            project: project.name.clone(),
+            task: title.to_string(),
+        }),
+        1 => Ok(found.remove(0)),
+        _ => Err(IterError::AmbiguousTask {
+            project: project.name.clone(),
+            title: title.to_string(),
+            ids: found.iter().map(Task::id).collect(),
+        }),
+    }
 }
 
 /// The project a `task pull`/`push` runs against: resolved as usual, then held to `github` and a

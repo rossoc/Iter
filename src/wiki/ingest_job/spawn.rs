@@ -47,8 +47,8 @@ fn ingest_command(
     let mut command = std::process::Command::new(exe);
     command.args(["wiki", "ingest"]);
     match task {
-        // `--flag=value`, so a name starting with `-` is a value, not a flag
-        Some(task) => command.arg(format!("--task={}", task_display(project, task))),
+        // `--flag=value`, so a name starting with `-` is a value, not a flag; a task goes by its id
+        Some(task) => command.arg(format!("--task={}", task.id())),
         None => command.arg(format!("--project={}", project.name)),
     };
     if let Some(agent) = opts.agent {

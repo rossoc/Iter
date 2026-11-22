@@ -8,7 +8,7 @@ use crate::app::App;
 use crate::db::Table;
 use crate::error::Result;
 use crate::models::{Project, Task};
-use crate::utils::resolve::{resolve_task_or_current, task_display};
+use crate::utils::resolve::resolve_task_or_current;
 use std::path::Path;
 
 pub fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)> {
@@ -18,10 +18,10 @@ pub fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)>
 }
 
 /// What the project's wiki knows about the task, for the prompt. The only place the agent side reaches for the wiki; never fails: any problem gives no text.
-fn onboarding(app: &App, project: &Project, task: &Task) -> String {
+fn onboarding(app: &App, task: &Task) -> String {
     use crate::wiki::{retrieve, scope};
     let spec = scope::Spec {
-        task: Some(task_display(project, task)),
+        task: Some(task.id().to_string()),
         ..scope::Spec::default()
     };
     let Ok(wiki) = scope::wiki(&app.db, &spec) else {
@@ -147,7 +147,7 @@ pub fn fill(
         .find_session_config_by_task(task.id())?
         .and_then(|s| s.worktree_path);
     let known = match onboarding_wanted {
-        true => onboarding(app, project, task),
+        true => onboarding(app, task),
         false => String::new(),
     };
     // computed only when asked for: it reads the whole wiki
@@ -157,7 +157,7 @@ pub fn fill(
         }
         false => String::new(),
     };
-    let shown = task_display(project, task);
+    let shown = task.id().to_string();
     let plan_path = dir.plan_path();
     let ctx = Context {
         task: &shown,

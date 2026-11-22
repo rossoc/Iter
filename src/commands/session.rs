@@ -185,12 +185,15 @@ fn adopt_workspace(
     Ok(())
 }
 
-/// The tmux session name for a task, not `task_display`: tmux treats `/` as a hierarchy separator, so each half is flattened.
-/// A tmux identifier, not a `<project>/<task>` ref; `parse_task_ref` is not its inverse.
+/// The tmux session name of a new session, `<project>/<id> <title>`, not `task_display`: tmux
+/// treats `/` as a hierarchy separator, so each half is flattened. The id keeps it unique when
+/// titles repeat. A tmux identifier, not a task reference; names already stored are read back from
+/// the database, never recomputed.
 fn tmux_session_name(project: &Project, task: &Task) -> String {
     format!(
-        "{}/{}",
+        "{}/{} {}",
         tmux_name_part(&project.name),
+        task.id(),
         tmux_name_part(&task.name)
     )
 }

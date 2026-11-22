@@ -6,11 +6,10 @@ use crate::agent::error::AgentError;
 use crate::agent::exec;
 use crate::agent::run::{Harness, Invocation, alive};
 use crate::app::App;
-use crate::db::Db;
+use crate::db::{Db, Table};
 use crate::error::Result;
 use crate::models::{Project, Task};
 use crate::process;
-use crate::utils::resolve::task_display;
 use crate::wiki::graph::Wiki;
 use crate::wiki::ingest::{self, Mode};
 use crate::wiki::scope::{self, Spec};
@@ -124,7 +123,7 @@ pub fn task_ingest_text(db: &Db, project: &Project, task: &Task) -> Option<Strin
     Some(ingest::ingest_prompt(
         &text.job(&target),
         &waiting,
-        Some(&task_display(project, task)),
+        Some(&task.id().to_string()),
     ))
 }
 

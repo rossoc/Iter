@@ -1,6 +1,7 @@
 //! Schema migrations: the versioned history and the steps it runs.
 
 use super::*;
+use std::path::PathBuf;
 
 impl Db {
     /// Brings the schema up to date. `PRAGMA user_version` counts the [`Self::MIGRATIONS`] run, so an
@@ -8,20 +9,54 @@ impl Db {
     /// and its version bump share one `IMMEDIATE` transaction: the write lock is taken up front
     /// (where `busy_timeout` waits; a mid-step upgrade fails outright) and the version re-read
     /// under it, so a concurrent process skips a step already run.
+    ///
+    /// Foreign keys are off for the whole run and on again after it: inside a transaction the
+    /// pragma is a no-op, and a table rebuild ([`Self::task_titles_repeat`]) would otherwise
+    /// cascade-delete every row that points at the dropped table.
     pub(super) fn migrate(&self) -> Result<()> {
         if self.user_version()? >= Self::MIGRATIONS.len() {
             return Ok(());
         }
-        loop {
+        self.conn.execute_batch("PRAGMA foreign_keys = OFF")?;
+        let run = self.run_pending_steps();
+        self.conn.execute_batch("PRAGMA foreign_keys = ON")?;
+        run
+    }
+
+    fn run_pending_steps(&self) -> Result<()> {
+        for first in std::iter::successors(Some(true), |_| Some(false)) {
             let tx = Transaction::new_unchecked(&self.conn, TransactionBehavior::Immediate)?;
             let done = self.user_version()?;
             let Some(step) = Self::MIGRATIONS.get(done) else {
                 return Ok(());
             };
+            if first {
+                self.keep_a_copy()?;
+            }
             step(self)?;
             tx.execute_batch(&format!("PRAGMA user_version = {}", done + 1))?;
             tx.commit()?;
         }
+        Ok(())
+    }
+
+    /// Copies a database that holds tasks to `<db>.before-v7` before the first step that changes
+    /// it, once: an existing copy is kept. The copy is made on a second connection (`VACUUM INTO`
+    /// reads, so it runs beside our write lock) under a temporary name and renamed into place.
+    fn keep_a_copy(&self) -> Result<()> {
+        let Some(path) = self.conn.path().filter(|p| !p.is_empty()) else {
+            return Ok(());
+        };
+        let copy = PathBuf::from(format!("{}.before-v7", path));
+        if copy.exists() || !self.table_exists("tasks")? {
+            return Ok(());
+        }
+        let partial = PathBuf::from(format!("{}.{}", copy.display(), std::process::id()));
+        let _ = std::fs::remove_file(&partial);
+        Connection::open(path)?.execute("VACUUM INTO ?1", params![partial.to_string_lossy()])?;
+        crate::utils::fs::make_private(&partial)?;
+        std::fs::rename(&partial, &copy)?;
+        Ok(())
     }
 
     pub(super) fn user_version(&self) -> Result<usize> {
@@ -39,6 +74,7 @@ impl Db {
         Self::add_notes_path,
         Self::add_platform,
         Self::add_pushes,
+        Self::task_titles_repeat,
     ];
 
     /// `notes_path` on projects and organizations.
@@ -64,6 +100,76 @@ impl Db {
              CREATE INDEX IF NOT EXISTS idx_pushes_organization ON pushes(organization_id, hash);",
         )?;
         Ok(())
+    }
+
+    /// Two tasks of a project may share a title: `tasks` is rebuilt without `UNIQUE (project_id,
+    /// name)`, keeping every id (tags, session configs and sessions point at them) and the id
+    /// sequence, so a deleted task's id is never handed out again. Foreign keys are off (see
+    /// [`Self::migrate`]); the rebuild must leave no new violation.
+    pub(super) fn task_titles_repeat(&self) -> Result<()> {
+        self.add_missing_columns()?;
+        let before = self.foreign_key_violations()?;
+        let sequence: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT seq FROM sqlite_sequence WHERE name = 'tasks'",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?;
+        // a database older than the baseline's columns lacks some of the original ones too
+        let kept = |column: &str, default: &str| -> Result<String> {
+            Ok(if self.column_exists("tasks", column)? {
+                column.to_string()
+            } else {
+                default.to_string()
+            })
+        };
+        let (description, github_issue, status) = (
+            kept("description", "''")?,
+            kept("github_issue", "NULL")?,
+            kept("status", "'queue'")?,
+        );
+        self.conn.execute_batch(&format!(
+            "CREATE TABLE tasks_rebuilt (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                name          TEXT NOT NULL,
+                description   TEXT NOT NULL DEFAULT '',
+                github_issue  INTEGER,
+                status        TEXT NOT NULL DEFAULT 'queue' CHECK (status IN ('queue', 'wip', 'done')),
+                matrix_placed INTEGER NOT NULL DEFAULT 0,
+                start_time    TEXT,
+                duration      INTEGER,
+                branch_prefix TEXT NOT NULL DEFAULT ''
+             );
+             INSERT INTO tasks_rebuilt (id, project_id, name, description, github_issue, status,
+                                        matrix_placed, start_time, duration, branch_prefix)
+                SELECT id, project_id, name, {description}, {github_issue}, {status}, matrix_placed,
+                       start_time, duration, branch_prefix
+                FROM tasks;
+             DROP TABLE tasks;
+             ALTER TABLE tasks_rebuilt RENAME TO tasks;",
+            ))?;
+        if let Some(seq) = sequence {
+            self.conn.execute(
+                "UPDATE sqlite_sequence SET seq = MAX(seq, ?1) WHERE name = 'tasks'",
+                params![seq],
+            )?;
+        }
+        if self.foreign_key_violations()? > before {
+            return Err(rusqlite::Error::SqliteFailure(
+                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CONSTRAINT_FOREIGNKEY),
+                Some("rebuilding tasks broke a foreign key".into()),
+            )
+            .into());
+        }
+        Ok(())
+    }
+
+    fn foreign_key_violations(&self) -> Result<usize> {
+        let mut stmt = self.conn.prepare("PRAGMA foreign_key_check")?;
+        Ok(stmt.query_map([], |_| Ok(()))?.count())
     }
 
     /// Everything before versioning; idempotent. The `CREATE TABLE`s hold the original columns;

@@ -81,8 +81,6 @@ pub enum IterError {
     #[error("expected <project>/<task>, got '{0}'")]
     InvalidTaskRef(String),
 
-    // stub: I1 (task ids): nothing returns it yet; the tests of R2 expect it.
-    #[allow(dead_code)]
     #[error("{} tasks in '{project}' are titled '{title}': {} -- name one by its id", .ids.len(), ids_list(.ids))]
     AmbiguousTask {
         project: String,

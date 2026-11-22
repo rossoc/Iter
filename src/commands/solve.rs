@@ -7,6 +7,7 @@ use crate::agent::task_prompt::{instruction_for, locate};
 use crate::app::App;
 use crate::args::RunEnd;
 use crate::commands::ingest::say_auto;
+use crate::db::Table;
 use crate::error::Result;
 use crate::md_edit::{edit_text, split_front};
 use crate::models::Project;
@@ -175,7 +176,7 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
         println!(
             "No runs of {} yet: `iter task solve {} -i develop`.",
             task_display(&project, &task),
-            crate::agent::prompt::shell_word(&task_display(&project, &task))
+            task.id()
         );
     }
     for r in runs {
