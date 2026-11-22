@@ -1,4 +1,4 @@
-//! Colored chips; the text color comes from `ink.rs`.
+//! Colored chips; the text color comes from `ui/ink.rs`.
 
 use crate::prelude::*;
 

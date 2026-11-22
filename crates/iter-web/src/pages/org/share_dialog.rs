@@ -1,5 +1,5 @@
 //! The Share pop-up of the Report tab and what a share answers with: the data (`ShareForm`,
-//! `ShareDialog`, `Outcome`) and the views. The push itself is `org_share.rs`, which renders
+//! `ShareDialog`, `Outcome`) and the views. The push itself is `pages/org/org_share.rs`, which renders
 //! the host page; this module imports neither it nor the host.
 
 use crate::pages::org::platform_pick;

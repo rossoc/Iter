@@ -1,4 +1,4 @@
-//! The inputs of the Settings group shared by the organization and project forms: the write-side twin of `settings_panel.rs`.
+//! The inputs of the Settings group shared by the organization and project forms: the write-side twin of `parts/settings_panel.rs`.
 
 use crate::{forms::SettingsForm as S, prelude::*};
 use iter_core::models::Settings;

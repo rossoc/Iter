@@ -1,4 +1,4 @@
-//! What the two task pop-ups (`pages/task/task_notes.rs`, `task_sessions.rs`, both `form_modal`) put on
+//! What the two task pop-ups (`pages/task/task_notes.rs`, `pages/task/task_sessions.rs`, both `form_modal`) put on
 //! the page: the modal's id and title, the form's action's action, its fields, the submit label and the way back.
 //!
 //! Like `toast_tests`, each test runs again in a child process whose config folder and database

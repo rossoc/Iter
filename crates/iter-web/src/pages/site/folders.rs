@@ -1,4 +1,4 @@
-//! `POST /folders/pick`: opens the system folder chooser (`folder_picker.rs`) for a path field (`ui/field.rs`).
+//! `POST /folders/pick`: opens the system folder chooser (`pages/site/folder_picker.rs`) for a path field (`ui/field.rs`).
 
 use crate::{
     assets::json,

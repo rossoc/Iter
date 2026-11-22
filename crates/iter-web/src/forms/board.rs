@@ -1,4 +1,4 @@
-//! The board edit form.
+//! The board edit form: its fields and how they land on a `Board`.
 
 use super::{DESCRIPTION, NAME, PROJECTS, Pairs, text};
 use crate::{forms::edit::EditForm, prelude::*};

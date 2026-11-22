@@ -1,4 +1,4 @@
-//! The organization edit form.
+//! The organization edit form: its fields and how they land on an `Organization`.
 
 use super::{DESCRIPTION, NAME, PROJECTS, Pairs, SettingsForm, text};
 use crate::{forms::edit::EditForm, prelude::*};

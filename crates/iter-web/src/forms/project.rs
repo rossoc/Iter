@@ -1,4 +1,4 @@
-//! The project edit form.
+//! The project edit form: its fields and how they land on a `Project`.
 
 use super::{SettingsForm, text};
 use crate::{

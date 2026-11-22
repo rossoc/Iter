@@ -1,3 +1,5 @@
+//! Tests of the instruction pages: the list, the page of one and the forms that write them.
+
 use super::*;
 use iter_core::fixtures;
 

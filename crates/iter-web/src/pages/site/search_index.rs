@@ -1,4 +1,4 @@
-//! `GET /search?q=`: the palette's results as JSON, read from the database and notes folders on each request and ranked by `search.rs`.
+//! `GET /search?q=`: the palette's results as JSON, read from the database and notes folders on each request and ranked by `iter_core::front::search`.
 
 use crate::{assets::json, prelude::*};
 use iter_core::{

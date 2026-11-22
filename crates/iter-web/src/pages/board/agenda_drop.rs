@@ -1,4 +1,4 @@
-//! The agenda's POST route (`POST /board/{id}/schedule`); the form and transaction are in `drop.rs`.
+//! The agenda's POST route (`POST /board/{id}/schedule`); the form and transaction are in `pages/board/drop.rs`.
 
 use crate::{
     pages::board::{

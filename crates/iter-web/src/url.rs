@@ -99,7 +99,7 @@ pub fn board_edit_url(id: i64) -> String {
     edit_url(&board_url(id))
 }
 
-/// Every link into the Tasks tab spells out the default search (`task_query::DEFAULT`), since a list with no `q` is unfiltered.
+/// Every link into the Tasks tab spells out the default search (`iter_core::front::query::DEFAULT`), since a list with no `q` is unfiltered.
 pub fn tasks_tab_url(base: &str) -> String {
     tasks_list_url(base, Some(DEFAULT))
 }

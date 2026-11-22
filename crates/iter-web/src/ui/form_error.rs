@@ -1,3 +1,5 @@
+//! A refused form: the message, and the control it is about (marked invalid, pointed at by the error notice).
+
 use iter_core::error::IterError;
 
 /// `field` is the `name` of the control the error is about, if any; controls and the error notice use it.

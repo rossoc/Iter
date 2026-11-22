@@ -1,4 +1,4 @@
-// The search palette (search.rs): `/` or the bar's button opens it; the query goes to
+// The search palette (`pages/site/search_index.rs`): `/` or the bar's button opens it; the query goes to
 // GET /search?q= and the selected page shows in the frame beside the list.
 //   - Up/Down (or Ctrl-N/Ctrl-P) move, Enter opens (Shift/Ctrl/Cmd+Enter in a new tab), Esc closes;
 //   - Tab completes a kind word (`pr` -> `project `), else moves into the interactive preview.

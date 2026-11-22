@@ -1,4 +1,4 @@
-//! The organization page (`/org/{id}`): route, loading and view of the tabs; the Report tab is `org_report.rs`.
+//! The organization page (`/org/{id}`): route, loading and view of the tabs; the Report tab is `pages/org/org_report.rs`.
 
 use crate::{
     assets::{Asset, serve},

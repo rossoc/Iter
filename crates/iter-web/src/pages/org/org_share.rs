@@ -1,5 +1,5 @@
 //! Sharing the Report tab's period (`POST /org/{id}/share`): copy it as text, or push it to the
-//! organization's time platform. The pop-up and its data are `share_dialog.rs`.
+//! organization's time platform. The pop-up and its data are `pages/org/share_dialog.rs`.
 
 use crate::{
     pages::org::{

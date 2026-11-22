@@ -1,4 +1,4 @@
-//! What the edit forms submit, and how it lands on a model.
+//! What the edit forms submit and how it lands on a model: one form per entity, the `Pairs` they parse from, and the helpers they share.
 
 use iter_core::{
     error::{IterError, Result},
@@ -9,11 +9,13 @@ use serde::Deserialize;
 mod board;
 pub mod edit;
 mod org;
+mod pairs;
 mod project;
 mod task;
 
 pub use board::BoardForm;
 pub use org::OrgForm;
+pub(crate) use pairs::Pairs;
 pub use project::ProjectForm;
 pub use task::TaskForm;
 
@@ -30,33 +32,6 @@ pub(crate) fn ticked<'de, D: serde::Deserializer<'de>>(
 /// YAML editor) use LF.
 pub fn text(value: &str) -> String {
     value.replace("\r\n", "\n")
-}
-
-struct Pairs<'a>(&'a [(String, String)]);
-
-impl Pairs<'_> {
-    fn first(&self, key: &str) -> String {
-        self.get(key).unwrap_or_default().to_string()
-    }
-
-    fn get(&self, key: &str) -> Option<&str> {
-        self.0
-            .iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v.as_str())
-    }
-
-    fn ids(&self, key: &str) -> Vec<i64> {
-        let mut ids: Vec<i64> = self
-            .0
-            .iter()
-            .filter(|(k, _)| k == key)
-            .filter_map(|(_, v)| v.parse().ok())
-            .collect();
-        ids.sort_unstable();
-        ids.dedup();
-        ids
-    }
 }
 
 pub fn names(value: &str) -> Vec<String> {
