@@ -9,7 +9,7 @@ use super::org::{load as load_org, screen as org_screen};
 use super::project::{load as load_project, screen as project_screen};
 use super::sections::Section;
 use super::task_query::DEFAULT;
-use super::{now, open_db};
+use super::{fresh_db, now};
 use crate::db::Table;
 use serde::Deserialize;
 use topcoat::{
@@ -67,7 +67,7 @@ async fn save(Form(new): Form<NewTask>) -> Result<impl View> {
         form: typed,
         ..
     } = new;
-    let db = open_db()?;
+    let db = fresh_db()?;
     let project = project_of(&db, id)?;
     let start = template(&project);
     let refused = create_to(

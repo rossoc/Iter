@@ -4,8 +4,8 @@ use super::Id;
 use super::create::{TaskCreate, TaskHome, task_modal};
 use super::crumbs::trail;
 use super::daily_notes::{NotesTab, notes_section};
+use super::fresh_db;
 use super::load::{Parents, parents_of, tasks_or_count};
-use super::open_db;
 use super::project_wiki::{self, WikiTab, wiki_tab};
 use super::sections::{Section, TabQuery};
 use super::sections::{section_tabs, settings_tab};
@@ -80,7 +80,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<TabQuery>(cx)?;
     let tab = section(query.tab.as_deref());
-    let page = load(&open_db()?, id, tab, query.q.as_deref())?;
+    let page = load(&fresh_db()?, id, tab, query.q.as_deref())?;
     let Loaded {
         parents: Parents { project, org },
         tasks,

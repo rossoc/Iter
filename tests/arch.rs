@@ -575,7 +575,6 @@ fn sqltypes_sit_in_models_and_md_edit_is_split() {
 /// Step 3: a library does not exit the process. `config::load` and `App::open` return errors and
 /// only `main` (in the interface) turns one into an exit code.
 #[test]
-#[ignore = "isolation: round I3"]
 fn only_the_interface_exits_the_process() {
     let sources = sources();
     let found: Vec<String> = sources
@@ -590,7 +589,6 @@ fn only_the_interface_exits_the_process() {
 
 /// Step 3: `open_db` and the exiting `App::new` are gone; `db` no longer reads the config.
 #[test]
-#[ignore = "isolation: round I3"]
 fn the_database_does_not_open_itself_from_the_config() {
     let sources = sources();
     none(

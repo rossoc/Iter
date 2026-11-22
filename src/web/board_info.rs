@@ -3,8 +3,8 @@
 use super::Id;
 use super::board_header::{BoardSection, board_header};
 use super::create::{Home, ProjectCreate, project_modal};
+use super::fresh_db;
 use super::load::board_of;
-use super::open_db;
 use super::project_rows::{project_search, projects_section};
 use super::sections::InfoQuery;
 use super::text::NO_PROJECTS;
@@ -28,7 +28,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
 async fn info_page(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<InfoQuery>(cx)?;
-    let (board, projects) = load(&open_db()?, id)?;
+    let (board, projects) = load(&fresh_db()?, id)?;
     let create = match query.new.as_deref() {
         Some("project") => {
             Some(Home::Board(id).create(query.name.as_deref(), query.base_path.as_deref())?)

@@ -4,7 +4,7 @@ use super::ui::field::{field, textarea};
 use super::ui::form::form_shell;
 use super::ui::modal::modal;
 use super::url::{sessions_tab_url, task_url};
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::models::{Session, Task};
 use chrono::NaiveDateTime;
 use serde::Deserialize;
@@ -76,7 +76,7 @@ fn parse(task_id: i64, form: &SessionForm) -> std::result::Result<Session, Strin
 #[route(POST "/task/{id}/sessions")]
 async fn add_session(cx: &Cx, Form(form): Form<SessionForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
-    let db = open_db()?;
+    let db = fresh_db()?;
     db.get::<Task>(id)?.ok_or_not_found()?;
     let session = parse(id, &form).map_err(bad_request)?;
     db.insert(&session)?;

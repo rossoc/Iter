@@ -44,6 +44,7 @@ use args::{Args, Command, ProjectCommand};
 use clap::{CommandFactory, Parser};
 use clap_complete::env::CompleteEnv;
 use commands::{Run, misc, project, task};
+use error::IterError;
 use models::TaskStatus;
 use std::process::ExitCode;
 
@@ -58,7 +59,17 @@ fn main() -> ExitCode {
     CompleteEnv::with_factory(cli).complete();
 
     let args = Args::parse();
-    let app = &App::new();
+    let app = &match App::open() {
+        Ok(app) => app,
+        Err(e @ IterError::OpenDb { .. }) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
 
     let result = match &args.command {
         Command::Init { organization } => project::init_cmd(app, organization.as_deref()),

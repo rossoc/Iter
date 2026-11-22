@@ -1,6 +1,6 @@
 //! What both boards' POST routes share: the posted form, and loading and storing the moved task in one transaction.
 
-use super::open_db;
+use super::fresh_db;
 use crate::models::{Priority, Task};
 use serde::Deserialize;
 use topcoat::{
@@ -25,7 +25,7 @@ pub fn drop_on(
     drop: &Drop,
     apply: impl FnOnce(&mut Task, &str) -> std::result::Result<Option<Priority>, String>,
 ) -> Result<Json<bool>> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let (mut task, project) = super::load::task_with_project(&db, drop.task_id)?;
     (project.board_id == Some(board_id))
         .then_some(())

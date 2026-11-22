@@ -1,7 +1,7 @@
 //! Suggestions from the organization's time platform for the project and activity fields (settings form, Share pop-up); a platform that cannot answer gives none.
 
 use super::assets::{Asset, json, serve};
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::models::Organization;
 use crate::platform::{JsonWebhook, PlatformItem};
 use crate::push;
@@ -83,7 +83,7 @@ struct Activities {
 async fn activities_of(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<ProjectQuery>(cx)?;
-    let db = open_db()?;
+    let db = fresh_db()?;
     let names = match db.get::<Organization>(id)? {
         Some(org) => lists(&org, query.project.as_deref().unwrap_or_default())
             .1

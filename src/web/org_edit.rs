@@ -12,7 +12,7 @@ use super::ui::breadcrumb::Crumb;
 use super::ui::field::{CheckOption, field, path_field};
 use super::ui::form_error::FormError;
 use super::url::{notes_tab_url, org_edit_url, org_url, projects_tab_url, tasks_tab_url};
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::db::Table;
 use crate::models::{Configured, Organization};
 use topcoat::{
@@ -59,7 +59,7 @@ pub async fn screen(
     let base = org_url(stored.id());
     let crumbs = [Crumb::label("Organization")];
     let settings = org.settings();
-    let db = open_db()?;
+    let db = fresh_db()?;
     let (projects_n, tasks_n) = (
         db.projects_in::<Organization>(stored.id())?.len(),
         db.count_tasks_in::<Organization>(stored.id())?,

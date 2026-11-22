@@ -5,7 +5,7 @@
 
 use super::edit::{DESCRIPTION, NAME};
 use super::forms::{ProjectForm, TaskForm};
-use super::open_db;
+use super::fresh_db;
 use super::settings_fields::settings_fields;
 use super::task_fields::task_fields;
 use super::ui::field::{field, path_field, select, textarea};
@@ -77,7 +77,7 @@ impl Home {
     }
 
     pub(super) fn template(self) -> Result<Project> {
-        let db = open_db()?;
+        let db = fresh_db()?;
         let mut template = Project::template(&config().project);
         match self {
             Home::Org(id) => {

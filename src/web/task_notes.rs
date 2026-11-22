@@ -4,7 +4,7 @@ use super::ui::field::{field, textarea};
 use super::ui::form::form_shell;
 use super::ui::modal::modal;
 use super::url::{notes_tab_url, task_url};
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::agent::taskdir;
 use serde::Deserialize;
 use std::io::Write;
@@ -74,7 +74,7 @@ fn write(dir: &Path, form: &NoteForm) -> std::result::Result<(), String> {
 #[route(POST "/task/{id}/notes")]
 async fn add_note(cx: &Cx, Form(form): Form<NoteForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
-    let db = open_db()?;
+    let db = fresh_db()?;
     let (task, project) = super::load::task_with_project(&db, id)?;
     let dir = taskdir::of(&db, &project, &task)?;
     write(&dir.notes_dir(), &form).map_err(bad_request)?;

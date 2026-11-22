@@ -16,7 +16,7 @@ use super::ui::{PLAY, STOP, X};
 use super::url::{
     RunAction, agent_tab_url, agent_url, agents_url, page_url, run_action_url, task_url,
 };
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::agent::run::RunRecord;
 use crate::agent::taskdir;
 use topcoat::{
@@ -65,7 +65,7 @@ async fn use_row(u: &Use) -> Result<impl View> {
 #[page("/agents")]
 async fn list_page(cx: &Cx) -> Result<impl View> {
     let _ = cx;
-    let db = open_db()?;
+    let db = fresh_db()?;
     let uses = usage(&db, None);
     Ok(view! {
         list_screen(uses: &uses)
@@ -97,7 +97,7 @@ struct Loaded {
 }
 
 fn load(id: i64, n: u32) -> Result<Loaded> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let (task, project) = super::load::task_with_project(&db, id)?;
     let dir = taskdir::of(&db, &project, &task)?;
     let run = dir.read_run(n)?.ok_or_not_found()?;

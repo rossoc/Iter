@@ -17,7 +17,7 @@ use super::ui::tabs::{Tab, tabs};
 use super::url::{
     NoteTab, edit_url, note_tab_url, note_url, notes_tab_url, notes_today_url, org_url, project_url,
 };
-use super::{now, open_db};
+use super::{fresh_db, now};
 use crate::db::Db;
 use crate::models::{Organization, Project};
 use crate::notes::{self as journal, Note};
@@ -273,7 +273,7 @@ enum Kind {
 /// The owner named by the request's `{id}`.
 fn owner_of(cx: &Cx, kind: Kind) -> Result<Owner> {
     let id = *path_param::<Id>(cx)?;
-    let db = open_db()?;
+    let db = fresh_db()?;
     match kind {
         Kind::Project => Owner::project(&db, id),
         Kind::Org => Owner::org(&db, id),

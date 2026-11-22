@@ -1,7 +1,7 @@
 //! `GET /search?q=`: the palette's results as JSON, read from the database and notes folders on each request and ranked by `search.rs`.
 
 use super::assets::json;
-use super::open_db;
+use super::fresh_db;
 use super::search::{Entry, Hit, Kind, search};
 use super::url::{board_url, note_url, org_url, project_url, task_url};
 use crate::db::{Db, Table};
@@ -151,7 +151,7 @@ fn to_json(hits: &[Hit]) -> String {
 #[route(GET "/search")]
 async fn results(cx: &Cx) -> Result<Response> {
     let query = query_params::<SearchQuery>(cx)?;
-    let all = entries(&open_db()?)?;
+    let all = entries(&fresh_db()?)?;
     let hits = search(&all, query.q.as_deref().unwrap_or_default(), LIMIT);
     let body = to_json(&hits);
     json(cx, body, true)

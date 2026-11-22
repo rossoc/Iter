@@ -23,7 +23,7 @@ use super::ui::prose::description;
 use super::ui::tabs::tabs;
 use super::ui::tasks_tab::tasks_tab;
 use super::url::org_url;
-use super::{now, open_db};
+use super::{fresh_db, now};
 use crate::db::{Db, Table};
 use crate::models::{Configured, Organization, Project, Task};
 use crate::reporting::fmt_date;
@@ -93,7 +93,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
         other => other,
     };
     let now = now();
-    let db = open_db()?;
+    let db = fresh_db()?;
     let recorded = match (section, query.pushed.as_deref()) {
         (Section::Report, Some(hash)) => recorded(&db, id, hash)?,
         _ => None,

@@ -6,7 +6,7 @@ use super::org_report::{report_link, share_text};
 use super::sections::Section;
 use super::share_dialog::{Modality, Outcome, Preview, ShareForm, ShareFormat};
 use super::url::{org_url, page_url};
-use super::{Id, now, open_db};
+use super::{Id, fresh_db, now};
 use crate::db::Db;
 use crate::error::{IterError, Result as IterResult};
 use crate::github::{GhCli, IssueTracker};
@@ -140,7 +140,7 @@ fn pushed_url(db: &Db, id: i64, form: &ShareForm, outcome: &Outcome) -> IterResu
 async fn share(cx: &Cx, Form(pairs): Form<Vec<(String, String)>>) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let form = ShareForm::parse(&pairs);
-    let db = open_db()?;
+    let db = fresh_db()?;
     let now = now();
     let outcome = handle(&db, id, &form, now, &connect_real, &GhCli::system());
     // A push is answered with a redirect to the report, so a refresh repeats a GET, not the push.

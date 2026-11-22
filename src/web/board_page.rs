@@ -2,8 +2,8 @@
 
 use super::board_cards::{BOARD_EMPTY, Colors};
 use super::board_header::{BoardSection, board_header};
+use super::fresh_db;
 use super::load::{board_of, unfinished};
-use super::open_db;
 use super::pick::{Picked, picked_in};
 use super::ui::KANBAN;
 use super::ui::empty_state::empty_state;
@@ -31,7 +31,7 @@ pub fn load_board<D>(
     moved: Option<&str>,
     split: impl FnOnce(Vec<Card>) -> D,
 ) -> topcoat::Result<BoardPage<D>> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let board = board_of(&db, id)?;
     let colors = Colors::load(&db)?;
     let cards = unfinished(&db, id)?;

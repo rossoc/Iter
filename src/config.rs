@@ -186,37 +186,46 @@ fn parse(text: &str) -> std::result::Result<Config, serde_yaml::Error> {
     Ok(serde_yaml::from_str::<Option<Config>>(text)?.unwrap_or_default())
 }
 
-/// Reads the config file once and holds it for [`config`]; an unreadable or invalid file is an
-/// error the caller reports (a library never exits the process). Called by `App::open`.
-// stub: I3 (`config()` still loads lazily and exits)
-#[allow(dead_code)]
-pub fn load() -> Result<&'static Config> {
-    unimplemented!("stub: I3")
-}
-
 /// The process's config, replaceable by the settings page; each value is leaked once so
 /// `config()` can hand out `&'static` (a few hundred bytes per save).
 static CONFIG: OnceLock<RwLock<&'static Config>> = OnceLock::new();
 
-/// Read on first use and held. An unreadable config is fatal here: nothing downstream works
-/// without knowing where the database is.
-pub fn config() -> &'static Config {
-    let cell = CONFIG.get_or_init(|| {
-        let config = Config::load().unwrap_or_else(|e| {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        });
-        RwLock::new(Box::leak(Box::new(config)))
-    });
+/// Reads the config file the first time and holds it for [`config`]; later calls return what is
+/// held. An unreadable or invalid file is an error for the caller to report (a library never exits
+/// the process). `App::open` calls it, so every front end loads before it reads.
+pub fn load() -> Result<&'static Config> {
+    if let Some(cell) = CONFIG.get() {
+        return Ok(held(cell));
+    }
+    let config = Box::leak(Box::new(Config::load()?));
+    Ok(held(CONFIG.get_or_init(|| RwLock::new(config))))
+}
+
+fn held(cell: &RwLock<&'static Config>) -> &'static Config {
     *cell.read().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The loaded config. Reading it before [`load`] is a bug in the caller, so it panics.
+pub fn config() -> &'static Config {
+    held(CONFIG.get().expect("config() before config::load()"))
+}
+
+/// Holds the defaults as the process's config, for a test that reaches `config()` without a config
+/// file to arrange. A no-op once a config is held.
+#[cfg(test)]
+pub fn load_defaults() {
+    let _ = CONFIG.set(RwLock::new(Box::leak(Box::new(Config::default()))));
 }
 
 /// Makes `new` the process's config after the settings page saved it.
 #[cfg(feature = "web")]
 pub fn replace(new: Config) {
-    config();
-    if let Some(cell) = CONFIG.get() {
-        *cell.write().unwrap_or_else(|e| e.into_inner()) = Box::leak(Box::new(new));
+    let new = Box::leak(Box::new(new));
+    match CONFIG.get() {
+        Some(cell) => *cell.write().unwrap_or_else(|e| e.into_inner()) = new,
+        None => {
+            let _ = CONFIG.set(RwLock::new(new));
+        }
     }
 }
 

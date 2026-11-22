@@ -6,7 +6,7 @@ use super::ui::empty_line::empty_line;
 use super::ui::labelled::labelled_section;
 use super::ui::notice::notice;
 use super::url::{WikiAction, project_url, wiki_action_url, wiki_tab_url};
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::db::{Db, Table};
 use crate::models::Project;
 use crate::wiki::ingest::Mode;
@@ -195,7 +195,7 @@ pub async fn wiki_tab(tab: &WikiTab) -> Result<impl View> {
 async fn act(cx: &Cx) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let action = *path_param::<Action>(cx)?;
-    let db = open_db()?;
+    let db = fresh_db()?;
     let project = db.get::<Project>(id)?.ok_or_not_found()?;
     let done = match action {
         WikiAction::Accept => ingest_job::settle(&db, &project, true).map(|_| ()),

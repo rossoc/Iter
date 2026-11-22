@@ -1,7 +1,7 @@
 //! Instructions in the browser: the list (`/instructions`) and the page of one (`/instruction/{name}`).
 
 use super::crumbs::trail;
-use super::open_db;
+use super::fresh_db;
 use super::sections::TabQuery;
 use super::task_runs::{label_of, state_pill};
 use super::ui::breadcrumb::Crumb;

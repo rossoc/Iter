@@ -1,6 +1,6 @@
 //! The shape every edit page shares: `GET` loads a row and what its form shows; `POST` applies the form, saves (or creates) and redirects, or shows the form again with the error.
 
-use super::open_db;
+use super::fresh_db;
 use super::ui::form_error::FormError;
 use crate::db::{Db, Table};
 use topcoat::router::error::{RouterErrorExt, see_other};
@@ -59,7 +59,7 @@ pub(super) fn load<R: Table, X>(
     id: i64,
     extra: impl FnOnce(&Db, &R) -> topcoat::Result<X>,
 ) -> topcoat::Result<Loaded<R, X>> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let row = db.get::<R>(id)?.ok_or_not_found()?;
     Ok(Loaded {
         extra: extra(&db, &row)?,
@@ -72,7 +72,7 @@ pub(super) fn load_among<R: Table, X>(
     id: i64,
     extra: impl FnOnce(&Db, &[R]) -> topcoat::Result<X>,
 ) -> topcoat::Result<Loaded<R, X>> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let mut rows = db.list::<R>()?;
     let at = rows.iter().position(|r| r.id() == id).ok_or_not_found()?;
     let row = rows.swap_remove(at);
@@ -88,7 +88,7 @@ pub(super) fn submit<F: EditForm, X>(
     form: &F,
     extra: impl FnOnce(&Db, &F::Row) -> topcoat::Result<X>,
 ) -> topcoat::Result<Refused<F::Row, X>> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let existing = db.get::<F::Row>(id)?.ok_or_not_found()?;
     settle(
         &db,
@@ -110,7 +110,7 @@ pub(super) fn create_to<F: EditForm, S, X>(
     extra: impl FnOnce(&Db, S) -> topcoat::Result<X>,
     land: impl FnOnce(i64) -> String,
 ) -> topcoat::Result<Refused<F::Row, X>> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let (template, seed) = start(&db)?;
     settle(
         &db,

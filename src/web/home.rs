@@ -1,8 +1,8 @@
 //! The home page (`/`): a grid of the organizations with their projects.
 
+use super::fresh_db;
 use super::load::{Grouped, grouped};
 use super::notes::first_line;
-use super::open_db;
 use super::project_rows::project_items;
 use super::text::NO_PROJECTS;
 use super::ui::FOLDER;
@@ -25,7 +25,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
 
 #[page("/")]
 async fn home() -> Result<impl View> {
-    let Grouped { groups, loose } = grouped::<Organization>(&open_db()?)?;
+    let Grouped { groups, loose } = grouped::<Organization>(&fresh_db()?)?;
     Ok(view! { overview(orgs: &groups, loose: &loose) })
 }
 

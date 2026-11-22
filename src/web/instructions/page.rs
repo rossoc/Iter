@@ -161,7 +161,7 @@ async fn agents_part(uses: &[Use]) -> Result<impl View> {
 pub(super) async fn detail_page(cx: &Cx) -> Result<impl View> {
     let name = path_param::<Name>(cx)?.clone();
     let query = query_params::<TabQuery>(cx)?;
-    let db = open_db()?;
+    let db = fresh_db()?;
     let scope = Scope::asked(&db, query.project.as_deref())?;
     let i = instruction::find(&name, &scope.layers).ok_or_not_found()?;
     // `?edit=1` opens the Settings tab.

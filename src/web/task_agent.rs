@@ -9,7 +9,7 @@ use super::ui::{CIRCLE, CIRCLE_CHECK, HALF, PLAY, STOP, X, icon};
 use super::url::{
     RunAction, agent_tab_url, agent_url, plan_step_url, run_action_url, task_step_url, task_url,
 };
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::agent::instruction::{self, Layers};
 use crate::agent::plan::{self, Item, Plan, State};
 use crate::agent::run::{Harness, RunRecord};
@@ -413,7 +413,7 @@ pub fn set_state(dir: &TaskDir, step: &str, state: &str) -> std::result::Result<
 async fn mark_step(cx: &Cx, Form(form): Form<MarkForm>) -> Result<Response> {
     let id = *path_param::<Id>(cx)?;
     let step = path_param::<Step>(cx)?.clone();
-    let db = open_db()?;
+    let db = fresh_db()?;
     let (task, project) = super::load::task_with_project(&db, id)?;
     let dir = taskdir::of(&db, &project, &task).ok().ok_or_not_found()?;
     match set_state(&dir, &step, &form.state) {

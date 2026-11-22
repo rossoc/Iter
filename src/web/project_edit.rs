@@ -11,7 +11,7 @@ use super::ui::breadcrumb::Crumb;
 use super::ui::field::{id_text, optional_options, path_field, select};
 use super::ui::form_error::FormError;
 use super::url::{notes_tab_url, project_edit_url, project_url, tasks_tab_url, wiki_tab_url};
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::db::Table;
 use crate::models::{Configured, Organization, Project};
 use topcoat::{
@@ -62,7 +62,7 @@ pub async fn screen(
     );
     let current = id_text(project.organization_id);
     let settings = project.settings();
-    let tasks_n = open_db()?.count_tasks_for_project(stored.id())?;
+    let tasks_n = fresh_db()?.count_tasks_for_project(stored.id())?;
     let notes = NotesTab::load(crate::notes::project_dir(stored, org), false);
     let sections = settings_row(
         &base,

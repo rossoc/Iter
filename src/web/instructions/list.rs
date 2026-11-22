@@ -28,7 +28,7 @@ pub async fn instruction_table(
 #[page("/instructions")]
 pub(super) async fn list_page(cx: &Cx) -> Result<impl View> {
     let query = query_params::<TabQuery>(cx)?;
-    let db = open_db()?;
+    let db = fresh_db()?;
     let scope = Scope::global();
     let rows = rows(&scope, &usage(&db, None));
     let adding = query.new.as_deref() == Some("instruction");

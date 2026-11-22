@@ -75,7 +75,6 @@ mod toast_tests;
 mod ui;
 mod url;
 
-use crate::config::config;
 use crate::db::Db;
 use crate::error::Result;
 use topcoat::router::{LayerFn, Router, path_param};
@@ -83,8 +82,8 @@ use topcoat::router::{LayerFn, Router, path_param};
 // The `{id}` of every route with one: a number, else a 400.
 path_param!(id: i64, error = bad_request);
 
-fn open_db() -> topcoat::Result<Db> {
-    Ok(Db::open(config().db_path()?)?)
+fn fresh_db() -> topcoat::Result<Db> {
+    Ok(crate::app::App::open()?.db)
 }
 
 fn now() -> chrono::NaiveDateTime {

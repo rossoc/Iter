@@ -2,7 +2,8 @@
 //! keystroke with nowhere to report failure, so each queries exactly the strings it offers and treats
 //! any error as no candidates. Kept out of the binary root so `args` can name them without a cycle.
 
-use crate::db::{Db, open_db};
+use crate::app::App;
+use crate::db::Db;
 use crate::error::Result;
 use crate::models::{Board, Organization, Project, Tag, TaskStatus};
 use clap_complete::engine::CompletionCandidate;
@@ -16,7 +17,7 @@ fn candidates(
     let Some(current) = current.to_str() else {
         return Vec::new();
     };
-    let Ok(names) = names(&open_db()) else {
+    let Ok(names) = App::open().and_then(|app| names(&app.db)) else {
         return Vec::new();
     };
     names

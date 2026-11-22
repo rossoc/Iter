@@ -60,7 +60,7 @@ struct NewForm {
 
 #[route(POST "/instructions")]
 pub(super) async fn create_instruction(Form(form): Form<NewForm>) -> Result<Response> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let scope = Scope::asked(&db, Some(&form.project))?;
     let name = form.name.trim().to_string();
     if !instruction::valid_name(&name) {
@@ -129,7 +129,7 @@ struct SaveForm {
 #[route(POST "/instruction/{name}")]
 pub(super) async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Result<Response> {
     let name = path_param::<Name>(cx)?.clone();
-    let db = open_db()?;
+    let db = fresh_db()?;
     let scope = Scope::asked(&db, Some(&form.project))?;
     let current = instruction::find(&name, &scope.layers).ok_or_not_found()?;
     let home = scope

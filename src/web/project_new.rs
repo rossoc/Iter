@@ -6,7 +6,7 @@ use super::edit::create_to;
 use super::forms::{ProjectForm, SettingsForm};
 use super::org::{load as load_org, screen as org_screen};
 use super::sections::Section;
-use super::{Id, now, open_db};
+use super::{Id, fresh_db, now};
 use serde::Deserialize;
 use topcoat::{
     Result,
@@ -60,7 +60,7 @@ fn add(home: Home, typed: NewProject) -> Result<ProjectCreate> {
 
 #[component]
 async fn list_page(home: Home, create: &ProjectCreate) -> Result<impl View> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let now = now();
     let (org_page, board_page) = match home {
         Home::Org(id) => (

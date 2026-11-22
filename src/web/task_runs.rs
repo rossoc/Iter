@@ -5,7 +5,7 @@ use super::errors::refused;
 use super::sections::TabQuery;
 use super::ui::icon;
 use super::url::{agent_tab_url, agent_url, task_url};
-use super::{Id, open_db};
+use super::{Id, fresh_db};
 use crate::agent::instruction::{self, Instruction, Layers};
 use crate::agent::run::{Harness, RunRecord};
 use crate::agent::solve::{self, Launch, Spec};
@@ -128,7 +128,7 @@ fn parse_run(form: &RunForm, layers: &Layers) -> std::result::Result<(Instructio
 }
 
 fn world(id: i64) -> Result<(App, String, Task, Project)> {
-    let db = open_db()?;
+    let db = fresh_db()?;
     let (task, project) = super::load::task_with_project(&db, id)?;
     // a task without a place for its folder has no runs to act on
     taskdir::of(&db, &project, &task)?;

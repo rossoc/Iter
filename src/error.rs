@@ -89,10 +89,8 @@ pub enum IterError {
         ids: Vec<i64>,
     },
 
-    /// What `open_db` printed before it exited: the database could not be opened. The message is
-    /// the whole line, so `main` prints it without an `error: ` prefix.
-    // stub: I3 (nothing returns it yet; `App::open` does)
-    #[allow(dead_code)]
+    /// The database could not be opened. The message is the whole line, so `main` prints it
+    /// without an `error: ` prefix.
     #[error("failed to open database at {}: {source}", .path.display())]
     OpenDb {
         path: PathBuf,

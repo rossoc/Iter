@@ -1,4 +1,3 @@
-use crate::config::config;
 use crate::error::{IterError, Result};
 #[cfg(feature = "web")]
 use crate::models::Organization;
@@ -117,18 +116,6 @@ fn update_sql<T: Table>() -> String {
 
 fn delete_sql<T: Table>() -> String {
     format!("DELETE FROM {} WHERE id = ?1", T::NAME)
-}
-
-/// Opens the configured database or exits with the reason: nothing downstream works without it.
-pub fn open_db() -> Db {
-    let path = config().db_path().unwrap_or_else(|e| {
-        eprintln!("error: {e}");
-        std::process::exit(1);
-    });
-    Db::open(&path).unwrap_or_else(|e| {
-        eprintln!("failed to open database at {}: {e}", path.display());
-        std::process::exit(1);
-    })
 }
 
 pub struct Db {

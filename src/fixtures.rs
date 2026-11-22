@@ -9,6 +9,7 @@ use crate::db::Db;
 use crate::models::{Board, Project, Session, Settings, Task, TaskStatus};
 
 pub fn db() -> Db {
+    crate::config::load_defaults();
     Db::open(":memory:").expect("in-memory database opens")
 }
 

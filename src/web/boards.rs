@@ -1,8 +1,8 @@
 //! The list of boards (`/boards`).
 
+use super::fresh_db;
 use super::load::grouped;
 use super::notes::first_line;
-use super::open_db;
 use super::project_rows::project_items;
 use super::text::NO_PROJECTS;
 use super::ui::KANBAN;
@@ -25,7 +25,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
 
 #[page("/boards")]
 async fn boards_page() -> Result<impl View> {
-    let boards = grouped::<Board>(&open_db()?)?.groups;
+    let boards = grouped::<Board>(&fresh_db()?)?.groups;
     Ok(view! { boards_view(boards: &boards) })
 }
 

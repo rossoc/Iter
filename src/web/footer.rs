@@ -1,6 +1,6 @@
 //! The footer of every page (`ui/site_footer.rs`); one that cannot be built is left out, never breaking a page.
 
-use super::open_db;
+use super::fresh_db;
 use super::ui::site_footer::{FooterData, FooterGroup, FooterLink, site_footer};
 use super::url::{BOARDS, SETTINGS, board_url, org_url, project_url};
 use crate::db::{Db, Table};
@@ -56,7 +56,7 @@ pub fn load(db: &Db) -> crate::error::Result<FooterData> {
 
 #[component]
 pub async fn site_footer_for() -> Result<impl View> {
-    let data = open_db().ok().and_then(|db| load(&db).ok());
+    let data = fresh_db().ok().and_then(|db| load(&db).ok());
     Ok(view! {
         if let Some(data) = &data {
             site_footer(data: data)

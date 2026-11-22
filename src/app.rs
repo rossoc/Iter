@@ -1,10 +1,10 @@
 //! The state one `iter` run is carried out against: the database (opened once) and `now` (taken
 //! once, so every duration and report in a run measures against the same instant). Not carried:
-//! the config, which stays the process-wide [`crate::config::config`] that about a dozen modules
-//! read directly (moving it onto `App` is a larger change, deliberately not made yet). Shell
-//! completion does not run against an `App` (see [`crate::completion`]).
+//! the config, which stays the process-wide [`crate::config::config`] that [`App::open`] loads.
 
-use crate::db::{Db, open_db};
+use crate::config;
+use crate::db::Db;
+use crate::error::{IterError, Result};
 use chrono::{Local, NaiveDateTime};
 
 pub struct App {
@@ -13,19 +13,16 @@ pub struct App {
 }
 
 impl App {
-    /// Opens the configured database, or exits saying why (see
-    /// [`open_db`]), and stamps the run's `now`.
-    pub fn new() -> Self {
-        App::over(open_db(), Local::now().naive_local())
-    }
-
-    /// Opens the configured database as `Result` instead of exiting: the config is read by
-    /// [`crate::config::load`], the database at its path, and a database that will not open is
-    /// [`crate::error::IterError::OpenDb`] naming that path.
-    // stub: I3 (`App::new` still exits)
-    #[allow(dead_code)]
-    pub fn open() -> crate::error::Result<Self> {
-        unimplemented!("stub: I3")
+    /// Loads the config, opens the database it names (made beside the config file when it names
+    /// none) and stamps the run's `now`. A database that will not open is
+    /// [`IterError::OpenDb`], naming its path.
+    pub fn open() -> Result<Self> {
+        let path = config::load()?.db_path()?;
+        let db = Db::open(&path).map_err(|source| IterError::OpenDb {
+            path,
+            source: Box::new(source),
+        })?;
+        Ok(App::over(db, Local::now().naive_local()))
     }
 
     /// An app over a database the caller already has, at an instant it chose: what a web request

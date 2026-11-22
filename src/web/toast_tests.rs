@@ -51,6 +51,7 @@ fn isolated(name: &str, yaml: Option<&str>) -> bool {
 /// [`isolated`] for a test of another module: `module` is that file's `module_path!()`.
 pub(super) fn isolated_in(module: &str, name: &str, yaml: Option<&str>) -> bool {
     if std::env::var_os(CHILD).is_some() {
+        crate::config::load().expect("the scratch config loads");
         return false;
     }
     let home = crate::fixtures::scratch(&format!("toast-{name}"));
@@ -475,7 +476,9 @@ fn a_refused_daily_note_raises_a_toast() {
     // in the child: `$HOME` is the scratch folder, and the database is the scratch config's
     let home = std::path::PathBuf::from(std::env::var_os("HOME").expect("a scratch home"));
     let notes = home.join("notes");
-    let id = crate::db::open_db()
+    let id = crate::app::App::open()
+        .expect("opens")
+        .db
         .insert(&crate::models::Project {
             notes_path: notes.display().to_string(),
             ..crate::fixtures::project("app")

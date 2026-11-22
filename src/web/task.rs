@@ -19,7 +19,7 @@ use super::ui::sessions_table::sessions_table;
 use super::ui::table::AddRow;
 use super::ui::tabs::tabs;
 use super::url::{notes_tab_url, page_url, project_url, sessions_tab_url, task_url, wiki_tab_url};
-use super::{now, open_db};
+use super::{fresh_db, now};
 use crate::agent::taskdir;
 use crate::db::{Db, Table};
 use crate::models::{Session, Tag, Task};
@@ -64,7 +64,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let id = *path_param::<Id>(cx)?;
     let query = query_params::<TabQuery>(cx)?;
     let section = TaskSection::of(query.tab.as_deref());
-    let db = open_db()?;
+    let db = fresh_db()?;
     let page = load(&db, id)?;
     // the wiki was a tab of the task; it is the project's
     if query.tab.as_deref() == Some("wiki") {
@@ -74,7 +74,7 @@ async fn show(cx: &Cx) -> Result<impl View> {
     let agent = match section {
         TaskSection::Agent => {
             // the prompts of a new agent are made with the commands' own code, which wants an app
-            let app = crate::app::App::over(open_db()?, chrono::Local::now().naive_local());
+            let app = crate::app::App::over(fresh_db()?, chrono::Local::now().naive_local());
             let open = task_agent::Open {
                 step: query.step.as_deref(),
                 run: query.run.as_deref(),
