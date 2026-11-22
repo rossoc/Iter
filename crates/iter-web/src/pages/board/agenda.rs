@@ -41,9 +41,14 @@ pub(super) async fn show(cx: &Cx) -> Result<impl View> {
         split(cards, day, now.date())
     })?;
     let folded = query.side.as_deref() == Some("off");
-    let model = Model::of(&page, day, now, folded);
+    let lead = page
+        .picked
+        .as_ref()
+        .map(|p| p.words().title(&p.title))
+        .unwrap_or_default();
+    let short = day.format("%a %-d %b").to_string();
     Ok(view! {
-        screen(page: &page, model: &model, day: day, now: now)
+        screen(page: &page, day: day, now: now, folded: folded, lead: &lead, short: &short)
     })
 }
 
@@ -68,147 +73,85 @@ fn moved_to(task: &Picked) -> String {
         .unwrap_or_else(|| "Unscheduled".into())
 }
 
-struct Model {
-    title: Vec<String>,
-    style: String,
-    note: String,
-    schedule: String,
-    state: String,
-    date: String,
-    heading: String,
-    labels: Vec<String>,
-    previous: DayLink,
-    next: DayLink,
-    today: String,
-    is_today: bool,
-    pick: Option<i64>,
-    folded: bool,
-    fold: Fold,
-}
-
-impl Model {
-    fn of(page: &BoardPage<Day>, day: NaiveDate, now: NaiveDateTime, folded: bool) -> Model {
-        let BoardPage {
-            board,
-            colors,
-            picked,
-            moved,
-            ..
-        } = page;
-        let id = board.id();
-        let pick = picked.as_ref().map(|p| p.id);
-        let lead = picked
-            .as_ref()
-            .map(|p| p.words().title(&p.title))
-            .unwrap_or_default();
-        let short = day.format("%a %-d %b").to_string();
-        let (before, after) = neighbours(day);
-        let step = |to: NaiveDate, what: &str| DayLink {
-            href: with_side(day_url(id, to, pick), folded),
-            label: format!("{what} day, {}", to.format("%A %-d %B")),
-        };
-        Model {
-            title: title_parts(
-                &lead,
-                &[&short, BoardSection::Agenda.label(), board.name.as_str()],
-            )
-            .into_iter()
-            .map(String::from)
-            .collect(),
-            style: colors.style(),
-            note: moved
-                .as_ref()
-                .map(|m| moved_note(&m.title, &moved_to(m)))
-                .unwrap_or_default(),
-            schedule: board_schedule_url(id),
-            state: picked.as_ref().map(Picked::state).unwrap_or_default(),
-            date: fmt_date(day),
-            heading: day.format("%A %-d %B %Y").to_string(),
-            labels: (0..24).map(hour_label).collect(),
-            previous: step(before, "Previous"),
-            next: step(after, "Next"),
-            today: today_url(id, now.date(), pick, folded),
-            is_today: day == now.date(),
-            pick,
-            folded,
-            fold: Fold {
-                fold: with_side(day_url(id, day, pick), true),
-                unfold: day_url(id, day, pick),
-            },
-        }
-    }
-}
-
 #[component]
 async fn screen(
     page: &BoardPage<Day>,
-    model: &Model,
     day: NaiveDate,
     now: NaiveDateTime,
+    folded: bool,
+    lead: &str,
+    short: &str,
 ) -> Result<impl View> {
     let BoardPage {
         board,
+        colors,
         picked,
+        moved,
         data: split,
-        ..
     } = page;
     let id = board.id();
-    let Model {
-        title,
-        style,
-        note,
-        schedule,
-        state,
-        date,
-        heading,
-        labels,
-        previous,
-        next,
-        today,
-        is_today,
-        pick,
-        folded,
-        fold,
-    } = model;
+    let pick = picked.as_ref().map(|p| p.id);
+    let title = title_parts(
+        lead,
+        &[short, BoardSection::Agenda.label(), board.name.as_str()],
+    );
+    let note = moved
+        .as_ref()
+        .map(|m| moved_note(&m.title, &moved_to(m)))
+        .unwrap_or_default();
+    let schedule = board_schedule_url(id);
+    let state = picked.as_ref().map(Picked::state).unwrap_or_default();
+    let date = fmt_date(day);
+    let heading = day.format("%A %-d %B %Y").to_string();
+    let style = colors.style();
+    let labels: Vec<String> = (0..24).map(hour_label).collect();
+    let (before, after) = neighbours(day);
+    let step = move |to: NaiveDate, what: &str| DayLink {
+        href: with_side(day_url(id, to, pick), folded),
+        label: format!("{what} day, {}", to.format("%A %-d %B")),
+    };
+    let fold = Fold {
+        fold: with_side(day_url(id, day, pick), true),
+        unfold: day_url(id, day, pick),
+    };
     let ctx = Cards {
         board: id,
         day,
-        folded: *folded,
-        ctx: CardCtx { picked: *pick },
+        folded,
+        ctx: CardCtx { picked: pick },
     };
-    let title: Vec<&str> = title.iter().map(String::as_str).collect();
     Ok(view! {
-        board_screen(board: board, section: BoardSection::Agenda, title: &title, post: schedule, style: style, note: note, folded: *folded,
-            side: Child::new(view! { side(split: split, ctx: &ctx, to: fold) }),
+        board_screen(board: board, section: BoardSection::Agenda, title: &title, post: &schedule, style: &style, note: &note, folded: folded,
+            side: Child::new(view! { side(split: split, ctx: &ctx, to: &fold) }),
             sticky_head(
                 if let Some(p) = picked {
-                    pick_bar(verb: p.words().verb, title: &p.title, state: state, prompt: "Choose an hour.", cancel: links(id, day).cancel(p.id),
+                    pick_bar(verb: p.words().verb, title: &p.title, state: &state, prompt: "Choose an hour.", cancel: links(id, day).cancel(p.id),
                         if p.scheduled() {
-                            post_button(action: schedule.as_str(), fields: pick_fields(p.id, "", Some(("date", date))), small: true, "Unschedule")
+                            post_button(action: schedule.as_str(), fields: pick_fields(p.id, "", Some(("date", &date))), small: true, "Unschedule")
                         }
                     )
                 }
                 day_nav(
                     id: DAY_TITLE,
-                    title: heading,
-                    iso: date,
+                    title: &heading,
+                    iso: &date,
                     action: board_url(id),
-                    pick: *pick,
-                    folded: *folded,
-                    prev: previous.clone(),
-                    next: next.clone(),
-                    today: today.clone(),
-                    is_today: *is_today,
+                    pick: pick,
+                    folded: folded,
+                    prev: step(before, "Previous"),
+                    next: step(after, "Next"),
+                    today: today_url(id, now.date(), pick, folded),
+                    is_today: day == now.date(),
                 )
             )
-            if !split.is_empty() && !*folded {
+            if !split.is_empty() && !folded {
                 jump_link(target: format!("#{NOT_SCHEDULED}"), "Skip to unscheduled tasks")
             }
             hour_grid(label_id: DAY_TITLE,
                 for (h, cards) in split.hours.iter().enumerate() {
                     hour_slot(label: &labels[h], target: hour_target(day, h), now: now_line(now, day, h),
                         if let Some(p) = picked {
-                            pick_here(action: schedule.as_str(), fields: pick_fields(p.id, &hour_target(day, h), Some(("date", date))), verb: p.words().action, at: &labels[h], slot: true)
+                            pick_here(action: schedule.as_str(), fields: pick_fields(p.id, &hour_target(day, h), Some(("date", &date))), verb: p.words().action, at: &labels[h], slot: true)
                         }
                         for card in cards.iter() {
                             task_card(card: ctx.view(card), draggable: true)
