@@ -1,4 +1,4 @@
-//! What `iter task pull` and `iter task push` decide to do about each GitHub issue and task, as plain data (`gh` calls and database writes are `cli::sync`'s).
+//! What `iter task pull` and `iter task push` decide to do about each GitHub issue and task, as plain data (`gh` calls and database writes are `iter-cli`'s `sync`).
 //! Deliberately asymmetric: pulling can create a task but never touches an issue; pushing can create or close/reopen an issue but never changes a task's status, so a status cannot ping-pong.
 //! Descriptions are the exception: either side may have been edited, so `--body` copies one over the other only on request, in the direction run.
 

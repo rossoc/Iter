@@ -9,6 +9,7 @@ use crate::error::{IterError, Result};
 use std::io::Write;
 use std::process::{Command, Stdio};
 
+/// The environment variable that supplies a key for one run.
 pub const ENV_KEY: &str = "ITER_PLATFORM_KEY";
 
 /// An API key. Never `Display`ed or `Debug`ged in the clear.
@@ -43,6 +44,7 @@ impl std::fmt::Display for Secret {
     }
 }
 
+/// Where an organization's key is kept, by the organization's name.
 pub trait KeyStore {
     fn get(&self, organization: &str) -> Result<Option<Secret>>;
     fn set(&self, organization: &str, key: &Secret) -> Result<()>;
@@ -102,10 +104,12 @@ fn env_key() -> Option<&'static str> {
         .as_deref()
 }
 
+/// [`resolve`] with the environment key [`take_env_key`] took.
 pub fn resolve_env(store: &dyn KeyStore, organization: &str) -> Result<Secret> {
     resolve(store, organization, env_key())
 }
 
+/// Whether [`resolve_env`] finds a key.
 pub fn is_set(store: &dyn KeyStore, organization: &str) -> bool {
     resolve_env(store, organization).is_ok()
 }
@@ -117,6 +121,13 @@ pub struct Keychain;
 
 const SERVICE: &str = "iter-time-platform";
 
+fn spawn_error(source: std::io::Error) -> IterError {
+    IterError::Spawn {
+        tool: "security",
+        source,
+    }
+}
+
 impl Keychain {
     fn session(&self, command: &str) -> Result<bool> {
         let mut child = Command::new("security")
@@ -125,10 +136,7 @@ impl Keychain {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|source| IterError::Spawn {
-                tool: "security",
-                source,
-            })?;
+            .map_err(spawn_error)?;
         if let Some(mut stdin) = child.stdin.take() {
             writeln!(stdin, "{command}")?;
         }
@@ -160,10 +168,7 @@ impl KeyStore for Keychain {
             ])
             .stderr(Stdio::null())
             .output()
-            .map_err(|source| IterError::Spawn {
-                tool: "security",
-                source,
-            })?;
+            .map_err(spawn_error)?;
         if !out.status.success() {
             return Ok(None);
         }
@@ -176,12 +181,9 @@ impl KeyStore for Keychain {
             quotable(organization)?,
             quotable(key.expose())?
         );
-        match self.session(&line)? {
-            true => Ok(()),
-            false => Err(IterError::CommandFailed(
-                "the keychain refused to store the key".into(),
-            )),
-        }
+        self.session(&line)?
+            .then_some(())
+            .ok_or_else(|| IterError::CommandFailed("the keychain refused to store the key".into()))
     }
 
     fn delete(&self, organization: &str) -> Result<()> {

@@ -1,4 +1,8 @@
-use crate::error::Result;
+//! The `info` reports: gathering a period's sessions into per-task and per-project breakdowns ([`gather`]), merging overlapping
+//! sessions into a total ([`merge`]), rendering markdown or YAML ([`render`]) and building the worklog a time platform receives ([`worklog`]).
+//! A [`Report`] is a shared [`Header`] plus a body only its kind knows.
+
+use crate::error::{IterError, Result};
 use crate::models::{Duration, Session, TaskStatus};
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use serde::Serialize;
@@ -22,7 +26,6 @@ pub enum Format {
     Worklog,
 }
 
-/// What a text report says where a session table would otherwise go.
 mod gather;
 mod merge;
 mod render;
@@ -38,6 +41,7 @@ pub use render::{Md, non_empty};
 use render::{cell, document, summary_line};
 pub use worklog::*;
 
+/// What a text report says where a session table would otherwise go.
 const NO_SESSIONS: &str = "_No sessions in this period._";
 
 /// A model's YAML fields minus `id` and `name`, in declaration order, for the front matter; taken from `Serialize` so a new field needs no second list.
@@ -226,7 +230,7 @@ pub trait Report: Serialize {
     fn body(&self, md: &mut Md);
 
     fn worklog(&self) -> Result<String> {
-        Err(crate::error::IterError::CommandFailed(
+        Err(IterError::CommandFailed(
             "the worklog format is only available for project and organization reports".into(),
         ))
     }

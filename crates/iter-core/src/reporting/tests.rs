@@ -25,114 +25,110 @@ fn is_ongoing_reflects_whether_end_is_set() {
 }
 
 #[test]
-fn round_to_half_hour_below_quarter_rounds_down() {
-    assert_eq!(round_to_half_hour(3.1), 3.0);
-    assert_eq!(round_to_half_hour(3.0), 3.0);
+fn round_to_half_hour_goes_to_the_nearest_half() {
+    for (hours, rounded) in [
+        (3.1, 3.0),
+        (3.0, 3.0),
+        (3.25, 3.5),
+        (3.4, 3.5),
+        (3.5, 3.5),
+        (3.6, 3.5),
+        (3.75, 4.0),
+        (3.9, 4.0),
+    ] {
+        assert_eq!(round_to_half_hour(hours), rounded, "{hours}");
+    }
 }
 
 #[test]
-fn round_to_half_hour_at_quarter_rounds_up_to_half() {
-    assert_eq!(round_to_half_hour(3.25), 3.5);
+fn a_range_knows_its_single_day_and_its_label() {
+    let to = day("2026-09-04");
+    for (range, single, label) in [
+        (DateRange::day(to), Some(to), "2026-09-04"),
+        // a bounded interval is inclusive at both ends
+        (
+            DateRange {
+                from: Some(day("2026-09-01")),
+                to,
+            },
+            None,
+            "2026-09-01 to 2026-09-04",
+        ),
+        // an open start reaches back indefinitely
+        (DateRange { from: None, to }, None, "up to 2026-09-04"),
+    ] {
+        assert_eq!(range.single_day(), single, "{label}");
+        assert_eq!(range.label(), label);
+    }
 }
 
+/// Each case is a list of `(task, start, end)` and the merged minutes at a 17 minute gap: 17 minutes or less is a pause (counted), 18 a break.
 #[test]
-fn round_to_half_hour_between_quarter_and_three_quarters_rounds_to_half() {
-    assert_eq!(round_to_half_hour(3.4), 3.5);
-    assert_eq!(round_to_half_hour(3.5), 3.5);
-    assert_eq!(round_to_half_hour(3.6), 3.5);
-}
-
-#[test]
-fn round_to_half_hour_at_three_quarters_rounds_up_to_next_int() {
-    assert_eq!(round_to_half_hour(3.75), 4.0);
-}
-
-#[test]
-fn round_to_half_hour_above_three_quarters_rounds_up_to_next_int() {
-    assert_eq!(round_to_half_hour(3.9), 4.0);
-}
-
-#[test]
-fn a_single_day_range_reports_that_day() {
-    let range = DateRange::day(day("2026-09-04"));
-    assert_eq!(range.single_day(), Some(day("2026-09-04")));
-    assert_eq!(range.label(), "2026-09-04");
-}
-
-#[test]
-fn a_bounded_interval_is_inclusive_at_both_ends() {
-    let range = DateRange {
-        from: Some(day("2026-09-01")),
-        to: day("2026-09-04"),
-    };
-    assert_eq!(range.single_day(), None);
-    assert_eq!(range.label(), "2026-09-01 to 2026-09-04");
-}
-
-#[test]
-fn an_open_start_reaches_back_indefinitely() {
-    let range = DateRange {
-        from: None,
-        to: day("2026-09-04"),
-    };
-    assert_eq!(range.single_day(), None);
-    assert_eq!(range.label(), "up to 2026-09-04");
-}
-
-#[test]
-fn merged_total_bridges_gaps_under_threshold() {
-    let sessions = vec![
-        sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-        sess(1, "2026-09-01 10:10", Some("2026-09-01 11:00"), None),
+fn merged_total_bridges_pauses_and_keeps_breaks() {
+    type Span = (i64, &'static str, Option<&'static str>);
+    let cases: [(&str, Vec<Span>, i64); 7] = [
+        (
+            "a gap under the threshold is bridged",
+            vec![
+                (1, "2026-09-01 09:00", Some("2026-09-01 10:00")),
+                (1, "2026-09-01 10:10", Some("2026-09-01 11:00")),
+            ],
+            120,
+        ),
+        (
+            "a gap of exactly the threshold is bridged",
+            vec![
+                (1, "2026-09-01 09:00", Some("2026-09-01 10:00")),
+                (1, "2026-09-01 10:17", Some("2026-09-01 11:00")),
+            ],
+            120,
+        ),
+        (
+            "a gap above the threshold stays separate",
+            vec![
+                (1, "2026-09-01 09:00", Some("2026-09-01 10:00")),
+                (1, "2026-09-01 10:18", Some("2026-09-01 11:00")),
+            ],
+            60 + 42,
+        ),
+        (
+            "bridging chains across more than two sessions",
+            vec![
+                (1, "2026-09-01 09:00", Some("2026-09-01 09:30")),
+                (1, "2026-09-01 09:35", Some("2026-09-01 10:00")),
+                (1, "2026-09-01 10:10", Some("2026-09-01 10:40")),
+            ],
+            100,
+        ),
+        (
+            "it extends into an ongoing session",
+            vec![
+                (1, "2026-09-04 09:00", Some("2026-09-04 10:00")),
+                (1, "2026-09-04 10:05", None),
+            ],
+            180,
+        ),
+        (
+            "tasks are unioned without double counting",
+            vec![
+                (1, "2026-09-01 09:00", Some("2026-09-01 10:00")),
+                (2, "2026-09-01 09:30", Some("2026-09-01 10:30")),
+            ],
+            90,
+        ),
+        ("no session is no time", vec![], 0),
     ];
-    assert_eq!(merged_total_minutes(&sessions, now(), 17), 120);
-}
-
-/// 17 minutes or less is a pause: exactly 17 is bridged, 18 is not.
-#[test]
-fn merged_total_bridges_a_gap_of_exactly_the_threshold() {
-    let sessions = vec![
-        sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-        sess(1, "2026-09-01 10:17", Some("2026-09-01 11:00"), None),
-    ];
-    assert_eq!(merged_total_minutes(&sessions, now(), 17), 120);
-}
-
-#[test]
-fn merged_total_keeps_gaps_above_threshold_separate() {
-    let sessions = vec![
-        sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-        sess(1, "2026-09-01 10:18", Some("2026-09-01 11:00"), None),
-    ];
-    assert_eq!(merged_total_minutes(&sessions, now(), 17), 60 + 42);
-}
-
-#[test]
-fn merged_total_chains_across_more_than_two_sessions() {
-    let sessions = vec![
-        sess(1, "2026-09-01 09:00", Some("2026-09-01 09:30"), None),
-        sess(1, "2026-09-01 09:35", Some("2026-09-01 10:00"), None),
-        sess(1, "2026-09-01 10:10", Some("2026-09-01 10:40"), None),
-    ];
-    assert_eq!(merged_total_minutes(&sessions, now(), 17), 100);
-}
-
-#[test]
-fn merged_total_extends_into_an_ongoing_session() {
-    let sessions = vec![
-        sess(1, "2026-09-04 09:00", Some("2026-09-04 10:00"), None),
-        sess(1, "2026-09-04 10:05", None, None),
-    ];
-    assert_eq!(merged_total_minutes(&sessions, now(), 17), 180);
-}
-
-#[test]
-fn merged_total_unions_across_different_tasks_without_double_counting() {
-    let sessions = vec![
-        sess(1, "2026-09-01 09:00", Some("2026-09-01 10:00"), None),
-        sess(2, "2026-09-01 09:30", Some("2026-09-01 10:30"), None),
-    ];
-    assert_eq!(merged_total_minutes(&sessions, now(), 17), 90);
+    for (what, spans, minutes) in cases {
+        let sessions: Vec<Session> = spans
+            .into_iter()
+            .map(|(task, start, end)| sess(task, start, end, None))
+            .collect();
+        assert_eq!(
+            merged_total_minutes(&sessions, now(), 17),
+            minutes,
+            "{what}"
+        );
+    }
 }
 
 #[test]

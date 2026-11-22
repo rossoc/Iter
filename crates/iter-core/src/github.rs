@@ -1,3 +1,5 @@
+//! The GitHub side: [`IssueTracker`] (what `iter task pull`/`push` and a worklog push need from issues), its `gh` CLI implementation [`GhCli`], and the issue-state to task-status mapping; [`fake`] holds the test trackers.
+
 use crate::error::{IterError, Result};
 use crate::models::TaskStatus;
 use crate::process::{Runner, SYSTEM};
@@ -184,6 +186,7 @@ impl IssueTracker for GhCli<'_> {
 #[cfg(any(test, feature = "test-support"))]
 pub mod fake {
     use super::*;
+    use std::cell::RefCell;
 
     /// A tracker with nothing in it: writes succeed and are forgotten.
     pub struct Inert;
@@ -214,6 +217,55 @@ pub mod fake {
         }
         fn comment(&self, _: &str, _: i64, _: &str) -> Result<()> {
             Ok(())
+        }
+    }
+
+    /// An [`Inert`] tracker that writes down the issue reads and writes a push makes (`view #7`, `close #7`,
+    /// `comment #7 <body>`), reports every issue `closed` or not, and can refuse comments; only closing is accepted as a state change.
+    #[derive(Default)]
+    pub struct Recorder {
+        pub calls: RefCell<Vec<String>>,
+        pub closed: bool,
+        pub fail_comment: bool,
+    }
+
+    impl IssueTracker for Recorder {
+        fn fetch(&self, repo: &str, number: i64) -> Result<Issue> {
+            self.calls.borrow_mut().push(format!("view #{number}"));
+            let state = if self.closed {
+                IssueState::Closed
+            } else {
+                IssueState::Open
+            };
+            Ok(Issue {
+                state,
+                ..Inert.fetch(repo, number)?
+            })
+        }
+        fn set_state(&self, _: &str, number: i64, state: IssueState) -> Result<()> {
+            assert_eq!(state, IssueState::Closed);
+            self.calls.borrow_mut().push(format!("close #{number}"));
+            Ok(())
+        }
+        fn comment(&self, _: &str, number: i64, body: &str) -> Result<()> {
+            if self.fail_comment {
+                return Err(IterError::CommandFailed("gh down".into()));
+            }
+            let call = format!("comment #{number} {body}");
+            self.calls.borrow_mut().push(call);
+            Ok(())
+        }
+        fn list(&self, repo: &str) -> Result<Vec<Issue>> {
+            Inert.list(repo)
+        }
+        fn create(&self, repo: &str, title: &str, body: &str, project: &str) -> Result<i64> {
+            Inert.create(repo, title, body, project)
+        }
+        fn set_body(&self, repo: &str, number: i64, body: &str) -> Result<()> {
+            Inert.set_body(repo, number, body)
+        }
+        fn assign_self(&self, repo: &str, number: i64) -> Result<()> {
+            Inert.assign_self(repo, number)
         }
     }
 }

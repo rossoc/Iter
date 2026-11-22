@@ -39,11 +39,7 @@ pub(super) fn message_bullets(rows: &[SessionRow]) -> Option<String> {
         .filter_map(|r| r.message.as_deref())
         .map(|m| format!("- {}", m.trim_start_matches('-').trim_start()))
         .collect();
-    if messages.is_empty() {
-        None
-    } else {
-        Some(messages.join("\n"))
-    }
+    (!messages.is_empty()).then(|| messages.join("\n"))
 }
 
 /// One `| a | b |` row padded to the column widths; generic so header and body rows share the code.
