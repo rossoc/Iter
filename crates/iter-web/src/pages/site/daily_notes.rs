@@ -154,65 +154,57 @@ fn link(base: &str, note: &Note) -> NoteLink {
     }
 }
 
-#[derive(Clone, Copy)]
-enum Kind {
-    Project,
-    Org,
-}
+/// How a route finds its owner: [`Owner::project`] or [`Owner::org`].
+type Find = fn(&Db, i64) -> topcoat::Result<Owner>;
 
 /// The owner named by the request's `{id}`.
-fn owner_of(cx: &Cx, kind: Kind) -> Result<Owner> {
-    let id = path_id(cx)?;
-    let db = fresh_db()?;
-    match kind {
-        Kind::Project => Owner::project(&db, id),
-        Kind::Org => Owner::org(&db, id),
-    }
+fn owner_of(cx: &Cx, find: Find) -> Result<Owner> {
+    Ok(find(&fresh_db()?, path_id(cx)?)?)
 }
 
-fn show(cx: &Cx, kind: Kind) -> Result<NotePage> {
+fn show(cx: &Cx, find: Find) -> Result<NotePage> {
     let day = day_of(cx)?;
     let tab = NoteTab::of(query_params::<NoteQuery>(cx)?.tab.as_deref());
-    owner_of(cx, kind)?.note_page(day, tab)
+    owner_of(cx, find)?.note_page(day, tab)
 }
 
-fn save_text(cx: &Cx, kind: Kind, text: &str) -> Result<NotePage> {
+fn save_text(cx: &Cx, find: Find, text: &str) -> Result<NotePage> {
     let day = day_of(cx)?;
-    owner_of(cx, kind)?.save(day, text)
+    owner_of(cx, find)?.save(day, text)
 }
 
 #[page("/project/{id}/notes/{date}")]
 pub(super) async fn project_note(cx: &Cx) -> Result<impl View> {
-    let page = show(cx, Kind::Project)?;
+    let page = show(cx, Owner::project)?;
     Ok(view! { note_screen(page: &page) })
 }
 
 #[page("/org/{id}/notes/{date}")]
 pub(super) async fn org_note(cx: &Cx) -> Result<impl View> {
-    let page = show(cx, Kind::Org)?;
+    let page = show(cx, Owner::org)?;
     Ok(view! { note_screen(page: &page) })
 }
 
 #[page(POST "/project/{id}/notes/{date}")]
 pub(super) async fn project_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View> {
-    let page = save_text(cx, Kind::Project, &form.text)?;
+    let page = save_text(cx, Owner::project, &form.text)?;
     Ok(view! { note_screen(page: &page) })
 }
 
 #[page(POST "/org/{id}/notes/{date}")]
 pub(super) async fn org_note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View> {
-    let page = save_text(cx, Kind::Org, &form.text)?;
+    let page = save_text(cx, Owner::org, &form.text)?;
     Ok(view! { note_screen(page: &page) })
 }
 
 #[route(POST "/project/{id}/notes/today")]
 pub(super) async fn project_today(cx: &Cx) -> Result<Response> {
-    owner_of(cx, Kind::Project)?.open_today()
+    owner_of(cx, Owner::project)?.open_today()
 }
 
 #[route(POST "/org/{id}/notes/today")]
 pub(super) async fn org_today(cx: &Cx) -> Result<Response> {
-    owner_of(cx, Kind::Org)?.open_today()
+    owner_of(cx, Owner::org)?.open_today()
 }
 
 fn note_tabs(base: &str, day: NaiveDate, current: NoteTab) -> Vec<Tab> {

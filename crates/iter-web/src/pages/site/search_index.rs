@@ -7,7 +7,7 @@ use iter_core::{
     models::{Board, Organization, Project, Task},
     notes,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 const LIMIT: usize = 50;
 
@@ -16,108 +16,96 @@ struct SearchQuery {
     q: Option<String>,
 }
 
-fn entries(db: &Db) -> iter_core::error::Result<Vec<Entry>> {
-    let orgs = db.list::<Organization>()?;
-    let projects = db.list::<Project>()?;
-    let org_of: HashMap<i64, &Organization> = orgs.iter().map(|o| (o.id(), o)).collect();
-    let project_org = |p: &Project| p.organization_id.and_then(|id| org_of.get(&id).copied());
-    let ancestors = |p: &Project| {
-        let mut path: Vec<(Kind, String)> = Vec::new();
-        if let Some(org) = project_org(p) {
-            path.push((Kind::Org, org.name.clone()));
-        }
-        path
-    };
+type Trail = Vec<(Kind, String)>;
 
-    let mut out = Vec::new();
-    for board in db.list::<Board>()? {
-        out.push(Entry {
-            kind: Kind::Board,
-            title: board.name.clone(),
-            ancestors: Vec::new(),
-            url: board_url(board.id()),
-            description: board.description.clone(),
-            status: String::new(),
-        });
+fn entry(kind: Kind, title: &str, above: &Trail, url: String, description: &str) -> Entry {
+    Entry {
+        kind,
+        title: title.to_string(),
+        ancestors: above.clone(),
+        url,
+        description: description.to_string(),
+        status: String::new(),
     }
-    for org in &orgs {
-        out.push(Entry {
-            kind: Kind::Org,
-            title: org.name.clone(),
-            ancestors: Vec::new(),
-            url: org_url(org.id()),
-            description: org.description.clone(),
-            status: String::new(),
-        });
-        let base = org_url(org.id());
-        let dir = notes::org_dir(org);
-        push_notes(
-            &mut out,
-            dir.as_deref(),
-            &base,
-            (Kind::Org, &org.name),
-            Vec::new(),
-        );
-    }
-    let mut by_id: HashMap<i64, Vec<(Kind, String)>> = HashMap::new();
-    for project in &projects {
-        let mut above = ancestors(project);
-        out.push(Entry {
-            kind: Kind::Project,
-            title: project.name.clone(),
-            ancestors: above.clone(),
-            url: project_url(project.id()),
-            description: project.description.clone(),
-            status: String::new(),
-        });
-        let org = project_org(project).cloned();
-        let dir = notes::project_dir(project, &org);
-        let base = project_url(project.id());
-        push_notes(
-            &mut out,
-            dir.as_deref(),
-            &base,
-            (Kind::Project, &project.name),
-            above.clone(),
-        );
-        above.push((Kind::Project, project.name.clone()));
-        by_id.insert(project.id(), above);
-    }
-    for task in db.list::<Task>()? {
-        let Some(above) = by_id.get(&task.project_id) else {
-            continue;
-        };
-        out.push(Entry {
-            kind: Kind::Task,
-            title: task.name.clone(),
-            ancestors: above.clone(),
-            url: task_url(task.id()),
-            description: task.description.clone(),
-            status: task.status.as_str().to_string(),
-        });
-    }
-    Ok(out)
 }
 
-fn push_notes(
-    out: &mut Vec<Entry>,
-    dir: Option<&std::path::Path>,
-    base: &str,
-    owner: (Kind, &str),
-    mut above: Vec<(Kind, String)>,
-) {
-    let Some(dir) = dir else { return };
-    above.push((owner.0, owner.1.to_string()));
-    for note in notes::list(dir) {
-        out.push(Entry {
-            kind: Kind::Note,
-            title: note.title.clone(),
-            ancestors: above.clone(),
-            url: note_url(base, note.date),
-            description: note.body,
-            status: String::new(),
-        });
+/// One entry per note of `dir` (if the owner has a notes folder), under `owner`, the owner's own path.
+fn note_entries(dir: Option<PathBuf>, base: &str, owner: &Trail) -> impl Iterator<Item = Entry> {
+    let notes = dir.map(|dir| notes::list(&dir)).unwrap_or_default();
+    notes
+        .into_iter()
+        .map(|n| entry(Kind::Note, &n.title, owner, note_url(base, n.date), &n.body))
+}
+
+fn entries(db: &Db) -> iter_core::error::Result<Vec<Entry>> {
+    let orgs = db.list::<Organization>()?;
+    let org_of: HashMap<i64, &Organization> = orgs.iter().map(|o| (o.id(), o)).collect();
+    let none = Trail::new();
+    let mut out: Vec<Entry> = db
+        .list::<Board>()?
+        .iter()
+        .map(|b| {
+            entry(
+                Kind::Board,
+                &b.name,
+                &none,
+                board_url(b.id()),
+                &b.description,
+            )
+        })
+        .collect();
+    for org in &orgs {
+        let url = org_url(org.id());
+        out.push(entry(
+            Kind::Org,
+            &org.name,
+            &none,
+            url.clone(),
+            &org.description,
+        ));
+        let own = vec![(Kind::Org, org.name.clone())];
+        out.extend(note_entries(notes::org_dir(org), &url, &own));
     }
+    let mut path_of: HashMap<i64, Trail> = HashMap::new();
+    for project in db.list::<Project>()? {
+        let org = project
+            .organization_id
+            .and_then(|id| org_of.get(&id).copied());
+        let above: Trail = org
+            .map(|o| (Kind::Org, o.name.clone()))
+            .into_iter()
+            .collect();
+        let url = project_url(project.id());
+        out.push(entry(
+            Kind::Project,
+            &project.name,
+            &above,
+            url.clone(),
+            &project.description,
+        ));
+        let own = [above, vec![(Kind::Project, project.name.clone())]].concat();
+        out.extend(note_entries(
+            notes::project_dir(&project, &org.cloned()),
+            &url,
+            &own,
+        ));
+        path_of.insert(project.id(), own);
+    }
+    for task in db.list::<Task>()? {
+        if let Some(above) = path_of.get(&task.project_id) {
+            out.push(Entry {
+                status: task.status.as_str().to_string(),
+                ..entry(
+                    Kind::Task,
+                    &task.name,
+                    above,
+                    task_url(task.id()),
+                    &task.description,
+                )
+            });
+        }
+    }
+    Ok(out)
 }
 
 fn to_json(hits: &[Hit]) -> String {

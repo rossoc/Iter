@@ -36,6 +36,11 @@ pub(super) struct SettingsPage {
     settings: SettingsForm,
 }
 
+/// `text`, trimmed, as a number that `fits`.
+fn number<T: std::str::FromStr>(text: &str, fits: impl Fn(&T) -> bool) -> Option<T> {
+    text.trim().parse().ok().filter(fits)
+}
+
 impl SettingsPage {
     /// Nothing is changed when it is refused.
     fn apply(&self, mut config: Config) -> std::result::Result<Config, (IterError, &'static str)> {
@@ -44,21 +49,15 @@ impl SettingsPage {
         if editor.is_empty() {
             return Err(bad(EDITOR, "Editor cannot be empty.".into()));
         }
-        let gap = self
-            .pause_gap_minutes
-            .trim()
-            .parse::<i64>()
-            .ok()
-            .filter(|n| *n >= 0)
-            .ok_or_else(|| {
-                bad(
-                    PAUSE_GAP,
-                    format!(
-                        "Pause gap '{}' is not valid. Use a whole number of minutes, such as 17.",
-                        self.pause_gap_minutes.trim()
-                    ),
-                )
-            })?;
+        let gap = number(&self.pause_gap_minutes, |n: &i64| *n >= 0).ok_or_else(|| {
+            bad(
+                PAUSE_GAP,
+                format!(
+                    "Pause gap '{}' is not valid. Use a whole number of minutes, such as 17.",
+                    self.pause_gap_minutes.trim()
+                ),
+            )
+        })?;
         let status = TaskStatus::parse(&self.status)
             .ok_or_else(|| (IterError::InvalidStatus(self.status.clone()), STATUS))?;
         let settings = self.settings.settings();
@@ -68,13 +67,10 @@ impl SettingsPage {
                 "Default branch cannot be empty.".into(),
             ));
         }
-        let seconds = self
-            .notification_seconds
-            .trim()
-            .parse::<u32>()
-            .ok()
-            .filter(|n| (1..=MAX_NOTIFICATION_SECONDS).contains(n))
-            .ok_or_else(|| {
+        let seconds = number(&self.notification_seconds, |n: &u32| {
+            (1..=MAX_NOTIFICATION_SECONDS).contains(n)
+        })
+        .ok_or_else(|| {
                 bad(
                     NOTIFICATION_SECONDS,
                     format!(

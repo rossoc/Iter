@@ -9,11 +9,18 @@ use iter_core::{
 /// Bounded: the footer is on every page, so what it reads must stay small however large the database.
 pub(crate) const FOOTER_LIMIT: usize = 8;
 
-fn project_link(p: &Project) -> FooterLink {
+fn link(name: &str, href: String) -> FooterLink {
     FooterLink {
-        name: p.name.clone(),
-        href: project_url(p.id()),
+        name: name.to_string(),
+        href,
     }
+}
+
+fn project_links(projects: &[Project]) -> Vec<FooterLink> {
+    projects
+        .iter()
+        .map(|p| link(&p.name, project_url(p.id())))
+        .collect()
 }
 
 pub fn load(db: &Db) -> iter_core::error::Result<FooterData> {
@@ -21,11 +28,8 @@ pub fn load(db: &Db) -> iter_core::error::Result<FooterData> {
         .organizations_with_projects(FOOTER_LIMIT)?
         .into_iter()
         .map(|(org, projects, total)| FooterGroup {
-            link: FooterLink {
-                name: org.name.clone(),
-                href: org_url(org.id()),
-            },
-            projects: projects.iter().map(project_link).collect(),
+            link: link(&org.name, org_url(org.id())),
+            projects: project_links(&projects),
             projects_total: total,
         })
         .collect();
@@ -35,14 +39,11 @@ pub fn load(db: &Db) -> iter_core::error::Result<FooterData> {
         orgs,
         boards: boards
             .iter()
-            .map(|b| FooterLink {
-                name: b.name.clone(),
-                href: board_url(b.id()),
-            })
+            .map(|b| link(&b.name, board_url(b.id())))
             .collect(),
         boards_total,
         boards_href: BOARDS,
-        loose: loose.iter().map(project_link).collect(),
+        loose: project_links(&loose),
         loose_total,
         loose_href: "/",
         settings_href: SETTINGS.to_string(),
@@ -63,21 +64,29 @@ pub async fn site_footer_for() -> Result<impl View> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iter_core::fixtures;
-    use iter_core::models::Organization;
+    use iter_core::{fixtures, models::Organization};
+
+    fn org(db: &Db, name: &str) -> i64 {
+        db.insert(&Organization {
+            name: name.into(),
+            ..Organization::default()
+        })
+        .expect("org")
+    }
+
+    fn add_projects(db: &Db, org: i64, names: impl IntoIterator<Item = String>) {
+        for name in names {
+            let mut p = fixtures::project(&name);
+            p.organization_id = Some(org);
+            db.insert(&p).expect("project");
+        }
+    }
 
     #[test]
     fn the_footer_lists_organizations_with_projects_boards_and_loose_projects() {
         let db = fixtures::db();
-        let org = db
-            .insert(&Organization {
-                name: "acme".into(),
-                ..Organization::default()
-            })
-            .expect("org");
-        let mut in_org = fixtures::project("web");
-        in_org.organization_id = Some(org);
-        db.insert(&in_org).expect("project");
+        let org = org(&db, "acme");
+        add_projects(&db, org, ["web".into()]);
         fixtures::add_project(&db, "solo");
         let board = db.insert(&fixtures::board("week")).expect("board");
 
@@ -101,23 +110,13 @@ mod tests {
     #[test]
     fn a_list_past_the_limit_is_cut_and_counts_what_it_leaves_out() {
         let db = fixtures::db();
-        let acme = db
-            .insert(&Organization {
-                name: "acme".into(),
-                ..Organization::default()
-            })
-            .expect("org");
-        let empty = db
-            .insert(&Organization {
-                name: "zeta".into(),
-                ..Organization::default()
-            })
-            .expect("org");
-        for i in 0..FOOTER_LIMIT + 2 {
-            let mut p = fixtures::project(&format!("web{i:02}"));
-            p.organization_id = Some(acme);
-            db.insert(&p).expect("project");
-        }
+        let acme = org(&db, "acme");
+        let empty = org(&db, "zeta");
+        add_projects(
+            &db,
+            acme,
+            (0..FOOTER_LIMIT + 2).map(|i| format!("web{i:02}")),
+        );
         for i in 0..FOOTER_LIMIT + 1 {
             fixtures::add_project(&db, &format!("solo{i:02}"));
             db.insert(&fixtures::board(&format!("week{i:02}")))
@@ -143,17 +142,8 @@ mod tests {
     #[test]
     fn a_list_within_the_limit_is_not_cut() {
         let db = fixtures::db();
-        let org = db
-            .insert(&Organization {
-                name: "acme".into(),
-                ..Organization::default()
-            })
-            .expect("org");
-        for name in ["api", "web"] {
-            let mut p = fixtures::project(name);
-            p.organization_id = Some(org);
-            db.insert(&p).expect("project");
-        }
+        let org = org(&db, "acme");
+        add_projects(&db, org, ["api".into(), "web".into()]);
         fixtures::add_project(&db, "solo");
         db.insert(&fixtures::board("week")).expect("board");
 
