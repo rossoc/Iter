@@ -1,7 +1,7 @@
 //! `mv`: renames a file inside its level and rewrites every reference to it (front matter values and `[[links]]`),
 //! each keeping its spelling. Raw notes are never rewritten.
 
-use super::graph::Wiki;
+use super::graph::{Node, Wiki};
 use crate::error::{Result, failed};
 use crate::files::write_atomic;
 use crate::text::{Split, split_closed, strip_bom};
@@ -112,10 +112,9 @@ fn rewrite(content: &str, renames: &[(String, String)]) -> (String, usize) {
     }
 }
 
-/// Moves `node` to path `to` (no `.md`) in its level and rewrites references; `dry_run` only says what it would do.
-pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
-    let n = &wiki.nodes[node];
-    let level = &wiki.levels[n.level];
+/// `to` as a path inside the level of `node`, without `.md`; refused if it could leave the level or the wiki.
+fn destination<'a>(wiki: &Wiki, node: &Node, to: &'a str) -> Result<&'a str> {
+    let level = &wiki.levels[node.level];
     let to = to.trim().trim_start_matches('/');
     let to = to.strip_suffix(".md").unwrap_or(to);
     // no part starts with a dot: not `..`, and not a hidden folder (`.git`,
@@ -135,18 +134,15 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
     }
     // a page stays a page: it moves to a folder the wiki gives a class to,
     // else it would leave the wiki and every reference to it would dangle
-    if wiki.ontology.pages.contains(&n.class) {
-        let folders: Vec<&str> = wiki
-            .ontology
-            .places
-            .iter()
-            .filter(|p| p.kind == level.kind && wiki.ontology.pages.contains(&p.class))
+    let onto = &wiki.ontology;
+    if onto.pages.contains(&node.class) {
+        let folders: Vec<&str> = (onto.places.iter())
+            .filter(|p| p.kind == level.kind && onto.pages.contains(&p.class))
             .map(|p| p.folder.as_str())
             .collect();
-        let inside = folders.iter().any(|f| {
-            to.strip_prefix(*f)
-                .is_some_and(|rest| rest.starts_with('/'))
-        });
+        let inside = folders
+            .iter()
+            .any(|f| (to.strip_prefix(f)).is_some_and(|rest| rest.starts_with('/')));
         if !inside {
             return Err(failed(format!(
                 "`{to}` is not in a folder of the wiki: a page goes under {}",
@@ -154,35 +150,25 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
             )));
         }
     }
+    Ok(to)
+}
+
+/// Moves `node` to path `to` (no `.md`) in its level and rewrites references; `dry_run` only says what it would do.
+pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
+    let n = &wiki.nodes[node];
+    let level = &wiki.levels[n.level];
+    let to = destination(wiki, n, to)?;
     let target = level.dir.join(format!("{to}.md"));
     if target.exists() {
         return Err(failed(format!("{} already exists", target.display())));
     }
 
-    let mut plans = Vec::new();
+    let (mut rewrites, mut edits) = (Vec::new(), Vec::new());
     for (i, page) in wiki.nodes.iter().enumerate() {
-        let Some(front) = &page.front else {
-            if page.links.is_empty() {
-                continue;
-            }
-            plans.push((
-                i,
-                collect(wiki, page, node, level.label.as_str(), &n.rel, to, &[]),
-            ));
+        let renames = renames(wiki, page, node, &level.label, &n.rel, to);
+        if renames.is_empty() {
             continue;
-        };
-        let targets: Vec<&String> = front.relations.iter().flat_map(|(_, t)| t).collect();
-        plans.push((
-            i,
-            collect(wiki, page, node, level.label.as_str(), &n.rel, to, &targets),
-        ));
-    }
-    let plans: Vec<_> = plans.into_iter().filter(|(_, r)| !r.is_empty()).collect();
-
-    let mut rewrites = Vec::new();
-    let mut edits = Vec::new();
-    for (i, renames) in plans {
-        let page = &wiki.nodes[i];
+        }
         let content = std::fs::read_to_string(&page.path)?;
         let (new_content, count) = rewrite(&content, &renames);
         if count > 0 {
@@ -199,20 +185,12 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
             std::fs::create_dir_all(dir)?;
         }
         std::fs::rename(&n.path, &target)?;
-        let mut written: Vec<(PathBuf, String)> = Vec::new();
-        for (path, original, content) in edits {
-            let path = if path == n.path { target.clone() } else { path };
-            match write_atomic(&path, &content) {
-                Ok(()) => written.push((path, original)),
-                Err(e) => {
-                    // half a move leaves dangling references: put back what was changed, report the original error
-                    for (done, original) in written {
-                        let _ = write_atomic(&done, &original);
-                    }
-                    let _ = std::fs::rename(&target, &n.path);
-                    return Err(e.into());
-                }
-            }
+        let edits = (edits.into_iter())
+            .map(|(path, old, new)| (if path == n.path { target.clone() } else { path }, old, new));
+        if let Err(e) = write_all(edits) {
+            // half a move leaves dangling references: put the file back too
+            let _ = std::fs::rename(&target, &n.path);
+            return Err(e);
         }
     }
     Ok(Moved {
@@ -222,26 +200,38 @@ pub fn mv(wiki: &Wiki, node: usize, to: &str, dry_run: bool) -> Result<Moved> {
     })
 }
 
-fn collect(
+/// Writes each `(path, original, new content)`; if one fails, puts back every file already written and returns that error.
+fn write_all(edits: impl Iterator<Item = (PathBuf, String, String)>) -> Result<()> {
+    let mut written: Vec<(PathBuf, String)> = Vec::new();
+    for (path, original, content) in edits {
+        if let Err(e) = write_atomic(&path, &content) {
+            for (done, original) in written {
+                let _ = write_atomic(&done, &original);
+            }
+            return Err(e.into());
+        }
+        written.push((path, original));
+    }
+    Ok(())
+}
+
+/// The `(old spelling, new spelling)` of every reference in `page` that names `node`, longest old spelling first
+/// so that one containing another is not cut.
+fn renames(
     wiki: &Wiki,
-    page: &super::graph::Node,
+    page: &Node,
     node: usize,
     label: &str,
     old_rel: &str,
     new_rel: &str,
-    targets: &[&String],
 ) -> Vec<(String, String)> {
     let mut renames: Vec<(String, String)> = Vec::new();
-    for t in targets.iter().copied().chain(page.links.iter()) {
+    for (_, _, t) in page.written(&wiki.ontology) {
         let plain = t.strip_suffix(".md").unwrap_or(t);
-        if wiki.resolve(page.level, plain) == Some(node) {
-            let new = respell(t, label, old_rel, new_rel);
-            if !renames.iter().any(|(o, _)| o == t) {
-                renames.push((t.clone(), new));
-            }
+        if wiki.resolve(page.level, plain) == Some(node) && !renames.iter().any(|(o, _)| o == t) {
+            renames.push((t.clone(), respell(t, label, old_rel, new_rel)));
         }
     }
-    // a longer spelling first, so one that contains another is not cut
     renames.sort_by_key(|(o, _)| std::cmp::Reverse(o.len()));
     renames
 }
