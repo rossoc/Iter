@@ -1,7 +1,6 @@
 //! A board's day agenda (`/board/{id}?date=`): the day beside the lists of unscheduled tasks.
 
 use super::agenda_cards::{Cards, Fold, NOT_SCHEDULED, side};
-use super::agenda_day::{Day, hour_label, hour_target, neighbours, split};
 use super::agenda_pick::{day_url, links};
 use super::board_cards::{CLOCK_FMT, CardCtx};
 use super::board_header::{BoardSection, title_parts};
@@ -17,6 +16,7 @@ use super::ui::task_card::task_card;
 use super::url::{board_day_url, board_schedule_url, board_url, with_side};
 use super::{Id, now};
 use crate::db::Table;
+use crate::front::day::{Day, hour_label, hour_target, neighbours, split};
 use crate::reporting::fmt_date;
 use crate::reporting::parse_day;
 use chrono::{NaiveDate, NaiveDateTime, Timelike};

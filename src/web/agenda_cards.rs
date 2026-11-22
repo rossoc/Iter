@@ -1,6 +1,5 @@
 //! The agenda's cards and the side lists of tasks that are not on the day.
 
-use super::agenda_day::Day;
 use super::agenda_pick::links;
 use super::board_cards::{BOARD_EMPTY, CardCtx};
 use super::ui::KANBAN;
@@ -12,6 +11,7 @@ use super::ui::task_card::{CardView, task_card};
 use super::ui::unplaced_list::unplaced_list;
 use super::url::with_side;
 use crate::db::Table;
+use crate::front::day::Day;
 use crate::models::Card;
 use chrono::NaiveDate;
 use topcoat::{

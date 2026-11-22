@@ -1,11 +1,11 @@
 //! Maps tasks to the task table (`ui::task_table`) and their tags to chips: the one place a task's links, issue label and chips are built.
 
-use super::task_query::TaskQuery;
 use super::ui::filter_bar::Search;
 use super::ui::tag_chips::Chip;
 use super::ui::task_table::{ProjectLink, TaskRow};
 use super::url::{project_url, task_url, tasks_list_url};
 use crate::db::Table;
+use crate::front::query::TaskQuery;
 use crate::models::{Tag, Task};
 
 const SYNTAX: &[(&str, &str)] = &[

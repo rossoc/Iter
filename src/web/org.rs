@@ -12,7 +12,6 @@ use super::project_rows::{project_search_in, projects_section};
 use super::sections::{Section, TabQuery, section_tabs, settings_tab};
 use super::settings_panel::settings_panel;
 use super::share_dialog::{Outcome, ShareDialog, preview_modal, recorded, share_modal};
-use super::task_query::TaskQuery;
 use super::task_rows::{group_rows, search};
 use super::text::NO_PROJECTS;
 use super::ui::frame::frame;
@@ -25,6 +24,7 @@ use super::ui::tasks_tab::tasks_tab;
 use super::url::org_url;
 use super::{fresh_db, now};
 use crate::db::{Db, Table};
+use crate::front::query::TaskQuery;
 use crate::models::{Configured, Organization, Project, Task};
 use crate::reporting::fmt_date;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -67,7 +67,7 @@ pub fn load(
         || db.count_tasks_in::<Organization>(id),
     )?;
     // the badge keeps the total; the rows are the ones the search lets by
-    let tasks = TaskQuery::of(q).filter_named(db, tasks)?;
+    let tasks = TaskQuery::of(q).filter_named(&|ids| db.tag_names_for_tasks(ids), tasks)?;
     let report = match section {
         Section::Report => Some(super::org_report::load(db, &projects, from, to, now)?),
         _ => None,

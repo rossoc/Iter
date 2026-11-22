@@ -2,9 +2,9 @@
 
 use super::assets::json;
 use super::fresh_db;
-use super::search::{Entry, Hit, Kind, search};
 use super::url::{board_url, note_url, org_url, project_url, task_url};
 use crate::db::{Db, Table};
+use crate::front::search::{Entry, Hit, Kind, search};
 use crate::models::{Board, Organization, Project, Task};
 use crate::notes;
 use std::collections::HashMap;

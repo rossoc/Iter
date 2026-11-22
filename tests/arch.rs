@@ -660,7 +660,6 @@ fn utils_keeps_only_what_waits_for_the_cli() {
 /// Step 4: `front` is what a front end shows, as data: four files out of `web`, with no markup,
 /// no URL, no DOM id, and nothing above `models`.
 #[test]
-#[ignore = "isolation: round I3"]
 fn front_is_pure_data_moved_out_of_web() {
     let sources = sources();
     for (front, web) in [

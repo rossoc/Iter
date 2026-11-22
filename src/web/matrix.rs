@@ -6,7 +6,6 @@ use super::board_header::{BoardSection, title_parts};
 use super::board_page::{BoardPage, board_screen, load_board};
 use super::drop::{Drop, back_or, drop_on};
 use super::pick::{PickLinks, PickWords, Picked, moved_note, pick_fields};
-use super::quadrants::{Matrix, QUADRANTS, place, quadrant_index, split};
 use super::ui::button::post_button;
 use super::ui::layout::{jump_link, side_lists, sticky_head};
 use super::ui::pick_bar::pick_bar;
@@ -17,6 +16,8 @@ use super::ui::task_card::{Edge, task_card};
 use super::ui::unplaced_list::unplaced_list;
 use super::url::{board_matrix_url, with_side};
 use crate::db::Table;
+use crate::front::matrix::{self, Matrix, QUADRANTS, quadrant_index, split};
+use crate::models::{Priority, Task};
 use topcoat::{
     Result,
     context::Cx,
@@ -154,7 +155,7 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
             // 1 2 / 3 4; the quadrants stack (still 1 to 4) when narrow
             <div class="quad-grid">
                 for (n, (q, cards)) in QUADRANTS.iter().zip(matrix.placed.iter()).enumerate() {
-                    quadrant(id: q.id, target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
+                    quadrant(id: DOM_IDS[n], target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
                         if let Some(p) = picked {
                             if now != Some(n) {
                                 pick_here(action: base.as_str(), fields: pick_fields(p.id, q.target, Some(FORM_POST)), verb: action, at: q.name)
@@ -170,10 +171,27 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
     })
 }
 
+/// The element of each quadrant, in the order of [`QUADRANTS`].
+const DOM_IDS: [&str; 4] = ["q-both", "q-important", "q-urgent", "q-neither"];
+
+/// What the board's script posts: a quadrant's target word, or `left` for the backlog.
+fn place(task: &mut Task, target: &str) -> std::result::Result<Option<Priority>, String> {
+    let chosen = match target {
+        "left" => None,
+        _ => Some(
+            QUADRANTS
+                .iter()
+                .find(|q| q.target == target)
+                .ok_or_else(|| format!("unknown quadrant '{target}'"))?,
+        ),
+    };
+    Ok(matrix::place(task, chosen))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::Priority;
+    use crate::models::TaskStatus;
 
     fn task(placed: bool, urgent: bool, important: bool) -> Picked {
         Picked {
@@ -216,5 +234,36 @@ mod tests {
     #[test]
     fn the_pick_mode_names_the_document() {
         assert_eq!(PickWords::MOVING.title("p/t"), "Moving p/t");
+    }
+
+    #[test]
+    fn quadrants_set_the_flags_and_the_side_list_only_unplaces() {
+        let mut t = Task::template(1, String::new(), TaskStatus::Queue);
+        assert_eq!(
+            place(&mut t, "both"),
+            Ok(Some(Priority {
+                urgent: true,
+                important: true
+            }))
+        );
+        assert!(t.matrix_placed);
+        assert_eq!(
+            place(&mut t, "urgent"),
+            Ok(Some(Priority {
+                urgent: true,
+                important: false
+            }))
+        );
+        assert_eq!(place(&mut t, "left"), Ok(None));
+        assert!(!t.matrix_placed);
+        assert_eq!(
+            place(&mut t, "neither"),
+            Ok(Some(Priority {
+                urgent: false,
+                important: false
+            }))
+        );
+        assert!(t.matrix_placed);
+        assert!(place(&mut t, "nowhere").is_err());
     }
 }

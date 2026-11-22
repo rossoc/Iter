@@ -12,7 +12,6 @@ pub enum TaskStatus {
 }
 
 impl TaskStatus {
-    #[cfg(any(test, feature = "web"))]
     pub const ALL: [TaskStatus; 3] = [TaskStatus::Queue, TaskStatus::Wip, TaskStatus::Done];
 
     /// `(value, label)` per status, in workflow order (a `<select>`'s options).

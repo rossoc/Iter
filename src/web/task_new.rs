@@ -8,9 +8,9 @@ use super::load::project_of;
 use super::org::{load as load_org, screen as org_screen};
 use super::project::{load as load_project, screen as project_screen};
 use super::sections::Section;
-use super::task_query::DEFAULT;
 use super::{fresh_db, now};
 use crate::db::Table;
+use crate::front::query::DEFAULT;
 use serde::Deserialize;
 use topcoat::{
     Result,

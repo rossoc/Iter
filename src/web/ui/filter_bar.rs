@@ -12,7 +12,7 @@ pub(super) const FILTER_ID: &str = "filter-q";
 
 const SYNTAX_ID: &str = "filter-syntax";
 
-/// What a filter bar shows and where it sends (syntaxes in `web/task_query.rs`, `web/project_rows.rs`).
+/// What a filter bar shows and where it sends (syntaxes in `front/query.rs`, `web/project_rows.rs`).
 pub struct Search {
     pub action: String,
     pub tab: &'static str,

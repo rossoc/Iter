@@ -58,7 +58,7 @@ pub struct Entry {
 }
 
 #[derive(Debug, PartialEq, Default)]
-pub(super) struct Query {
+pub struct Query {
     scopes: Vec<(Option<Kind>, String)>,
     kind: Option<Kind>,
     words: Vec<String>,
@@ -310,6 +310,6 @@ mod tests {
             .map(|k| format!("\"{}\"", k.word()))
             .collect();
         let list = format!("var KINDS = [{}];", words.join(","));
-        assert!(include_str!("ui/search.js").contains(&list));
+        assert!(include_str!("../web/ui/search.js").contains(&list));
     }
 }

@@ -26,7 +26,7 @@ pub use settings::Settings;
 #[cfg(feature = "web")]
 pub use tag::is_hex_color;
 pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};
-#[cfg(feature = "web")]
+#[cfg(any(test, feature = "web"))]
 pub use task::parse_start_time;
 pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus, end_text};
 pub use task_ref::{TaskId, TaskLabel, TaskRef};

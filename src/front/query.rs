@@ -1,8 +1,13 @@
 //! The query box of a task list (`?q=`): a few GitHub-style terms in one
 //! text field, parsed here and matched against tasks. Pure, no markup.
 
-use crate::db::Db;
+use crate::error::Result;
 use crate::models::{Task, TaskStatus};
+use std::collections::HashMap;
+
+/// The tags of the tasks with the given ids (what `Db::tag_names_for_tasks` answers): handed in by
+/// the caller, so a query that never asks about tags reads none.
+pub type TagsOf<'a> = &'a dyn Fn(&[i64]) -> Result<HashMap<i64, Vec<String>>>;
 
 /// What a list starts with: the tasks that are not done. The links into a
 /// list spell it out (`url::tasks_tab_url`); no `q` at all is no filter.
@@ -116,7 +121,7 @@ impl TaskQuery {
         q.unwrap_or("")
     }
 
-    pub(super) fn needs_tags(&self) -> bool {
+    pub fn needs_tags(&self) -> bool {
         self.terms.iter().any(|t| matches!(t.kind, Kind::Tag(_)))
     }
 
@@ -134,10 +139,10 @@ impl TaskQuery {
     }
 
     /// Tags are read (one query) only when the query asks about them.
-    fn keep(&self, db: &Db, items: &[(&Task, &str)]) -> crate::error::Result<Vec<bool>> {
+    fn keep(&self, tags_of: TagsOf, items: &[(&Task, &str)]) -> Result<Vec<bool>> {
         let tags = if self.needs_tags() {
             let ids: Vec<i64> = items.iter().filter_map(|(t, _)| t.id).collect();
-            db.tag_names_for_tasks(&ids)?
+            tags_of(&ids)?
         } else {
             Default::default()
         };
@@ -155,12 +160,12 @@ impl TaskQuery {
 
     pub fn filter_tasks(
         &self,
-        db: &Db,
+        tags_of: TagsOf,
         tasks: Vec<Task>,
         project: &str,
-    ) -> crate::error::Result<Vec<Task>> {
+    ) -> Result<Vec<Task>> {
         let items: Vec<(&Task, &str)> = tasks.iter().map(|t| (t, project)).collect();
-        let keep = self.keep(db, &items)?;
+        let keep = self.keep(tags_of, &items)?;
         Ok(tasks
             .into_iter()
             .zip(keep)
@@ -170,11 +175,11 @@ impl TaskQuery {
 
     pub fn filter_named(
         &self,
-        db: &Db,
+        tags_of: TagsOf,
         rows: Vec<(String, Task)>,
-    ) -> crate::error::Result<Vec<(String, Task)>> {
+    ) -> Result<Vec<(String, Task)>> {
         let items: Vec<(&Task, &str)> = rows.iter().map(|(p, t)| (t, p.as_str())).collect();
-        let keep = self.keep(db, &items)?;
+        let keep = self.keep(tags_of, &items)?;
         Ok(rows
             .into_iter()
             .zip(keep)
@@ -309,7 +314,7 @@ mod tests {
         let rows = db.tasks_for_project(project).expect("rows");
         let names = |q: &str| -> Vec<String> {
             TaskQuery::parse(q)
-                .filter_tasks(&db, rows.clone(), "p")
+                .filter_tasks(&|ids| db.tag_names_for_tasks(ids), rows.clone(), "p")
                 .expect("filtered")
                 .into_iter()
                 .map(|t| t.name)

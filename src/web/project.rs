@@ -10,7 +10,6 @@ use super::project_wiki::{self, WikiTab, wiki_tab};
 use super::sections::{Section, TabQuery};
 use super::sections::{section_tabs, settings_tab};
 use super::settings_panel::settings_panel;
-use super::task_query::TaskQuery;
 use super::task_rows::{project_rows, search};
 use super::ui::breadcrumb::Crumb;
 use super::ui::frame::frame;
@@ -23,6 +22,7 @@ use super::ui::tabs::tabs;
 use super::ui::tasks_tab::tasks_tab;
 use super::url::{project_url, wiki_tab_url};
 use crate::db::{Db, Table};
+use crate::front::query::TaskQuery;
 use crate::models::{Configured, Organization, Project, Task};
 use topcoat::{
     Result,
@@ -60,7 +60,11 @@ pub fn load(db: &Db, id: i64, section: Section, q: Option<&str>) -> Result<Loade
         || db.count_tasks_for_project(id),
     )?;
     // the badge keeps the total; the rows are the ones the search lets by
-    let tasks = TaskQuery::of(q).filter_tasks(db, tasks, &parents.project.name)?;
+    let tasks = TaskQuery::of(q).filter_tasks(
+        &|ids| db.tag_names_for_tasks(ids),
+        tasks,
+        &parents.project.name,
+    )?;
     let notes = NotesTab::load(
         crate::notes::project_dir(&parents.project, &parents.org),
         section == Section::Notes,

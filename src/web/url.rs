@@ -1,7 +1,7 @@
 //! The URLs of the pages, built in one place so no call site concatenates
 //! a path by hand.
 
-use super::task_query::DEFAULT;
+use crate::front::query::DEFAULT;
 use crate::reporting::fmt_date;
 use crate::text::percent_encode;
 use chrono::NaiveDate;

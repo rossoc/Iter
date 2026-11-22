@@ -3,7 +3,6 @@
 
 mod agenda;
 mod agenda_cards;
-mod agenda_day;
 mod agenda_drop;
 mod agenda_pick;
 mod agents;
@@ -48,8 +47,6 @@ mod project_new;
 mod project_options;
 mod project_rows;
 mod project_wiki;
-mod quadrants;
-mod search;
 mod search_index;
 mod sections;
 mod session_lines;
@@ -65,7 +62,6 @@ mod task_fields;
 mod task_new;
 mod task_notes;
 mod task_panel;
-mod task_query;
 mod task_rows;
 mod task_runs;
 mod task_sessions;

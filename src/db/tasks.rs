@@ -226,7 +226,7 @@ impl Db {
     }
 
     /// Tag names per task id, one query; untagged tasks are absent.
-    #[cfg(feature = "web")]
+    #[cfg(any(test, feature = "web"))]
     pub fn tag_names_for_tasks(&self, ids: &[i64]) -> Result<HashMap<i64, Vec<String>>> {
         let rows = self.query_all(
             "SELECT tt.task_id, g.name FROM task_tags tt
