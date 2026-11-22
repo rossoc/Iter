@@ -12,6 +12,7 @@ mod settings;
 mod table;
 mod tag;
 mod task;
+mod task_ref;
 
 pub use board::{Board, Card};
 pub use organization::Organization;
@@ -28,6 +29,8 @@ pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};
 #[cfg(feature = "web")]
 pub use task::parse_start_time;
 pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus, end_text};
+#[allow(unused_imports)] // stub: I2
+pub use task_ref::{TaskId, TaskLabel, TaskRef};
 
 /// Fallback settings for a project that inherits none (no organization); also serde's default
 /// for fields the YAML editor left out.

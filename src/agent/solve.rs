@@ -486,9 +486,42 @@ pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
     work(&project, task.id(), &dir, run, extra).map(|_| ())
 }
 
+/// The arguments of the detached worker: `iter task run-worker <task> <run> -- <extra..>`.
+///
+/// stub: I2 (task 298): `unimplemented!()`; the spawn above builds the same list inline until
+/// the develop step of round I2 calls this.
+#[allow(dead_code)]
+fn worker_args(_task_id: i64, _run: u32, _extra: &[String]) -> Vec<String> {
+    unimplemented!("stub: I2")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The command line a detached worker is started with must parse as `iter task run-worker`:
+    /// rename the subcommand and this fails, instead of a worker that exits 2 unseen.
+    #[test]
+    fn the_worker_command_line_parses_as_run_worker() {
+        use crate::args::{Args, Command, TaskCommand};
+        use clap::Parser;
+        for extra in [vec![], vec!["--model".to_string(), "-x".to_string()]] {
+            let mut argv = vec!["iter".to_string()];
+            argv.extend(worker_args(42, 3, &extra));
+            let parsed = Args::try_parse_from(&argv).unwrap_or_else(|e| panic!("{argv:?}: {e}"));
+            match parsed.command {
+                Command::Task {
+                    action:
+                        Some(TaskCommand::RunWorker {
+                            task_id,
+                            run,
+                            extra: passed,
+                        }),
+                } => assert_eq!((task_id, run, passed), (42, 3, extra)),
+                other => panic!("{argv:?} parsed as {other:?}"),
+            }
+        }
+    }
 
     #[test]
     fn the_agent_cannot_reach_the_run_records() {

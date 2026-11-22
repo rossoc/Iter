@@ -303,3 +303,88 @@ fn two_connections_migrating_one_file_leave_one_copy_and_version_7() {
     assert_eq!(ids(&copy, "tasks"), [1, 2, 5], "it holds the old data");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn foreign_keys_on(db: &Db) -> bool {
+    let on: i64 = db
+        .conn
+        .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
+        .unwrap();
+    on == 1
+}
+
+fn noop_step(_: &Db) -> Result<()> {
+    Ok(())
+}
+
+fn failing_step(db: &Db) -> Result<()> {
+    // a half-done change, rolled back with its transaction
+    db.conn.execute_batch("UPDATE tasks SET name = 'changed'")?;
+    Err(crate::error::failed("boom"))
+}
+
+/// Round I2: the copy guards the rebuild (step 7). A later step on a database that already ran it
+/// has nothing to guard, and must not leave a `.before-v7` file that says otherwise.
+#[test]
+fn a_step_after_the_rebuild_takes_no_copy() {
+    let dir = fixtures::scratch("rebuild-later-step");
+    let path = old_database(&dir, 6, true);
+    let db = Db::open(&path).expect("migrates");
+    std::fs::remove_file(backup_of(&path)).expect("the copy of step 7");
+    let mut steps = Db::MIGRATIONS.to_vec();
+    steps.push(noop_step);
+    db.migrate_steps(&steps).expect("the extra step runs");
+    assert_eq!(db.user_version().unwrap(), 8);
+    assert!(
+        !backup_of(&path).exists(),
+        "step 7 was not pending: no copy"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A failing step is rolled back whole (name and version), the error reaches the caller, and
+/// foreign keys are on again: the connection goes on being used by the process.
+#[test]
+fn a_failing_step_leaves_the_data_the_version_and_foreign_keys_alone() {
+    let dir = fixtures::scratch("rebuild-failing");
+    let path = old_database(&dir, 6, true);
+    let db = Db::open(&path).expect("migrates");
+    let mut steps = Db::MIGRATIONS.to_vec();
+    steps.push(failing_step);
+    let err = db.migrate_steps(&steps).expect_err("the step fails");
+    assert!(err.to_string().contains("boom"), "{err}");
+    assert_eq!(db.user_version().unwrap(), 7, "the version did not move");
+    assert!(foreign_keys_on(&db), "foreign keys are on after a failure");
+    let names: Vec<String> = db
+        .conn
+        .prepare("SELECT name FROM tasks ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert!(!names.contains(&"changed".to_string()), "rolled back");
+    assert_eq!(count(&db.conn, "sessions"), 3);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The rebuild itself failing (step 7 replaced by one that errors) loses nothing either: the
+/// old database is still version 6 with every dependent row, and foreign keys are on.
+#[test]
+fn a_failing_rebuild_keeps_the_old_database_and_foreign_keys_on() {
+    let dir = fixtures::scratch("rebuild-failing-v7");
+    let path = old_database(&dir, 6, true);
+    let (before, _) = Db::MIGRATIONS.split_at(6);
+    let mut steps = before.to_vec();
+    steps.push(failing_step);
+    let conn = Connection::open(&path).expect("opens");
+    conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
+    let db = Db { conn };
+    db.migrate_steps(&steps).expect_err("the rebuild fails");
+    assert_eq!(db.user_version().unwrap(), 6);
+    assert!(foreign_keys_on(&db));
+    assert_eq!(ids(&db.conn, "tasks"), [1, 2, 5]);
+    assert_eq!(count(&db.conn, "task_tags"), 4, "three and the orphan");
+    assert_eq!(count(&db.conn, "session_configs"), 2);
+    assert_eq!(count(&db.conn, "sessions"), 3);
+    let _ = std::fs::remove_dir_all(&dir);
+}

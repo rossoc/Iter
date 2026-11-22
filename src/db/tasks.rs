@@ -272,6 +272,18 @@ impl Db {
         })
     }
 
+    /// Every task as a [`TaskLabel`], by project, title and id, optionally narrowed by project
+    /// and statuses (empty = all): what `iter task list` prints and completion chooses from.
+    /// stub: I2 (replaces `task_refs`).
+    #[allow(dead_code)]
+    pub fn task_labels(
+        &self,
+        _project: Option<&str>,
+        _statuses: &[TaskStatus],
+    ) -> Result<Vec<crate::models::TaskLabel>> {
+        unimplemented!("stub: I2")
+    }
+
     /// The id of every task, sorted: what `task pull/push --task` completes (the project is not
     /// known to the completer, so a title could name several).
     pub fn task_names(&self) -> Result<Vec<String>> {

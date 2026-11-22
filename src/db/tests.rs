@@ -131,7 +131,10 @@ fn set_priority_toggles_only_the_builtin_tags() {
     };
     db.set_priority(task, flags).expect("set");
     let cards = db.cards(work).expect("cards");
-    assert_eq!((cards[0].label.as_str(), cards[0].priority), ("p/t", flags));
+    assert_eq!(
+        (cards[0].label.as_str(), cards[0].priority),
+        (format!("p/t #{task}").as_str(), flags)
+    );
 
     db.set_priority(task, Priority::default()).expect("clear");
     let names: Vec<String> = db
@@ -189,7 +192,7 @@ fn unfinished_cards_leave_out_done_tasks() {
     let cards = db.cards_unfinished(work).expect("cards");
     assert_eq!(
         cards.iter().map(|c| c.label.as_str()).collect::<Vec<_>>(),
-        ["p/open"]
+        [format!("p/open #{open}")]
     );
     assert_eq!(cards[0].priority, urgent);
     let all = db.cards(work).expect("cards");
@@ -1656,4 +1659,65 @@ fn timestamps_are_stored_as_plain_seconds_text() {
         .expect("raw row");
     assert_eq!(start, "2025-03-04 12:30:00");
     assert_eq!(end, None);
+}
+
+/// Round I2, R3: a board card is labelled as everywhere else, `<project>/<title> #<id>`, so two
+/// cards of one title can be told apart.
+#[test]
+fn board_cards_of_one_title_carry_their_ids() {
+    let db = db();
+    let work = db.insert(&board("work")).expect("board");
+    let web = insert_project(&db, "web");
+    db.set_projects::<Board>(work, &[web]).expect("roster");
+    let first = insert_task(&db, web, "login");
+    let second = insert_task(&db, web, "login");
+    let labels: Vec<String> = db
+        .cards(work)
+        .expect("cards")
+        .into_iter()
+        .map(|c| c.label)
+        .collect();
+    assert_eq!(
+        labels,
+        [
+            format!("web/login #{first}"),
+            format!("web/login #{second}")
+        ]
+    );
+}
+
+/// Round I2, R3: what `iter task list` prints and completion chooses from: one label per task,
+/// narrowed by project and status, by project then title then id. Replaces `task_refs`.
+#[test]
+fn task_labels_are_every_task_with_its_id_in_project_and_title_order() {
+    let db = db();
+    let beta = insert_project(&db, "beta");
+    let alpha = insert_project(&db, "alpha");
+    let ship = insert_task(&db, beta, "ship it");
+    let first = insert_task(&db, alpha, "docs");
+    let second = insert_task(&db, alpha, "docs");
+    let shown = |labels: Vec<crate::models::TaskLabel>| -> Vec<String> {
+        labels.iter().map(|l| l.to_string()).collect()
+    };
+    assert_eq!(
+        shown(db.task_labels(None, &[]).expect("labels")),
+        [
+            format!("alpha/docs #{first}"),
+            format!("alpha/docs #{second}"),
+            format!("beta/ship it #{ship}"),
+        ]
+    );
+    assert_eq!(
+        shown(db.task_labels(Some("beta"), &[]).expect("labels")),
+        [format!("beta/ship it #{ship}")]
+    );
+    assert_eq!(
+        shown(db.task_labels(None, &[TaskStatus::Done]).expect("labels")),
+        Vec::<String>::new()
+    );
+    let wip = db.task_labels(None, &[TaskStatus::Wip]).expect("labels");
+    assert_eq!(wip.len(), 3, "the fixtures insert tasks as wip");
+    assert_eq!(wip[0].project, "alpha");
+    assert_eq!(wip[0].title, "docs");
+    assert_eq!(wip[0].id, first);
 }

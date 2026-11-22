@@ -285,9 +285,81 @@ fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
     format!("run-shell '{bin} internal hook {event} -- {args}'")
 }
 
+/// The arguments of the hook for `event` (one entry of [`HOOKS`]) after the binary:
+/// `internal hook <event> -- <format variables..>`, which `hook_action` quotes into the
+/// `set-hook` body.
+///
+/// stub: I2 (task 298): `unimplemented!()`; `hook_action` builds the same words inline until
+/// the develop step of round I2 calls this.
+#[allow(dead_code)]
+fn hook_args(_event: &str, _variables: &str) -> Vec<String> {
+    unimplemented!("stub: I2")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every hook iter installs must parse as the `internal hook` event of its name, with the
+    /// number of arguments that event takes: a renamed subcommand fails here, not in a tmux
+    /// that ignores a failing hook.
+    #[test]
+    fn every_installed_hook_parses_as_its_internal_event() {
+        use crate::args::{Args, Command, HookEvent, InternalCommand};
+        use clap::Parser;
+        for (event, variables) in HOOKS {
+            // what tmux fills the variables with; a leading dash is the case that broke
+            let filled: String = variables
+                .split(' ')
+                .enumerate()
+                .map(|(i, _)| format!("-v{i}"))
+                .collect::<Vec<_>>()
+                .join(" ");
+            let mut argv = vec!["iter".to_string()];
+            argv.extend(hook_args(event, &filled));
+            let parsed = Args::try_parse_from(&argv).unwrap_or_else(|e| panic!("{argv:?}: {e}"));
+            let Command::Internal {
+                action: InternalCommand::Hook { event: parsed },
+            } = parsed.command
+            else {
+                panic!("{argv:?} is not `internal hook`");
+            };
+            let name = match (&parsed, event) {
+                (
+                    HookEvent::ClientSessionChanged {
+                        client,
+                        session,
+                        previous,
+                    },
+                    "client-session-changed",
+                ) => {
+                    assert_eq!((client.as_str(), session.as_str()), ("-v0", "-v1"));
+                    assert_eq!(previous.as_deref(), Some("-v2"));
+                    event
+                }
+                (HookEvent::ClientDetached { client }, "client-detached") => {
+                    assert_eq!(client, "-v0");
+                    event
+                }
+                (HookEvent::SessionClosed { session }, "session-closed") => {
+                    assert_eq!(session, "-v0");
+                    event
+                }
+                (other, event) => panic!("{event} parsed as {other:?}"),
+            };
+            assert_eq!(name, event);
+        }
+    }
+
+    /// The same words end up in the `set-hook` body, so what is tested is what is installed.
+    #[test]
+    fn the_hook_action_holds_the_hook_arguments() {
+        for (event, variables) in HOOKS {
+            let action = hook_action("/usr/bin/iter", event, variables);
+            let words = hook_args(event, variables).join(" ");
+            assert!(action.contains(&words), "{action} lacks {words}");
+        }
+    }
 
     fn action_for(event: &str) -> String {
         let (event, args) = HOOKS

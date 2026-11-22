@@ -14,20 +14,25 @@ impl Db {
     /// pragma is a no-op, and a table rebuild ([`Self::task_titles_repeat`]) would otherwise
     /// cascade-delete every row that points at the dropped table.
     pub(super) fn migrate(&self) -> Result<()> {
-        if self.user_version()? >= Self::MIGRATIONS.len() {
+        self.migrate_steps(Self::MIGRATIONS)
+    }
+
+    /// [`Self::migrate`] over `steps` (a seam: tests append or break a step).
+    pub(super) fn migrate_steps(&self, steps: &[fn(&Db) -> Result<()>]) -> Result<()> {
+        if self.user_version()? >= steps.len() {
             return Ok(());
         }
         self.conn.execute_batch("PRAGMA foreign_keys = OFF")?;
-        let run = self.run_pending_steps();
+        let run = self.run_pending_steps(steps);
         self.conn.execute_batch("PRAGMA foreign_keys = ON")?;
         run
     }
 
-    fn run_pending_steps(&self) -> Result<()> {
+    fn run_pending_steps(&self, steps: &[fn(&Db) -> Result<()>]) -> Result<()> {
         for first in std::iter::successors(Some(true), |_| Some(false)) {
             let tx = Transaction::new_unchecked(&self.conn, TransactionBehavior::Immediate)?;
             let done = self.user_version()?;
-            let Some(step) = Self::MIGRATIONS.get(done) else {
+            let Some(step) = steps.get(done) else {
                 return Ok(());
             };
             if first {

@@ -28,6 +28,7 @@ mod reporting;
 mod scaffold;
 mod secret;
 mod sync;
+mod text;
 mod tmux;
 mod utils;
 #[cfg(feature = "web")]

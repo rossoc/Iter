@@ -245,3 +245,53 @@ pub mod fake {
         }
     }
 }
+
+/// The `iter` binary that is running: the one place the core asks for it, to start `iter` again
+/// as a detached worker or to name it in a tmux hook.
+///
+/// stub: I2 (task 298): `unimplemented!()` until the develop step of round I2.
+#[allow(dead_code)]
+pub fn host() -> Result<std::path::PathBuf> {
+    unimplemented!("stub: I2")
+}
+
+/// `word` as one shell word, backslash-escaped (`app/Fix\ it`), a newline and an empty word
+/// quoted. Moves here from `agent::prompt` (the tmux hook and the prompts both need it).
+///
+/// stub: I2 (task 298): `unimplemented!()` until the develop step of round I2.
+#[allow(dead_code)]
+pub fn shell_word(_word: &str) -> String {
+    unimplemented!("stub: I2")
+}
+
+#[cfg(test)]
+mod host_and_shell_tests {
+    use super::*;
+
+    #[test]
+    fn the_host_is_the_running_binary() {
+        assert_eq!(host().unwrap(), std::env::current_exe().unwrap());
+    }
+
+    /// Each case reads back as one word in `sh`: that is the property, the spelling is the pin.
+    #[test]
+    fn a_shell_word_is_escaped_so_a_shell_reads_it_as_one_word() {
+        for (word, quoted) in [
+            ("", "''"),
+            ("app/fix-it", "app/fix-it"),
+            ("app/Fix it", r"app/Fix\ it"),
+            ("app/It's", r"app/It\'s"),
+            ("a;b", r"a\;b"),
+            ("$HOME", r"\$HOME"),
+            ("a\"b", "a\\\"b"),
+            ("x&y|z", r"x\&y\|z"),
+            ("42", "42"),
+            ("user@host:1+2=3,4%5", "user@host:1+2=3,4%5"),
+            ("naïve ✓", r"naïve\ ✓"),
+            ("two\nlines", "two'\n'lines"),
+            ("-dash", "-dash"),
+        ] {
+            assert_eq!(shell_word(word), quoted, "{word:?}");
+        }
+    }
+}
