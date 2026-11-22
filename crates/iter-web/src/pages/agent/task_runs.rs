@@ -1,4 +1,4 @@
-//! The agents of a task at the top of its Agent tab: the table, the form that writes a new one, and the page of one that has begun.
+//! The routes that write a task's agent runs (create, amend, run, cancel, and the prompt an instruction makes), and the parts of a run the agent pages share: its label, state pill and action buttons.
 
 use crate::{assets::json, layers::errors::refused, parts::all::*, prelude::*};
 use iter_core::{

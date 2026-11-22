@@ -1,4 +1,4 @@
-//! The task edit form (`/task/{id}/edit`), the twin of New task (`pages/task/task_new.rs`); the controls are in `parts/task_fields.rs`.
+//! The task edit form (`/task/{id}/edit`) and its write; the controls are in `parts/task_fields.rs`, the page around them in `parts/edit_page.rs`.
 
 use crate::{
     forms::{

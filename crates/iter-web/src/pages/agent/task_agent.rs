@@ -1,4 +1,4 @@
-//! The Agent tab of the task page: the plan, a step opened beside it, and the notes and sketches in the task's folder.
+//! The Agent tab of the task page (the plan rail, an open step, the table of runs) and the plan step route, with the task folder's notes and sketches for the Notes tab.
 
 use crate::{
     pages::agent::{
@@ -28,6 +28,7 @@ path_param!(step: String, error = bad_request);
 const FILE_BYTES: usize = 64 * 1024;
 const FILES: usize = 50;
 
+/// A file of the task folder, cut to `FILE_BYTES`.
 pub struct Doc {
     pub name: String,
     pub text: String,
@@ -78,6 +79,7 @@ pub fn files(db: &Db, project: &Project, task: &Task) -> Files {
     )
 }
 
+/// What the query string opens on the tab: a plan step, a run, or the form of a new agent.
 #[derive(Default)]
 pub struct Open<'a> {
     pub step: Option<&'a str>,
@@ -372,6 +374,7 @@ pub(crate) enum Refusal {
     Io(std::io::Error),
 }
 
+/// Moves a step of the plan to the state named, or says why not.
 pub fn set_state(dir: &TaskDir, step: &str, state: &str) -> std::result::Result<(), Refusal> {
     let state =
         State::parse(state).ok_or_else(|| Refusal::State(format!("'{state}' is not a state")))?;
@@ -410,6 +413,7 @@ pub(super) async fn mark_step(cx: &Cx, Form(form): Form<MarkForm>) -> Result<Res
 
 const RUNS: usize = 50;
 
+/// The task's latest runs, and the form (a new agent, or a queued run being amended) open beside them.
 #[derive(Default)]
 pub struct Roster {
     pub runs: Vec<RunRecord>,
