@@ -72,15 +72,7 @@ pub async fn screen(
     let agents_n = taskdir::of(&db, &parents.project, stored)
         .map(|d| d.runs().len())
         .unwrap_or(0);
-    let sections = settings_row(
-        &base,
-        &[
-            ("Info", base.clone(), None),
-            ("Sessions", sessions_tab_url(&base), Some(sessions_n)),
-            ("Agents", agent_tab_url(&base), Some(agents_n)),
-            ("Notes", notes_tab_url(&base), None),
-        ],
-    );
+    let sections = task_tabs(&base, TaskSection::Settings, sessions_n, agents_n);
     Ok(view! {
         edit_page(
             kind: "task",

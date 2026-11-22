@@ -168,15 +168,17 @@ pub async fn screen(
         report,
     } = page;
     let base = org_url(org.id());
-    let mut items = section_tabs(
+    let items = section_tabs(
         &base,
         section,
-        Some(projects.len()),
-        *task_count,
-        NotesTab::badge(Some(notes)),
-        Some(tab_url(&base, today)),
+        Counts {
+            projects: Some(projects.len()),
+            tasks: *task_count,
+            notes: NotesTab::badge(Some(notes)),
+            report: Some(tab_url(&base, today)),
+            ..Counts::default()
+        },
     );
-    items.push(settings_tab(&base, false));
     let parts = [section.title("Organization"), org.name.as_str()];
     let rows = group_rows(tasks);
     // the first row of Tasks opens New task, when there is a project to put it in

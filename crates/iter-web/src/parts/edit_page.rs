@@ -14,20 +14,6 @@ fn heading(kind: &str, subject: &str, creating: bool) -> (String, [String; 2]) {
     }
 }
 
-pub fn settings_row(base: &str, entries: &[(&'static str, String, Option<usize>)]) -> Vec<Tab> {
-    entries
-        .iter()
-        .map(|(label, href, count)| {
-            let tab = Tab::link(label, href.clone());
-            match count {
-                Some(n) => tab.count(*n),
-                None => tab,
-            }
-        })
-        .chain([crate::parts::sections::settings_tab(base, true)])
-        .collect()
-}
-
 /// A component only so the two parts can borrow from its parameters (`frame` takes `&str`s).
 #[component]
 async fn titled(
@@ -87,20 +73,6 @@ pub async fn edit_page(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_settings_row_keeps_the_badges_and_ends_with_settings() {
-        let row = settings_row(
-            "/org/1",
-            &[
-                ("Info", "/org/1".into(), None),
-                ("Tasks", "/org/1?tab=tasks".into(), Some(3)),
-            ],
-        );
-        assert_eq!(row.len(), 3);
-        assert_eq!((row[0].badge(), row[1].badge()), (None, Some(3)));
-        assert!(row[2].is_current() && row[2].href() == "/org/1/edit");
-    }
 
     #[test]
     fn the_heading_says_edit_or_new() {

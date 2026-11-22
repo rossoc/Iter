@@ -53,14 +53,15 @@ pub async fn screen(
     let settings = project.settings();
     let tasks_n = fresh_db()?.count_tasks_for_project(stored.id())?;
     let notes = NotesTab::load(iter_core::notes::project_dir(stored, org), false);
-    let sections = settings_row(
+    let sections = section_tabs(
         &base,
-        &[
-            ("Info", base.clone(), None),
-            ("Tasks", tasks_tab_url(&base), Some(tasks_n)),
-            ("Notes", notes_tab_url(&base), NotesTab::badge(Some(&notes))),
-            ("Wiki", wiki_tab_url(&base), None),
-        ],
+        Section::Settings,
+        Counts {
+            tasks: tasks_n,
+            notes: NotesTab::badge(Some(&notes)),
+            wiki: true,
+            ..Counts::default()
+        },
     );
     Ok(view! {
         edit_page(

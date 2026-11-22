@@ -65,15 +65,16 @@ pub async fn screen(
     let (platform_projects, platform_activities) = platform_pick::lists(org, &org.platform_project);
     let activities_url = format!("{base}/platform-activities");
     let notes = NotesTab::load(iter_core::notes::org_dir(stored), false);
-    let sections = settings_row(
+    let sections = section_tabs(
         &base,
-        &[
-            ("Info", base.clone(), None),
-            ("Projects", projects_tab_url(&base), Some(projects_n)),
-            ("Tasks", tasks_tab_url(&base), Some(tasks_n)),
-            ("Notes", notes_tab_url(&base), NotesTab::badge(Some(&notes))),
-            ("Report", tab_url(&base, now().date()), None),
-        ],
+        Section::Settings,
+        Counts {
+            projects: Some(projects_n),
+            tasks: tasks_n,
+            notes: NotesTab::badge(Some(&notes)),
+            report: Some(tab_url(&base, now().date())),
+            ..Counts::default()
+        },
     );
     Ok(view! {
         edit_page(

@@ -48,6 +48,7 @@ pub enum Section {
     Projects,
     /// A project's wiki (the organization page has none).
     Wiki,
+    Settings,
 }
 
 impl Section {
@@ -71,6 +72,7 @@ impl Section {
             Section::Report => "Report",
             Section::Projects => "Projects",
             Section::Wiki => "Wiki",
+            Section::Settings => "Settings",
         }
     }
 }
@@ -82,42 +84,30 @@ pub fn tabs_for<S: PartialEq>(current: S, entries: impl IntoIterator<Item = (S, 
         .collect()
 }
 
-pub fn settings_tab(base: &str, current: bool) -> Tab {
-    Tab::link("Settings", format!("{base}/edit")).marked(current)
+/// What decides which tabs an organization or project page has, and their badges.
+#[derive(Default)]
+pub struct Counts {
+    pub projects: Option<usize>,
+    pub tasks: usize,
+    pub notes: Option<usize>,
+    /// The Report tab's link (organizations only).
+    pub report: Option<String>,
+    pub wiki: bool,
 }
 
-pub fn section_tabs(
-    base: &str,
-    current: Section,
-    projects: Option<usize>,
-    task_count: usize,
-    notes: Option<usize>,
-    report: Option<String>,
-) -> Vec<Tab> {
-    let mut entries = vec![(Section::Info, Tab::link("Info", base.to_string()))];
-    if let Some(n) = projects {
-        entries.push((
-            Section::Projects,
-            Tab::link("Projects", projects_tab_url(base)).count(n),
-        ));
-    }
-    entries.extend([
-        (
-            Section::Tasks,
-            Tab::link("Tasks", tasks_tab_url(base)).count(task_count),
-        ),
-        (Section::Notes, {
-            let tab = Tab::link("Notes", notes_tab_url(base));
-            match notes {
-                Some(n) => tab.count(n),
-                None => tab,
-            }
-        }),
-    ]);
-    if let Some(href) = report {
-        entries.push((Section::Report, Tab::link("Report", href)));
-    }
-    tabs_for(current, entries)
+/// Info, Projects, Tasks, Notes, Report, Wiki, Settings: those `counts` names.
+pub fn section_tabs(base: &str, current: Section, counts: Counts) -> Vec<Tab> {
+    let Counts { projects, tasks, notes, report, wiki } = counts;
+        let entries = [
+        Some((Section::Info, Tab::link("Info", base.to_string()))),
+        projects.map(|n| (Section::Projects, Tab::link("Projects", projects_tab_url(base)).count(n))),
+        Some((Section::Tasks, Tab::link("Tasks", tasks_tab_url(base)).count(tasks))),
+        Some((Section::Notes, Tab::link("Notes", notes_tab_url(base)).count(notes))),
+        report.map(|href| (Section::Report, Tab::link("Report", href))),
+        wiki.then(|| (Section::Wiki, Tab::link("Wiki", wiki_tab_url(base)))),
+        Some((Section::Settings, Tab::link("Settings", edit_url(base)))),
+    ];
+    tabs_for(current, entries.into_iter().flatten())
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -167,7 +157,7 @@ pub fn task_tabs(base: &str, current: TaskSection, sessions: usize, agents: usiz
             (TaskSection::Notes, Tab::link("Notes", notes_tab_url(base))),
             (
                 TaskSection::Settings,
-                Tab::link("Settings", format!("{base}/edit")),
+                Tab::link("Settings", edit_url(base)),
             ),
         ],
     )
@@ -227,24 +217,22 @@ mod tests {
 
     #[test]
     fn section_tabs_mark_the_current_one() {
-        let items = section_tabs("/project/1", Section::Tasks, None, 4, None, None);
-        assert_eq!(items.len(), 3);
+        let counts = |projects, notes, report| Counts {
+            projects,
+            tasks: 4,
+            notes,
+            report,
+            wiki: false,
+        };
+        let items = section_tabs("/project/1", Section::Tasks, counts(None, None, None));
+        assert_eq!(items.len(), 4);
         assert!(!items[0].is_current() && items[1].is_current());
         assert_eq!(
             (items[1].href(), items[1].badge()),
             ("/project/1?tab=tasks&q=is%3Aopen", Some(4))
         );
-        assert_eq!(
-            section_tabs(
-                "/org/1",
-                Section::Info,
-                Some(9),
-                0,
-                Some(2),
-                Some("/r".into())
-            )
-            .len(),
-            5
-        );
+        let org = section_tabs("/org/1", Section::Settings, counts(Some(9), Some(2), Some("/r".into())));
+        assert_eq!(org.len(), 6);
+        assert!(org[5].is_current() && org[5].href() == "/org/1/edit");
     }
 }

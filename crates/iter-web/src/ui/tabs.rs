@@ -43,8 +43,9 @@ impl Tab {
         self.count
     }
 
-    pub fn count(mut self, count: usize) -> Tab {
-        self.count = Some(count);
+    /// A badge: `usize` or `Option<usize>` (`None` leaves it off).
+    pub fn count(mut self, count: impl Into<Option<usize>>) -> Tab {
+        self.count = count.into();
         self
     }
 }
