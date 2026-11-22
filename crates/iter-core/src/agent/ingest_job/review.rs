@@ -48,7 +48,11 @@ pub fn changes(target: &Target) -> Result<Vec<Change>> {
                 ("new", format!("--- /dev/null\n+++ b/{path}\n{body}"))
             }
             c => (
-                if c.contains('D') { "deleted" } else { "changed" },
+                if c.contains('D') {
+                    "deleted"
+                } else {
+                    "changed"
+                },
                 git(
                     target,
                     &["diff", "HEAD", "--relative", "--", &literal(path)],

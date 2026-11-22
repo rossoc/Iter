@@ -341,7 +341,11 @@ pub fn compose(existing: Option<&str>, f: &Fields) -> AgentResult<String> {
     put(&mut map, "description", text_value(f.description));
     put(&mut map, "model", text_value(f.model));
     put(&mut map, "mode", text_value(f.mode));
-    put(&mut map, "temperature", text_value(f.temperature).map(number_or_text));
+    put(
+        &mut map,
+        "temperature",
+        text_value(f.temperature).map(number_or_text),
+    );
     if let Some(worktree) = f.worktree {
         put(&mut map, "worktree", worktree.then_some(Value::Bool(true)));
     }
@@ -372,11 +376,16 @@ mod tests {
 
     #[test]
     fn front_matter_is_split_from_the_prompt() {
-        assert_eq!(split("---\na: 1\n---\nBody\n"), (Some("a: 1\n"), "Body\n"));
-        assert_eq!(split("---\n---\nBody"), (Some(""), "Body"));
-        assert_eq!(split("no front"), (None, "no front"));
-        assert_eq!(split("---\nnever closed\n"), (None, "---\nnever closed\n"));
-        assert_eq!(split("---\na: 1\n---"), (Some("a: 1\n"), ""));
+        let cases = [
+            ("---\na: 1\n---\nBody\n", (Some("a: 1\n"), "Body\n")),
+            ("---\n---\nBody", (Some(""), "Body")),
+            ("no front", (None, "no front")),
+            ("---\nnever closed\n", (None, "---\nnever closed\n")),
+            ("---\na: 1\n---", (Some("a: 1\n"), "")),
+        ];
+        for (raw, want) in cases {
+            assert_eq!(split(raw), want, "{raw:?}");
+        }
     }
 
     #[test]
@@ -456,11 +465,16 @@ mod tests {
 
     #[test]
     fn what_cannot_be_kept_is_refused() {
-        assert!(check("fix", "---\ndescription: x\n---\nWork on {{task.name}}").is_ok());
-        assert!(check("fix", "Work on {{taks}}").is_err());
-        assert!(check("fix", "---\ndescription: x\n---\n\n").is_err());
-        assert!(check("fix", "---\nkind: dance\n---\nx").is_ok());
-        assert!(check("fix", "---\ninteractive: maybe\n---\nx").is_err());
+        let cases = [
+            ("---\ndescription: x\n---\nWork on {{task.name}}", true),
+            ("Work on {{taks}}", false),
+            ("---\ndescription: x\n---\n\n", false),
+            ("---\nkind: dance\n---\nx", true),
+            ("---\ninteractive: maybe\n---\nx", false),
+        ];
+        for (raw, kept) in cases {
+            assert_eq!(check("fix", raw).is_ok(), kept, "{raw:?}");
+        }
         assert!(
             valid_name("code-review")
                 && !valid_name("Code")
@@ -576,14 +590,16 @@ mod tests {
 
     #[test]
     fn a_name_can_change_to_any_valid_name() {
-        assert_eq!(rename_target("review", "review").unwrap(), None);
-        assert_eq!(rename_target("review", "  ").unwrap(), None);
-        assert_eq!(
-            rename_target("review", " audit ").unwrap(),
-            Some("audit".into())
-        );
+        let cases = [
+            ("review", "review", None),
+            ("review", "  ", None),
+            ("review", " audit ", Some("audit".to_string())),
+            ("fix", "fix", None),
+        ];
+        for (old, wanted, want) in cases {
+            assert_eq!(rename_target(old, wanted).unwrap(), want, "{wanted:?}");
+        }
         assert!(rename_target("review", "Bad Name").is_err());
-        assert_eq!(rename_target("fix", "fix").unwrap(), None);
     }
 
     /// Characterisation (R7, YAML scalar): an instruction's front-matter scalar is text exactly

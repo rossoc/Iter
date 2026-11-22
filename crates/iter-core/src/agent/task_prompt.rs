@@ -54,13 +54,11 @@ fn onboarding(app: &App, task: &Task) -> String {
 /// Words worth looking up: name and start of description, lowercased, short words dropped, at most a dozen.
 fn keywords(name: &str, description: &str) -> String {
     let start: String = description.chars().take(300).collect();
-    let mut words: Vec<String> = Vec::new();
-    for word in format!("{name} {start}")
-        .to_lowercase()
-        .split(|c: char| !c.is_alphanumeric())
-    {
-        if word.chars().count() >= 4 && !words.iter().any(|w| w == word) {
-            words.push(word.to_string());
+    let mut words: Vec<&str> = Vec::new();
+    let text = format!("{name} {start}").to_lowercase();
+    for word in text.split(|c: char| !c.is_alphanumeric()) {
+        if word.chars().count() >= 4 && !words.contains(&word) {
+            words.push(word);
         }
     }
     words.truncate(12);
@@ -146,15 +144,16 @@ pub fn fill(
         .db
         .find_session_config_by_task(task.id())?
         .and_then(|s| s.worktree_path);
-    let known = match onboarding_wanted {
-        true => onboarding(app, task),
-        false => String::new(),
+    let known = if onboarding_wanted {
+        onboarding(app, task)
+    } else {
+        String::new()
     };
     // computed only when asked for: it reads the whole wiki
-    let ingest = match uses(text, "ingest") {
-        true => super::ingest_job::task_ingest_text(&app.db, project, task).unwrap_or_default(),
-        false => String::new(),
-    };
+    let ingest = uses(text, "ingest")
+        .then(|| super::ingest_job::task_ingest_text(&app.db, project, task))
+        .flatten()
+        .unwrap_or_default();
     let shown = task.id().to_string();
     let plan_path = dir.plan_path();
     let ctx = Context {
