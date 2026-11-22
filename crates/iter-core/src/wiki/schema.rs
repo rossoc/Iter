@@ -1,6 +1,6 @@
 //! The instructions an agent gets (`iter wiki schema`): `schema.md` with the ontology-derived parts filled in, so they cannot drift from `check`.
 
-use super::ontology::{NS, Ontology, ns};
+use super::ontology::{Ontology, local, ns};
 use oxigraph::model::TermRef;
 use oxigraph::model::vocab::rdfs;
 use std::fmt::Write as _;
@@ -19,27 +19,23 @@ fn comment(onto: &Ontology, subject: &oxigraph::model::NamedNode) -> Option<Stri
 pub fn render(onto: &Ontology) -> String {
     let mut places = String::from("| Class | Folder | In |\n|---|---|---|\n");
     for p in &onto.places {
-        let class = p
-            .class
-            .as_str()
-            .strip_prefix(NS)
-            .unwrap_or(p.class.as_str());
+        let class = local(&p.class);
         let folder = if p.folder == "." {
             "(the root, files named like a date)".to_string()
         } else {
             format!("`{}`", p.folder)
         };
         let what = comment(onto, &p.class).unwrap_or_default();
-        let _ = write!(
+        let _ = writeln!(
             places,
-            "| {class} | {folder} | {} level. {what} |\n",
+            "| {class} | {folder} | {} level. {what} |",
             p.kind.key()
         );
     }
     let mut relations = String::new();
     for (key, prop) in &onto.authorable {
         let what = comment(onto, prop).unwrap_or_default();
-        let _ = write!(relations, "- `{key}`: {what}\n");
+        let _ = writeln!(relations, "- `{key}`: {what}");
     }
     let confidence = match onto.allowed_values(&ns("confidence")) {
         Some(values) => format!("one of {}", values.join(", ")),

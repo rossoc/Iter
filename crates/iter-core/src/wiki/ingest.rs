@@ -81,19 +81,19 @@ pub struct Job<'a> {
 }
 
 fn fill(template: &str, job: &Job, extra: &[(&str, String)]) -> String {
-    let mut text = template.to_string();
-    let wiki_dir = job.notes_dir.join("wiki").display().to_string();
-    let mut pairs = vec![
+    let own = [
         ("project", job.project.to_string()),
         ("notes.dir", job.notes_dir.display().to_string()),
-        ("wiki.dir", wiki_dir),
+        ("wiki.dir", job.notes_dir.join("wiki").display().to_string()),
         ("now", job.now.to_string()),
         ("scope", job.scope.to_string()),
     ];
-    pairs.extend(extra.iter().map(|(k, v)| (*k, v.clone())));
-    for (key, value) in pairs {
-        text = text.replace(&format!("{{{{{key}}}}}"), &value);
-    }
+    let pairs = own
+        .into_iter()
+        .chain(extra.iter().map(|(k, v)| (*k, v.clone())));
+    let text = pairs.fold(template.to_string(), |text, (key, value)| {
+        text.replace(&format!("{{{{{key}}}}}"), &value)
+    });
     // last, so nothing in the rules is read as a placeholder
     text.replace("{{schema}}", job.schema)
 }
@@ -200,20 +200,27 @@ mod tests {
         assert_eq!(problems.len(), 1);
     }
 
-    #[test]
-    fn the_prompts_name_the_notes_and_leave_no_placeholder() {
-        let job = Job {
+    fn job() -> Job<'static> {
+        Job {
             project: "app",
             notes_dir: Path::new("/n/app"),
             scope: "--project app",
             now: "2026-10-30T12:00:00",
             schema: "RULES",
-        };
-        let notes = [Waiting {
+        }
+    }
+
+    fn new_note() -> [Waiting; 1] {
+        [Waiting {
             id: "2026-10-27".into(),
             path: PathBuf::from("/n/app/2026-10-27.md"),
             why: Dirty::New,
-        }];
+        }]
+    }
+
+    #[test]
+    fn the_prompts_name_the_notes_and_leave_no_placeholder() {
+        let (job, notes) = (job(), new_note());
         let text = ingest_prompt(&job, &notes, Some("app/Fix it"));
         assert!(text.contains("- `2026-10-27` (new): `iter note read 2026-10-27`"));
         assert!(text.contains("iter wiki check --project app"));
@@ -228,23 +235,11 @@ mod tests {
         assert!(!concept.contains("{{"));
     }
 
-    /// R3: the ingest instruction is laid out like a CLAUDE.md (purpose, sources, workflow, rules)
+    /// The ingest instruction is laid out like a CLAUDE.md (purpose, sources, workflow, rules)
     /// and reads only through iter commands.
     #[test]
     fn the_ingest_instruction_has_the_claude_md_sections_and_reads_through_iter() {
-        let job = Job {
-            project: "app",
-            notes_dir: Path::new("/n/app"),
-            scope: "--project app",
-            now: "2026-10-30T12:00:00",
-            schema: "RULES",
-        };
-        let notes = [Waiting {
-            id: "2026-10-27".into(),
-            path: PathBuf::from("/n/app/2026-10-27.md"),
-            why: Dirty::New,
-        }];
-        let text = ingest_prompt(&job, &notes, None);
+        let text = ingest_prompt(&job(), &new_note(), None);
         let mut at = 0;
         for section in ["## Purpose", "## Sources", "## Workflow", "## Rules"] {
             let found = text[at..]

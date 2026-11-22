@@ -1,8 +1,9 @@
 //! `check`: the lint that needs no LLM; contradictions between pages are the agent's lint.
 
 use super::graph::{Wiki, md_files};
-use super::ontology::{LevelKind, NS, ns};
+use super::ontology::{LevelKind, local, ns};
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Timelike};
+use oxigraph::model::NamedNode;
 use oxigraph::model::vocab::rdfs;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
@@ -27,6 +28,22 @@ pub struct Issue {
     pub message: String,
 }
 
+impl Issue {
+    fn new(
+        severity: Severity,
+        code: &'static str,
+        id: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Issue {
+        Issue {
+            severity,
+            code,
+            id: id.into(),
+            message: message.into(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Dirty {
     New,
@@ -49,6 +66,15 @@ pub(super) fn parse_updated(text: &str) -> Option<NaiveDateTime> {
         .and_hms_opt(23, 59, 59)
 }
 
+/// The pages naming `note` as a `source`.
+fn made_from(wiki: &Wiki, note: usize) -> Vec<usize> {
+    wiki.edges_out(note)
+        .into_iter()
+        .filter(|(prop, _)| prop == "sourceOf")
+        .map(|(_, page)| page)
+        .collect()
+}
+
 /// Notes no page has been made from since they last changed: file mtime against the `updated` of the pages naming it as source. No hash, no ledger.
 pub fn dirty_notes(wiki: &Wiki) -> Vec<(usize, Dirty)> {
     let mut out = Vec::new();
@@ -56,22 +82,14 @@ pub fn dirty_notes(wiki: &Wiki) -> Vec<(usize, Dirty)> {
         if wiki.ontology.pages.contains(&node.class) {
             continue;
         }
-        let made: Vec<usize> = wiki
-            .edges_out(i)
-            .into_iter()
-            .filter(|(p, _)| p == "sourceOf")
-            .map(|(_, other)| other)
-            .collect();
+        let made = made_from(wiki, i);
         if made.is_empty() {
             out.push((i, Dirty::New));
             continue;
         }
         let ingested = made
             .iter()
-            .filter_map(|&p| {
-                let updated = wiki.nodes[p].front.as_ref()?.updated.as_deref()?;
-                parse_updated(updated)
-            })
+            .filter_map(|&p| parse_updated(wiki.nodes[p].front.as_ref()?.updated.as_deref()?))
             .max();
         let modified = node
             .modified
@@ -86,199 +104,170 @@ pub fn dirty_notes(wiki: &Wiki) -> Vec<(usize, Dirty)> {
     out
 }
 
-fn local(prop: &oxigraph::model::NamedNode) -> &str {
-    prop.as_str().strip_prefix(NS).unwrap_or(prop.as_str())
-}
-
 /// Lints the wiki; `from` is the level ids are written from. Errors sort first.
 pub fn check(wiki: &Wiki, from: usize) -> Vec<Issue> {
-    let mut issues = Vec::new();
-    let onto = &wiki.ontology;
-    let sketch = onto.subclasses_of(&ns("Sketch"));
-    let mut issue = |severity, code, id: String, message: String| {
-        issues.push(Issue {
-            severity,
-            code,
-            id,
-            message,
-        })
-    };
-
-    for (i, node) in wiki.nodes.iter().enumerate() {
-        if !onto.pages.contains(&node.class) {
-            continue;
-        }
-        let id = wiki.id(i, from);
-        if let Some(e) = &node.front_error {
-            issue(Severity::Error, "front-matter", id.clone(), e.clone());
-        }
-        // a sketch is the agent's working memory: it only has to parse
-        let strict = !sketch.contains(&node.class);
-        match &node.front {
-            None if node.front_error.is_none() && strict => issue(
-                Severity::Warning,
-                "no-front-matter",
-                id.clone(),
-                "no front matter: the page has no description and no tags".into(),
-            ),
-            Some(front) => {
-                if strict {
-                    if front.description.as_deref().is_none_or(str::is_empty) {
-                        let message = "no description: retrieval cannot say what it is".into();
-                        issue(
-                            Severity::Warning,
-                            "missing-description",
-                            id.clone(),
-                            message,
-                        );
-                    }
-                    if front.tags.is_empty() {
-                        issue(
-                            Severity::Warning,
-                            "missing-tags",
-                            id.clone(),
-                            "no tags".into(),
-                        );
-                    }
-                }
-                for (key, value) in front.scalars() {
-                    if let (Some(value), Some(allowed)) = (value, onto.allowed_values(&ns(key)))
-                        && !allowed.iter().any(|a| a == value)
-                    {
-                        let message =
-                            format!("`{key}` is `{value}`: it is one of {}", allowed.join(", "));
-                        issue(Severity::Error, "bad-value", id.clone(), message);
-                    }
-                }
-                for key in &front.unknown {
-                    let message = format!("`{key}` is not a key the ontology knows");
-                    issue(Severity::Warning, "unknown-key", id.clone(), message);
-                }
-                for (key, targets) in &front.relations {
-                    let Some(prop) = onto.relation(key) else {
-                        continue;
-                    };
-                    for target in targets {
-                        if let Some(t) = wiki.resolve(node.level, target)
-                            && let Some(m) = violation(wiki, prop, i, t)
-                        {
-                            issue(Severity::Error, "constraint", id.clone(), m);
-                        }
-                    }
-                }
-            }
-            None => {}
-        }
-        for link in &node.links {
-            if let Some(t) = wiki.resolve(node.level, link)
-                && let Some(m) = violation(wiki, &ns("ref"), i, t)
-            {
-                issue(Severity::Error, "constraint", id.clone(), m);
-            }
-        }
-        if strict && wiki.edges_out(i).is_empty() {
-            let message = "nothing relates to it and it relates to nothing".into();
-            issue(Severity::Warning, "orphan", id, message);
-        }
-    }
-
-    for d in &wiki.dangling {
+    let mut issues: Vec<Issue> = (0..wiki.nodes.len())
+        .flat_map(|i| page_issues(wiki, from, i))
+        .collect();
+    issues.extend(wiki.dangling.iter().map(|d| {
         let message = format!("{} -> `{}` does not exist", d.via, d.target);
-        issue(Severity::Error, "dangling", wiki.id(d.from, from), message);
-    }
-
-    let claimed: HashSet<&Path> = wiki.nodes.iter().map(|n| n.path.as_path()).collect();
-    for level in &wiki.levels {
-        if level.kind == LevelKind::Task {
-            continue;
-        }
-        let stray = md_files(&level.dir.join("wiki"));
-        for path in stray.into_iter().filter(|p| !claimed.contains(p.as_path())) {
-            let rel = path.strip_prefix(&level.dir).unwrap_or(&path);
-            issue(
-                Severity::Warning,
-                "unplaced",
-                format!("{}:{}", level.label, rel.display()),
-                "in a folder no class owns, so it is not part of the wiki".into(),
-            );
-        }
-    }
-
-    for (n, why) in dirty_notes(wiki) {
+        Issue::new(Severity::Error, "dangling", wiki.id(d.from, from), message)
+    }));
+    issues.extend(unplaced(wiki));
+    issues.extend(dirty_notes(wiki).into_iter().map(|(n, why)| {
         let message = match why {
             Dirty::New => "not ingested yet",
             Dirty::Changed => "changed since it was ingested",
         };
-        issue(
-            Severity::Info,
-            "dirty-note",
-            wiki.id(n, from),
-            message.into(),
+        Issue::new(Severity::Info, "dirty-note", wiki.id(n, from), message)
+    }));
+    issues.extend(promotable(wiki, from));
+    issues.sort();
+    issues
+}
+
+/// What is wrong in one page: its front matter, its relations and links, its isolation.
+fn page_issues(wiki: &Wiki, from: usize, i: usize) -> Vec<Issue> {
+    let (onto, node) = (&wiki.ontology, &wiki.nodes[i]);
+    if !onto.pages.contains(&node.class) {
+        return Vec::new();
+    }
+    let id = wiki.id(i, from);
+    let mut out = Vec::new();
+    let mut add =
+        |severity, code, message: String| out.push(Issue::new(severity, code, &id, message));
+    if let Some(e) = &node.front_error {
+        add(Severity::Error, "front-matter", e.clone());
+    }
+    // a sketch is the agent's working memory: it only has to parse
+    let strict = !onto.subclasses_of(&ns("Sketch")).contains(&node.class);
+    match &node.front {
+        None if node.front_error.is_none() && strict => add(
+            Severity::Warning,
+            "no-front-matter",
+            "no front matter: the page has no description and no tags".into(),
+        ),
+        Some(front) => {
+            if strict && front.description.as_deref().is_none_or(str::is_empty) {
+                add(
+                    Severity::Warning,
+                    "missing-description",
+                    "no description: retrieval cannot say what it is".into(),
+                );
+            }
+            if strict && front.tags.is_empty() {
+                add(Severity::Warning, "missing-tags", "no tags".into());
+            }
+            for (key, value) in front.scalars() {
+                if let (Some(value), Some(allowed)) = (value, onto.allowed_values(&ns(key)))
+                    && !allowed.iter().any(|a| a == value)
+                {
+                    let message =
+                        format!("`{key}` is `{value}`: it is one of {}", allowed.join(", "));
+                    add(Severity::Error, "bad-value", message);
+                }
+            }
+            for key in &front.unknown {
+                add(
+                    Severity::Warning,
+                    "unknown-key",
+                    format!("`{key}` is not a key the ontology knows"),
+                );
+            }
+        }
+        None => {}
+    }
+    for (_, prop, target) in node.written(onto) {
+        if let Some(t) = wiki.resolve(node.level, target)
+            && let Some(m) = violation(wiki, prop, i, t)
+        {
+            add(Severity::Error, "constraint", m);
+        }
+    }
+    if strict && wiki.edges_out(i).is_empty() {
+        add(
+            Severity::Warning,
+            "orphan",
+            "nothing relates to it and it relates to nothing".into(),
         );
     }
+    out
+}
 
-    // three ideas under one tag and no concept built from any: time to build one
-    let ideas = ns("Idea");
-    let concepts = onto.subclasses_of(&ns("Concept"));
+/// Files under a level's `wiki/` that no class owns.
+fn unplaced(wiki: &Wiki) -> Vec<Issue> {
+    let claimed: HashSet<&Path> = wiki.nodes.iter().map(|n| n.path.as_path()).collect();
+    let mut out = Vec::new();
+    for level in wiki.levels.iter().filter(|l| l.kind != LevelKind::Task) {
+        for path in md_files(&level.dir.join("wiki")) {
+            if !claimed.contains(path.as_path()) {
+                let rel = path.strip_prefix(&level.dir).unwrap_or(&path);
+                out.push(Issue::new(
+                    Severity::Warning,
+                    "unplaced",
+                    format!("{}:{}", level.label, rel.display()),
+                    "in a folder no class owns, so it is not part of the wiki",
+                ));
+            }
+        }
+    }
+    out
+}
+
+/// Three ideas under one tag and no concept built from any: time to build one.
+fn promotable(wiki: &Wiki, from: usize) -> Vec<Issue> {
+    let (ideas, concepts) = (ns("Idea"), wiki.ontology.subclasses_of(&ns("Concept")));
     let mut by_tag: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
     for (i, node) in wiki.nodes.iter().enumerate() {
-        if node.class == ideas
-            && let Some(front) = &node.front
-        {
+        if let (true, Some(front)) = (node.class == ideas, &node.front) {
             for tag in &front.tags {
                 by_tag.entry(tag).or_default().push(i);
             }
         }
     }
-    for (tag, members) in by_tag {
-        let built = members.iter().any(|&m| {
-            wiki.edges_out(m)
-                .iter()
-                .any(|(p, o)| p == "sourceOf" && concepts.contains(&wiki.nodes[*o].class))
-        });
-        if members.len() >= 3 && !built {
-            issue(
+    by_tag
+        .into_iter()
+        .filter(|(_, members)| members.len() >= 3)
+        .filter(|(_, members)| {
+            !members.iter().any(|&m| {
+                (wiki.edges_out(m).iter())
+                    .any(|(p, o)| p == "sourceOf" && concepts.contains(&wiki.nodes[*o].class))
+            })
+        })
+        .map(|(tag, members)| {
+            let message = format!(
+                "{} ideas are tagged `{tag}` and no concept is built from any of them",
+                members.len()
+            );
+            Issue::new(
                 Severity::Info,
                 "promote",
                 wiki.id(members[0], from),
-                format!(
-                    "{} ideas are tagged `{tag}` and no concept is built from any of them",
-                    members.len()
-                ),
-            );
-        }
-    }
-
-    issues.sort();
-    issues
+                message,
+            )
+        })
+        .collect()
 }
 
-fn violation(wiki: &Wiki, prop: &oxigraph::model::NamedNode, s: usize, t: usize) -> Option<String> {
+/// Why `prop` may not link `s` to `t`: a domain or range the ontology gives it that their classes do not fit.
+fn violation(wiki: &Wiki, prop: NamedNode, s: usize, t: usize) -> Option<String> {
     let onto = &wiki.ontology;
-    let fits = |node: usize, wanted: Vec<_>| {
+    let fits = |node: usize, wanted: Vec<NamedNode>| {
         wanted.is_empty()
-            || onto
-                .superclasses_of(&wiki.nodes[node].class)
+            || (onto.superclasses_of(&wiki.nodes[node].class))
                 .iter()
                 .any(|c| wanted.contains(c))
     };
-    let (domain, range) = (
-        onto.constraint(prop, rdfs::DOMAIN),
-        onto.constraint(prop, rdfs::RANGE),
-    );
-    if !fits(s, domain.clone()) {
-        return Some(format!(
-            "a {} cannot have `{}`",
-            local(&wiki.nodes[s].class),
-            local(prop)
-        ));
+    if !fits(s, onto.constraint(&prop, rdfs::DOMAIN)) {
+        let class = local(&wiki.nodes[s].class);
+        return Some(format!("a {class} cannot have `{}`", local(&prop)));
     }
-    if !fits(t, range.clone()) {
+    if !fits(t, onto.constraint(&prop, rdfs::RANGE)) {
+        let target = &wiki.nodes[t];
+        let (prop, class) = (local(&prop), local(&target.class));
         return Some(format!(
-            "`{}` cannot point at a {} (`{}`)",
-            local(prop),
-            local(&wiki.nodes[t].class),
-            wiki.nodes[t].rel
+            "`{prop}` cannot point at a {class} (`{}`)",
+            target.rel
         ));
     }
     None
