@@ -1,6 +1,6 @@
 //! The count badge of a heading; a screen reader hears "(3 sessions)".
 
-use crate::prelude::*;
+use super::kit::*;
 
 /// Screen-reader text: "1 task", "3 tasks".
 fn counted(n: usize, noun: &str) -> String {

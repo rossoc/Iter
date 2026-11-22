@@ -1,6 +1,6 @@
 //! The hours of a day: rows of hour label and drop zone; today's current hour carries the now line.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// The now line: how far into the hour (0 to 1) and its hidden text.
 pub struct Now {

@@ -1,6 +1,6 @@
 //! The pick-mode button that puts the picked task in a place: a form of hidden fields, no script.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `fields` are what the form posts (see `pages/board/pick.rs`). A `slot` fills its place
 /// with a dashed box naming it; any other is a small button.

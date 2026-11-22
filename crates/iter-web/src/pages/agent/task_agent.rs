@@ -538,7 +538,7 @@ async fn agent_row(task_id: i64, run: &RunRecord, current: bool) -> Result<impl 
                 </span>
             )
             cell(state_pill(run: run))
-            cell(class: "acts", run_acts(task_id: task_id, run: run))
+            cell(class: "acts", run_acts(task_id: task_id, run: run, stop: "Stop"))
         )
     })
 }

@@ -1,6 +1,6 @@
 //! A `fieldset` whose `legend` names its controls; used by `field::checklist`.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `id` (with `hint`) feeds the fieldset's `aria-describedby`; `invalid` shows
 /// the [`invalid_cue`] outside the legend so the legend stays the name.

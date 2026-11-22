@@ -1,6 +1,6 @@
 //! A titled list that folds (a `<details>`); not a drop zone.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `open` unfolds it (when what the page is about is inside).
 #[component]

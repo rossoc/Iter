@@ -1,6 +1,6 @@
 //! A titled block of the Info body: a small-caps heading over its content.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `id` is the heading's unique id; `count` adds a badge, `noun` is what a screen reader hears after it.
 #[component]

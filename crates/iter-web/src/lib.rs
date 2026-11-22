@@ -8,17 +8,6 @@
 // `Send` check on the resulting future needs more than the default depth of 128.
 #![recursion_limit = "256"]
 
-/// Declares the modules of a folder of components and its `all` glob: a component shares its
-/// module's name (`frame::frame`), so the glob lives one level down.
-macro_rules! components {
-    ($($m:ident),* $(,)?) => {
-        $(pub mod $m;)*
-        pub(crate) mod all {
-            $(pub use super::$m::*;)*
-        }
-    };
-}
-
 mod assets;
 mod cx;
 mod forms;

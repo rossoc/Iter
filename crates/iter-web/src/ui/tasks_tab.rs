@@ -1,6 +1,6 @@
 //! The Tasks tab of an organization or project page: search box and task table.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `rows` are the tasks passing the search, out of `total`; `add` leads the first row.
 #[component]

@@ -1,6 +1,6 @@
 //! The frame: the top bar and the centered main pane.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// The main nav `(label, href, icon)`; hrefs equal `url::BOARDS`/`SETTINGS` (tested in `url.rs`).
 pub const NAV: [(&str, &str, &str); 4] = [

@@ -143,6 +143,7 @@ fn no_instruction_is_compiled_into_the_binary() {
     let needle = format!("include_str!(\"{}/", "prompts");
     let mut rs = Vec::new();
     files(&repo().join("crates"), "rs", &mut rs);
+    assert!(!rs.is_empty(), "no source file found under crates/");
     let offenders: Vec<String> = rs
         .iter()
         // the wiki's own prompts are out of scope
@@ -193,7 +194,7 @@ fn the_cli_names_the_instruction_with_i() {
     }
 }
 
-/// as the CLI looks: nearest first (task folder, then project notes); `{{kind}}`
+/// An instruction is looked up as the CLI does: nearest first (task folder, then project notes); `{{kind}}`
 /// is the instruction's name; a name that is no built-in kind works.
 #[test]
 fn the_cli_takes_the_nearest_instruction_of_any_name() {

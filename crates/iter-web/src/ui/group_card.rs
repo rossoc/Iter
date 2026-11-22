@@ -1,6 +1,6 @@
 //! The overview card (Home, Boards) and the grid that holds the cards.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// The cards of a page, as a responsive grid.
 #[component]

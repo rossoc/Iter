@@ -1,6 +1,6 @@
 //! Section tabs with one sliding underline (`tabs.css`); the caller gives each tab its `href`.
 
-use crate::prelude::*;
+use super::kit::*;
 
 pub struct Tab {
     label: &'static str,

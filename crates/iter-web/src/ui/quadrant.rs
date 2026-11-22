@@ -1,7 +1,7 @@
 //! One Eisenhower quadrant: a section with number, name, count and rule, holding
 //! a drop zone. Text carries the meaning, so color is never the only cue.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// The element id of the quadrant a task is dropped on by `target`.
 fn dom_id(target: &str) -> String {

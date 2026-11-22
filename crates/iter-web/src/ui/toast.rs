@@ -3,7 +3,7 @@
 //! in every frame; `toast.js` fills it from the flash cookie (`layers/flash.rs`) and with
 //! `window.iterToast(kind, text)`. Turned off, neither the region nor the script is there.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 use iter_core::config::config;
 
 /// The region, live (`polite`) so a success is read out; an error toast that `toast.js`

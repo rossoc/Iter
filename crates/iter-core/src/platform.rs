@@ -116,11 +116,30 @@ struct Results {
     results: Vec<EntryResult>,
 }
 
-/// The reply of `/projects` or `/projects/<id>/activities`: one list, under either key.
+/// The reply of `/projects`.
 #[derive(Deserialize)]
-struct Listing {
-    #[serde(default, alias = "projects", alias = "activities")]
-    items: Vec<PlatformItem>,
+struct Projects {
+    #[serde(default)]
+    projects: Vec<PlatformItem>,
+}
+
+/// The reply of `/projects/<id>/activities`.
+#[derive(Deserialize)]
+struct Activities {
+    #[serde(default)]
+    activities: Vec<PlatformItem>,
+}
+
+impl From<Projects> for Vec<PlatformItem> {
+    fn from(reply: Projects) -> Self {
+        reply.projects
+    }
+}
+
+impl From<Activities> for Vec<PlatformItem> {
+    fn from(reply: Activities) -> Self {
+        reply.activities
+    }
 }
 
 pub trait TimePlatform {
@@ -216,10 +235,13 @@ impl JsonWebhook {
         self.read(request.call(), missing_ok)
     }
 
-    /// The items at `url`; a platform without that endpoint lists nothing.
-    fn list(&self, url: &str) -> Result<Vec<PlatformItem>> {
+    /// The items at `url`, read as the reply `R`; a platform without that endpoint lists nothing.
+    fn list<R: serde::de::DeserializeOwned + Into<Vec<PlatformItem>>>(
+        &self,
+        url: &str,
+    ) -> Result<Vec<PlatformItem>> {
         match self.get(url, &[], true)? {
-            Some(body) => Ok(self.parse::<Listing>(&body)?.items),
+            Some(body) => Ok(self.parse::<R>(&body)?.into()),
             None => Ok(Vec::new()),
         }
     }
@@ -304,12 +326,12 @@ impl TimePlatform for JsonWebhook {
     }
 
     fn projects(&self) -> Result<Vec<PlatformItem>> {
-        self.list(&format!("{}/projects", self.url))
+        self.list::<Projects>(&format!("{}/projects", self.url))
     }
 
     fn activities(&self, project_id: &str) -> Result<Vec<PlatformItem>> {
         let id = path_segment(project_id);
-        self.list(&format!("{}/projects/{id}/activities", self.url))
+        self.list::<Activities>(&format!("{}/projects/{id}/activities", self.url))
     }
 }
 

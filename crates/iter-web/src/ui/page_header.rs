@@ -1,6 +1,6 @@
 //! The page's title block: a kicker above the `h1`, actions on the right.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 #[derive(Default)]
 pub enum Kicker<'a> {

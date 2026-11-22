@@ -358,9 +358,9 @@ fn show(
     format!("{from} -> {to} ({})", files.join(", "))
 }
 
-#[test]
-fn no_cycle_between_top_level_modules() {
-    let graph = imports(&sources());
+/// The top-level modules of `sources` that sit on an import cycle.
+fn on_cycle(sources: &[Source]) -> Vec<String> {
+    let graph = imports(sources);
     let nodes: BTreeSet<&String> = graph
         .keys()
         .chain(graph.values().flat_map(BTreeMap::keys))
@@ -388,12 +388,32 @@ fn no_cycle_between_top_level_modules() {
             break;
         }
     }
-    let cyclic: Vec<&&String> = nodes.iter().filter(|n| reach[**n].contains(**n)).collect();
+    nodes
+        .iter()
+        .filter(|n| reach[**n].contains(**n))
+        .map(|n| n.to_string())
+        .collect()
+}
+
+#[test]
+fn no_cycle_between_top_level_modules() {
+    let cyclic = on_cycle(&sources());
     assert!(
         cyclic.is_empty(),
         "{} modules are on an import cycle: {:?}",
         cyclic.len(),
         cyclic
+    );
+}
+
+/// `iter-web` is ordered too (`lib.rs`): the components may not import the prelude that
+/// re-exports them.
+#[test]
+fn no_cycle_between_the_modules_of_the_web() {
+    let cyclic = on_cycle(&sources_of("iter-web", "web"));
+    assert!(
+        cyclic.is_empty(),
+        "web modules on an import cycle: {cyclic:?}"
     );
 }
 

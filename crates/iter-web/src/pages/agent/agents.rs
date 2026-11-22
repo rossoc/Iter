@@ -127,7 +127,7 @@ pub(super) async fn detail_page(cx: &Cx) -> Result<impl View> {
 #[component]
 async fn actions(task_id: i64, run: &RunRecord) -> Result<impl View> {
     Ok(view! {
-        <div class="run-actions">run_acts(task_id: task_id, run: run)</div>
+        <div class="run-actions">run_acts(task_id: task_id, run: run, stop: "Stop the agent")</div>
     })
 }
 

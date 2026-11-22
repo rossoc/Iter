@@ -1,6 +1,6 @@
 //! Colored chips; the text color comes from `ui/ink.rs`.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// One chip, ready to show (mapping in `parts/task_rows.rs`); only a `#rrggbb` `color` is used.
 pub struct Chip<'a> {

@@ -1,6 +1,6 @@
 //! A titled aside of label / value rows; the caller decides what the rows say.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 use iter_core::models::TaskStatus;
 
 pub enum Row<'a> {

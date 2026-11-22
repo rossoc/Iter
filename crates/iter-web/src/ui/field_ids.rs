@@ -1,6 +1,6 @@
 //! The ids and cues that tie a control to its label, hint and the form's error notice.
 
-use crate::prelude::*;
+use super::kit::*;
 
 /// Id of the form's error notice (`aria-describedby` target).
 pub const ERROR_ID: &str = "form-error";

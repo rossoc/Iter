@@ -1,6 +1,6 @@
 //! "Nothing here", as a quiet line ("No tasks.").
 
-use crate::prelude::*;
+use super::kit::*;
 
 #[component]
 pub async fn empty_line(child: Child<'_>) -> Result<impl View> {

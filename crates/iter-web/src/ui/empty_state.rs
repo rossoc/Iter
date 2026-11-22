@@ -1,6 +1,6 @@
 //! "Nothing here" as a dashed box with an icon; the one-liner is `empty_line`.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `svg` is one of the icon constants.
 #[component]

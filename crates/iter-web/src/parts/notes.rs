@@ -13,7 +13,6 @@ pub fn first_line(text: &str) -> &str {
         .unwrap_or_default()
 }
 
-
 /// Notes are read only on the Notes tab; the other tabs just count them (the badge).
 #[derive(Default)]
 pub struct NotesTab {

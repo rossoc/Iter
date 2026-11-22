@@ -255,17 +255,17 @@ pub mod fake {
             self.calls.borrow_mut().push(call);
             Ok(())
         }
-        fn list(&self, repo: &str) -> Result<Vec<Issue>> {
-            Inert.list(repo)
+        fn list(&self, _: &str) -> Result<Vec<Issue>> {
+            unreachable!("a push never lists issues")
         }
-        fn create(&self, repo: &str, title: &str, body: &str, project: &str) -> Result<i64> {
-            Inert.create(repo, title, body, project)
+        fn create(&self, _: &str, _: &str, _: &str, _: &str) -> Result<i64> {
+            unreachable!("a push never opens an issue")
         }
-        fn set_body(&self, repo: &str, number: i64, body: &str) -> Result<()> {
-            Inert.set_body(repo, number, body)
+        fn set_body(&self, _: &str, _: i64, _: &str) -> Result<()> {
+            unreachable!("a push never edits an issue")
         }
-        fn assign_self(&self, repo: &str, number: i64) -> Result<()> {
-            Inert.assign_self(repo, number)
+        fn assign_self(&self, _: &str, _: i64) -> Result<()> {
+            unreachable!("a push never assigns an issue")
         }
     }
 }

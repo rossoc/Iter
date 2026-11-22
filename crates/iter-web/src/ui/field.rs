@@ -1,7 +1,7 @@
 //! Form controls. Each has a real `<label for>` (id from [`field_id`]), so only
 //! `aria-describedby`, `aria-invalid` and `aria-required` are needed.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// A control's `aria-describedby`: its hint and, if the error is about it, the error notice.
 fn described_by(id: &str, hint: &str, invalid: bool) -> String {

@@ -1,7 +1,7 @@
 //! Projects as `data_table` rows (or a plain list in a card): name link, then
 //! the path in mono, leaf strong and directories muted; a long path loses its start.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `path` split after the last `/`: directories, then the leaf.
 fn split_leaf(path: &str) -> (&str, &str) {

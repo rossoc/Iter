@@ -2,7 +2,7 @@
 //! is untrusted: raw HTML is shown as text, and links/images keep their URL only
 //! if `http(s)`, `mailto` or relative. Headings move down two levels under the page's `<h1>`/`<h2>`.
 
-use crate::prelude::*;
+use super::kit::*;
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd, html};
 use topcoat::view::Unescaped;
 

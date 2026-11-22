@@ -1,7 +1,7 @@
 //! A titled drop zone of tasks not yet placed; a card dropped in is taken off the
 //! day or out of the quadrants (`target` is what `board.js` posts).
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `target` is empty on the agenda (unschedule). It is a labelled region unless
 /// `alone` in an aside labelled itself (one landmark, not two). `collapsible`

@@ -1,6 +1,6 @@
 //! A POST form: error box, "* Required" note, the controls, then submit and the way out.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 #[component]
 async fn required_note() -> Result<impl View> {

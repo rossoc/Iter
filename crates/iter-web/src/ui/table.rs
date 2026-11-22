@@ -4,7 +4,7 @@
 //! its native semantics as a `role`, because browsers drop them when narrow
 //! screens lay rows out as boxes; a headerless table is named by its caption.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// The first row, which adds an entity: a link to the New pop-up or a posting button.
 pub struct AddRow<'a> {

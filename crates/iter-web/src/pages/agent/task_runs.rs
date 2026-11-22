@@ -44,14 +44,14 @@ pub(crate) async fn act(
 
 /// What can be done to a run now: start or drop a queued one, stop a running one.
 #[component]
-pub(crate) async fn run_acts(task_id: i64, run: &RunRecord) -> Result<impl View> {
+pub(crate) async fn run_acts(task_id: i64, run: &RunRecord, stop: &str) -> Result<impl View> {
     let shown = run.shown_status();
     Ok(view! {
         if shown == "queued" {
             act(action: run_action_url(task_id, run.n, RunAction::Run), label: "Run now", svg: PLAY)
             act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Remove from the queue", svg: X)
         } else if shown == "running" {
-            act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: "Stop the agent", svg: STOP)
+            act(action: run_action_url(task_id, run.n, RunAction::Cancel), label: stop, svg: STOP)
         }
     })
 }

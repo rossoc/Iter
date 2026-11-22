@@ -1,6 +1,6 @@
 //! A task's status as a glyph pill: icon (decorative) plus the word.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 use iter_core::models::TaskStatus;
 
 fn glyph(state: TaskStatus) -> &'static str {

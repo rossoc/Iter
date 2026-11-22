@@ -1,7 +1,7 @@
 //! A day's heading with previous, Today and next links. With script the title
 //! opens the date picker; without, a hidden button submits the date input.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// A link to another day; `label` is its accessible name.
 #[derive(Clone)]

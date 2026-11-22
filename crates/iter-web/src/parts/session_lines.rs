@@ -1,9 +1,12 @@
 //! The mapping from sessions to what the sessions table shows
 //! (`ui::sessions_table`): the one place a session's times are written.
 
-use chrono::NaiveDateTime;
 use crate::prelude::*;
-use iter_core::{models::{START_TIME_FMT, Session, end_text}, reporting::{SessionRow, non_empty}};
+use chrono::NaiveDateTime;
+use iter_core::{
+    models::{START_TIME_FMT, Session, end_text},
+    reporting::{SessionRow, non_empty},
+};
 
 pub fn report_lines(rows: &[SessionRow]) -> Vec<SessionLine<'_>> {
     rows.iter()

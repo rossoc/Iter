@@ -1,7 +1,10 @@
 //! The projects of a group (a board, an organization) as the edit forms' checklists list them.
 
 use crate::{forms::PROJECTS, parts::all::*, prelude::*};
-use iter_core::{db::{Db, Table}, models::ProjectGroup};
+use iter_core::{
+    db::{Db, Table},
+    models::ProjectGroup,
+};
 use std::collections::{HashMap, HashSet};
 
 #[component]

@@ -1,6 +1,6 @@
 //! Layout atoms: one element and one class each (rules in `layout.css`).
 
-use crate::prelude::*;
+use super::kit::*;
 
 /// Two columns (body, then aside), one when narrow; `class` `side-folded` makes the aside a narrow rail.
 #[component]

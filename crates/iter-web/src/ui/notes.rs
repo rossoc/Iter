@@ -1,6 +1,6 @@
 //! Daily notes: the Notes tab list (by month, latest day first) and links between days.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// One row of the list; `title` only when the note has its own.
 pub struct NoteItem<'a> {

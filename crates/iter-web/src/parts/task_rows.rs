@@ -1,7 +1,11 @@
 //! Maps tasks to the task table (`ui::task_table`) and their tags to chips: the one place a task's links, issue label and chips are built.
 
 use crate::prelude::*;
-use iter_core::{db::Table, front::query::TaskQuery, models::{Tag, Task}};
+use iter_core::{
+    db::Table,
+    front::query::TaskQuery,
+    models::{Tag, Task},
+};
 
 const SYNTAX: &[(&str, &str)] = &[
     ("is:open", "queued or in progress (the default)"),

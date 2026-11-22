@@ -1,6 +1,6 @@
 //! A boxed message: a hint or, as `error`, a problem.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// `focus` moves focus to the notice on load via `notice.js` (`autofocus`
 /// was skipped by Chromium on submit-back pages; an inline script would break the

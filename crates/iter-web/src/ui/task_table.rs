@@ -1,6 +1,6 @@
 //! A table of tasks: name, optionally project, status, issue.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 use iter_core::models::TaskStatus;
 
 pub struct ProjectLink<'a> {

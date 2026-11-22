@@ -97,12 +97,29 @@ pub struct Counts {
 
 /// Info, Projects, Tasks, Notes, Report, Wiki, Settings: those `counts` names.
 pub fn section_tabs(base: &str, current: Section, counts: Counts) -> Vec<Tab> {
-    let Counts { projects, tasks, notes, report, wiki } = counts;
-        let entries = [
+    let Counts {
+        projects,
+        tasks,
+        notes,
+        report,
+        wiki,
+    } = counts;
+    let entries = [
         Some((Section::Info, Tab::link("Info", base.to_string()))),
-        projects.map(|n| (Section::Projects, Tab::link("Projects", projects_tab_url(base)).count(n))),
-        Some((Section::Tasks, Tab::link("Tasks", tasks_tab_url(base)).count(tasks))),
-        Some((Section::Notes, Tab::link("Notes", notes_tab_url(base)).count(notes))),
+        projects.map(|n| {
+            (
+                Section::Projects,
+                Tab::link("Projects", projects_tab_url(base)).count(n),
+            )
+        }),
+        Some((
+            Section::Tasks,
+            Tab::link("Tasks", tasks_tab_url(base)).count(tasks),
+        )),
+        Some((
+            Section::Notes,
+            Tab::link("Notes", notes_tab_url(base)).count(notes),
+        )),
         report.map(|href| (Section::Report, Tab::link("Report", href))),
         wiki.then(|| (Section::Wiki, Tab::link("Wiki", wiki_tab_url(base)))),
         Some((Section::Settings, Tab::link("Settings", edit_url(base)))),
@@ -155,10 +172,7 @@ pub fn task_tabs(base: &str, current: TaskSection, sessions: usize, agents: usiz
                 Tab::link("Agents", agent_tab_url(base)).count(agents),
             ),
             (TaskSection::Notes, Tab::link("Notes", notes_tab_url(base))),
-            (
-                TaskSection::Settings,
-                Tab::link("Settings", edit_url(base)),
-            ),
+            (TaskSection::Settings, Tab::link("Settings", edit_url(base))),
         ],
     )
 }
@@ -190,6 +204,15 @@ mod tests {
             ("/task/7?tab=sessions", Some(3))
         );
         assert_eq!(items[2].href(), "/task/7?tab=agent");
+    }
+
+    #[test]
+    fn the_settings_row_keeps_the_badges_and_ends_with_settings() {
+        let items = task_tabs("/task/7", TaskSection::Settings, 3, 2);
+        assert_eq!(items.len(), 5);
+        assert!(items[..4].iter().all(|tab| !tab.is_current()));
+        assert!(items[4].is_current() && items[4].href() == "/task/7/edit");
+        assert_eq!((items[1].badge(), items[2].badge()), (Some(3), Some(2)));
     }
 
     #[test]
@@ -231,7 +254,11 @@ mod tests {
             (items[1].href(), items[1].badge()),
             ("/project/1?tab=tasks&q=is%3Aopen", Some(4))
         );
-        let org = section_tabs("/org/1", Section::Settings, counts(Some(9), Some(2), Some("/r".into())));
+        let org = section_tabs(
+            "/org/1",
+            Section::Settings,
+            counts(Some(9), Some(2), Some("/r".into())),
+        );
         assert_eq!(org.len(), 6);
         assert!(org[5].is_current() && org[5].href() == "/org/1/edit");
     }

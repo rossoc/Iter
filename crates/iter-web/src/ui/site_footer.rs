@@ -2,7 +2,7 @@
 //! their projects, boards, loose projects and settings. Markup and CSS only; data
 //! comes from `pages/site/footer.rs`.
 
-use crate::prelude::*;
+use super::kit::*;
 
 pub struct FooterLink {
     pub name: String,

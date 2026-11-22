@@ -3,8 +3,20 @@
 //! host page (organization, project, board) can show one without importing the module that
 //! handles its POST (`pages/project/project_new.rs`, `pages/task/task_new.rs`), which in turn renders the host.
 
-use crate::{forms::{ProjectForm, TaskForm, edit::{DESCRIPTION, NAME}}, parts::all::*, prelude::*};
-use iter_core::{config::config, db::Table, git, models::{Board, Configured, Organization, Project, Settings, Task}};
+use crate::{
+    forms::{
+        ProjectForm, TaskForm,
+        edit::{DESCRIPTION, NAME},
+    },
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    config::config,
+    db::Table,
+    git,
+    models::{Board, Configured, Organization, Project, Settings, Task},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Home {

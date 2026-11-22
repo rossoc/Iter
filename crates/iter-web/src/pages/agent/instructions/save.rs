@@ -178,6 +178,7 @@ pub(super) async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Res
         },
     )
     .map_err(refuse)?;
+    instruction::check(target, &text).map_err(refuse)?;
     let to = instruction::file(&home, target);
     if renamed.is_some() && to.exists() {
         return Err(refuse(format!("'{target}' exists already")));

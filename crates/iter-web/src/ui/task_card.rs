@@ -2,7 +2,7 @@
 //! one action link. `board.js` drags it: a card with `data-task` is made
 //! draggable by the script, and is a plain card without.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 use iter_core::models::{Priority, TaskStatus};
 
 /// The colored left edge for priority; never the only cue (a chip says it too).

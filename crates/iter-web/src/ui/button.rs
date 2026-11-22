@@ -1,6 +1,6 @@
 //! `.button` (look in `button.css`) and the "+" add row link.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 
 /// The "+" link that adds an entity: first row of a list or table, opens the New pop-up.
 #[component]

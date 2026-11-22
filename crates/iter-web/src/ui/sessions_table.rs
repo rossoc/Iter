@@ -1,6 +1,6 @@
 //! A table of work sessions (when, how long, note), shared by the Organization report and the task page.
 
-use crate::prelude::*;
+use super::{all::*, kit::*};
 use std::borrow::Cow;
 
 /// A point in time as shown, plus its machine form for `<time>` if known.

@@ -2,7 +2,7 @@
 //! `aria-current="page"` goes on the current tab if the page has tabs
 //! (`Crumb::label`), else on the last crumb (`Crumb::here`).
 
-use crate::prelude::*;
+use super::kit::*;
 
 pub struct Crumb {
     pub label: String,

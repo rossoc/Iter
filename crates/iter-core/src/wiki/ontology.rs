@@ -161,7 +161,7 @@ impl Ontology {
             .texts("authorable")
             .into_iter()
             .filter(|(_, text)| text == "true")
-            .map(|(prop, _)| (local(&prop).to_string(), prop))
+            .filter_map(|(prop, _)| Some((prop.as_str().strip_prefix(NS)?.to_string(), prop)))
             .collect();
         self.authorable.sort();
 
