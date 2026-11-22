@@ -634,7 +634,11 @@ fn front_is_pure_data_moved_out_of_web() {
         );
     }
     assert!(
-        crate_src("iter-web").join("folder_picker.rs").exists(),
+        {
+            let mut web = Vec::new();
+            walk(&crate_src("iter-web"), &mut web);
+            web.iter().any(|p| p.ends_with("folder_picker.rs"))
+        },
         "the OS dialog stays in the web"
     );
     let markup = Regex::new(r"topcoat|view!|\bhref\b").expect("regex");

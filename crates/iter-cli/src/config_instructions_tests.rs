@@ -118,7 +118,11 @@ fn flag(front: &serde_yaml::Mapping, key: &str) -> bool {
 
 /// Every file under `dir` with extension `ext`.
 fn files(dir: &Path, ext: &str, out: &mut Vec<PathBuf>) {
-    for e in std::fs::read_dir(dir).unwrap().flatten() {
+    // a scratch folder another test removes mid-walk is simply skipped
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for e in entries.flatten() {
         let path = e.path();
         if path.is_dir() {
             files(&path, ext, out);
