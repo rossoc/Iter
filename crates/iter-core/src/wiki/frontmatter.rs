@@ -5,6 +5,7 @@ use crate::text::yaml_scalar;
 use crate::text::{Split as Divided, split_closed, strip_bom};
 use serde_yaml::Value;
 
+/// What a page's front matter says; `relations` keep the order the file writes them in.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Front {
     pub description: Option<String>,
@@ -16,6 +17,7 @@ pub struct Front {
 }
 
 impl Front {
+    /// The single-valued keys, absent ones as `None`; `check` tests them against the ontology's ranges.
     pub fn scalars(&self) -> [(&'static str, Option<&str>); 3] {
         [
             ("description", self.description.as_deref()),
@@ -25,6 +27,7 @@ impl Front {
     }
 }
 
+/// A page cut into its front matter (`None` if it has none) and its body.
 pub struct Split<'a> {
     pub yaml: Option<&'a str>,
     pub body: &'a str,
@@ -123,6 +126,7 @@ pub fn wikilinks(body: &str) -> Vec<String> {
     out
 }
 
+/// The text of the first `# ` heading of `body`.
 pub fn title(body: &str) -> Option<String> {
     body.lines()
         .find_map(|l| l.strip_prefix("# "))
@@ -201,8 +205,7 @@ mod tests {
         );
     }
 
-    /// Characterisation (R7, YAML scalar): a front-matter scalar is trimmed text, a number or a
-    /// bool as written; a null, a list or a map is none.
+    /// A front-matter scalar is trimmed text, a number or a bool as written; a null, a list or a map is none.
     #[test]
     fn a_scalar_is_trimmed_text_a_number_or_a_bool() {
         let value = |yaml: &str| serde_yaml::from_str::<Value>(yaml).unwrap();

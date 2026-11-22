@@ -774,8 +774,7 @@ mod tests {
         assert!(!stays_inside("/etc"));
     }
 
-    /// Characterisation (R7, percent-encode): an IRI path part keeps `-._~` and `/` (a label's
-    /// folders stay folders) and encodes the rest, `!*'()` included.
+    /// An IRI path part keeps `-._~` and `/` (a label's folders stay folders) and encodes the rest, `!*'()` included.
     #[test]
     fn an_iri_path_part_keeps_the_slash() {
         assert_eq!(encode("ideas/a b"), "ideas/a%20b");

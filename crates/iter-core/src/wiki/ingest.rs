@@ -235,7 +235,7 @@ mod tests {
         assert!(!concept.contains("{{"));
     }
 
-    /// R3: the ingest instruction is laid out like a CLAUDE.md (purpose, sources, workflow, rules)
+    /// The ingest instruction is laid out like a CLAUDE.md (purpose, sources, workflow, rules)
     /// and reads only through iter commands.
     #[test]
     fn the_ingest_instruction_has_the_claude_md_sections_and_reads_through_iter() {
