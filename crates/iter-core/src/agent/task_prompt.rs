@@ -268,7 +268,7 @@ mod tests {
         );
     }
 
-    /// R3: `{{task}}` is the bare id: agents address a task by it, and a title may repeat. The
+    /// `{{task}}` is the bare id: agents address a task by it, and a title may repeat. The
     /// title is `{{task.name}}`.
     #[test]
     fn a_prompt_names_a_task_whose_title_repeats_by_its_id_only() {
@@ -288,7 +288,7 @@ mod tests {
         assert!(e.to_string().contains("#1, #2"), "{e}");
     }
 
-    /// R2, R3, R4: `-i ingest` carries the wiki ingest text for the task: the note waiting, the
+    /// `-i ingest` carries the wiki ingest text for the task: the note waiting, the
     /// rules, and the task's sketches named by command, not by folder.
     #[test]
     fn the_ingest_prompt_lists_the_waiting_notes_and_reads_through_iter() {
@@ -310,7 +310,7 @@ mod tests {
         assert!(!text.contains("(the project has no wiki)"), "{text}");
     }
 
-    /// R4: a project without a notes folder has no wiki; the prompt says so and does not fail.
+    /// A project without a notes folder has no wiki; the prompt says so and does not fail.
     #[test]
     fn the_ingest_prompt_of_a_project_without_notes_says_there_is_no_wiki() {
         let db = fixtures::db();
@@ -323,7 +323,7 @@ mod tests {
         assert!(!text.contains("{{"), "{text}");
     }
 
-    /// R4: `{{branch.main}}` is the project's default branch, `{{ingest}}` works in any template.
+    /// `{{branch.main}}` is the project's default branch, `{{ingest}}` works in any template.
     #[test]
     fn a_template_can_name_the_main_branch_and_the_ingest_text() {
         let (app, notes) = world("branch");

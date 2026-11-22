@@ -40,6 +40,7 @@ impl Launch<'_> {
     }
 }
 
+/// The observer that says nothing.
 pub(super) struct Quiet;
 
 impl Observer for Quiet {}
@@ -547,7 +548,7 @@ mod tests {
             model: "sonnet".into(),
             effort: "high".into(),
         };
-        let (n, prompt) = open_subagent(&app, name, "test", &sonnet, &Quietly).unwrap();
+        let (n, prompt) = open_subagent(&app, name, "test", &sonnet, &Quiet).unwrap();
         assert!(prompt.contains("Retries hammer the api.") && !prompt.contains("{{"));
         let (_, task, dir) = locate(&app, Some(name)).unwrap();
         assert_eq!(task.status, TaskStatus::Wip);
@@ -563,7 +564,7 @@ mod tests {
         );
 
         // one at a time, and nothing written down for the refused one
-        let busy = open_subagent(&app, name, "develop", &sonnet, &Quietly).unwrap_err();
+        let busy = open_subagent(&app, name, "develop", &sonnet, &Quiet).unwrap_err();
         assert!(busy.to_string().contains("still working"), "{busy}");
         assert_eq!(dir.runs().len(), 1);
         assert!(close(&app, name, n, Status::Running, "x").is_err());
@@ -578,7 +579,7 @@ mod tests {
         let again = close(&app, name, n, Status::Failed, "").unwrap_err();
         assert!(again.to_string().contains("is done"), "{again}");
 
-        let (m, _) = open_subagent(&app, name, "check", &sonnet, &Quietly).unwrap();
+        let (m, _) = open_subagent(&app, name, "check", &sonnet, &Quiet).unwrap();
         assert_eq!(m, n + 1);
     }
 
@@ -604,12 +605,12 @@ mod tests {
             e.to_string().contains("iter task prompt -i complete"),
             "{e}"
         );
-        assert!(open_subagent(&app, name, "complete", &spec, &Quietly).is_err());
+        assert!(open_subagent(&app, name, "complete", &spec, &Quiet).is_err());
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         assert_eq!(dir.runs().len(), 1);
     }
 
-    /// R2: the ingest of a closing task is a subagent run like the others, opened and closed.
+    /// The ingest of a closing task is a subagent run like the others, opened and closed.
     #[test]
     fn an_ingest_subagent_run_is_opened_and_closed() {
         let app = world("ingest");
@@ -619,7 +620,7 @@ mod tests {
             model: "haiku".into(),
             effort: "low".into(),
         };
-        let (n, prompt) = open_subagent(&app, name, "ingest", &spec, &Quietly).unwrap();
+        let (n, prompt) = open_subagent(&app, name, "ingest", &spec, &Quiet).unwrap();
         assert!(!prompt.contains("{{"), "{prompt}");
         let (_, _, dir) = locate(&app, Some(name)).unwrap();
         let run = dir.read_run(n).unwrap().unwrap();
@@ -627,9 +628,6 @@ mod tests {
         close(&app, name, n, Status::Done, "2 pages updated").unwrap();
         assert_eq!(dir.read_run(n).unwrap().unwrap().status, Status::Done);
     }
-
-    struct Quietly;
-    impl Observer for Quietly {}
 
     #[test]
     fn an_agent_starting_makes_a_queued_task_work_in_progress_and_leaves_a_done_one() {
@@ -648,7 +646,7 @@ mod tests {
         }
     }
 
-    /// Characterisation (R7, `now()`): a run's stamp is the local time as `YYYY-MM-DD HH:MM:SS`.
+    /// Characterisation: a run's stamp is the local time as `YYYY-MM-DD HH:MM:SS`.
     #[test]
     fn a_run_is_stamped_with_the_local_time_and_a_space() {
         let stamp = now();

@@ -6,6 +6,8 @@
 use iter_core::db::{Db, Table};
 use iter_core::error::{IterError, Result};
 use iter_core::models::Named;
+use iter_core::models::Session;
+use iter_core::reporting::{DateRange, Header, total_minutes};
 use serde::Serialize;
 
 /// Prints `value` as YAML: what every `list` emits.
@@ -17,6 +19,18 @@ pub(crate) fn print_yaml<T: serde::Serialize>(value: &T) -> Result<()> {
 /// `iter <entity> list`: every `T`'s name as a YAML list.
 pub(crate) fn list_names<T: Table + Named>(db: &Db) -> Result<()> {
     print_yaml(&db.names::<T>()?)
+}
+
+/// The header of an `info` report on `item` over `range`: its time is the union of `sessions`,
+/// so hours spent on two things at once are not counted twice.
+pub(crate) fn report_header<T: Serialize>(
+    (name, description): (String, &str),
+    item: &T,
+    range: DateRange,
+    sessions: &[Session],
+    now: chrono::NaiveDateTime,
+) -> Result<Header> {
+    Header::of(name, description, item, range, total_minutes(sessions, now))
 }
 
 #[derive(clap::ValueEnum, Clone, Copy, Debug, Default, PartialEq, Eq)]

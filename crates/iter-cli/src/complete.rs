@@ -207,7 +207,7 @@ mod tests {
         );
     }
 
-    /// R3: `task pull/push --task` completes the bare id of every task (the project is not known to
+    /// `task pull/push --task` completes the bare id of every task (the project is not known to
     /// the completer, so a title could name several); the help text, not the value, carries the title.
     #[test]
     fn task_names_are_the_ids_of_every_task() {
@@ -243,7 +243,7 @@ mod tests {
         );
     }
 
-    /// R3: a task is offered as `<project>/<title>` when that names it alone, and as its bare id
+    /// A task is offered as `<project>/<title>` when that names it alone, and as its bare id
     /// when the title repeats (a completion must never hand the shell a value that is ambiguous).
     #[test]
     fn completion_offers_a_repeated_title_by_its_id() {
@@ -264,7 +264,7 @@ mod tests {
         );
     }
 
-    /// R3: a title that ends in `#<digits>` would be read back as an id, so it is offered by id.
+    /// A title that ends in `#<digits>` would be read back as an id, so it is offered by id.
     #[test]
     fn completion_offers_a_title_that_reads_like_a_label_by_its_id() {
         let db = fixtures::db();

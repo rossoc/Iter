@@ -94,7 +94,7 @@ mod tests {
         .collect()
     }
 
-    /// R4: the task is passed by its id, not its title: titles repeat, and a title starting with
+    /// The task is passed by its id, not its title: titles repeat, and a title starting with
     /// `-` or holding a space is one more thing to get wrong.
     #[test]
     fn the_task_is_handed_to_the_ingest_by_id() {

@@ -4,7 +4,7 @@
 use crate::args::{ReportOpts, TaskCommand};
 use crate::editor::edited;
 use crate::ingest;
-use crate::output::print_yaml;
+use crate::output::{print_yaml, report_header};
 use crate::sync::{task_pull, task_push};
 use crate::{Run, agent, solve};
 use iter_core::agent::ingest_job::{self, Trigger};
@@ -17,10 +17,7 @@ use iter_core::github::{self, GhCli, IssueTracker};
 use iter_core::locate::{project_or_current, require_git_repo, require_github, task_or_current};
 use iter_core::models::require_name;
 use iter_core::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
-use iter_core::reporting::total_minutes;
-use iter_core::reporting::{
-    Header, TaskInfo, WeekdayReport, print_report, session_rows, weekday_averages,
-};
+use iter_core::reporting::{TaskInfo, WeekdayReport, print_report, session_rows, weekday_averages};
 use iter_core::tmux::{Multiplexer, TmuxClient};
 use iter_core::workspace::clock::close_open_session;
 use iter_core::workspace::teardown_and_kill;
@@ -167,15 +164,14 @@ fn task_info(app: &App, task_ref: Option<&str>, opts: &ReportOpts) -> Result<()>
     let now = app.now;
     let range = opts.range(now)?;
     let sessions = db.sessions_for_task_in_range(task.id(), range.from, range.to)?;
-    let total_minutes = total_minutes(&sessions, now);
 
     let info = TaskInfo {
-        header: Header::of(
-            task.label(&project).to_string(),
-            &task.description,
+        header: report_header(
+            (task.label(&project).to_string(), &task.description),
             &task,
             range,
-            total_minutes,
+            &sessions,
+            now,
         )?,
         sessions: session_rows(&sessions, now, range.single_day().is_none()),
     };

@@ -602,7 +602,7 @@ mod tests {
         assert!(rename_target("review", "Bad Name").is_err());
     }
 
-    /// Characterisation (R7, YAML scalar): an instruction's front-matter scalar is text exactly
+    /// An instruction's front-matter scalar is text exactly
     /// as written (not trimmed), a number or a bool; a null, a list or a map is none.
     #[test]
     fn a_scalar_keeps_its_text_as_written() {
@@ -619,7 +619,7 @@ mod tests {
     }
 }
 
-/// R2, R7: the lookup every front end shares, over layers of real folders.
+/// The lookup every front end shares, over layers of real folders.
 #[cfg(test)]
 mod lookup_tests {
     use super::*;
@@ -649,7 +649,7 @@ mod lookup_tests {
         )
     }
 
-    /// T2 (R2): only files count: one in the config layer is found there, none is found nowhere.
+    /// Only files count: one in the config layer is found there, none is found nowhere.
     #[test]
     fn lookup_reads_files_only() {
         let (layers, config) = layers("lookup");
@@ -667,7 +667,7 @@ mod lookup_tests {
         assert_eq!(plan.body.trim(), "Plan {{task.name}}.");
     }
 
-    /// T7 (R7): the list is what the layers hold: empty when they hold nothing.
+    /// The list is what the layers hold: empty when they hold nothing.
     #[test]
     fn the_list_is_what_the_layers_hold() {
         let (layers, config) = layers("list");
@@ -680,7 +680,7 @@ mod lookup_tests {
         assert_eq!(names, ["plan", "review"]);
     }
 
-    /// T7 (R7): with no built-in ones, any instruction can be renamed, to any free name.
+    /// With no built-in ones, any instruction can be renamed, to any free name.
     #[test]
     fn any_instruction_can_be_renamed() {
         assert_eq!(
@@ -695,7 +695,7 @@ mod lookup_tests {
         assert!(rename_target("plan", "Bad Name").is_err());
     }
 
-    /// R4, R5: `kind:` is ignored like any other key, the new keys are read, `{{kind}}` renders.
+    /// `kind:` is ignored like any other key, the new keys are read, `{{kind}}` renders.
     #[test]
     fn kind_is_not_read_and_the_new_keys_are() {
         assert!(check("fix", "---\nkind: dance\n---\nx").is_ok());
@@ -708,7 +708,7 @@ mod lookup_tests {
         );
     }
 
-    /// R1, R4: every shipped instruction, read from the repo as a config layer, is valid and says
+    /// Every shipped instruction, read from the repo as a config layer, is valid and says
     /// what it is for.
     #[test]
     fn every_shipped_instruction_is_found_in_the_folder_and_valid() {

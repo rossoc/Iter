@@ -4,7 +4,7 @@ use crate::Run;
 use crate::args::{ProjectCommand, ReportOpts};
 use crate::editor::edited;
 use crate::entity::update;
-use crate::output::list_names;
+use crate::output::{list_names, report_header};
 use iter_core::app::App;
 use iter_core::config::config;
 use iter_core::db::Db;
@@ -12,8 +12,7 @@ use iter_core::db::Table;
 use iter_core::error::Result;
 use iter_core::locate::project_or_current;
 use iter_core::models::{Board, Named, Organization, Project};
-use iter_core::reporting::{Header, ProjectInfo, print_report};
-use iter_core::reporting::{task_reports, total_minutes};
+use iter_core::reporting::{ProjectInfo, print_report, task_reports};
 use iter_core::tmux::{Multiplexer, TmuxClient};
 use iter_core::workspace::teardown;
 use iter_core::{git, scaffold};
@@ -144,13 +143,13 @@ impl Run for ProjectCommand {
                 no_board,
             } => project_edit(
                 app,
-                name.as_deref(),
+                name.name(),
                 organization.as_deref(),
                 board.as_deref(),
                 *no_board,
             ),
-            Self::Delete { name } => project_delete(app, &TmuxClient::system(), name.as_deref()),
-            Self::Info { name, report } => project_info(app, name.as_deref(), report),
+            Self::Delete { name } => project_delete(app, &TmuxClient::system(), name.name()),
+            Self::Info { name, report } => project_info(app, name.name(), report),
             Self::List => project_list(app),
         }
     }
@@ -217,17 +216,14 @@ fn project_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> 
     let now = app.now;
     let range = opts.range(now)?;
 
-    // the union of every task's sessions, so two tasks worked in parallel are not double-counted
     let (tasks, sessions) = task_reports(db, project_id, range, now)?;
-    let total_minutes = total_minutes(&sessions, now);
-
     let info = ProjectInfo {
-        header: Header::of(
-            project.name.clone(),
-            &project.description,
+        header: report_header(
+            (project.name.clone(), &project.description),
             &project,
             range,
-            total_minutes,
+            &sessions,
+            now,
         )?,
         tasks,
     };

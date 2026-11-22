@@ -1,3 +1,6 @@
+//! The command line as clap derives it: one module per entity, plus the shared `ReportOpts`,
+//! `TaskRef` and the top-level `Cli`.
+
 use crate::complete::{
     board_completer, organization_completer, project_completer, queued_task_completer,
     tag_completer, task_completer, task_name_completer,

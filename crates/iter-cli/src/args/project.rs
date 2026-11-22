@@ -2,6 +2,20 @@
 
 use super::*;
 
+/// A project named on the command line, else the one of the tmux session you are in.
+#[derive(clap::Args, Debug)]
+pub struct ProjectRef {
+    /// Default: the project of the tmux session you're in
+    #[arg(add = ArgValueCompleter::new(project_completer))]
+    name: Option<String>,
+}
+
+impl ProjectRef {
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+}
+
 #[derive(clap::Subcommand, Debug)]
 pub enum ProjectCommand {
     /// Open a blank project in nvim; saving & quitting creates it
@@ -20,9 +34,8 @@ pub enum ProjectCommand {
 
     /// Edit an existing project in nvim; saving & quitting updates it
     Edit {
-        /// Default: the project of the tmux session you're in
-        #[arg(add = ArgValueCompleter::new(project_completer))]
-        name: Option<String>,
+        #[clap(flatten)]
+        name: ProjectRef,
 
         /// Move the project into this organization (its current
         /// organization, if any, is kept when this isn't given)
@@ -42,17 +55,15 @@ pub enum ProjectCommand {
 
     /// Delete a project (and its tasks, session-configs and sessions)
     Delete {
-        /// Default: the project of the tmux session you're in
-        #[arg(add = ArgValueCompleter::new(project_completer))]
-        name: Option<String>,
+        #[clap(flatten)]
+        name: ProjectRef,
     },
 
     /// Name, description, and time spent (union of all its tasks) over a
     /// day or an interval, broken down per task
     Info {
-        /// Default: the project of the tmux session you're in
-        #[arg(add = ArgValueCompleter::new(project_completer))]
-        name: Option<String>,
+        #[clap(flatten)]
+        name: ProjectRef,
 
         #[clap(flatten)]
         report: ReportOpts,

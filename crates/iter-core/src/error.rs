@@ -426,7 +426,7 @@ mod tests {
         }
     }
 
-    /// R2: the error lists the `#<id>` of every match, so the user can name one.
+    /// The error lists the `#<id>` of every match, so the user can name one.
     #[test]
     fn an_ambiguous_title_lists_the_ids_to_choose_from() {
         let error = IterError::AmbiguousTask {

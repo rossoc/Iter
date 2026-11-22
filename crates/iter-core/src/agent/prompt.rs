@@ -194,13 +194,13 @@ mod tests {
         assert!(text.contains("iter task plan 7 --stdin"));
     }
 
-    /// R2: `ingest` only writes the wiki, from the ingest text.
+    /// `ingest` only writes the wiki, from the ingest text.
     #[test]
     fn ingest_carries_the_ingest_text() {
         assert!(body("ingest").contains("{{ingest}}"));
     }
 
-    /// R4: the main branch and the ingest text are placeholders a template may use.
+    /// The main branch and the ingest text are placeholders a template may use.
     #[test]
     fn branch_main_and_ingest_are_known_placeholders() {
         for key in ["branch.main", "ingest"] {
@@ -208,7 +208,7 @@ mod tests {
         }
     }
 
-    /// R1: `complete` closes the task with the user: commit, merge main in, merge into main,
+    /// `complete` closes the task with the user: commit, merge main in, merge into main,
     /// ingest by a subagent, commit the wiki.
     #[test]
     fn complete_closes_the_task_by_merging_and_ingesting() {
