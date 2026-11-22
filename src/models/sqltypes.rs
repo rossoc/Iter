@@ -1,7 +1,12 @@
 //! SQLite conversions `rusqlite` lacks: `Duration`, `TaskStatus` and `NaiveDateTime` (via `datetime`).
 
-use super::*;
-use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput};
+use super::{Duration, TaskStatus};
+use chrono::NaiveDateTime;
+use rusqlite::Row;
+use rusqlite::types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Type, Value, ValueRef};
+
+/// How a `NaiveDateTime` is stored: fixed-width, so text order is time order.
+pub(crate) const DATETIME_FMT: &str = "%Y-%m-%d %H:%M:%S";
 
 /// Stored as whole minutes.
 impl ToSql for Duration {
@@ -36,13 +41,15 @@ pub(crate) mod datetime {
     use super::*;
 
     pub(crate) fn write(value: &NaiveDateTime) -> rusqlite::Result<ToSqlOutput<'static>> {
-        Ok(ToSqlOutput::Owned(Value::Text(dt_to_str(*value))))
+        Ok(ToSqlOutput::Owned(Value::Text(
+            value.format(DATETIME_FMT).to_string(),
+        )))
     }
 
     /// A malformed value fails the read (naming value and column) instead of panicking.
     pub(crate) fn read(row: &Row, index: usize) -> rusqlite::Result<NaiveDateTime> {
         let text = row.get::<_, String>(index)?;
-        str_to_dt(&text).map_err(|error| {
+        NaiveDateTime::parse_from_str(&text, DATETIME_FMT).map_err(|error| {
             let column = row.as_ref().column_name(index).unwrap_or("?");
             rusqlite::Error::FromSqlConversionFailure(
                 index,

@@ -1,7 +1,7 @@
 use super::*;
 use crate::fixtures::{self, board, day, db, dt};
-use crate::models::Organization;
 use crate::models::Settings;
+use crate::models::{Duration, Organization};
 
 /// Re-runs every migration, as on a pre-versioning database.
 fn remigrate(db: &Db) -> Result<()> {

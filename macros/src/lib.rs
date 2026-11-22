@@ -7,7 +7,7 @@ use syn::{Data, DeriveInput, Fields, LitStr, parse_macro_input};
 
 /// Implements `crate::models::Table` for a struct. Columns are the fields in declaration order, minus
 /// the `id` primary key (assigned on insert; read from column 0). Other field types need
-/// `FromSql`/`ToSql`, or `#[table(with = "path")]` naming a `crate::db` module with
+/// `FromSql`/`ToSql`, or `#[table(with = "path")]` naming a `crate::models::sqltypes` module with
 /// `read(row, index)`/`write(&value)` (e.g. `datetime`). `order_by` sets `Db::list`'s trailing
 /// clause. `kind = "project"` also implements `crate::models::Named` over `name`; its `validate`
 /// requires a name and, with `check = "method"`, runs that `fn(&mut self) -> Result<()>`.
@@ -89,8 +89,8 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         let index = columns.len() + 1;
         match with {
             Some(path) => {
-                reads.push(quote! { crate::db::#path::read(row, #index)? });
-                writes.push(quote! { crate::db::#path::write(&self.#name) });
+                reads.push(quote! { crate::models::sqltypes::#path::read(row, #index)? });
+                writes.push(quote! { crate::models::sqltypes::#path::write(&self.#name) });
             }
             None => {
                 reads.push(quote! { row.get::<_, #ty>(#index)? });

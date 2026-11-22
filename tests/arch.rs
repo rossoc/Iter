@@ -537,7 +537,6 @@ fn none(what: &str, found: Vec<String>) {
 /// Step 2: `models` is a leaf over `error`, `text`, `files` and `process`: `check_url` is its own
 /// (not `platform`'s) and the row types hold no dependency on the storage or the clients.
 #[test]
-#[ignore = "isolation: round I3"]
 fn models_imports_only_the_leaves() {
     let found = imported_by(&sources(), "models");
     let allowed: BTreeSet<String> = ["error", "text", "files", "process"]
@@ -549,7 +548,6 @@ fn models_imports_only_the_leaves() {
 
 /// Step 2: `#[derive(Table)]` emits paths the text scan above cannot see, so read the macro.
 #[test]
-#[ignore = "isolation: round I3"]
 fn the_table_derive_names_models_and_not_db() {
     let text = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("macros/src/lib.rs"))
         .expect("the macros crate");
@@ -563,7 +561,6 @@ fn the_table_derive_names_models_and_not_db() {
 /// Step 2: the SQLite conversions live with the row types, and `md_edit` is split into `text` (the
 /// pure half) and `editor` (the launch half).
 #[test]
-#[ignore = "isolation: round I3"]
 fn sqltypes_sit_in_models_and_md_edit_is_split() {
     assert!(
         src_path("models/sqltypes.rs").exists(),

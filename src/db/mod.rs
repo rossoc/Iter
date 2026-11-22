@@ -3,11 +3,11 @@ use crate::error::{IterError, Result};
 #[cfg(feature = "web")]
 use crate::models::Organization;
 use crate::models::{
-    Board, Card, Duration, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Push, Session,
+    Board, Card, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Push, Session,
     SessionConfig, Tag, Task, TaskLabel, TaskStatus, URGENT_TAG, split_label,
 };
-use chrono::{NaiveDate, NaiveDateTime};
-use rusqlite::types::{Type, Value, ValueRef};
+use chrono::NaiveDate;
+use rusqlite::types::Value;
 use rusqlite::{
     Connection, OptionalExtension, Params, Row, Transaction, TransactionBehavior, params,
     params_from_iter,
@@ -22,13 +22,11 @@ mod pushes;
 mod rebuild_tests;
 mod reporting;
 mod sessions;
-mod sqltypes;
 mod tasks;
 #[cfg(test)]
 mod tests;
 
 pub(crate) use crate::models::Table;
-pub(crate) use sqltypes::datetime;
 
 /// Names bound per `ids_by_name` query (older SQLite allows 999 variables).
 const NAME_CHUNK: usize = 500;
@@ -59,16 +57,6 @@ fn write_error(error: rusqlite::Error, table: &str) -> IterError {
     }
 }
 
-const DATETIME_FMT: &str = "%Y-%m-%d %H:%M:%S";
-
-fn dt_to_str(dt: NaiveDateTime) -> String {
-    dt.format(DATETIME_FMT).to_string()
-}
-
-fn str_to_dt(s: &str) -> chrono::ParseResult<NaiveDateTime> {
-    NaiveDateTime::parse_from_str(s, DATETIME_FMT)
-}
-
 /// `ids` as a JSON array for `json_each`: one bound variable however many ids.
 fn json_ids(ids: &[i64]) -> String {
     format!(
@@ -79,7 +67,7 @@ fn json_ids(ids: &[i64]) -> String {
 
 /// The half-open `[from 00:00:00, to+1day 00:00:00)` window of a date range, as stored text.
 /// Half-open so no sub-second tail is dropped; an absent `from` is open-ended. Text comparison
-/// is exact because [`DATETIME_FMT`] is fixed-width and zero-padded.
+/// is exact because [`crate::models::sqltypes::DATETIME_FMT`] is fixed-width and zero-padded.
 fn range_bounds(from: Option<NaiveDate>, to: NaiveDate) -> (String, String) {
     let lower = from.map_or_else(
         || "0000-01-01 00:00:00".to_string(),
