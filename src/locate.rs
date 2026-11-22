@@ -3,7 +3,7 @@
 
 use crate::db::Db;
 use crate::error::{IterError, Result};
-use crate::models::{Project, ProjectGroup, Table, Task, TaskId, TaskRef};
+use crate::models::{Project, ProjectGroup, Table, Task, TaskRef};
 use crate::{git, tmux};
 
 /// The task's issue number, or the "no linked issue" error.
@@ -42,22 +42,23 @@ pub fn task(db: &Db, task_ref: &TaskRef) -> Result<(Project, Task)> {
 /// A task of `project` by what `--task` of pull and push says: an id (`42`, `#42`) when a task
 /// of *that* project has it, otherwise a title, which must be unique.
 pub fn task_in(db: &Db, project: &Project, text: &str) -> Result<Task> {
-    if let Ok(id) = text.parse::<TaskId>() {
-        match db
-            .get::<Task>(id.get())?
-            .filter(|task| task.project_id == project.id())
-        {
-            Some(task) => return Ok(task),
-            None if text.starts_with('#') => {
-                return Err(IterError::TaskNotFound {
+    match text.parse::<TaskRef>() {
+        Ok(TaskRef::Id(id)) => {
+            let found = db
+                .get::<Task>(id.get())?
+                .filter(|task| task.project_id == project.id());
+            match (found, text.parse::<i64>().is_ok()) {
+                (Some(task), _) => Ok(task),
+                // `7` may be a title made of digits; `#7` cannot
+                (None, true) => titled(db, project, text),
+                (None, false) => Err(IterError::TaskNotFound {
                     project: project.name.clone(),
                     task: text.to_string(),
-                });
+                }),
             }
-            None => {}
         }
+        _ => titled(db, project, text),
     }
-    titled(db, project, text)
 }
 
 /// The one task of `project` titled `title`; the ids of the several are in the error.

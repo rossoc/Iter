@@ -8,7 +8,7 @@ use crate::commands::ingest;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::locate::{self, current_task, require_git_repo, task_or_current};
-use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
+use crate::models::{Duration, SessionConfig, TaskStatus};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::wiki::ingest_job::Trigger;
 use crate::workspace;
@@ -46,40 +46,38 @@ fn session_new(
     let (project, mut task) = locate::task(db, &task_ref.parse()?)?;
     let task_id = task.id();
 
+    // an agent's workspace (`iter task solve`) has a worktree and no tmux session: give it one
+    let mut adopted = None;
     if let Some(existing) = db.find_session_config_by_task(task_id)? {
-        // an agent's workspace (`iter task solve`) has a worktree and no tmux session: give it one
+        let worktree_exists = |path: &str| std::path::Path::new(path).exists();
         if project.tmux
             && existing.tmux_session_name.is_none()
-            && existing
-                .worktree_path
-                .as_deref()
-                .is_some_and(|path| std::path::Path::new(path).exists())
+            && existing.worktree_path.as_deref().is_some_and(worktree_exists)
         {
-            return adopt_workspace(app, tmux, &project, &mut task, existing);
-        }
-        // a restart or kill leaves a row with nothing to tear down; only a row whose tmux session and worktree are both gone is dropped
-        let tmux_gone = existing
-            .tmux_session_name
-            .as_deref()
-            .is_some_and(|name| !tmux.session_exists(name));
-        let worktree_gone = existing
-            .worktree_path
-            .as_deref()
-            .is_none_or(|path| !std::path::Path::new(path).exists());
-        match (tmux_gone, worktree_gone, existing.id) {
-            (true, true, Some(id)) => {
-                db.delete::<SessionConfig>(id)?;
-                eprintln!(
-                    "note: dropped a stale session for '{task_ref}' (its tmux session and worktree are gone)"
-                );
+            adopted = Some(existing);
+        } else {
+            // a restart or kill leaves a row with nothing to tear down; only a row whose tmux session and worktree are both gone is dropped
+            let tmux_gone = existing
+                .tmux_session_name
+                .as_deref()
+                .is_some_and(|name| !tmux.session_exists(name));
+            let worktree_gone = !existing.worktree_path.as_deref().is_some_and(worktree_exists);
+            match (tmux_gone, worktree_gone, existing.id) {
+                (true, true, Some(id)) => {
+                    db.delete::<SessionConfig>(id)?;
+                    eprintln!(
+                        "note: dropped a stale session for '{task_ref}' (its tmux session and worktree are gone)"
+                    );
+                }
+                _ => return Err(IterError::SessionAlreadyExists(task_ref.to_string())),
             }
-            _ => return Err(IterError::SessionAlreadyExists(task_ref.to_string())),
         }
     }
+    let adopt = adopted.is_some();
 
     let tmux_session_name = workspace::tmux_name(&project, &task);
 
-    if project.github {
+    if project.github && !adopt {
         require_git_repo(&project)?;
     }
 
@@ -87,9 +85,12 @@ fn session_new(
         return Err(IterError::TmuxSessionExists(tmux_session_name));
     }
 
-    let mut config = match project.github && project.auto_branch && !no_branch {
-        true => workspace::open(db, &project, &task, branch_override)?,
-        false => SessionConfig {
+    let mut config = match adopted {
+        Some(config) => config,
+        None if project.github && project.auto_branch && !no_branch => {
+            workspace::open(db, &project, &task, branch_override)?
+        }
+        None => SessionConfig {
             id: None,
             task_id,
             tmux_session_name: None,
@@ -102,12 +103,15 @@ fn session_new(
         .clone()
         .unwrap_or_else(|| project.base_path.clone());
 
-    // the worktree and branch are the row's: a failure from here on takes them down again (retry: "branch already exists")
+    // a fresh worktree and branch are the row's: a failure from here on takes them down again
+    // (retry: "branch already exists"); an agent's workspace is only left without its session
+    let undo = |config: &SessionConfig, session: Option<&str>| match adopt {
+        true => session.into_iter().for_each(|name| tmux.kill_session(name)),
+        false => workspace::unwind(db, tmux, &project, config, session),
+    };
     if project.tmux {
         tmux.start_tracked_session(&tmux_session_name, &cwd)
-            .inspect_err(|_| {
-                workspace::unwind(db, tmux, &project, &config, Some(&tmux_session_name))
-            })?;
+            .inspect_err(|_| undo(&config, None))?;
         println!("session '{tmux_session_name}' started");
         config.tmux_session_name = Some(tmux_session_name);
     } else {
@@ -120,19 +124,16 @@ fn session_new(
         Some(id) => db.update(id, &config),
         None => db.insert(&config).map(drop),
     }
-    .inspect_err(|_| {
-        workspace::unwind(
-            db,
-            tmux,
-            &project,
-            &config,
-            config.tmux_session_name.as_deref(),
-        )
-    })?;
+    .inspect_err(|_| undo(&config, config.tmux_session_name.as_deref()))?;
 
-    task.status = TaskStatus::Wip;
-    db.update(task_id, &task)?;
-    ingest::auto(app, &project, &task, Trigger::TaskStart);
+    match adopt {
+        true => workspace::start_work(db, &mut task)?,
+        false => {
+            task.status = TaskStatus::Wip;
+            db.update(task_id, &task)?;
+            ingest::auto(app, &project, &task, Trigger::TaskStart);
+        }
+    }
 
     // attach last, once every row is written: the `client-attached` hook looks the session-config up by tmux name
     if let Some(name) = &config.tmux_session_name
@@ -142,38 +143,6 @@ fn session_new(
         eprintln!("the session is set up -- attach with: tmux attach -t '{name}'");
     }
 
-    Ok(())
-}
-
-fn adopt_workspace(
-    app: &App,
-    tmux: &dyn Multiplexer,
-    project: &Project,
-    task: &mut Task,
-    mut config: SessionConfig,
-) -> Result<()> {
-    let name = workspace::tmux_name(project, task);
-    if tmux.session_exists(&name) {
-        return Err(IterError::TmuxSessionExists(name));
-    }
-    let cwd = config.worktree_path.clone().unwrap_or_default();
-    tmux.start_tracked_session(&name, &cwd)?;
-    println!("session '{name}' started in the workspace made for the agent");
-    config.tmux_session_name = Some(name.clone());
-    if let Some(id) = config.id
-        && let Err(e) = app.db.update(id, &config)
-    {
-        tmux.kill_session(&name);
-        return Err(e);
-    }
-    if task.status == TaskStatus::Queue {
-        task.status = TaskStatus::Wip;
-        app.db.update(task.id(), task)?;
-    }
-    if let Err(e) = tmux.attach_session(&name) {
-        eprintln!("warning: couldn't attach to '{name}': {e}");
-        eprintln!("the session is set up -- attach with: tmux attach -t '{name}'");
-    }
     Ok(())
 }
 

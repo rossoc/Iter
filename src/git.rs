@@ -16,17 +16,6 @@ pub fn branch_prefix(template: &str) -> String {
     }
 }
 
-/// The slug of a task's branch *and* worktree directory (one slug, so uniqueness for one holds for
-/// the other): `<id>-<title slug>`. The id makes it unique though titles repeat. A title with no
-/// ASCII letters or digits leaves the bare `task-<id>`: an empty slug would make a bare-prefix
-/// branch git refuses and a worktree path equal to `.iter-worktrees` itself.
-pub fn task_slug(name: &str, task_id: i64) -> String {
-    match crate::text::slug(name).as_str() {
-        "" => format!("task-{task_id}"),
-        slug => format!("{task_id}-{slug}"),
-    }
-}
-
 pub fn create_worktree(base_path: &str, branch: &str, worktree_path: &str) -> Result<()> {
     Git(Some(base_path)).run(&["worktree", "add", "-b", branch, worktree_path])
 }
@@ -176,22 +165,5 @@ mod tests {
     #[test]
     fn branch_prefix_of_a_placeholderless_template_is_the_whole_thing() {
         assert_eq!(branch_prefix("wip/"), "wip/");
-    }
-
-    /// Without the fallback this is empty: a `feat/` branch git rejects and a worktree path equal to
-    /// the container directory.
-    #[test]
-    fn a_name_with_nothing_sluggable_in_it_falls_back_to_the_task_id() {
-        assert_eq!(task_slug("設計を見直す", 42), "task-42");
-        assert_eq!(task_slug("!!! ---", 7), "task-7");
-        assert_eq!(task_slug("", 3), "task-3");
-    }
-
-    /// R3: the id leads the slug, so equal titles never share a branch or a worktree directory.
-    #[test]
-    fn a_slug_leads_with_the_task_id() {
-        assert_eq!(task_slug("Fix Login Bug!", 42), "42-fix-login-bug");
-        assert_ne!(task_slug("login", 1), task_slug("login", 2));
-        assert_eq!(task_slug("login", 12), "12-login");
     }
 }

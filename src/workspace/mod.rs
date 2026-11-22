@@ -39,7 +39,7 @@ pub fn open(
         "" => git::branch_prefix(&project.branch_template),
         prefix => prefix.to_string(),
     };
-    let slug = git::task_slug(&task.name, task.id());
+    let slug = task.slug();
     let path = Path::new(&project.base_path)
         .join(".iter-worktrees")
         .join(&slug);

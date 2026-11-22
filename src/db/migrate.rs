@@ -3,24 +3,32 @@
 use super::*;
 use std::path::PathBuf;
 
-/// A migration step and what must happen before it (round I4: replaces finding the rebuild by
-/// `fn_addr_eq`).
-#[allow(dead_code)] // stub: I4
+/// One migration: what it does and whether the database is copied before it runs.
 #[derive(Clone, Copy)]
 pub(super) struct Step {
     pub run: fn(&Db) -> Result<()>,
-    /// Copy the database to `<db>.before-v<n>` (`n` the version the step brings) right before it
-    /// runs, once, unless it is a new database.
+    /// Copy the database to `<db>.before-v7` right before the step runs, once, unless it is a new
+    /// database. For a step that cannot be undone from the data left.
     pub copy_first: bool,
 }
 
-impl Db {
-    /// [`Self::migrate_steps`] over steps that say whether a copy comes first.
-    #[allow(dead_code)] // stub: I4
-    pub(super) fn migrate_with(&self, _steps: &[Step]) -> Result<()> {
-        unimplemented!("stub: I4")
+impl Step {
+    const fn new(run: fn(&Db) -> Result<()>) -> Self {
+        Step {
+            run,
+            copy_first: false,
+        }
     }
 
+    const fn copying(run: fn(&Db) -> Result<()>) -> Self {
+        Step {
+            run,
+            copy_first: true,
+        }
+    }
+}
+
+impl Db {
     /// Brings the schema up to date. `PRAGMA user_version` counts the [`Self::MIGRATIONS`] run, so an
     /// up-to-date open costs one pragma read (serve and completion open per request/TAB). Each step
     /// and its version bump share one `IMMEDIATE` transaction: the write lock is taken up front
@@ -31,11 +39,11 @@ impl Db {
     /// pragma is a no-op, and a table rebuild ([`Self::task_titles_repeat`]) would otherwise
     /// cascade-delete every row that points at the dropped table.
     pub(super) fn migrate(&self) -> Result<()> {
-        self.migrate_steps(Self::MIGRATIONS)
+        self.migrate_with(Self::MIGRATIONS)
     }
 
     /// [`Self::migrate`] over `steps` (a seam: tests append or break a step).
-    pub(super) fn migrate_steps(&self, steps: &[fn(&Db) -> Result<()>]) -> Result<()> {
+    pub(super) fn migrate_with(&self, steps: &[Step]) -> Result<()> {
         if self.user_version()? >= steps.len() {
             return Ok(());
         }
@@ -46,32 +54,31 @@ impl Db {
         run
     }
 
-    fn run_pending_steps(&self, steps: &[fn(&Db) -> Result<()>], had_tasks: bool) -> Result<()> {
+    fn run_pending_steps(&self, steps: &[Step], had_tasks: bool) -> Result<()> {
         loop {
             let tx = Transaction::new_unchecked(&self.conn, TransactionBehavior::Immediate)?;
             let done = self.user_version()?;
             let Some(step) = steps.get(done) else {
                 return Ok(());
             };
-            if had_tasks
-                && std::ptr::fn_addr_eq(*step, Self::task_titles_repeat as fn(&Db) -> Result<()>)
-            {
+            if had_tasks && step.copy_first {
                 self.keep_a_copy()?;
             }
-            step(self)?;
+            (step.run)(self)?;
             tx.execute_batch(&format!("PRAGMA user_version = {}", done + 1))?;
             tx.commit()?;
         }
     }
 
-    /// Copies a database that held tasks when it was opened to `<db>.before-v7` right before the
-    /// rebuild step ([`Self::task_titles_repeat`], found by identity), once: an existing copy is kept, and no later step takes one. The copy is made on a second connection (`VACUUM INTO`
-    /// reads, so it runs beside our write lock) under a temporary name and renamed into place.
+    /// Copies a database that held tasks when it was opened to `<db>.before-v7` (the version of the
+    /// title rebuild, the step that asks for it) right before that step, once: an existing copy is kept. The copy is made on a
+    /// second connection (`VACUUM INTO` reads, so it runs beside our write lock) under a temporary
+    /// name and renamed into place.
     fn keep_a_copy(&self) -> Result<()> {
         let Some(path) = self.conn.path().filter(|p| !p.is_empty()) else {
             return Ok(());
         };
-        let copy = PathBuf::from(format!("{}.before-v7", path));
+        let copy = PathBuf::from(format!("{path}.before-v7"));
         if copy.exists() {
             return Ok(());
         }
@@ -91,14 +98,14 @@ impl Db {
     }
 
     /// Oldest first. Append a step; never edit a shipped one.
-    pub(super) const MIGRATIONS: &[fn(&Db) -> Result<()>] = &[
-        Self::baseline,
-        Self::flags_to_tags,
-        Self::drop_short_sessions,
-        Self::add_notes_path,
-        Self::add_platform,
-        Self::add_pushes,
-        Self::task_titles_repeat,
+    pub(super) const MIGRATIONS: &[Step] = &[
+        Step::new(Self::baseline),
+        Step::new(Self::flags_to_tags),
+        Step::new(Self::drop_short_sessions),
+        Step::new(Self::add_notes_path),
+        Step::new(Self::add_platform),
+        Step::new(Self::add_pushes),
+        Step::copying(Self::task_titles_repeat),
     ];
 
     /// `notes_path` on projects and organizations.

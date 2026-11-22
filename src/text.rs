@@ -117,7 +117,7 @@ mod tests {
         }
     }
 
-    /// May be empty: the caller (`git::task_slug`) owns the `task-<id>` fallback.
+    /// May be empty: the caller (`Task::slug`) owns the `task-<id>` fallback.
     #[test]
     fn a_name_with_nothing_sluggable_makes_an_empty_slug() {
         for name in ["", "   ", "!!! ---", "設計を見直す"] {

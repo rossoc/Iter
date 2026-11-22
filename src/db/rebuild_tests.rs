@@ -331,8 +331,8 @@ fn a_step_after_the_rebuild_takes_no_copy() {
     let db = Db::open(&path).expect("migrates");
     std::fs::remove_file(backup_of(&path)).expect("the copy of step 7");
     let mut steps = Db::MIGRATIONS.to_vec();
-    steps.push(noop_step);
-    db.migrate_steps(&steps).expect("the extra step runs");
+    steps.push(step(noop_step, false));
+    db.migrate_with(&steps).expect("the extra step runs");
     assert_eq!(db.user_version().unwrap(), 8);
     assert!(
         !backup_of(&path).exists(),
@@ -349,8 +349,8 @@ fn a_failing_step_leaves_the_data_the_version_and_foreign_keys_alone() {
     let path = old_database(&dir, 6, true);
     let db = Db::open(&path).expect("migrates");
     let mut steps = Db::MIGRATIONS.to_vec();
-    steps.push(failing_step);
-    let err = db.migrate_steps(&steps).expect_err("the step fails");
+    steps.push(step(failing_step, false));
+    let err = db.migrate_with(&steps).expect_err("the step fails");
     assert!(err.to_string().contains("boom"), "{err}");
     assert_eq!(db.user_version().unwrap(), 7, "the version did not move");
     assert!(foreign_keys_on(&db), "foreign keys are on after a failure");
@@ -375,11 +375,11 @@ fn a_failing_rebuild_keeps_the_old_database_and_foreign_keys_on() {
     let path = old_database(&dir, 6, true);
     let (before, _) = Db::MIGRATIONS.split_at(6);
     let mut steps = before.to_vec();
-    steps.push(failing_step);
+    steps.push(step(failing_step, true));
     let conn = Connection::open(&path).expect("opens");
     conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
     let db = Db { conn };
-    db.migrate_steps(&steps).expect_err("the rebuild fails");
+    db.migrate_with(&steps).expect_err("the rebuild fails");
     assert_eq!(db.user_version().unwrap(), 6);
     assert!(foreign_keys_on(&db));
     assert_eq!(ids(&db.conn, "tasks"), [1, 2, 5]);
@@ -398,11 +398,11 @@ fn the_copy_is_taken_right_before_the_rebuild_wherever_it_sits() {
     let path = old_database(&dir, 6, true);
     let (old, _) = Db::MIGRATIONS.split_at(6);
     let mut steps = old.to_vec();
-    steps.push(noop_step);
-    steps.push(Db::task_titles_repeat);
+    steps.push(step(noop_step, false));
+    steps.push(step(Db::task_titles_repeat, true));
     let conn = Connection::open(&path).expect("opens");
     let db = Db { conn };
-    db.migrate_steps(&steps).expect("migrates");
+    db.migrate_with(&steps).expect("migrates");
     assert_eq!(db.user_version().unwrap(), 8);
     let copy = Connection::open(backup_of(&path)).expect("a copy was made");
     let version: i64 = copy
@@ -433,7 +433,7 @@ fn the_copy_is_taken_because_the_step_says_copy_first() {
     let dir = fixtures::scratch("rebuild-copy-first-flag");
     let (path, db) = open_old(&dir);
     let (old, _) = Db::MIGRATIONS.split_at(6);
-    let mut steps: Vec<migrate::Step> = old.iter().map(|&run| step(run, false)).collect();
+    let mut steps = old.to_vec();
     steps.push(step(Db::task_titles_repeat, false));
     db.migrate_with(&steps).expect("migrates");
     assert_eq!(db.user_version().unwrap(), 7);
@@ -442,7 +442,7 @@ fn the_copy_is_taken_because_the_step_says_copy_first() {
 
     let dir = fixtures::scratch("rebuild-copy-first-noop");
     let (path, db) = open_old(&dir);
-    let mut steps: Vec<migrate::Step> = old.iter().map(|&run| step(run, false)).collect();
+    let mut steps = old.to_vec();
     steps.push(step(noop_step, true));
     db.migrate_with(&steps).expect("migrates");
     let copy = Connection::open(backup_of(&path)).expect("a copy was made before step 7");
@@ -461,7 +461,7 @@ fn a_flagged_rebuild_keeps_every_row_and_a_failing_flagged_step_keeps_foreign_ke
     let dir = fixtures::scratch("rebuild-copy-first-rows");
     let (path, db) = open_old(&dir);
     let (old, _) = Db::MIGRATIONS.split_at(6);
-    let mut steps: Vec<migrate::Step> = old.iter().map(|&run| step(run, false)).collect();
+    let mut steps = old.to_vec();
     steps.push(step(Db::task_titles_repeat, true));
     db.migrate_with(&steps).expect("migrates");
     assert_eq!(ids(&db.conn, "tasks"), [1, 2, 5]);

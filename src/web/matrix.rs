@@ -155,7 +155,7 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
             // 1 2 / 3 4; the quadrants stack (still 1 to 4) when narrow
             <div class="quad-grid">
                 for (n, (q, cards)) in QUADRANTS.iter().zip(matrix.placed.iter()).enumerate() {
-                    quadrant(id: DOM_IDS[n], target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
+                    quadrant(target: q.target, number: n + 1, name: q.name, rule: q.rule, empty: q.empty, edge: Edge::of(q.flags), count: cards.len(),
                         if let Some(p) = picked {
                             if now != Some(n) {
                                 pick_here(action: base.as_str(), fields: pick_fields(p.id, q.target, Some(FORM_POST)), verb: action, at: q.name)
@@ -170,9 +170,6 @@ async fn screen(page: &BoardPage<Matrix>, lead: &str, folded: bool) -> Result<im
         )
     })
 }
-
-/// The element of each quadrant, in the order of [`QUADRANTS`].
-const DOM_IDS: [&str; 4] = ["q-both", "q-important", "q-urgent", "q-neither"];
 
 /// What the board's script posts: a quadrant's target word, or `left` for the backlog.
 fn place(task: &mut Task, target: &str) -> std::result::Result<Option<Priority>, String> {

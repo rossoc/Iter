@@ -69,11 +69,15 @@ impl fmt::Display for TaskLabel {
 }
 
 impl Task {
-    /// The slug of the task's branch and worktree folder: `<id>-<title slug>`, or `task-<id>` when
-    /// the title has no ASCII letter or digit (replaces `git::task_slug`).
-    #[allow(dead_code)] // stub: I4
+    /// The slug of the task's branch and worktree folder (one slug, so uniqueness for one holds for
+    /// the other): `<id>-<title slug>`. The id makes it unique though titles repeat. A title with no
+    /// ASCII letter or digit leaves the bare `task-<id>`: an empty slug would make a bare-prefix
+    /// branch git refuses and a worktree path equal to `.iter-worktrees` itself.
     pub fn slug(&self) -> String {
-        unimplemented!("stub: I4")
+        match crate::text::slug(&self.name).as_str() {
+            "" => format!("task-{}", self.id()),
+            slug => format!("{}-{slug}", self.id()),
+        }
     }
 
     pub fn label(&self, project: &Project) -> TaskLabel {
@@ -253,7 +257,7 @@ mod tests {
         }
     }
 
-    /// Round I4 (isolation step 6): the slug is the task's own, the same cases as `git::task_slug`.
+    /// The slug is the task's own: id first, `task-<id>` when the title has nothing sluggable.
     #[test]
     fn the_slug_of_a_task_carries_its_id() {
         let task = |id: i64, name: &str| Task {

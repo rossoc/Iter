@@ -337,7 +337,6 @@ fn show(
 }
 
 #[test]
-#[ignore = "isolation: round I4"]
 fn no_cycle_between_top_level_modules() {
     let graph = imports(&sources());
     let nodes: BTreeSet<&String> = graph
@@ -377,7 +376,6 @@ fn no_cycle_between_top_level_modules() {
 }
 
 #[test]
-#[ignore = "isolation: round I4"]
 fn every_module_is_in_the_design_and_imports_only_lower_ranks() {
     let sources = sources();
     let graph = imports(&sources);
