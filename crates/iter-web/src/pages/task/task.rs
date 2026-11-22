@@ -15,7 +15,6 @@ use crate::{
 };
 use chrono::NaiveDateTime;
 use iter_core::{
-    agent::taskdir,
     db::{Db, Table},
     models::{Session, Tag, Task},
 };
@@ -71,17 +70,14 @@ pub(super) async fn show(cx: &Cx) -> Result<impl View> {
         }
         _ => None,
     };
-    let files = match section {
-        TaskSection::Notes => Some(task_agent::files(&db, &page.parents.project, &page.task)),
-        _ => None,
-    };
+    let files = (section == TaskSection::Notes)
+        .then(|| task_agent::files(&db, &page.parents.project, &page.task));
     let plan = (section == TaskSection::Info)
         .then(|| task_agent::plan_of(&db, &page.parents.project, &page.task));
-    let agents = taskdir::of(&db, &page.parents.project, &page.task)
-        .map(|d| d.runs().len())
-        .unwrap_or(0);
-    let add_session = section == TaskSection::Sessions && query.new.as_deref() == Some("session");
-    let add_note = section == TaskSection::Notes && query.new.as_deref() == Some("note");
+    let agents = task_agent::run_count(&db, &page.parents.project, &page.task);
+    let adding = |tab, what| section == tab && query.new.as_deref() == Some(what);
+    let add_session = adding(TaskSection::Sessions, "session");
+    let add_note = adding(TaskSection::Notes, "note");
     let now = now();
     Ok(view! {
         screen(page: &page, section: section, now: now, agent: agent.as_ref(), files: files.as_ref(), add_session: add_session, add_note: add_note, plan: plan.as_ref(), agents: agents)

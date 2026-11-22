@@ -17,7 +17,10 @@ use iter_core::{
     models::{Organization, Project, Task},
 };
 use serde::Deserialize;
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 mod list;
 mod page;
@@ -76,6 +79,11 @@ impl Scope {
             }
             None => Ok(Scope::global()),
         }
+    }
+
+    /// The hidden `project` field of a form: the project's id, empty for the global scope.
+    fn project_field(&self) -> String {
+        self.project_id().map(|p| p.to_string()).unwrap_or_default()
     }
 
     fn project_id(&self) -> Option<i64> {

@@ -16,10 +16,7 @@ pub(super) fn placeholder_hint() -> String {
 /// Made an instruction that changes no code; Settings changes that.
 #[component]
 pub async fn new_instruction_modal(scope: &Scope) -> Result<impl View> {
-    let project = scope
-        .project_id()
-        .map(|p| p.to_string())
-        .unwrap_or_default();
+    let project = scope.project_field();
     let close = instructions_target(scope);
     let starter = instruction::starter_prompt();
     let hint = placeholder_hint();
@@ -58,24 +55,53 @@ struct NewForm {
     project: String,
 }
 
+/// Where the instructions of this scope are kept, or a refusal when it has no folder.
+fn home_of(scope: &Scope) -> Result<PathBuf> {
+    Ok(scope
+        .home
+        .clone()
+        .ok_or_else(|| bad_request("there is no folder to keep it in"))?)
+}
+
+/// The refusal for a text that does not make a valid instruction.
+fn refuse(e: impl ToString) -> topcoat::Error {
+    bad_request(e.to_string()).into()
+}
+
+/// Writes `text` at `path`, making its folder, after checking it is a valid instruction named `name`.
+fn write_checked(home: &Path, path: &Path, name: &str, text: &str) -> Result<()> {
+    instruction::check(name, text).map_err(refuse)?;
+    std::fs::create_dir_all(path.parent().unwrap_or(home))?;
+    Ok(iter_core::files::write_atomic(path, text)?)
+}
+
+/// Removes a file; one that is not there is as good as removed.
+fn unlink(path: &Path) -> Result<()> {
+    match std::fs::remove_file(path) {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+        _ => Ok(()),
+    }
+}
+
+/// Where a write leads: the instruction's Settings tab.
+fn settings_to(scope: &Scope, name: &str) -> topcoat::Error {
+    see_other(page_url(&scope.url(name), &[("tab", Some("settings"))])).into()
+}
+
 #[route(POST "/instructions")]
 pub(super) async fn create_instruction(Form(form): Form<NewForm>) -> Result<Response> {
     let db = fresh_db()?;
     let scope = Scope::asked(&db, Some(&form.project))?;
     let name = form.name.trim().to_string();
     if !instruction::valid_name(&name) {
-        return Err(bad_request(format!(
+        return Err(refuse(format!(
             "'{name}' is not a name: lowercase letters, digits and dashes"
-        ))
-        .into());
+        )));
     }
-    let home = scope
-        .home
-        .clone()
-        .ok_or_else(|| bad_request("there is no folder to keep it in"))?;
+    let home = home_of(&scope)?;
     let path = instruction::file(&home, &name);
     if path.exists() {
-        return Err(bad_request(format!("'{name}' exists already")).into());
+        return Err(refuse(format!("'{name}' exists already")));
     }
     let text = instruction::compose(
         None,
@@ -85,12 +111,9 @@ pub(super) async fn create_instruction(Form(form): Form<NewForm>) -> Result<Resp
             ..Default::default()
         },
     )
-    .map_err(|e| bad_request(e.to_string()))?;
-    instruction::check(&name, &text).map_err(|e| bad_request(e.to_string()))?;
-    std::fs::create_dir_all(path.parent().unwrap_or(&home))?;
-    iter_core::files::write_atomic(&path, &text)?;
-    let to = page_url(&scope.url(&name), &[("tab", Some("settings"))]);
-    Err(see_other(to).into())
+    .map_err(refuse)?;
+    write_checked(&home, &path, &name, &text)?;
+    Err(settings_to(&scope, &name))
 }
 
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,55 +155,37 @@ pub(super) async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Res
     let db = fresh_db()?;
     let scope = Scope::asked(&db, Some(&form.project))?;
     let current = instruction::find(&name, &scope.layers).ok_or_not_found()?;
-    let home = scope
-        .home
-        .clone()
-        .ok_or_else(|| bad_request("there is no folder to keep it in"))?;
+    let home = home_of(&scope)?;
     let path = instruction::file(&home, &name);
-    match form.action {
-        SaveButton::Save => {
-            let renamed = instruction::rename_target(&name, &form.new_name)
-                .map_err(|e| bad_request(e.to_string()))?;
-            let target = renamed.as_deref().unwrap_or(&name);
-            // the keys the form does not know stay as they are in the file
-            let worktree = form.worktree.as_deref().map(|w| w.trim() == "true");
-            let text = instruction::compose(
-                Some(&current.raw),
-                &instruction::Fields {
-                    description: &form.description,
-                    worktree,
-                    model: &form.model,
-                    mode: &form.mode,
-                    temperature: &form.temperature,
-                    permission: &form.permission,
-                    prompt: &form.prompt,
-                },
-            )
-            .map_err(|e| bad_request(e.to_string()))?;
-            instruction::check(target, &text).map_err(|e| bad_request(e.to_string()))?;
-            let to = instruction::file(&home, target);
-            if renamed.is_some() && to.exists() {
-                return Err(bad_request(format!("'{target}' exists already")).into());
-            }
-            std::fs::create_dir_all(to.parent().unwrap_or(&home))?;
-            iter_core::files::write_atomic(&to, &text)?;
-            if renamed.is_some() {
-                // only the file at this scope moves; an inherited one stays where it is
-                match std::fs::remove_file(&path) {
-                    Ok(()) => {}
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-                    Err(e) => return Err(e.into()),
-                }
-            }
-            return Err(
-                see_other(page_url(&scope.url(target), &[("tab", Some("settings"))])).into(),
-            );
-        }
-        SaveButton::Reset => match std::fs::remove_file(&path) {
-            Ok(()) => {}
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => return Err(e.into()),
-        },
+    if form.action == SaveButton::Reset {
+        unlink(&path)?;
+        return Err(settings_to(&scope, &name));
     }
-    Err(see_other(page_url(&scope.url(&name), &[("tab", Some("settings"))])).into())
+    let renamed = instruction::rename_target(&name, &form.new_name).map_err(refuse)?;
+    let target = renamed.as_deref().unwrap_or(&name);
+    // the keys the form does not know stay as they are in the file
+    let worktree = form.worktree.as_deref().map(|w| w.trim() == "true");
+    let text = instruction::compose(
+        Some(&current.raw),
+        &instruction::Fields {
+            description: &form.description,
+            worktree,
+            model: &form.model,
+            mode: &form.mode,
+            temperature: &form.temperature,
+            permission: &form.permission,
+            prompt: &form.prompt,
+        },
+    )
+    .map_err(refuse)?;
+    let to = instruction::file(&home, target);
+    if renamed.is_some() && to.exists() {
+        return Err(refuse(format!("'{target}' exists already")));
+    }
+    write_checked(&home, &to, target, &text)?;
+    if renamed.is_some() {
+        // only the file at this scope moves; an inherited one stays where it is
+        unlink(&path)?;
+    }
+    Err(settings_to(&scope, target))
 }

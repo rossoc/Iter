@@ -1,4 +1,4 @@
-//! The task edit form (`/task/{id}/edit`), the twin of New task (`pages/task/task_new.rs`); the controls are in `parts/task_fields.rs`.
+//! The task edit form (`/task/{id}/edit`) and its write; the controls are in `parts/task_fields.rs`, the page around them in `parts/edit_page.rs`.
 
 use crate::{
     forms::{
@@ -7,11 +7,11 @@ use crate::{
         joined,
     },
     load::{Parents, parents_of},
+    pages::agent::task_agent::run_count,
     parts::all::*,
     prelude::*,
 };
 use iter_core::{
-    agent::taskdir,
     db::{Db, Table},
     error::Result as IterResult,
     models::{Project, Task},
@@ -68,11 +68,9 @@ pub async fn screen(
     let base = task_url(stored.id());
     let crumbs = trail(&parents.org, Some(&parents.project), Crumb::label("Task"));
     let db = fresh_db()?;
-    let sessions_n = db.sessions_for_task(stored.id())?.len();
-    let agents_n = taskdir::of(&db, &parents.project, stored)
-        .map(|d| d.runs().len())
-        .unwrap_or(0);
-    let sections = task_tabs(&base, TaskSection::Settings, sessions_n, agents_n);
+    let sessions = db.sessions_for_task(stored.id())?.len();
+    let agents = run_count(&db, &parents.project, stored);
+    let sections = task_tabs(&base, TaskSection::Settings, sessions, agents);
     Ok(view! {
         edit_page(
             kind: "task",
