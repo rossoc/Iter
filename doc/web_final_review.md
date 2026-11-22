@@ -1,5 +1,7 @@
 # Final whole-codebase review of `src/web/`
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 Five reviewers audited the whole of `src/web/` after the cleanup that removed `?design=old`. Each read the code only: none ran the server or a browser. This file records their findings, condensed from their reports, with the status after the last fix agent (which stopped early).
 
 The per-page reviews (five lenses per page, pages 3 to 12) are not repeated here. They are in the "Review" table at the end of each `doc/web_<page>.md`.

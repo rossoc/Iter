@@ -1,5 +1,7 @@
 # Task page redesign (`/task/{id}`)
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 > Tabs (agent workflow, M1): the page now has the tab row Info / Sessions / Agent (`?tab=`, `sections::TaskSection`, `sections::task_tabs`), like the Project page. Info keeps the description and the Details panel; Sessions is the sessions table alone (its tab carries the count); Agent is a placeholder for the plan and the agent runs. Because the page has tabs, the last crumb is plain text (`Crumb::label("Task")`) and the document title names the tab ("Sessions - {name} - iter"). Points 1 and 2 below describe the page before the tabs.
 
 > Superseded (final cleanup, `doc/web_cleanup.md`): the compare switch and `?design=old` were removed; the pages render the current design only. References below to the old design, the switch or `proposal` (now `screen`) describe how it was built, not how it is.

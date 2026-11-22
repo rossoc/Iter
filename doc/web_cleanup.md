@@ -1,5 +1,7 @@
 # Final cleanup of `iter serve`
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 Scope: after the 12 pages of `doc/web.md` were redesigned, the old design and its comparison switch were removed. Routes, redirects and POST behaviour are unchanged.
 
 ## Removed

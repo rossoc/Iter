@@ -1,5 +1,7 @@
 # Shared components (`crates/iter-web/src/ui/`)
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 `crates/iter-web/src/` has the pages (route, loader, `screen` component) and the mappers that
 turn models into display rows; `crates/iter-web/src/ui/` has the components they share: one
 `.rs` and one `.css` per feature, no models, no routes.

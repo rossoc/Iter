@@ -1,5 +1,7 @@
 # Search palette
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 `/` anywhere (not while typing in a field) or the Search button in the bar opens the palette (`ui/search.rs`, `search.css`, `search.js`).
 
 - Left: the results (an icon per kind: board, organization, project, task, note; title with matched letters marked, path and status). Right: the selected page in an `<iframe>` (same origin, so interactive). Under 900px the preview is hidden; under 600px the box is the whole screen.

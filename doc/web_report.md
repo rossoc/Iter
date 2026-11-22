@@ -1,5 +1,7 @@
 # `iter serve` redesign: report
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 Status: final (batches A, B and C done). Nothing is committed: the work is uncommitted or untracked in the worktree `html-refactor`.
 
 ## What was asked

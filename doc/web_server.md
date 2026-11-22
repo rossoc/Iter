@@ -35,7 +35,7 @@ A pop-up is the same page with a parameter, so it works without JavaScript and c
 - `?share=1`: the Share pop-up over an organization's Report tab; the push preview is a pop-up too.
 - `?run=N`, `?step=ID`: the agent or plan step open over the Agent tab.
 - Board pages: `?date=` picks the agenda day, `?pick=<task>` turns the page into "choose where" (the pick mode, the no-drag way to move a task), `?moved=` marks the card just moved, `?side=off` folds the side column into its rail.
-- `?q=` is a list's search (`task_query.rs` syntax); a Tasks link spells out the default search because a list with no `q` is unfiltered.
+- `?q=` is a list's search (`front/query.rs` in iter-core: the syntax); a Tasks link spells out the default search because a list with no `q` is unfiltered.
 
 Drops (`board.js`) and pick forms post to the same routes (`drop.rs`). Pick forms also send a `form` marker or the day to land back on; the redirect URL is rebuilt from parsed values, never from request text.
 

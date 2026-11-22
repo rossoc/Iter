@@ -1,5 +1,7 @@
 > Superseded in part: `home.css` and its `/home.css` route no longer exist. The card grid and `group_card` live in `src/web/ui/group_card.{rs,css}` (shared with `/boards`), the Before | Proposal switch in `src/web/ui/compare.{rs,css}`, and the styles are served in `/v2.css`. Read the file names below with that in mind.
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 > Superseded (final cleanup, `doc/web_cleanup.md`): the compare switch and `?design=old` were removed; the pages render the current design only. References below to the old design, the switch or `proposal` (now `screen`) describe how it was built, not how it is.
 
 

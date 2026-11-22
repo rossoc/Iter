@@ -429,7 +429,7 @@ fn the_save_that_turns_toasts_on_shows_one() {
     assert_success_flash(&post_settings(&settings_form(true, "5")));
 }
 
-/// R11, the reverse: the save that turns the toasts off sets no cookie, though they were on
+/// The reverse: the save that turns the toasts off sets no cookie, though they were on
 /// when the request came in.
 #[test]
 fn the_save_that_turns_toasts_off_sets_no_cookie() {

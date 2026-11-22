@@ -1,5 +1,7 @@
 # Daily notes (`Notes` tab of organizations and projects)
 
+> Paths: this note was written when the web layer lived in `src/web/`. It is now the crate `crates/iter-web/src/` (`pages/`, `parts/`, `ui/`, `forms/`, `layers/`), and `utils::` is split into `iter_core::{text, files, process, locate, workspace}`; read the file names below as the history of the redesign.
+
 Every organization and project has a Notes tab: one note a day, earlier days one click away. Inspired by a plain folder of `YYYY-MM-DD.md` files (a journal kept in Obsidian); the files stay the source of truth, so the notes can be edited anywhere and the database holds only the path.
 
 ## Where notes live

@@ -68,9 +68,8 @@ fn refuse(e: impl ToString) -> topcoat::Error {
     bad_request(e.to_string()).into()
 }
 
-/// Writes `text` at `path`, making its folder, after checking it is a valid instruction named `name`.
-fn write_checked(home: &Path, path: &Path, name: &str, text: &str) -> Result<()> {
-    instruction::check(name, text).map_err(refuse)?;
+/// Writes `text` at `path`, making its folder.
+fn write_text(home: &Path, path: &Path, text: &str) -> Result<()> {
     std::fs::create_dir_all(path.parent().unwrap_or(home))?;
     Ok(iter_core::files::write_atomic(path, text)?)
 }
@@ -112,7 +111,8 @@ pub(super) async fn create_instruction(Form(form): Form<NewForm>) -> Result<Resp
         },
     )
     .map_err(refuse)?;
-    write_checked(&home, &path, &name, &text)?;
+    instruction::check(&name, &text).map_err(refuse)?;
+    write_text(&home, &path, &text)?;
     Err(settings_to(&scope, &name))
 }
 
@@ -183,7 +183,7 @@ pub(super) async fn save_instruction(cx: &Cx, Form(form): Form<SaveForm>) -> Res
     if renamed.is_some() && to.exists() {
         return Err(refuse(format!("'{target}' exists already")));
     }
-    write_checked(&home, &to, target, &text)?;
+    write_text(&home, &to, &text)?;
     if renamed.is_some() {
         // only the file at this scope moves; an inherited one stays where it is
         unlink(&path)?;

@@ -44,7 +44,7 @@
 
 ## `/boards` Boards
 - Header: eyebrow "Board" (the name of the section, as in the top bar), `h1` "Boards", a lede. One card per board (name linked to the board, first line of its description, its projects with their paths, "No projects yet." when none), in Home's card grid; with no boards, a hint to run `iter board new`.
-- The top bar's Board link is highlighted on every board page. Shared for pages 9-12: `board_url` helpers (`ui/url.rs`), the board header with the tabs Agenda / Eisenhower matrix / Info and the Edit button (`web/board_header.rs`, used by the agenda), `load::board_of`.
+- The top bar's Board link is highlighted on every board page. Shared for pages 9-12: `board_url` helpers (`url.rs`), the board header with the tabs Agenda / Eisenhower matrix / Info and the Edit button (`parts/board_header.rs`, used by the agenda), `load::board_of`.
 - Plan and checks: `doc/web_boards.md`.
 
 ## `/board/{id}` Board: agenda (`?date=`)
