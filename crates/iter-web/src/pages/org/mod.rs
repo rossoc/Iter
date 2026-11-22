@@ -2,6 +2,7 @@
 
 use crate::prelude::*;
 
+#[allow(clippy::module_inception)] // the page itself, beside its siblings
 pub mod org;
 pub mod org_edit;
 pub mod org_report;
