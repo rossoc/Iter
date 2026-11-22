@@ -143,13 +143,13 @@ impl Run for ProjectCommand {
                 no_board,
             } => project_edit(
                 app,
-                name.as_deref(),
+                name.name(),
                 organization.as_deref(),
                 board.as_deref(),
                 *no_board,
             ),
-            Self::Delete { name } => project_delete(app, &TmuxClient::system(), name.as_deref()),
-            Self::Info { name, report } => project_info(app, name.as_deref(), report),
+            Self::Delete { name } => project_delete(app, &TmuxClient::system(), name.name()),
+            Self::Info { name, report } => project_info(app, name.name(), report),
             Self::List => project_list(app),
         }
     }
