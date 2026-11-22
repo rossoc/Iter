@@ -163,16 +163,13 @@ pub async fn screen(
         report,
     } = page;
     let base = org_url(org.id());
-    let items = section_tabs(
+    let items = org_tabs(
         &base,
         section,
-        Counts {
-            projects: Some(projects.len()),
-            tasks: *task_count,
-            notes: NotesTab::badge(Some(notes)),
-            report: Some(tab_url(&base, today)),
-            ..Counts::default()
-        },
+        projects.len(),
+        *task_count,
+        notes,
+        tab_url(&base, today),
     );
     let parts = [section.title("Organization"), org.name.as_str()];
     let rows = group_rows(tasks);

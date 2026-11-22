@@ -53,16 +53,7 @@ pub async fn screen(
     let settings = project.settings();
     let tasks_n = fresh_db()?.count_tasks_for_project(stored.id())?;
     let notes = NotesTab::load(iter_core::notes::project_dir(stored, org), false);
-    let sections = section_tabs(
-        &base,
-        Section::Settings,
-        Counts {
-            tasks: tasks_n,
-            notes: NotesTab::badge(Some(&notes)),
-            wiki: true,
-            ..Counts::default()
-        },
-    );
+    let sections = project_tabs(&base, Section::Settings, tasks_n, Some(&notes));
     Ok(view! {
         edit_page(
             kind: "project",

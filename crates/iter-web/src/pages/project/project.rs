@@ -107,16 +107,7 @@ pub async fn screen(
     #[default] task_create: Option<&TaskCreate>,
 ) -> Result<impl View> {
     let base = project_url(project.id());
-    let items = section_tabs(
-        &base,
-        section,
-        Counts {
-            tasks: task_count,
-            notes: NotesTab::badge(notes),
-            wiki: true,
-            ..Counts::default()
-        },
-    );
+    let items = project_tabs(&base, section, task_count, notes);
     let parts = [section.title("Project"), project.name.as_str()];
     // The page has tabs, so the current tab is the current item; the crumb
     // is plain text, and with no organization the kicker is just a label.

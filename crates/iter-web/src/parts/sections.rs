@@ -1,7 +1,7 @@
 //! The sections of an organization or project page (`?tab=`) and their tab
 //! rows: the parsing and the URLs live here, `ui/tabs.rs` only draws.
 
-use crate::prelude::*;
+use crate::{parts::all::NotesTab, prelude::*};
 
 /// The query of the pages with tabs: `?tab=`, and the organization report's
 /// period (`org_report::load`; the project page ignores it).
@@ -125,6 +125,41 @@ pub fn section_tabs(base: &str, current: Section, counts: Counts) -> Vec<Tab> {
         Some((Section::Settings, Tab::link("Settings", edit_url(base)))),
     ];
     tabs_for(current, entries.into_iter().flatten())
+}
+
+/// The tabs of an organization page (`base` is its URL); `report` is the Report tab's link.
+pub fn org_tabs(
+    base: &str,
+    current: Section,
+    projects: usize,
+    tasks: usize,
+    notes: &NotesTab,
+    report: String,
+) -> Vec<Tab> {
+    let counts = Counts {
+        projects: Some(projects),
+        tasks,
+        notes: NotesTab::badge(Some(notes)),
+        report: Some(report),
+        ..Counts::default()
+    };
+    section_tabs(base, current, counts)
+}
+
+/// The tabs of a project page (`base` is its URL); `notes` is `None` when its folder was not read.
+pub fn project_tabs(
+    base: &str,
+    current: Section,
+    tasks: usize,
+    notes: Option<&NotesTab>,
+) -> Vec<Tab> {
+    let counts = Counts {
+        tasks,
+        notes: NotesTab::badge(notes),
+        wiki: true,
+        ..Counts::default()
+    };
+    section_tabs(base, current, counts)
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
