@@ -47,7 +47,7 @@ fn render_info(board: &Board, projects: &[Project], cards: &[Card]) -> String {
         out.push_str("  (none)\n");
     }
     for project in projects {
-        let _ = write!(out, "  {}\n", project.name);
+        let _ = writeln!(out, "  {}", project.name);
     }
     out.push_str(&render_agenda(cards));
     out
@@ -71,12 +71,12 @@ fn render_agenda(cards: &[Card]) -> String {
         if let Some(end) = card.task.end_time() {
             let _ = write!(slot, "-{}", end_text(start, end));
         }
-        let _ = write!(out, "  {slot}  {}{}\n", card.label, markers(card.priority));
+        let _ = writeln!(out, "  {slot}  {}{}", card.label, markers(card.priority));
     }
     if !unscheduled.is_empty() {
         out.push_str("\nunscheduled:\n");
         for card in unscheduled {
-            let _ = write!(out, "  {}{}\n", card.label, markers(card.priority));
+            let _ = writeln!(out, "  {}{}", card.label, markers(card.priority));
         }
     }
     out
