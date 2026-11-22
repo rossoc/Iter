@@ -1,29 +1,9 @@
 //! Prompts that tell an agent what to do with a task: instructions (`instruction.rs`) filled from the task.
 //! An instruction is the first `instructions/<name>.md` in the task, project notes, organization notes or config folder.
 
-use crate::agent::error::{AgentError, AgentResult};
+use crate::error::{AgentError, AgentResult};
+use crate::process::shell_word;
 use std::path::{Path, PathBuf};
-
-/// `word` as one shell word, backslash-escaped (`app/Fix\ it`): task names may contain spaces.
-pub fn shell_word(word: &str) -> String {
-    if word.is_empty() {
-        return "''".to_string();
-    }
-    let plain = |c: char| c.is_ascii_alphanumeric() || "_./:-@%+=,".contains(c);
-    let mut out = String::new();
-    for c in word.chars() {
-        // a newline cannot be escaped: quoted, it is one word again
-        if c == '\n' {
-            out.push_str("'\n'");
-        } else if plain(c) || !c.is_ascii() {
-            out.push(c);
-        } else {
-            out.push('\\');
-            out.push(c);
-        }
-    }
-    out
-}
 
 pub struct Context<'a> {
     pub task: &'a str,
@@ -176,16 +156,6 @@ mod tests {
         let mut c = ctx(None, "", dir);
         c.worktree = Some("/wt/fix-it");
         assert_eq!(render("{{worktree}}", "fix", &c).unwrap(), "/wt/fix-it");
-    }
-
-    #[test]
-    fn the_task_is_one_shell_word() {
-        assert_eq!(shell_word("app/fix-it"), "app/fix-it");
-        assert_eq!(shell_word("app/Fix it"), r"app/Fix\ it");
-        assert_eq!(shell_word("app/It's"), r"app/It\'s");
-        assert_eq!(shell_word("a;rm -rf"), r"a\;rm\ -rf");
-        assert_eq!(shell_word("café au"), r"café\ au");
-        assert_eq!(shell_word(""), "''");
     }
 
     #[test]

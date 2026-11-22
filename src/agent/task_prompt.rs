@@ -1,11 +1,11 @@
 //! The prompt that sends an agent to work on a task; shared by the CLI and the web page.
 
-use crate::agent::error::AgentError;
 use crate::agent::instruction::{self, Instruction};
 use crate::agent::prompt::{self, Context};
 use crate::agent::taskdir::{self, TaskDir};
 use crate::app::App;
 use crate::db::Table;
+use crate::error::AgentError;
 use crate::error::Result;
 use crate::models::{Project, Task};
 use crate::utils::resolve::resolve_task_or_current;

@@ -15,8 +15,8 @@
 
 use crate::config::expand_home;
 use crate::error::Result;
-use crate::git::slugify;
 use crate::models::{Organization, Project};
+use crate::text;
 use chrono::NaiveDate;
 use serde::Deserialize;
 use std::io::Write;
@@ -195,7 +195,7 @@ pub fn save(dir: &Path, date: NaiveDate, content: &str) -> Result<()> {
     if !path.is_file() {
         return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no such note").into());
     }
-    crate::utils::fs::write_atomic(&path, content)?;
+    crate::files::write_atomic(&path, content)?;
     Ok(())
 }
 
@@ -240,7 +240,7 @@ pub fn append_section(dir: &Path, day: NaiveDate, heading: &str, body: &str) -> 
         text.push('\n');
     }
     text.push_str(&format!("{line}\n\n{}\n", body.trim_end()));
-    crate::utils::fs::write_atomic(&path, &text)?;
+    crate::files::write_atomic(&path, &text)?;
     Ok(true)
 }
 
@@ -290,7 +290,7 @@ pub fn org_dir(org: &Organization) -> Option<PathBuf> {
 pub fn project_dir(project: &Project, org: &Option<Organization>) -> Option<PathBuf> {
     resolve(&project.notes_path).or_else(|| {
         let root = org_dir(org.as_ref()?)?;
-        let slug = slugify(&project.name);
+        let slug = text::slug(&project.name);
         let slug = if slug.is_empty() {
             format!("project-{}", project.id.unwrap_or_default())
         } else {

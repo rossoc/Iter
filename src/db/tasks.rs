@@ -8,9 +8,7 @@ impl Db {
     pub fn move_task(&self, id: i64, task: &mut Task, from: &Project, to: &Project) -> Result<()> {
         if to.id() != from.id() {
             if self.find_session_config_by_task(id)?.is_some() {
-                return Err(IterError::TaskHasSession(task_label(
-                    &from.name, &task.name, id,
-                )));
+                return Err(IterError::TaskHasSession(task.label(from).to_string()));
             }
             task.project_id = to.id();
         }
@@ -41,7 +39,12 @@ impl Db {
         Ok(tasks
             .into_iter()
             .map(|(project, task)| Card {
-                label: format!("{project}/{}", task.name),
+                label: TaskLabel {
+                    id: task.id(),
+                    project,
+                    title: task.name.clone(),
+                }
+                .to_string(),
                 priority: priorities.get(&task.id()).copied().unwrap_or_default(),
                 task,
             })
@@ -234,13 +237,35 @@ impl Db {
     /// What completion offers for a task, in `<project>/<title>` order, optionally narrowed by
     /// project and/or statuses (empty `statuses` = all): `<project>/<title>` where that names it
     /// alone, else its bare id (a repeated title, or one that reads like a `#<id>` label, would
-    /// resolve to the wrong task or to none). One join: this runs on every TAB.
+    /// resolve to the wrong task or to none). Two joins: this runs on every TAB.
     pub fn task_refs(&self, project: Option<&str>, statuses: &[TaskStatus]) -> Result<Vec<String>> {
+        let mut titled: HashMap<(String, String), usize> = HashMap::new();
+        for label in self.task_labels(None, &[])? {
+            *titled.entry((label.project, label.title)).or_default() += 1;
+        }
+        Ok(self
+            .task_labels(project, statuses)?
+            .into_iter()
+            .map(|label| {
+                let alone = titled[&(label.project.clone(), label.title.clone())] == 1
+                    && split_label(&label.title).is_none();
+                match alone {
+                    true => format!("{}/{}", label.project, label.title),
+                    false => label.id.to_string(),
+                }
+            })
+            .collect())
+    }
+
+    /// Every task as a [`TaskLabel`], by project, title and id, optionally narrowed by project
+    /// and statuses (empty = all): what `iter task list` prints.
+    pub fn task_labels(
+        &self,
+        project: Option<&str>,
+        statuses: &[TaskStatus],
+    ) -> Result<Vec<TaskLabel>> {
         let mut sql = String::from(
-            "SELECT p.name, t.name, t.id,
-                    (SELECT COUNT(*) FROM tasks s
-                     WHERE s.project_id = t.project_id AND s.name = t.name)
-             FROM tasks t JOIN projects p ON p.id = t.project_id",
+            "SELECT p.name, t.name, t.id FROM tasks t JOIN projects p ON p.id = t.project_id",
         );
         let mut clauses = Vec::new();
         if project.is_some() {
@@ -262,26 +287,12 @@ impl Db {
         values.extend(statuses.iter().map(|s| Value::Text(s.as_str().to_string())));
 
         self.query_all(&sql, params_from_iter(values), |row| {
-            let (project, title, id, same_title): (String, String, i64, i64) =
-                (row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?);
-            let alone = same_title == 1 && split_label(&title).is_none();
-            Ok(match alone {
-                true => format!("{project}/{title}"),
-                false => id.to_string(),
+            Ok(TaskLabel {
+                project: row.get(0)?,
+                title: row.get(1)?,
+                id: row.get(2)?,
             })
         })
-    }
-
-    /// Every task as a [`TaskLabel`], by project, title and id, optionally narrowed by project
-    /// and statuses (empty = all): what `iter task list` prints and completion chooses from.
-    /// stub: I2 (replaces `task_refs`).
-    #[allow(dead_code)]
-    pub fn task_labels(
-        &self,
-        _project: Option<&str>,
-        _statuses: &[TaskStatus],
-    ) -> Result<Vec<crate::models::TaskLabel>> {
-        unimplemented!("stub: I2")
     }
 
     /// The id of every task, sorted: what `task pull/push --task` completes (the project is not

@@ -3,7 +3,7 @@
 
 use super::task_query::DEFAULT;
 use crate::reporting::fmt_date;
-use crate::utils::text::percent_encode;
+use crate::text::percent_encode;
 use chrono::NaiveDate;
 
 pub fn page_url(base: &str, params: &[(&str, Option<&str>)]) -> String {

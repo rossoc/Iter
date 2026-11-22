@@ -23,7 +23,6 @@ use crate::utils::output::print_yaml;
 use crate::utils::report::{resolve_range, total_minutes};
 use crate::utils::resolve::{
     require_git_repo, require_github, resolve_project_or_current, resolve_task_or_current,
-    task_display,
 };
 use crate::utils::workspace::teardown_and_kill;
 use crate::wiki::ingest_job::{self, Trigger};
@@ -186,10 +185,7 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
         edit.task.project_id = project.id();
         let id = db.insert(&edit.task)?;
         db.set_task_tags(id, &tag_ids)?;
-        Ok(format!(
-            "created task '{}'",
-            task_display(&project, &edit.task)
-        ))
+        Ok(format!("created task '{}'", edit.task.label(&project)))
     })
 }
 
@@ -225,10 +221,7 @@ fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
         db.move_task(id, &mut edit.task, &project, &target)?;
         db.update(id, &edit.task)?;
         db.set_task_tags(id, &tag_ids)?;
-        Ok(format!(
-            "updated task '{}'",
-            task_display(&target, &edit.task)
-        ))
+        Ok(format!("updated task '{}'", edit.task.label(&target)))
     })
 }
 
@@ -236,7 +229,7 @@ fn task_delete(app: &App, mux: &dyn Multiplexer, task_ref: Option<&str>) -> Resu
     let db = &app.db;
     let (project, task) = resolve_task_or_current(db, task_ref)?;
     let task_id = task.id();
-    let display = task_display(&project, &task);
+    let display = task.label(&project).to_string();
     let session_config = db.find_session_config_by_task(task_id)?;
 
     // delete the row before tearing down tmux/the worktree: from inside the task's own session `kill-session` takes this pane down too
@@ -259,7 +252,7 @@ fn task_info(app: &App, task_ref: Option<&str>, opts: &ReportOpts) -> Result<()>
 
     let info = TaskInfo {
         header: Header::of(
-            task_display(&project, &task),
+            task.label(&project).to_string(),
             &task.description,
             &task,
             range,
@@ -270,20 +263,22 @@ fn task_info(app: &App, task_ref: Option<&str>, opts: &ReportOpts) -> Result<()>
     print_report(&info, opts.format)
 }
 
-/// Prints `<project>/<task>` for every task matching both filters, as a YAML list; empty `statuses` and `None` project mean all.
+/// Prints the label (`<project>/<title> #<id>`) of every task matching both filters, as a YAML
+/// list; empty `statuses` and `None` project mean all.
 pub(crate) fn task_list(
     app: &App,
     project_filter: Option<&str>,
     statuses: &[TaskStatus],
 ) -> Result<()> {
-    print_yaml(&app.db.task_refs(project_filter, statuses)?)
+    let labels = app.db.task_labels(project_filter, statuses)?;
+    print_yaml(&labels.iter().map(ToString::to_string).collect::<Vec<_>>())
 }
 
 fn task_done(app: &App, mux: &dyn Multiplexer, task_ref: Option<&str>, save: bool) -> Result<()> {
     let db = &app.db;
     let (project, mut task) = resolve_task_or_current(db, task_ref)?;
     let task_id = task.id();
-    let display = task_display(&project, &task);
+    let display = task.label(&project).to_string();
     let session_config = db.find_session_config_by_task(task_id)?;
 
     // tearing the worktree down under an agent that is working in it would
@@ -382,7 +377,7 @@ fn task_weekday(app: &App, task_ref: Option<&str>) -> Result<()> {
     let now = app.now;
     let sessions = db.sessions_for_task(task.id())?;
     let report = WeekdayReport {
-        name: task_display(&project, &task),
+        name: task.label(&project).to_string(),
         weekdays: weekday_averages(&sessions, now),
     };
     print_yaml(&report)

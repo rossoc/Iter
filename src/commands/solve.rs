@@ -1,6 +1,5 @@
 //! `iter task solve`, `iter task runs`: handing a task to an agent working on its own in the task's worktree.
 
-use crate::agent::error::AgentError;
 use crate::agent::run::{Harness, RunRecord, Status};
 use crate::agent::solve::{Launch, Observer, Spec, close, open_subagent, start};
 use crate::agent::task_prompt::{instruction_for, locate};
@@ -8,10 +7,10 @@ use crate::app::App;
 use crate::args::RunEnd;
 use crate::commands::ingest::say_auto;
 use crate::db::Table;
+use crate::error::AgentError;
 use crate::error::Result;
 use crate::md_edit::{edit_text, split_front};
 use crate::models::Project;
-use crate::utils::resolve::task_display;
 use crate::wiki::ingest_job::Auto;
 
 struct Console;
@@ -67,7 +66,7 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
     {
         return Err(AgentError::Interactive(req.instruction.to_string()).into());
     }
-    let name = task_display(&project, &task);
+    let name = task.label(&project).to_string();
     let mut spec = Spec {
         agent: req.agent.unwrap_or_default(),
         model: req.model.unwrap_or("haiku").to_string(),
@@ -102,7 +101,7 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
         println!(
             "run {n} of {name} started ({}). Follow it: iter task runs {} --log {n}",
             spec.agent.key(),
-            crate::agent::prompt::shell_word(&name)
+            crate::process::shell_word(&name)
         );
     }
     Ok(())
@@ -118,7 +117,7 @@ pub fn subagent(
     effort: Option<&str>,
 ) -> Result<()> {
     let (project, task, _) = locate(app, task)?;
-    let name = task_display(&project, &task);
+    let name = task.label(&project).to_string();
     let spec = Spec {
         agent: Harness::default(),
         model: model.unwrap_or(INHERIT).to_string(),
@@ -158,7 +157,7 @@ pub fn close_run(
         RunEnd::Failed => Status::Failed,
         RunEnd::Cancelled => Status::Cancelled,
     };
-    close(app, &task_display(&project, &task), n, status, &report)?;
+    close(app, &task.label(&project).to_string(), n, status, &report)?;
     println!("run {n}: {}", status.label());
     Ok(())
 }
@@ -175,7 +174,7 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
     if runs.is_empty() {
         println!(
             "No runs of {} yet: `iter task solve {} -i develop`.",
-            task_display(&project, &task),
+            task.label(&project),
             task.id()
         );
     }

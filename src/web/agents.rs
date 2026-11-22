@@ -19,7 +19,6 @@ use super::url::{
 use super::{Id, open_db};
 use crate::agent::run::RunRecord;
 use crate::agent::taskdir;
-use crate::utils::resolve::task_display;
 use topcoat::{
     Result,
     context::Cx,
@@ -105,7 +104,7 @@ fn load(id: i64, n: u32) -> Result<Loaded> {
     let (log, cut) = tail(&std::fs::read_to_string(dir.run_log_path(n)).unwrap_or_default());
     Ok(Loaded {
         task_id: id,
-        task: task_display(&project, &task),
+        task: task.label(&project).to_string(),
         prompt: std::fs::read_to_string(dir.run_prompt_path(n)).unwrap_or_default(),
         run,
         log,

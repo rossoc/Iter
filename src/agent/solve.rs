@@ -1,17 +1,17 @@
 //! The life of an agent run: `create`, `amend`, `begin`, `cancel` and the detached `worker`; shared by `iter task solve` and the web page.
 //! Callers hear what happens through an [`Observer`]; nothing prints here.
 
-use crate::agent::error::AgentError;
 use crate::agent::exec;
 use crate::agent::run::{Harness, Invocation, RunRecord, Status};
 use crate::agent::task_prompt::{fill, instruction_for, locate};
 use crate::agent::taskdir::TaskDir;
 use crate::app::App;
 use crate::db::Table;
+use crate::error::AgentError;
 use crate::error::{IterError, Result};
 use crate::git;
 use crate::models::{Project, SessionConfig, Task, TaskStatus};
-use crate::utils::text::now_as;
+use crate::text::now_as;
 use crate::utils::workspace::create_task_worktree;
 use crate::wiki::ingest_job::{Auto, Trigger, auto};
 use serde::{Deserialize, Serialize};
@@ -165,7 +165,7 @@ pub fn create(
         pid: None,
         subagent: false,
     };
-    let written = crate::utils::fs::write_private(&dir.run_prompt_path(n), text)
+    let written = crate::files::write_private(&dir.run_prompt_path(n), text)
         .map_err(IterError::from)
         .and_then(|()| dir.write_run(&run).map_err(IterError::from));
     if let Err(e) = written {
@@ -201,7 +201,7 @@ pub fn amend(
     run.effort = spec.effort.clone();
     run.instruction = instruction.to_string();
     run.wants_worktree = found.front.worktree;
-    crate::utils::fs::write_private(&dir.run_prompt_path(n), prompt)?;
+    crate::files::write_private(&dir.run_prompt_path(n), prompt)?;
     dir.write_run(&run)?;
     Ok(())
 }
@@ -218,7 +218,7 @@ struct Ready {
 fn fail(dir: &TaskDir, mut run: RunRecord, e: IterError) -> IterError {
     run.status = Status::Failed;
     run.ended = Some(now());
-    let _ = crate::utils::fs::write_private(&dir.run_log_path(run.n), format!("iter: {e}\n"));
+    let _ = crate::files::write_private(&dir.run_log_path(run.n), format!("iter: {e}\n"));
     let _ = dir.write_run(&run);
     e
 }
@@ -261,7 +261,7 @@ fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
         };
         let at = worktree.as_deref().unwrap_or(&project.base_path);
         let text = std::fs::read_to_string(dir.run_prompt_path(n))?;
-        crate::utils::fs::write_private(&dir.run_prompt_path(n), text.replace("{{worktree}}", at))?;
+        crate::files::write_private(&dir.run_prompt_path(n), text.replace("{{worktree}}", at))?;
         Ok((branch, worktree))
     })();
     match placed {
@@ -303,10 +303,11 @@ pub fn begin(app: &App, name: &str, n: u32, launch: &Launch) -> Result<()> {
             return Ok(());
         }
         let pid = exec::spawn_detached(
-            std::process::Command::new(std::env::current_exe()?)
-                .args(["task", "run-worker", &task.id().to_string(), &n.to_string()])
-                .arg("--")
-                .args(extra),
+            std::process::Command::new(crate::process::host()?).args(worker_args(
+                task.id(),
+                n,
+                extra,
+            )),
         )?;
         // the worker writes its own record; only fill in its pid if it has not yet
         if let Some(mut current) = dir.read_run(n)?
@@ -362,7 +363,7 @@ pub fn close(app: &App, name: &str, n: u32, status: Status, report: &str) -> Res
     }
     let mut log = report.trim_end().to_string();
     log.push('\n');
-    crate::utils::fs::write_private(&dir.run_log_path(n), log)?;
+    crate::files::write_private(&dir.run_log_path(n), log)?;
     run.status = status;
     run.ended = Some(now());
     dir.write_run(&run)?;
@@ -409,7 +410,7 @@ fn launch(
     extra: &[String],
 ) -> Result<Option<i32>> {
     let prompt = std::fs::read_to_string(dir.run_prompt_path(run.n))?;
-    let log = crate::utils::fs::create_private(&dir.run_log_path(run.n))?;
+    let log = crate::files::create_private(&dir.run_log_path(run.n))?;
     let writable = agent_dir(dir);
     let (program, args) = run.agent.command(&Invocation {
         model: &run.model,
@@ -457,8 +458,7 @@ fn work(
             };
         }
         Err(e) => {
-            let _ =
-                crate::utils::fs::write_private(&dir.run_log_path(run.n), format!("iter: {e}\n"));
+            let _ = crate::files::write_private(&dir.run_log_path(run.n), format!("iter: {e}\n"));
             run.status = Status::Failed;
         }
     }
@@ -487,12 +487,13 @@ pub fn worker(app: &App, task_id: i64, n: u32, extra: &[String]) -> Result<()> {
 }
 
 /// The arguments of the detached worker: `iter task run-worker <task> <run> -- <extra..>`.
-///
-/// stub: I2 (task 298): `unimplemented!()`; the spawn above builds the same list inline until
-/// the develop step of round I2 calls this.
-#[allow(dead_code)]
-fn worker_args(_task_id: i64, _run: u32, _extra: &[String]) -> Vec<String> {
-    unimplemented!("stub: I2")
+fn worker_args(task_id: i64, run: u32, extra: &[String]) -> Vec<String> {
+    ["task", "run-worker"]
+        .map(String::from)
+        .into_iter()
+        .chain([task_id.to_string(), run.to_string(), "--".to_string()])
+        .chain(extra.iter().cloned())
+        .collect()
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 //! A run: one headless agent working on a task in its worktree, kept as `runs/<n>.yaml`, `.prompt.md` and `.log` in the task's folder.
 
-use crate::agent::error::AgentResult;
 use crate::agent::taskdir::TaskDir;
+use crate::error::AgentResult;
 use crate::process::{Runner, SYSTEM};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -443,7 +443,7 @@ impl TaskDir {
         std::fs::create_dir_all(self.runs_dir())?;
         let text = serde_yaml::to_string(run)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(crate::utils::fs::write_whole(
+        Ok(crate::files::write_whole(
             &self.runs_dir(),
             &self.run_path(run.n),
             &text,

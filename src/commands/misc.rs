@@ -11,9 +11,7 @@ use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::{
     client_left_tmux_session, close_stale_session, start_for_tmux_session, stop_for_tmux_session,
 };
-use crate::utils::resolve::{
-    current_task, linked_issue, require_github, resolve_task_or_current, task_display,
-};
+use crate::utils::resolve::{current_task, linked_issue, require_github, resolve_task_or_current};
 use std::path::Path;
 
 pub(crate) fn comment_cmd(app: &App, task_ref: Option<&str>, message: &str) -> Result<()> {
@@ -29,7 +27,7 @@ pub(crate) fn comment_cmd(app: &App, task_ref: Option<&str>, message: &str) -> R
 pub(crate) fn t_cmd(app: &App) -> Result<()> {
     let db = &app.db;
     let (project, task) = current_task(db)?;
-    println!("{}", task_display(&project, &task));
+    println!("{}", task.label(&project));
     Ok(())
 }
 

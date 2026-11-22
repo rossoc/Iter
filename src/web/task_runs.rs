@@ -13,7 +13,6 @@ use crate::agent::taskdir::{self};
 use crate::app::App;
 use crate::config::config;
 use crate::models::{Project, Task};
-use crate::utils::resolve::task_display;
 use serde::Deserialize;
 use topcoat::{
     Result,
@@ -133,7 +132,7 @@ fn world(id: i64) -> Result<(App, String, Task, Project)> {
     let (task, project) = super::load::task_with_project(&db, id)?;
     // a task without a place for its folder has no runs to act on
     taskdir::of(&db, &project, &task)?;
-    let name = task_display(&project, &task);
+    let name = task.label(&project).to_string();
     let app = App::over(db, chrono::Local::now().naive_local());
     Ok((app, name, task, project))
 }

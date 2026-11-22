@@ -11,6 +11,7 @@ mod completion;
 mod config;
 mod db;
 mod error;
+mod files;
 #[cfg(test)]
 mod fixtures;
 mod git;

@@ -2,15 +2,15 @@
 //! Shared by the CLI and the web; nothing prints. The agent's changes stay uncommitted in the notes' git repository: accepting is a commit.
 //! See `doc/architecture_agent_wiki.md`.
 
-use crate::agent::error::AgentError;
 use crate::agent::exec;
 use crate::agent::run::{Harness, Invocation, alive};
 use crate::app::App;
 use crate::db::{Db, Table};
+use crate::error::AgentError;
 use crate::error::Result;
 use crate::models::{Project, Task};
 use crate::process;
-use crate::utils::text::now_as;
+use crate::text::now_as;
 use crate::wiki::graph::Wiki;
 use crate::wiki::ingest::{self, Mode};
 use crate::wiki::scope::{self, Spec};
@@ -62,7 +62,7 @@ impl Target {
     pub fn scope(&self) -> String {
         format!(
             "--project {}",
-            crate::agent::prompt::shell_word(&self.project.name)
+            crate::process::shell_word(&self.project.name)
         )
     }
 

@@ -3,8 +3,8 @@
 
 use super::graph::Wiki;
 use crate::error::{Result, failed};
+use crate::files::write_atomic;
 use crate::md_edit::split_closed;
-use crate::utils::fs::write_atomic;
 use serde::Serialize;
 use std::path::PathBuf;
 

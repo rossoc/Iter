@@ -29,7 +29,7 @@ pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};
 #[cfg(feature = "web")]
 pub use task::parse_start_time;
 pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus, end_text};
-#[allow(unused_imports)] // stub: I2
+pub(crate) use task_ref::split_label;
 pub use task_ref::{TaskId, TaskLabel, TaskRef};
 
 /// Fallback settings for a project that inherits none (no organization); also serde's default
@@ -163,34 +163,4 @@ pub(crate) fn require_no_comma(kind: &'static str, name: &str) -> Result<()> {
         });
     }
     Ok(())
-}
-
-/// How the CLI shows a task: `<project>/<title> #<id>`. The title may repeat in a project; the
-/// id never does, and [`split_label`] reads it back.
-pub fn task_label(project: &str, title: &str, id: i64) -> String {
-    format!("{project}/{title} #{id}")
-}
-
-/// `<project>` and the rest of a `<project>/<task>` reference.
-pub fn split_task_ref(task_ref: &str) -> Option<(&str, &str)> {
-    task_ref.split_once('/')
-}
-
-/// The title and id of a `<title> #<id>` label. A trailing `#<digits>` is always the id, also
-/// where a task is titled literally `fix #12`: that one is reached by its own id.
-pub fn split_label(text: &str) -> Option<(&str, i64)> {
-    let (title, id) = text.rsplit_once(" #")?;
-    Some((title, digits(id)?))
-}
-
-/// A task's id given alone: `42` or `#42`.
-pub fn bare_id(text: &str) -> Option<i64> {
-    digits(text.strip_prefix('#').unwrap_or(text))
-}
-
-fn digits(text: &str) -> Option<i64> {
-    match text.bytes().all(|b| b.is_ascii_digit()) {
-        true => text.parse().ok(),
-        false => None,
-    }
 }

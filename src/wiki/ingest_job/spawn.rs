@@ -13,7 +13,7 @@ pub fn run_agent(
     std::fs::create_dir_all(&dot)?;
     std::fs::write(dot.join(".gitignore"), "*\n")?;
     let log_path = dot.join(format!("{what}-{}.log", now().replace(':', "")));
-    let log = crate::utils::fs::create_private(&log_path)?;
+    let log = crate::files::create_private(&log_path)?;
     let _lock = lock(target)?;
     let harness = opts.agent.unwrap_or_default();
     let (program, args) = harness.command(&Invocation {
@@ -32,7 +32,7 @@ pub fn run_agent(
 
 /// Starts `iter wiki ingest` for `project` (and `task`) as a process that outlives this one.
 pub fn spawn_ingest(project: &Project, task: Option<&Task>, opts: &HarnessChoice) -> Result<()> {
-    let mut command = ingest_command(std::env::current_exe()?, project, task, opts);
+    let mut command = ingest_command(crate::process::host()?, project, task, opts);
     exec::spawn_detached(&mut command)?;
     Ok(())
 }
@@ -45,32 +45,26 @@ fn ingest_command(
     opts: &HarnessChoice,
 ) -> std::process::Command {
     let mut command = std::process::Command::new(exe);
-    command.args(["wiki", "ingest"]);
-    match task {
-        // `--flag=value`, so a name starting with `-` is a value, not a flag; a task goes by its id
-        Some(task) => command.arg(format!("--task={}", task.id())),
-        None => command.arg(format!("--project={}", project.name)),
-    };
-    if let Some(agent) = opts.agent {
-        command.arg(format!("--agent={}", agent.key()));
-    }
-    if let Some(model) = &opts.model {
-        command.arg(format!("--model={model}"));
-    }
-    if !opts.extra.is_empty() {
-        command.arg("--").args(&opts.extra);
-    }
+    command.args(ingest_args(project, task, opts));
     command
 }
 
 /// The arguments of `iter wiki ingest` for `project` (or `task`, by id) and `opts`: what
-/// [`ingest_command`] puts after the program.
-///
-/// stub: I2 (task 298): `unimplemented!()`; `ingest_command` builds the same list inline until
-/// the develop step of round I2 calls this.
-#[allow(dead_code)]
-fn ingest_args(_project: &Project, _task: Option<&Task>, _opts: &HarnessChoice) -> Vec<String> {
-    unimplemented!("stub: I2")
+/// [`ingest_command`] puts after the program. Each is `--flag=value`, so a name starting with
+/// `-` is a value, not a flag.
+fn ingest_args(project: &Project, task: Option<&Task>, opts: &HarnessChoice) -> Vec<String> {
+    let target = match task {
+        Some(task) => format!("--task={}", task.id()),
+        None => format!("--project={}", project.name),
+    };
+    let mut args = vec!["wiki".to_string(), "ingest".to_string(), target];
+    args.extend(opts.agent.map(|agent| format!("--agent={}", agent.key())));
+    args.extend(opts.model.as_ref().map(|model| format!("--model={model}")));
+    if !opts.extra.is_empty() {
+        args.push("--".to_string());
+        args.extend(opts.extra.iter().cloned());
+    }
+    args
 }
 
 #[cfg(feature = "web")]

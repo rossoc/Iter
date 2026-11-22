@@ -106,7 +106,7 @@ pub fn edit_in_editor<T: Serialize + DeserializeOwned + MarkdownBody>(
 ) -> Result<Option<T>> {
     let original = render_template(template)?;
 
-    let path = crate::utils::fs::temp_buffer(&original)?;
+    let path = crate::files::temp_buffer(&original)?;
 
     // `config()` is `&'static`, so the editor name satisfies `run_status`'s `&'static str`.
     let saved = process::run_status(&config().editor, None, &[&path])?;
@@ -145,7 +145,7 @@ fn read_edited<T: DeserializeOwned + MarkdownBody>(
 /// Opens `initial` as plain markdown in the configured editor. `None` if the
 /// editor quit without saving, or saved it unchanged.
 pub fn edit_text(initial: &str) -> Result<Option<String>> {
-    let path = crate::utils::fs::temp_buffer(initial)?;
+    let path = crate::files::temp_buffer(initial)?;
     let saved = process::run_status(&config().editor, None, &[&path]);
     let text = std::fs::read_to_string(&path);
     let _ = std::fs::remove_file(&path);

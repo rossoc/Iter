@@ -8,7 +8,7 @@ use crate::db::Table;
 use crate::error::Result;
 use crate::github::{self, IssueTracker};
 use crate::models::{Project, Task, TaskStatus};
-use crate::utils::resolve::{find_task_or_err, github_project, linked_issue, task_display};
+use crate::utils::resolve::{find_task_or_err, github_project, linked_issue};
 use crate::{git, sync};
 
 /// Sets a task's issue link, status and description in the database and in the copy in hand (a pull plans each issue against the tasks it holds); `None` means the issue says nothing about it.
@@ -76,7 +76,7 @@ pub(crate) fn task_pull(
                     task.id = Some(db.insert(&task)?);
                     println!(
                         "created task '{}' from issue #{} ({})",
-                        task_display(&project, &task),
+                        task.label(&project),
                         issue.number,
                         status.as_str()
                     );
@@ -98,7 +98,7 @@ pub(crate) fn task_pull(
                     )?;
                     println!(
                         "task '{}' <- issue #{}: {}",
-                        task_display(&project, &tasks[task]),
+                        tasks[task].label(&project),
                         issue.number,
                         pull_changes(link, status, description)
                     );
@@ -223,7 +223,7 @@ pub(crate) fn task_push(
 
     let (mut opened, mut edited, mut failed) = (0, 0, 0);
     for task in &mut tasks {
-        let display = task_display(&project, task);
+        let display = task.label(&project).to_string();
         // one task's `gh` calls are its own: a locked issue or a timeout skips that task (warn and continue) rather than ending the run and swallowing the summary
         match push_task(gh, db, &project, task, &issues, &display, body) {
             Ok(Pushed::Opened) => opened += 1,

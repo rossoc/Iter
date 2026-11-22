@@ -22,44 +22,47 @@ impl Db {
         if self.user_version()? >= steps.len() {
             return Ok(());
         }
+        let had_tasks = self.table_exists("tasks")?;
         self.conn.execute_batch("PRAGMA foreign_keys = OFF")?;
-        let run = self.run_pending_steps(steps);
+        let run = self.run_pending_steps(steps, had_tasks);
         self.conn.execute_batch("PRAGMA foreign_keys = ON")?;
         run
     }
 
-    fn run_pending_steps(&self, steps: &[fn(&Db) -> Result<()>]) -> Result<()> {
-        for first in std::iter::successors(Some(true), |_| Some(false)) {
+    fn run_pending_steps(&self, steps: &[fn(&Db) -> Result<()>], had_tasks: bool) -> Result<()> {
+        loop {
             let tx = Transaction::new_unchecked(&self.conn, TransactionBehavior::Immediate)?;
             let done = self.user_version()?;
             let Some(step) = steps.get(done) else {
                 return Ok(());
             };
-            if first {
+            if had_tasks && done == Self::REBUILD {
                 self.keep_a_copy()?;
             }
             step(self)?;
             tx.execute_batch(&format!("PRAGMA user_version = {}", done + 1))?;
             tx.commit()?;
         }
-        Ok(())
     }
 
-    /// Copies a database that holds tasks to `<db>.before-v7` before the first step that changes
-    /// it, once: an existing copy is kept. The copy is made on a second connection (`VACUUM INTO`
+    /// Where [`Self::task_titles_repeat`], the step that rebuilds `tasks`, sits in [`Self::MIGRATIONS`].
+    const REBUILD: usize = 6;
+
+    /// Copies a database that held tasks when it was opened to `<db>.before-v7` before that
+    /// rebuild, once: an existing copy is kept, and no later step takes one. The copy is made on a second connection (`VACUUM INTO`
     /// reads, so it runs beside our write lock) under a temporary name and renamed into place.
     fn keep_a_copy(&self) -> Result<()> {
         let Some(path) = self.conn.path().filter(|p| !p.is_empty()) else {
             return Ok(());
         };
         let copy = PathBuf::from(format!("{}.before-v7", path));
-        if copy.exists() || !self.table_exists("tasks")? {
+        if copy.exists() {
             return Ok(());
         }
         let partial = PathBuf::from(format!("{}.{}", copy.display(), std::process::id()));
         let _ = std::fs::remove_file(&partial);
         Connection::open(path)?.execute("VACUUM INTO ?1", params![partial.to_string_lossy()])?;
-        crate::utils::fs::make_private(&partial)?;
+        crate::files::make_private(&partial)?;
         std::fs::rename(&partial, &copy)?;
         Ok(())
     }

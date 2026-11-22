@@ -7,23 +7,6 @@ pub fn is_git_repo(path: &str) -> bool {
     Path::new(path).join(".git").exists()
 }
 
-/// Lowercases `name`, collapses runs of non `[a-z0-9]` into one `-` and trims dashes, for branch
-/// names and directories. May be empty; branch names go through [`task_slug`], which rules that out.
-pub fn slugify(name: &str) -> String {
-    let mut out = String::new();
-    let mut last_dash = false;
-    for c in name.to_lowercase().chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c);
-            last_dash = false;
-        } else if !last_dash && !out.is_empty() {
-            out.push('-');
-            last_dash = true;
-        }
-    }
-    out.trim_end_matches('-').to_string()
-}
-
 /// The fixed part of a `branch_template` (`"feat/"` out of `"feat/{task}"`); a template without
 /// `{task}` is returned whole.
 pub fn branch_prefix(template: &str) -> String {
@@ -38,7 +21,7 @@ pub fn branch_prefix(template: &str) -> String {
 /// ASCII letters or digits leaves the bare `task-<id>`: an empty slug would make a bare-prefix
 /// branch git refuses and a worktree path equal to `.iter-worktrees` itself.
 pub fn task_slug(name: &str, task_id: i64) -> String {
-    match slugify(name).as_str() {
+    match crate::text::slug(name).as_str() {
         "" => format!("task-{task_id}"),
         slug => format!("{task_id}-{slug}"),
     }
@@ -182,16 +165,6 @@ mod tests {
             Some(base),
             &["rev-parse", "--verify", "--quiet", branch],
         )
-    }
-
-    #[test]
-    fn slugify_lowercases_and_dashes_punctuation() {
-        assert_eq!(slugify("Fix Login Bug!"), "fix-login-bug");
-    }
-
-    #[test]
-    fn slugify_collapses_runs_and_trims_ends() {
-        assert_eq!(slugify("  weird   Name__here--"), "weird-name-here");
     }
 
     #[test]

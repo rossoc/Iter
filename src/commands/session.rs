@@ -11,7 +11,7 @@ use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::{Closed, close_open_session, start_session};
 use crate::utils::resolve::{
-    current_task, require_git_repo, resolve_task, resolve_task_or_current, task_display,
+    current_task, require_git_repo, resolve_task, resolve_task_or_current,
 };
 use crate::utils::workspace::{self, unwind_session_setup};
 use crate::wiki::ingest_job::Trigger;
@@ -207,7 +207,7 @@ fn session_start(app: &App, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
     let (project, task) = resolve_task_or_current(db, task_ref)?;
     start_session(db, task.id())?;
-    println!("started a session for '{}'", task_display(&project, &task));
+    println!("started a session for '{}'", task.label(&project));
     Ok(())
 }
 
@@ -218,7 +218,7 @@ fn session_stop(app: &App, task_ref: Option<&str>, message: Option<&str>) -> Res
         Closed::Discarded => "discarded the session (under a minute) for",
         Closed::Kept | Closed::Nothing => "stopped the session for",
     };
-    println!("{what} '{}'", task_display(&project, &task));
+    println!("{what} '{}'", task.label(&project));
     Ok(())
 }
 
@@ -227,7 +227,7 @@ fn session_elapse(app: &App) -> Result<()> {
     let db = &app.db;
     let (project, task) = current_task(db)?;
     let task_id = task.id();
-    let display = task_display(&project, &task);
+    let display = task.label(&project).to_string();
     let session = db
         .open_session_for_task(task_id)?
         .ok_or_else(|| IterError::NoOpenSession(display))?;

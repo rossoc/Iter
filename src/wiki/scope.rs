@@ -5,9 +5,9 @@ use super::graph::{Level, Wiki};
 use super::ontology::{LevelKind, Ontology};
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::git::slugify;
 use crate::models::{Organization, Project, Task};
 use crate::notes;
+use crate::text;
 use crate::utils::resolve::{current_project, current_task, resolve_task};
 use std::path::PathBuf;
 
@@ -61,7 +61,7 @@ fn ask(db: &Db, spec: &Spec) -> Result<Asked> {
 }
 
 fn slug(name: &str, kind: &str, id: i64) -> String {
-    match slugify(name) {
+    match text::slug(name) {
         s if s.is_empty() => format!("{kind}-{id}"),
         s => s,
     }

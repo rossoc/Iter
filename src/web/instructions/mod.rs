@@ -24,7 +24,6 @@ use crate::agent::taskdir;
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::models::{Organization, Project, Task};
-use crate::utils::resolve::task_display;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -138,7 +137,7 @@ pub fn usage(db: &Db, only: Option<i64>) -> Vec<Use> {
         let Ok(dir) = taskdir::of(db, project, &task) else {
             continue;
         };
-        let label = task_display(project, &task);
+        let label = task.label(project).to_string();
         for run in dir.runs() {
             uses.push(Use {
                 task_id: task.id(),

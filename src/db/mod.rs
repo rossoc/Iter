@@ -4,7 +4,7 @@ use crate::error::{IterError, Result};
 use crate::models::Organization;
 use crate::models::{
     Board, Card, Duration, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Push, Session,
-    SessionConfig, Tag, Task, TaskStatus, URGENT_TAG, split_label, task_label,
+    SessionConfig, Tag, Task, TaskLabel, TaskStatus, URGENT_TAG, split_label,
 };
 use chrono::{NaiveDate, NaiveDateTime};
 use rusqlite::types::{Type, Value, ValueRef};
@@ -173,7 +173,7 @@ impl Db {
         }
         let conn = Connection::open(path)?;
         // the WAL and shm files sqlite makes beside it take the database's permissions
-        crate::utils::fs::make_private(path)?;
+        crate::files::make_private(path)?;
         conn.execute_batch(
             "PRAGMA busy_timeout = 5000;
              PRAGMA foreign_keys = ON;",

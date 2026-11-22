@@ -163,7 +163,7 @@ mod tests {
             .into_iter()
             .map(|c| c.label)
             .collect();
-        assert_eq!(labels, ["p/z", "p/a", "p/b"]);
+        assert_eq!(labels, ["p/z #3", "p/a #2", "p/b #1"]);
     }
 
     #[test]

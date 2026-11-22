@@ -1,9 +1,9 @@
 //! `iter wiki ingest`, `build-concept` and `pending`: agents writing the wiki and the review of what they wrote (`wiki::ingest_job`).
 
-use crate::agent::error::AgentError;
 use crate::app::App;
 use crate::args::HarnessOpts;
 use crate::db::Table;
+use crate::error::AgentError;
 use crate::error::{IterError, Result};
 use crate::models::{Project, Task};
 use crate::utils::resolve::{resolve_project_or_current, resolve_task};

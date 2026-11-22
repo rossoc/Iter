@@ -1,31 +1,43 @@
 //! How a task is written and read back: the id (`42`, `#42`), the label iter prints
-//! (`web/login #42`) and the title reference (`web/login`).
-//!
-//! stub: I2 (task 298). The types and signatures are the design's (sketch `architecture`,
-//! section 5); every body is `unimplemented!()` until the develop step of round I2, and the tests
-//! below fail until then.
-#![allow(dead_code)]
+//! (`web/login #42`) and the title reference (`web/login`). What iter prints, it reads.
 
 use crate::error::{IterError, Result};
-use crate::models::{Project, Task};
+use crate::models::{Project, Table, Task};
 use std::fmt;
 use std::str::FromStr;
 
 /// A task id as written: `#42`, read from `42` or `#42`.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct TaskId(i64);
+pub struct TaskId(pub i64);
 
 impl fmt::Display for TaskId {
-    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unimplemented!("stub: I2")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "#{}", self.0)
     }
 }
 
 impl FromStr for TaskId {
     type Err = IterError;
-    fn from_str(_: &str) -> Result<Self> {
-        unimplemented!("stub: I2")
+    fn from_str(text: &str) -> Result<Self> {
+        digits(text.strip_prefix('#').unwrap_or(text))
+            .map(TaskId)
+            .ok_or_else(|| IterError::InvalidTaskRef(text.to_string()))
     }
+}
+
+/// The value of a non-empty run of ASCII digits that fits an `i64`.
+fn digits(text: &str) -> Option<i64> {
+    match !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit()) {
+        true => text.parse().ok(),
+        false => None,
+    }
+}
+
+/// The title and id of a `<title> #<id>` text. A trailing `#<digits>` is always the id, also
+/// where a task is titled literally `fix #12`: that one is reached by its own id.
+pub(crate) fn split_label(text: &str) -> Option<(&str, i64)> {
+    let (title, id) = text.rsplit_once(" #")?;
+    Some((title, digits(id)?))
 }
 
 /// A task as the CLI and the web show it: `<project>/<title> #<id>`.
@@ -37,14 +49,18 @@ pub struct TaskLabel {
 }
 
 impl fmt::Display for TaskLabel {
-    fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unimplemented!("stub: I2")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{} {}", self.project, self.title, TaskId(self.id))
     }
 }
 
 impl Task {
-    pub fn label(&self, _project: &Project) -> TaskLabel {
-        unimplemented!("stub: I2")
+    pub fn label(&self, project: &Project) -> TaskLabel {
+        TaskLabel {
+            id: self.id(),
+            project: project.name.clone(),
+            title: self.name.clone(),
+        }
     }
 }
 
@@ -61,8 +77,25 @@ pub enum TaskRef {
 
 impl FromStr for TaskRef {
     type Err = IterError;
-    fn from_str(_: &str) -> Result<Self> {
-        unimplemented!("stub: I2")
+    fn from_str(text: &str) -> Result<Self> {
+        if let Ok(id) = text.parse() {
+            return Ok(TaskRef::Id(id));
+        }
+        let (project, rest) = text
+            .split_once('/')
+            .ok_or_else(|| IterError::InvalidTaskRef(text.to_string()))?;
+        let project = project.to_string();
+        Ok(match split_label(rest) {
+            Some((title, id)) => TaskRef::Label(TaskLabel {
+                id,
+                project,
+                title: title.to_string(),
+            }),
+            None => TaskRef::Title {
+                project,
+                title: rest.to_string(),
+            },
+        })
     }
 }
 

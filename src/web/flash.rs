@@ -6,7 +6,7 @@
 //! `notifications.enabled: false` nothing here happens.
 
 use crate::config::config;
-use crate::utils::text::percent_encode;
+use crate::text::percent_encode;
 use topcoat::{
     Result,
     context::Cx,

@@ -7,7 +7,7 @@ use crate::args::{DocCommand, NoteCommand, NotesScope, TaskScope};
 use crate::commands::Run;
 use crate::error::{IterError, Result};
 use crate::md_edit::split_front;
-use crate::models::Organization;
+use crate::models::{Organization, TaskId, TaskRef};
 use crate::note_ref::{self, Address, Doc};
 use crate::notes;
 use crate::utils::resolve::resolve_project_or_current;
@@ -101,14 +101,19 @@ fn missing(what: &str) -> IterError {
 fn in_task(app: &App, doc: Doc, scope: &TaskScope, action: &DocCommand) -> Result<()> {
     let mut address = Address::of(doc, None, None, None);
     if let Some(task) = &scope.task {
-        match crate::utils::resolve::parse_task_ref(task) {
+        match task.parse() {
             // `<project>/<task>`
-            Ok((project, task)) => {
-                address.owners = vec![project.to_string()];
-                address.task = Some(task.to_string());
+            Ok(TaskRef::Title { project, title }) => {
+                address.owners = vec![project];
+                address.task = Some(title);
+            }
+            // `<project>/<task> #<id>`: the id keeps the title unambiguous
+            Ok(TaskRef::Label(label)) => {
+                address.task = Some(format!("{} {}", label.title, TaskId(label.id)));
+                address.owners = vec![label.project];
             }
             // an id
-            Err(_) => address.task = Some(task.clone()),
+            Ok(TaskRef::Id(_)) | Err(_) => address.task = Some(task.clone()),
         }
     }
     act(app, address, action)
@@ -287,14 +292,14 @@ fn write(file: &Path, content: &str, how: How) -> Result<()> {
                 })?;
             f.write_all(content.as_bytes())?;
         }
-        How::Replace => crate::utils::fs::write_atomic(file, content)?,
+        How::Replace => crate::files::write_atomic(file, content)?,
         How::Append => {
             let old = std::fs::read_to_string(file).unwrap_or_default();
             let joined = match old.trim_end().is_empty() {
                 true => content.to_string(),
                 false => format!("{}\n\n{}\n", old.trim_end(), content.trim_end()),
             };
-            crate::utils::fs::write_atomic(file, &joined)?;
+            crate::files::write_atomic(file, &joined)?;
         }
     }
     Ok(())

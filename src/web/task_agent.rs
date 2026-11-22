@@ -19,7 +19,6 @@ use crate::config::config;
 use crate::db::Db;
 use crate::error::{IterError, Result as Loaded};
 use crate::models::{Project, Task};
-use crate::utils::resolve::task_display;
 use serde::Deserialize;
 use topcoat::{
     Result,
@@ -111,7 +110,7 @@ pub fn load(app: &App, project: &Project, task: &Task, open: &Open) -> Loaded<Ag
         Some(dir) => dir.read_plan()?,
         None => None,
     };
-    let name = task_display(project, task);
+    let name = task.label(project).to_string();
     let layers = instruction::layers_for_task(db, project, task)?;
     let parsed = plan::parse(plan_text.as_deref().unwrap_or(""));
     let roster = Roster::load(
@@ -489,7 +488,7 @@ impl Roster {
                     effort,
                     prompt: String::new(),
                     error: Some(
-                        crate::agent::error::AgentError::InstructionNotFound {
+                        crate::error::AgentError::InstructionNotFound {
                             name: chosen.to_string(),
                             path: instruction::file(
                                 &instruction::global().unwrap_or_default(),

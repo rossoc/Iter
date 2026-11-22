@@ -3,7 +3,6 @@
 
 #[cfg(test)]
 mod config_instructions_tests;
-pub mod error;
 pub mod exec;
 pub mod instruction;
 pub mod plan;

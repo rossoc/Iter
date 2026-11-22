@@ -1,12 +1,12 @@
 //! A task's folder (`tasks/<id>/` in the project's notes): plan, notes, sketches. Kept with the notes so discarding a branch keeps them.
 
-use crate::agent::error::{AgentError, AgentResult};
 use crate::agent::plan::{self, Progress, State};
 use crate::db::{Db, Table};
+use crate::error::{AgentError, AgentResult};
 use crate::error::{IterError, Result};
+use crate::files::write_whole;
 use crate::models::{Project, Task};
 use crate::notes;
-use crate::utils::fs::write_whole;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 

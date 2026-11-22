@@ -1,6 +1,7 @@
 //! The plan of a task: `tasks/<id>/plan.md`, a markdown file with Goal, How and Checklist sections.
 //! A step is `- [ ] {s1} (verify) text`; the file is the only store. Format and rules: `doc/architecture_agent_wiki.md`.
 
+use crate::error::MarkError;
 use serde::Serialize;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, clap::ValueEnum)]
@@ -311,23 +312,6 @@ pub fn normalize(content: &str) -> String {
     }
     out
 }
-
-#[derive(Debug, PartialEq)]
-pub enum MarkError {
-    NoSuchStep(String, Vec<String>),
-}
-
-impl std::fmt::Display for MarkError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let MarkError::NoSuchStep(id, ids) = self;
-        match ids.is_empty() {
-            true => write!(f, "no step '{id}': the plan has no steps"),
-            false => write!(f, "no step '{id}' (the steps are {})", ids.join(", ")),
-        }
-    }
-}
-
-impl std::error::Error for MarkError {}
 
 /// `content` with step `id` in `state`: only its checkbox changes.
 pub fn mark(content: &str, id: &str, state: State) -> Result<String, MarkError> {

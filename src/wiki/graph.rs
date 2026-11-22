@@ -5,7 +5,7 @@ use super::frontmatter::{self, Front};
 use super::ontology::{LevelKind, NODE, NS, Ontology, Place, Rules, ns};
 use crate::error::{IterError, Result};
 use crate::notes::parse_date;
-use crate::utils::text::percent_encode;
+use crate::text::percent_encode;
 use oxigraph::io::RdfFormat;
 use oxigraph::model::vocab::{rdf, rdfs};
 use oxigraph::model::{GraphName, GraphNameRef, Literal, NamedNode, NamedOrBlankNode, Quad, Term};

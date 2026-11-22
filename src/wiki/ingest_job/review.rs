@@ -103,6 +103,7 @@ pub fn review(db: &Db, project: &Project) -> Result<Review> {
 }
 
 /// Commits (`accept`) or discards the pending pages under `wiki/`, and no other file; returns the paths touched.
+#[cfg(any(test, feature = "web"))]
 pub fn settle(db: &Db, project: &Project, accept: bool) -> Result<Vec<String>> {
     settle_with(db, project, accept, None)
 }

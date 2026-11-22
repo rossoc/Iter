@@ -57,7 +57,7 @@ pub trait Multiplexer {
 
     /// [`Multiplexer::ensure_hooks_installed`] for the running binary.
     fn install_hooks_for_current_exe(&self) -> Result<()> {
-        let iter_bin = std::env::current_exe()?.to_string_lossy().to_string();
+        let iter_bin = crate::process::host()?.to_string_lossy().to_string();
         self.ensure_hooks_installed(&iter_bin)
     }
 }
@@ -278,22 +278,22 @@ fn format_variables(action: &str) -> Vec<&str> {
 }
 
 /// The `set-hook` body for one entry of [`HOOKS`]; split out so variables are testable.
-fn hook_action(iter_bin: &str, event: &str, args: &str) -> String {
+fn hook_action(iter_bin: &str, event: &str, variables: &str) -> String {
     // Inside the action's single quotes a `'` cannot be written; the rest is shell-quoted.
-    let bin = crate::agent::prompt::shell_word(iter_bin);
-    // `--`: a session name may start with `-`, which clap would read as a flag
-    format!("run-shell '{bin} internal hook {event} -- {args}'")
+    let bin = crate::process::shell_word(iter_bin);
+    let args = hook_args(event, variables).join(" ");
+    format!("run-shell '{bin} {args}'")
 }
 
 /// The arguments of the hook for `event` (one entry of [`HOOKS`]) after the binary:
 /// `internal hook <event> -- <format variables..>`, which `hook_action` quotes into the
-/// `set-hook` body.
-///
-/// stub: I2 (task 298): `unimplemented!()`; `hook_action` builds the same words inline until
-/// the develop step of round I2 calls this.
-#[allow(dead_code)]
-fn hook_args(_event: &str, _variables: &str) -> Vec<String> {
-    unimplemented!("stub: I2")
+/// `set-hook` body. `--`: a session name may start with `-`, which clap would read as a flag.
+fn hook_args(event: &str, variables: &str) -> Vec<String> {
+    ["internal", "hook", event, "--"]
+        .into_iter()
+        .chain(variables.split(' '))
+        .map(String::from)
+        .collect()
 }
 
 #[cfg(test)]

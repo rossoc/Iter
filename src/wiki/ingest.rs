@@ -114,7 +114,7 @@ pub fn ingest_prompt(job: &Job, notes: &[Waiting], task: Option<&str>) -> String
                 format!(
                     "- `{}` ({why}): `iter note read {}`",
                     n.id,
-                    crate::agent::prompt::shell_word(&n.id)
+                    crate::process::shell_word(&n.id)
                 )
             })
             .collect::<Vec<_>>()
@@ -122,7 +122,7 @@ pub fn ingest_prompt(job: &Job, notes: &[Waiting], task: Option<&str>) -> String
     };
     let extra = match task {
         Some(task) => {
-            let t = crate::agent::prompt::shell_word(task);
+            let t = crate::process::shell_word(task);
             format!(
                 "\n### The task {t}\n\n\
                  The task is finished. Keep what the project should remember: decisions and their \

@@ -2,10 +2,10 @@
 //! Looked up nearest first: the task's folder, project notes, organization notes, then iter's config
 //! folder (`<config>/instructions/<name>.md`, beside `iter.yaml`); see [`Source`]. None is built in.
 
-use crate::agent::error::{AgentError, AgentResult};
 #[cfg(feature = "web")]
 use crate::agent::prompt::{self, Context};
-use crate::utils::text::yaml_scalar;
+use crate::error::{AgentError, AgentResult};
+use crate::text::yaml_scalar;
 use serde_yaml::Value;
 #[cfg(feature = "web")]
 use std::path::Path;

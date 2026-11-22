@@ -3,42 +3,49 @@
 
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
-use crate::models::{
-    Project, ProjectGroup, Task, bare_id, split_label, split_task_ref, task_label,
-};
+use crate::models::{Project, ProjectGroup, Task, TaskId, TaskRef, split_label};
 use crate::{git, tmux};
-
-/// A task as `<project>/<title> #<id>`, which [`resolve_task`] reads back.
-pub(crate) fn task_display(project: &Project, task: &Task) -> String {
-    task_label(&project.name, &task.name, task.id())
-}
 
 /// The task's issue number, or the "no linked issue" error.
 pub(crate) fn linked_issue(project: &Project, task: &Task) -> Result<i64> {
     task.github_issue
-        .ok_or_else(|| IterError::NoLinkedIssue(task_display(project, task)))
-}
-
-pub(crate) fn parse_task_ref(reference: &str) -> Result<(&str, &str)> {
-    split_task_ref(reference).ok_or_else(|| IterError::InvalidTaskRef(reference.to_string()))
+        .ok_or_else(|| IterError::NoLinkedIssue(task.label(project).to_string()))
 }
 
 /// A task by its id (`12` or `#12`: what a command run by an agent says, with no space to quote),
 /// or by `<project>/<title>` (refused when the title repeats) or `<project>/<title> #<id>` (the id
 /// wins over a stale title).
 pub(crate) fn resolve_task(db: &Db, text: &str) -> Result<(Project, Task)> {
-    if let Some(id) = bare_id(text) {
-        let task: Task = db.get(id)?.ok_or_else(|| IterError::NotFound {
-            kind: "task",
-            name: text.to_string(),
-        })?;
-        let project = follow(db, task.project_id, "project", "task")?;
-        return Ok((project, task));
-    }
-    let (project_name, rest) = parse_task_ref(text)?;
-    let project = db.resolve::<Project>(project_name)?;
-    let task = find_task_or_err(db, &project, rest)?;
+    let (project, task) = match text.parse()? {
+        TaskRef::Id(TaskId(id)) => {
+            let task: Task = db.get(id)?.ok_or_else(|| IterError::NotFound {
+                kind: "task",
+                name: text.to_string(),
+            })?;
+            (follow(db, task.project_id, "project", "task")?, task)
+        }
+        TaskRef::Title { project, title } => {
+            let project = db.resolve::<Project>(&project)?;
+            let task = find_task_or_err(db, &project, &title)?;
+            (project, task)
+        }
+        TaskRef::Label(label) => {
+            let project = db.resolve::<Project>(&label.project)?;
+            let task = task_in(db, &project, label.id)?.ok_or_else(|| IterError::TaskNotFound {
+                project: project.name.clone(),
+                task: format!("{} {}", label.title, TaskId(label.id)),
+            })?;
+            (project, task)
+        }
+    };
     Ok((project, task))
+}
+
+/// The task `id` when it belongs to `project`.
+fn task_in(db: &Db, project: &Project, id: i64) -> Result<Option<Task>> {
+    Ok(db
+        .get::<Task>(id)?
+        .filter(|task| task.project_id == project.id()))
 }
 
 /// The row `id` points at, or the error saying `what` the `of` named is gone.
@@ -201,21 +208,18 @@ pub(crate) fn resolve_group_or_current<G: ProjectGroup>(db: &Db, name: Option<&s
 /// A task of `project` by what `--task` or a path says: `#12`, `<title> #12`, a plain `12` (the id
 /// when the project has that task, else a title) or a title, which must be unique.
 pub(crate) fn find_task_or_err(db: &Db, project: &Project, text: &str) -> Result<Task> {
-    let in_project = |id| {
-        db.get::<Task>(id)
-            .map(|task| task.filter(|t| t.project_id == project.id()))
-    };
+    let id = text.parse::<TaskId>().ok().map(|id| id.0);
     let labelled = match text.starts_with('#') {
-        true => bare_id(text),
+        true => id,
         false => split_label(text).map(|(_, id)| id),
     };
     if let Some(id) = labelled {
-        return in_project(id)?.ok_or_else(|| IterError::TaskNotFound {
+        return task_in(db, project, id)?.ok_or_else(|| IterError::TaskNotFound {
             project: project.name.clone(),
             task: text.to_string(),
         });
     }
-    match bare_id(text).map(in_project).transpose()?.flatten() {
+    match id.map(|id| task_in(db, project, id)).transpose()?.flatten() {
         Some(task) => Ok(task),
         None => one_titled(db, project, text),
     }
@@ -472,9 +476,9 @@ mod tests {
     fn a_task_is_shown_with_its_id() {
         let db = distinct_titles();
         let (project, task) = resolve_task(&db, "2").unwrap();
-        assert_eq!(task_display(&project, &task), "web/logout #2");
-        assert_eq!(found(&db, &task_display(&project, &task)).unwrap(), 2);
-        let unlinked = IterError::NoLinkedIssue(task_display(&project, &task));
+        assert_eq!(task.label(&project).to_string(), "web/logout #2");
+        assert_eq!(found(&db, &task.label(&project).to_string()).unwrap(), 2);
+        let unlinked = IterError::NoLinkedIssue(task.label(&project).to_string());
         assert!(unlinked.to_string().contains("web/logout #2"), "{unlinked}");
     }
 

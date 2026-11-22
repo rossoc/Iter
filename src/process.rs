@@ -248,20 +248,25 @@ pub mod fake {
 
 /// The `iter` binary that is running: the one place the core asks for it, to start `iter` again
 /// as a detached worker or to name it in a tmux hook.
-///
-/// stub: I2 (task 298): `unimplemented!()` until the develop step of round I2.
-#[allow(dead_code)]
 pub fn host() -> Result<std::path::PathBuf> {
-    unimplemented!("stub: I2")
+    Ok(std::env::current_exe()?)
 }
 
-/// `word` as one shell word, backslash-escaped (`app/Fix\ it`), a newline and an empty word
-/// quoted. Moves here from `agent::prompt` (the tmux hook and the prompts both need it).
-///
-/// stub: I2 (task 298): `unimplemented!()` until the develop step of round I2.
-#[allow(dead_code)]
-pub fn shell_word(_word: &str) -> String {
-    unimplemented!("stub: I2")
+/// `word` as one shell word, backslash-escaped (`app/Fix\ it`): a newline is quoted (it cannot
+/// be escaped), an empty word is `''`. The tmux hook and the prompts both need it.
+pub fn shell_word(word: &str) -> String {
+    if word.is_empty() {
+        return "''".to_string();
+    }
+    let plain = |c: char| c.is_ascii_alphanumeric() || "_./:-@%+=,".contains(c);
+    word.chars().fold(String::new(), |mut out, c| {
+        match c {
+            '\n' => out.push_str("'\n'"),
+            c if plain(c) || !c.is_ascii() => out.push(c),
+            c => out.extend(['\\', c]),
+        }
+        out
+    })
 }
 
 #[cfg(test)]
@@ -290,6 +295,8 @@ mod host_and_shell_tests {
             ("naïve ✓", r"naïve\ ✓"),
             ("two\nlines", "two'\n'lines"),
             ("-dash", "-dash"),
+            ("a;rm -rf", r"a\;rm\ -rf"),
+            ("café au", r"café\ au"),
         ] {
             assert_eq!(shell_word(word), quoted, "{word:?}");
         }

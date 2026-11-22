@@ -1,15 +1,54 @@
-//! Pure text helpers with no dependency on the rest of iter (a leaf: sketch `architecture`,
-//! section 3). Round I2 moves `utils/text.rs` here and adds [`slug`].
-//!
-//! stub: I2 (task 298): `slug` is `unimplemented!()` until the develop step of round I2; the
-//! tests below pin what `git::slugify` does today, which is what the one merged helper keeps.
+//! Pure text helpers with no dependency on the rest of iter: a slug, percent-encoding, a YAML
+//! scalar as text, a timestamp.
+
+use serde_yaml::Value;
 
 /// Lowercases `name`, collapses runs of anything but `[a-z0-9]` into one `-` and trims the
 /// dashes: for branch names and folders. May be empty. Non-ASCII letters count as "anything
 /// else" (`notes::stem` keeps them and caps the length: it stays its own function).
-#[allow(dead_code)]
-pub fn slug(_name: &str) -> String {
-    unimplemented!("stub: I2")
+pub fn slug(name: &str) -> String {
+    let mut out = String::new();
+    let mut last_dash = false;
+    for c in name.to_lowercase().chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c);
+            last_dash = false;
+        } else if !last_dash && !out.is_empty() {
+            out.push('-');
+            last_dash = true;
+        }
+    }
+    out.trim_end_matches('-').to_string()
+}
+
+/// `text` with every byte that is not an ASCII letter, a digit or one of `keep` as `%XX`.
+pub fn percent_encode(text: &str, keep: &[u8]) -> String {
+    use std::fmt::Write as _;
+    text.bytes()
+        .fold(String::with_capacity(text.len()), |mut out, b| {
+            match b.is_ascii_alphanumeric() || keep.contains(&b) {
+                true => out.push(b as char),
+                false => {
+                    let _ = write!(out, "%{b:02X}");
+                }
+            }
+            out
+        })
+}
+
+/// A YAML string, number or boolean as text; anything else is not a scalar.
+pub fn yaml_scalar(value: &Value) -> Option<String> {
+    match value {
+        Value::String(s) => Some(s.clone()),
+        Value::Number(n) => Some(n.to_string()),
+        Value::Bool(b) => Some(b.to_string()),
+        _ => None,
+    }
+}
+
+/// The local time now, formatted with the `chrono` format `format`.
+pub fn now_as(format: &str) -> String {
+    chrono::Local::now().format(format).to_string()
 }
 
 #[cfg(test)]
@@ -26,7 +65,7 @@ mod tests {
             ("a/b\\c", "a-b-c"),
             ("--lead and trail--", "lead-and-trail"),
             ("UPPER 123", "upper-123"),
-            // letters outside ASCII are separators, as in `git::slugify`
+            // letters outside ASCII are separators, (a slug is ASCII)
             ("Café au lait", "caf-au-lait"),
             ("日本語 task", "task"),
         ] {

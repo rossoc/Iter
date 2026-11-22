@@ -2,7 +2,7 @@
 //! `iter:authorable` ontology properties are relations; any other key goes to `unknown` for `check`. A note is never parsed.
 
 use crate::md_edit::{split_closed, strip_bom};
-use crate::utils::text::yaml_scalar;
+use crate::text::yaml_scalar;
 use serde_yaml::Value;
 
 #[derive(Debug, Default, Clone, PartialEq)]
