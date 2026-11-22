@@ -5,7 +5,7 @@
 > Superseded (final cleanup, `doc/web_cleanup.md`): the compare switch and `?design=old` were removed; the pages render the current design only. References below to the old design, the switch or `proposal` (now `screen`) describe how it was built, not how it is.
 
 
-Scope: the task page. The task edit form (page 7) is left for later and keeps working. It builds on Org (`doc/web_org.md`), Project (`doc/web_project.md`), the edit pages and the shared components in `src/web/ui/` (`doc/web_components.md`). The page is the sibling of Org and Project: same header, two-column body, Details panel where they have Settings, a table like the Org report's.
+Scope: the task page. The task edit form (page 7) is left for later and keeps working. It builds on Org (`doc/web_org.md`), Project (`doc/web_project.md`), the edit pages and the shared components in `crates/iter-web/src/ui/` (`doc/web_components.md`). The page is the sibling of Org and Project: same header, two-column body, Details panel where they have Settings, a table like the Org report's.
 
 ## Plan
 

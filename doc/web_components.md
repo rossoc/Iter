@@ -1,7 +1,7 @@
-# Shared components (`src/web/ui/`)
+# Shared components (`crates/iter-web/src/ui/`)
 
-`src/web/` has the pages (route, loader, `screen` component) and the mappers that
-turn models into display rows; `src/web/ui/` has the components they share: one
+`crates/iter-web/src/` has the pages (route, loader, `screen` component) and the mappers that
+turn models into display rows; `crates/iter-web/src/ui/` has the components they share: one
 `.rs` and one `.css` per feature, no models, no routes.
 
 ## Layout
@@ -15,7 +15,7 @@ turn models into display rows; `src/web/ui/` has the components they share: one
 - Scripts, each an enhancement that the page works without: `modal.js` (Esc,
   focus trap, instruction prefill), `filter_bar.js` (Esc closes the syntax tip),
   `search.js` (the `/` palette), `combobox.js` (choice lists), `path_pick.js`
-  (folder button). Page scripts in `src/web/`: `board.js` (drag and drop),
+  (folder button). Page scripts in `crates/iter-web/src/`: `board.js` (drag and drop),
   `org.js` (report dates, Share), `platform.js` (activity suggestions).
 - Helpers: `ink.rs` (readable chip text color, WCAG 4.5:1), `icons.rs` (inline
   Lucide SVGs, styled by `.i`), `form_error.rs` (`FormError`, which control an
@@ -116,5 +116,5 @@ Boards
   listbox and `input[list]` shows the same list; the native `<select>` stays,
   hidden and in sync, so forms post it and its label still points at it. Arrow
   keys, Home/End, type-ahead, Enter picks, Esc closes only the list.
-- Tests that need a database use `src/fixtures.rs` (`db()`, `project`,
+- Tests that need a database use `crates/iter-core/src/fixtures.rs` (`db()`, `project`,
   `add_project`, `board`).

@@ -159,7 +159,7 @@ type Find = fn(&Db, i64) -> topcoat::Result<Owner>;
 
 /// The owner named by the request's `{id}`.
 fn owner_of(cx: &Cx, find: Find) -> Result<Owner> {
-    Ok(find(&fresh_db()?, path_id(cx)?)?)
+    find(&fresh_db()?, path_id(cx)?)
 }
 
 fn show(cx: &Cx, find: Find) -> Result<NotePage> {

@@ -12,9 +12,10 @@ tmux + GitHub integration.
 - A **project** is a base directory of work (optionally a git/GitHub repo).
 - A **task** is a unit of work under a project, with a status
   (`queue` / `wip` / `done`), a `branch_prefix` for the branch its session
-  gets, and, optionally, a linked GitHub issue.
+  gets, and, optionally, a linked GitHub issue. Every task has an id, like a
+  GitHub issue, and titles may repeat (see [Task ids](#task-ids)).
 - `iter session new` on a task creates a **session-config**: a tmux session
-  (named `<project>/<task>`) and, if the project is git-backed, a dedicated
+  (named `<project>/<id> <title>`) and, if the project is git-backed, a dedicated
   git worktree + branch for it -- so working two tasks of the same project
   at once never means one stomps on the other's checkout.
 - Every stretch of work is a **session**: a start/end pair (plus an optional
@@ -95,8 +96,35 @@ iter session stop myproj/mytask -m "note about what got done"
 iter comment myproj/mytask -m "progress note"   # posts to the task's linked issue via `gh`
 
 # tmux status
-iter t                              # prints <project>/<task> for the tmux session you're in
+iter t                              # prints the task for the tmux session you're in
 ```
+
+## Task ids
+
+Every task has an id, unique across all projects and shown after its title:
+`web/login #42`. `iter task list`, `task info`, shell completion, the web
+boards and the tmux session name all carry it. Two tasks of one project may
+have the same title.
+
+A task is named by any of:
+
+- `42` or `#42` -- the id, which always works (an unquoted `#` starts a shell
+  comment, so write `'#42'` or just `42`);
+- `web/login` -- the project and the title, which works while the title is
+  unique in the project. When it is not, the command fails with
+  `2 tasks in 'web' are titled 'login': #42, #57 -- name one by its id` and
+  does nothing;
+- `web/login #42` -- the label as printed, so a pasted line works. The id wins:
+  after a rename `web/old title #42` still acts on task 42.
+
+Completion offers `web/login` for a unique title and the bare id, with
+`web/login #42` as its help text, for a repeated one. A title that itself ends
+in ` #<digits>` (`fix #12`) is reached by its id.
+
+Upgrading from a database made before task ids copies it to `iter.db.before-v7`
+first, then rebuilds the `tasks` table without the unique title; no task, tag,
+session-config or session is lost. Tmux sessions, branches and worktrees that
+already exist keep their names.
 
 ## Reports
 
@@ -206,7 +234,7 @@ one thing that can cross either way, and only when `--body` says so.
 
 Both take the same two narrowing flags:
 
-- `--task <name>` -- just that one task, rather than every task in the
+- `--task <task>` -- the title or the id of just that one task, rather than every task in the
   project. On a pull that's the single issue it tracks, so a pull scoped
   this way can only update that task; on a push it's the one task sent up.
 - `--body` -- also copy the description across, in whatever direction you
@@ -225,10 +253,10 @@ iter task pull myproj    # for each issue in the repo, open and closed alike
   is the status `iter session new` takes, so a reopened issue can be picked
   up again. An open issue leaves a `queue`/`wip` task where it is: both
   read as "open" to GitHub, and the local one says more.
-- An issue whose title matches a task that tracks *no* issue links the two
-  rather than creating a second task by that name -- the same work, entered
-  on both sides separately. If that same-named task already tracks a
-  different issue, the issue is reported and skipped instead.
+- An issue whose title matches exactly one task that tracks *no* issue links
+  the two rather than creating a second task -- the same work, entered on
+  both sides separately. Any other issue of an already used title becomes a
+  new task of its own, since titles may repeat.
 - With `--body`, a tracked task's description is overwritten with the
   issue's body when the two differ.
 
@@ -236,7 +264,7 @@ iter task pull myproj    # for each issue in the repo, open and closed alike
 iter task push myproj    # for each task in the project
 ```
 
-- A task tracking no issue gets one opened, titled with its name and bodied
+- A task tracking no issue gets one opened, titled with its title and bodied
   with its description, and the new number is stored on the task.
 - A task that tracks an issue has that issue closed or reopened to match:
   `done` closes it, `queue` and `wip` both leave it (or put it back) open.
@@ -399,8 +427,9 @@ A project's `branch_template` (default `feat/{task}`) is only a *default*:
 its fixed part is copied into each new task's own `branch_prefix` field
 when the task is created, so it's sitting right there in the editor to
 change per task. `iter session new` branches from that prefix plus the
-task's slugified name -- `hotfix/` + `Fix Login Bug` gives
-`hotfix/fix-login-bug`. A task whose `branch_prefix` is empty (including
+task's id and slugified title -- `hotfix/` + `Fix Login Bug` (task 42) gives
+`hotfix/42-fix-login-bug`. The id keeps the branch unique when titles repeat;
+a title with no letter or digit leaves `task-42`. A task whose `branch_prefix` is empty (including
 every task created before the field existed) falls back to the project's
 `branch_template`.
 
@@ -409,11 +438,11 @@ every task created before the field existed) falls back to the project's
 `iter session new <project>/<task>`:
 1. If the project has `github: true` and `auto_branch: true` (and
    `--no-branch` wasn't passed), creates a new git worktree at
-   `<base_path>/.iter-worktrees/<task-slug>` on a new branch named
-   `<the task's branch_prefix><task-slug>` (override the whole name with
+   `<base_path>/.iter-worktrees/<task-slug>` (`<id>-<title slug>`) on a new
+   branch named `<the task's branch_prefix><task-slug>` (override the whole name with
    `-b/--branch`).
 2. If the project has `tmux: true`, creates a tmux session named
-   `<project>/<task>`, `cd`'d into that worktree (or the project's
+   `<project>/<id> <title>` (`web/42 login`), `cd`'d into that worktree (or the project's
    `base_path` if there's no worktree), installs three global tmux hooks
    (idempotent, installed once) -- `client-session-changed`,
    `client-detached`, `session-closed` -- and attaches you to it (switching
@@ -730,8 +759,8 @@ source <(COMPLETE=zsh iter)
 ```
 
 gets you tab-completion on project names (`project edit/delete/info`,
-`task new`, `task pull`/`task push`) and `<project>/<task>` pairs
-(everywhere a task is expected).
+`task new`, `task pull`/`task push`) and tasks (everywhere a task is
+expected): `<project>/<title>`, or the id for a repeated title.
 
 ## Building
 

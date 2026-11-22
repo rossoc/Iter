@@ -1,6 +1,6 @@
 # `iter serve`: the web server
 
-A local topcoat server (`src/web/`), bound to loopback only, showing the same database the CLI uses.
+A local topcoat server (`crates/iter-web/src/`), bound to loopback only, showing the same database the CLI uses.
 
 ## Requests and the database
 
