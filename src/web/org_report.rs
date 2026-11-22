@@ -13,7 +13,7 @@ use super::url::{page_url, project_url, task_url};
 use crate::db::Db;
 use crate::models::Project;
 use crate::reporting::{DateRange, ProjectReport, TaskReport, Total, fmt_date, worklog_text};
-use crate::utils::report::{parse_day, project_reports, total_minutes};
+use crate::reporting::{parse_day, project_reports, total_minutes};
 use chrono::{Days, NaiveDate, NaiveDateTime};
 use topcoat::{
     Result,

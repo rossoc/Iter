@@ -18,7 +18,7 @@ use super::url::{board_day_url, board_schedule_url, board_url, with_side};
 use super::{Id, now};
 use crate::db::Table;
 use crate::reporting::fmt_date;
-use crate::utils::report::parse_day;
+use crate::reporting::parse_day;
 use chrono::{NaiveDate, NaiveDateTime, Timelike};
 use topcoat::{
     Result,

@@ -22,12 +22,14 @@ pub enum Format {
 }
 
 /// What a text report says where a session table would otherwise go.
+mod gather;
 mod merge;
 mod render;
 #[cfg(test)]
 mod tests;
 mod worklog;
 
+pub use gather::*;
 pub use merge::*;
 #[cfg(test)]
 use render::message_bullets;

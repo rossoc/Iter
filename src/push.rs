@@ -9,8 +9,8 @@ use crate::models::{Organization, Project, Push, Task, TaskStatus};
 #[cfg(any(feature = "web", test))]
 use crate::platform::PlatformItem;
 use crate::platform::TimePlatform;
+use crate::reporting::project_reports;
 use crate::reporting::{DateRange, Worklog, WorklogEntry, fmt_date, worklog_line};
-use crate::utils::report::project_reports;
 use chrono::{NaiveDate, NaiveDateTime};
 use sha1::{Digest, Sha1};
 use std::fmt::Write;

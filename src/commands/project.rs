@@ -10,10 +10,10 @@ use crate::editor::edited;
 use crate::error::Result;
 use crate::models::{Board, Named, Organization, Project};
 use crate::reporting::{Header, ProjectInfo, print_report};
+use crate::reporting::{task_reports, total_minutes};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::crud::update;
 use crate::utils::output::list_names;
-use crate::utils::report::{resolve_range, task_reports, total_minutes};
 use crate::utils::resolve::resolve_project_or_current;
 use crate::utils::workspace::teardown_session_config;
 use crate::{git, scaffold};
@@ -215,7 +215,7 @@ fn project_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> 
     let project = resolve_project_or_current(db, name)?;
     let project_id = project.id();
     let now = app.now;
-    let range = resolve_range(opts, now)?;
+    let range = opts.range(now)?;
 
     // the union of every task's sessions, so two tasks worked in parallel are not double-counted
     let (tasks, sessions) = task_reports(db, project_id, range, now)?;

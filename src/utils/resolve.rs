@@ -22,7 +22,7 @@ pub(crate) fn resolve_task(db: &Db, text: &str) -> Result<(Project, Task)> {
                 kind: "task",
                 name: text.to_string(),
             })?;
-            (follow(db, task.project_id, "project", "task")?, task)
+            (db.require(task.project_id, "project", "task")?, task)
         }
         TaskRef::Title { project, title } => {
             let project = db.resolve::<Project>(&project)?;
@@ -46,11 +46,6 @@ fn task_in(db: &Db, project: &Project, id: i64) -> Result<Option<Task>> {
     Ok(db
         .get::<Task>(id)?
         .filter(|task| task.project_id == project.id()))
-}
-
-/// The row `id` points at, or the error saying `what` the `of` named is gone.
-fn follow<T: Table>(db: &Db, id: i64, what: &'static str, of: &'static str) -> Result<T> {
-    db.get::<T>(id)?.ok_or(IterError::Orphan { what, of })
 }
 
 /// The task an agent iter started works on (its id), set on the agent's process.
@@ -99,17 +94,21 @@ pub(crate) fn current_task_at(
     if let Some(cwd) = &here.cwd
         && let Some(task_id) = worktree_task(db, cwd)?
     {
-        let task: Task = follow(db, task_id, "task", "session")?;
-        let project = follow(db, task.project_id, "project", "task")?;
-        return Ok((project, task));
+        return task_of(db, task_id);
     }
     let name = tmux_session().ok_or(IterError::NoCurrentTask)?;
     let session_config = db
         .find_session_config_by_tmux_name(&name)?
         .ok_or_else(|| IterError::UntrackedTmuxSession(name.clone()))?;
-    let task: Task = follow(db, session_config.task_id, "task", "session")?;
-    let project = follow(db, task.project_id, "project", "task")?;
-    Ok((project, task))
+    task_of(db, session_config.task_id)
+}
+
+/// The task a session record names, with its project.
+fn task_of(db: &Db, id: i64) -> Result<(Project, Task)> {
+    db.task_with_project(id)?.ok_or(IterError::Orphan {
+        what: "task",
+        of: "session",
+    })
 }
 
 /// The task whose worktree is `dir` or holds it (the deepest, should worktrees nest).
@@ -202,7 +201,7 @@ pub(crate) fn resolve_group_or_current<G: ProjectGroup>(db: &Db, name: Option<&s
         project: project.name.clone(),
         relation: G::NOT_A_MEMBER,
     })?;
-    follow(db, id, G::KIND, "project")
+    db.require(id, G::KIND, "project")
 }
 
 /// A task of `project` by what `--task` or a path says: `#12`, `<title> #12`, a plain `12` (the id

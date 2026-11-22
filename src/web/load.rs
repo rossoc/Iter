@@ -73,8 +73,7 @@ pub fn project_of(db: &Db, id: i64) -> topcoat::Result<Project> {
 }
 
 pub fn task_with_project(db: &Db, id: i64) -> topcoat::Result<(Task, Project)> {
-    let task = db.get::<Task>(id)?.ok_or_not_found()?;
-    let project = project_of(db, task.project_id)?;
+    let (project, task) = db.task_with_project(id)?.ok_or_not_found()?;
     Ok((task, project))
 }
 

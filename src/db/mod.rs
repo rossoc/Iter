@@ -279,6 +279,11 @@ impl Db {
         self.find_one("WHERE id = ?1", params![id])
     }
 
+    /// The row `id` points at, or the error saying `what` the `of` named is gone.
+    pub fn require<T: Table>(&self, id: i64, what: &'static str, of: &'static str) -> Result<T> {
+        self.get(id)?.ok_or(IterError::Orphan { what, of })
+    }
+
     #[cfg_attr(not(feature = "web"), allow(dead_code))]
     pub fn list<T: Table>(&self) -> Result<Vec<T>> {
         self.find_all(T::LIST_TAIL, [])

@@ -65,7 +65,7 @@ impl EditForm for OrgForm {
         db.save_group(id, org, &self.projects)?;
         // the API key is kept under the name: it moves with a rename
         if let Some(old) = old {
-            crate::secret::rename_for(db, id, &old.name)?;
+            crate::secret::rename_for(&old.name, &org.name)?;
         }
         Ok(())
     }

@@ -4,6 +4,5 @@
 pub mod clock;
 pub mod crud;
 pub mod output;
-pub mod report;
 pub mod resolve;
 pub mod workspace;

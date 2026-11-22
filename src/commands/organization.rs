@@ -12,10 +12,10 @@ use crate::platform::JsonWebhook;
 use crate::process::run_status;
 use crate::push::{self, Target};
 use crate::reporting::{Header, OrganizationInfo, print_report};
+use crate::reporting::{project_reports, total_minutes};
 use crate::secret::{self, KeyStore, Keychain, Secret};
 use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
-use crate::utils::report::{project_reports, resolve_range, total_minutes};
 use crate::utils::resolve::resolve_group_or_current;
 use std::io::IsTerminal;
 
@@ -28,7 +28,10 @@ impl Run for OrganizationCommand {
                 let (id, old) = (existing.id(), existing.name.clone());
                 update_group(&app.db, existing)?;
                 // an edit that was cancelled or failed has the same name
-                secret::rename_for(&app.db, id, &old)
+                match app.db.get::<Organization>(id)? {
+                    Some(now) => secret::rename_for(&old, &now.name),
+                    None => Ok(()),
+                }
             }
             Self::Delete { name } => {
                 let existing = organization(app, name)?;
@@ -75,7 +78,7 @@ fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result
     let organization: Organization = resolve_group_or_current(db, name)?;
     let organization_id = organization.id();
     let now = app.now;
-    let range = resolve_range(opts, now)?;
+    let range = opts.range(now)?;
 
     let (projects, all_sessions) = project_reports(
         db,
@@ -177,7 +180,7 @@ fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) 
             organization.name
         )));
     }
-    let range = resolve_range(opts, app.now)?;
+    let range = opts.range(app.now)?;
     let mut target = Target::of(&organization);
     if let Some(value) = flags.organization {
         target.organization = value.to_string();

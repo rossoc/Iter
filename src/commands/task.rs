@@ -14,13 +14,13 @@ use crate::git;
 use crate::github::{self, GhCli, IssueTracker};
 use crate::models::require_name;
 use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
+use crate::reporting::total_minutes;
 use crate::reporting::{
     Header, TaskInfo, WeekdayReport, print_report, session_rows, weekday_averages,
 };
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::close_open_session;
 use crate::utils::output::print_yaml;
-use crate::utils::report::{resolve_range, total_minutes};
 use crate::utils::resolve::{
     require_git_repo, require_github, resolve_project_or_current, resolve_task_or_current,
 };
@@ -246,7 +246,7 @@ fn task_info(app: &App, task_ref: Option<&str>, opts: &ReportOpts) -> Result<()>
     let db = &app.db;
     let (project, task) = resolve_task_or_current(db, task_ref)?;
     let now = app.now;
-    let range = resolve_range(opts, now)?;
+    let range = opts.range(now)?;
     let sessions = db.sessions_for_task_in_range(task.id(), range.from, range.to)?;
     let total_minutes = total_minutes(&sessions, now);
 

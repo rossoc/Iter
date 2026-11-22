@@ -13,8 +13,8 @@ use crate::error::{IterError, Result as IterResult};
 use crate::models::Organization;
 use crate::platform::PlatformItem;
 use crate::push::{Item, Target};
+use crate::reporting::parse_day;
 use crate::reporting::{DateRange, fmt_date};
-use crate::utils::report::parse_day;
 use chrono::NaiveDateTime;
 use topcoat::{
     Result,

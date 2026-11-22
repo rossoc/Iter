@@ -94,7 +94,7 @@ impl Serialize for DateRange {
     }
 }
 
-/// The date format every report prints and `utils::report::parse_day` reads back.
+/// The date format every report prints and `reporting::parse_day` reads back.
 pub fn fmt_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }

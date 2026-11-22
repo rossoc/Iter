@@ -63,13 +63,10 @@ pub fn rename_key(store: &dyn KeyStore, old: &str, new: &str) -> Result<()> {
     Ok(())
 }
 
-/// After organization `id` was saved: moves the key kept under its former name `old` to its
-/// current one (a no-op when the name is unchanged, or the organization is gone).
-pub fn rename_for(db: &crate::db::Db, id: i64, old: &str) -> Result<()> {
-    if let Some(now) = db.get::<crate::models::Organization>(id)? {
-        rename_key(&Keychain, old, &now.name)?;
-    }
-    Ok(())
+/// After an organization was renamed: moves the key kept under its former name `old` to `new`
+/// (a no-op when the name is unchanged).
+pub fn rename_for(old: &str, new: &str) -> Result<()> {
+    rename_key(&Keychain, old, new)
 }
 
 /// The key to use for `organization`: `ITER_PLATFORM_KEY` when set, else the

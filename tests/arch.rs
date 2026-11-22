@@ -603,7 +603,6 @@ fn the_database_does_not_open_itself_from_the_config() {
 
 /// Step 3: the secret store is told the old and the new name; it does not read a row.
 #[test]
-#[ignore = "isolation: round I3"]
 fn secret_does_not_read_the_database() {
     let found = imported_by(&sources(), "secret");
     assert!(!found.contains("db"), "secret imports db");
@@ -613,7 +612,6 @@ fn secret_does_not_read_the_database() {
 /// Step 3: what the interface asked `db` through a SQL filter, it asks through the typed
 /// accessors of the design; the filter-taking one is not public.
 #[test]
-#[ignore = "isolation: round I3"]
 fn the_interface_asks_the_database_by_name_not_by_filter() {
     let sources = sources();
     let interface: Vec<_> = sources

@@ -79,13 +79,19 @@ impl Db {
     /// there are in all.
     #[cfg(feature = "web")]
     pub fn loose_projects(&self, limit: usize) -> Result<(Vec<Project>, usize)> {
-        self.first_by_name("WHERE organization_id IS NULL", limit)
+        self.first_where("WHERE organization_id IS NULL", limit)
     }
 
-    /// First `limit` rows of `T` matching `filter` (a `WHERE` clause or empty) by name, and the
-    /// total match count: a window computed before the `LIMIT`.
+    /// The first `limit` rows of `T` by name, and how many there are in all.
     #[cfg(feature = "web")]
-    pub fn first_by_name<T: Table>(&self, filter: &str, limit: usize) -> Result<(Vec<T>, usize)> {
+    pub fn first<T: Table>(&self, limit: usize) -> Result<(Vec<T>, usize)> {
+        self.first_where("", limit)
+    }
+
+    /// [`first`](Self::first) restricted by `filter` (a `WHERE` clause or empty); the total is a
+    /// window computed before the `LIMIT`. SQL: for the core only.
+    #[cfg(feature = "web")]
+    fn first_where<T: Table>(&self, filter: &str, limit: usize) -> Result<(Vec<T>, usize)> {
         let sql = format!(
             "SELECT id, {}, COUNT(*) OVER () FROM {} {filter} ORDER BY name LIMIT ?1",
             T::COLUMNS.join(", "),

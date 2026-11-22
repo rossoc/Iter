@@ -3,6 +3,15 @@
 use super::*;
 
 impl Db {
+    /// Task `id` with its project, or `None` when there is no such task.
+    pub fn task_with_project(&self, id: i64) -> Result<Option<(Project, Task)>> {
+        let Some(task) = self.get::<Task>(id)? else {
+            return Ok(None);
+        };
+        let project = self.require(task.project_id, "project", "task")?;
+        Ok(Some((project, task)))
+    }
+
     /// Points `task` (row `id`, in project `from`) at project `to`; nothing is written. A task
     /// with a session cannot move: its worktree and branch live in `from`'s repo.
     pub fn move_task(&self, id: i64, task: &mut Task, from: &Project, to: &Project) -> Result<()> {

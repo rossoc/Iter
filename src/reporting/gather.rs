@@ -1,47 +1,52 @@
 //! Gathering the numbers an `info` report is made of: the days covered and the per-task and
-//! per-project breakdowns. Kept apart from [`crate::reporting`], which renders and knows nothing of
-//! the database or the CLI.
+//! per-project breakdowns, free of any command line.
 
-use crate::args::ReportOpts;
+use super::{
+    DateRange, ProjectReport, TaskReport, Total, merged_total_minutes, non_empty, session_rows,
+};
 use crate::config::config;
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
 use crate::models::{Project, Session, Task};
-use crate::reporting::{
-    DateRange, ProjectReport, TaskReport, merged_total_minutes, non_empty, session_rows,
-};
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
 
 /// Total minutes across `sessions`, with the pause threshold from the config; `reporting`'s own
 /// [`merged_total_minutes`] takes an explicit gap so it is testable.
-pub(crate) fn total_minutes(sessions: &[Session], now: NaiveDateTime) -> i64 {
+pub fn total_minutes(sessions: &[Session], now: NaiveDateTime) -> i64 {
     merged_total_minutes(sessions, now, config().pause_gap_minutes)
 }
 
-pub(crate) fn parse_day(value: &str) -> Result<NaiveDate> {
+pub fn parse_day(value: &str) -> Result<NaiveDate> {
     NaiveDate::parse_from_str(value, "%Y-%m-%d")
         .map_err(|_| IterError::InvalidDate(value.to_string()))
 }
 
-/// The days an `info` report covers: `--date` (or nothing) is one day; `--from`/`--to` an interval
-/// (`--to` defaults to today, `--from` to unbounded). clap rejects mixing them.
-pub(crate) fn resolve_range(opts: &ReportOpts, now: chrono::NaiveDateTime) -> Result<DateRange> {
-    let day = |value: &Option<String>| value.as_deref().map(parse_day).transpose();
-    if opts.from.is_none() && opts.to.is_none() {
-        return Ok(DateRange::day(day(&opts.date)?.unwrap_or(now.date())));
+impl DateRange {
+    /// The days an `info` report covers: `date` (or nothing) is one day; `from`/`to` an interval
+    /// (`to` defaults to `today`, `from` to unbounded). The caller keeps `date` apart from the rest.
+    pub fn resolve(
+        date: Option<&str>,
+        from: Option<&str>,
+        to: Option<&str>,
+        today: NaiveDate,
+    ) -> Result<DateRange> {
+        let day = |value: Option<&str>| value.map(parse_day).transpose();
+        if from.is_none() && to.is_none() {
+            return Ok(DateRange::day(day(date)?.unwrap_or(today)));
+        }
+        let from = day(from)?;
+        let to = day(to)?.unwrap_or(today);
+        if let Some(from) = from
+            && from > to
+        {
+            return Err(IterError::InvalidDateRange {
+                from: from.to_string(),
+                to: to.to_string(),
+            });
+        }
+        Ok(DateRange { from, to })
     }
-    let from = day(&opts.from)?;
-    let to = day(&opts.to)?.unwrap_or(now.date());
-    if let Some(from) = from
-        && from > to
-    {
-        return Err(IterError::InvalidDateRange {
-            from: from.to_string(),
-            to: to.to_string(),
-        });
-    }
-    Ok(DateRange { from, to })
 }
 
 /// One `TaskReport` per task of `tasks` with sessions in `by_task` (consumed), plus the union of
@@ -81,7 +86,7 @@ fn group_by_task(sessions: Vec<Session>) -> HashMap<i64, Vec<Session>> {
 }
 
 /// One `TaskReport` per task of `project_id` with a session in `range`; two queries in all.
-pub(crate) fn task_reports(
+pub fn task_reports(
     db: &Db,
     project_id: i64,
     range: DateRange,
@@ -100,7 +105,7 @@ pub(crate) fn task_reports(
 
 /// [`task_reports`] one level up: one `ProjectReport` per project with a session in `range`, plus
 /// the union of all sessions; one sessions query and one tasks query in all.
-pub(crate) fn project_reports(
+pub fn project_reports(
     db: &Db,
     projects: &[Project],
     range: DateRange,
@@ -125,7 +130,7 @@ pub(crate) fn project_reports(
         reports.push(ProjectReport {
             id: project.id(),
             name: project.name.clone(),
-            total: crate::reporting::Total::new(total_minutes(&sessions, now)),
+            total: Total::new(total_minutes(&sessions, now)),
             description: non_empty(&project.description),
             tasks,
         });
@@ -137,8 +142,7 @@ pub(crate) fn project_reports(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixtures;
-    use crate::fixtures::dt;
+    use crate::fixtures::{self, dt};
     use crate::models::TaskStatus;
 
     /// The per-project loop, as the reference for the batch.
@@ -158,7 +162,7 @@ mod tests {
             reports.push(ProjectReport {
                 id: project.id(),
                 name: project.name.clone(),
-                total: crate::reporting::Total::new(total_minutes(&sessions, now)),
+                total: Total::new(total_minutes(&sessions, now)),
                 description: non_empty(&project.description),
                 tasks,
             });

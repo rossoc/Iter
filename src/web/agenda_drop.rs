@@ -4,7 +4,7 @@ use super::Id;
 use super::agenda_pick::links;
 use super::drop::{Drop, back_or, drop_on};
 use crate::models::{Duration, Task, parse_start_time};
-use crate::utils::report::parse_day;
+use crate::reporting::parse_day;
 use topcoat::{
     Result,
     context::Cx,

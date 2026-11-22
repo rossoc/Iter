@@ -54,6 +54,21 @@ pub struct ReportOpts {
     pub format: Format,
 }
 
+impl ReportOpts {
+    /// The days the options cover, `now` being the end of an open range.
+    pub fn range(
+        &self,
+        now: chrono::NaiveDateTime,
+    ) -> crate::error::Result<crate::reporting::DateRange> {
+        crate::reporting::DateRange::resolve(
+            self.date.as_deref(),
+            self.from.as_deref(),
+            self.to.as_deref(),
+            now.date(),
+        )
+    }
+}
+
 /// A project/task/session time tracker, with tmux + GitHub integration.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

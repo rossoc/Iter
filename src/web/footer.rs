@@ -33,7 +33,7 @@ pub fn load(db: &Db) -> crate::error::Result<FooterData> {
             projects_total: total,
         })
         .collect();
-    let (boards, boards_total) = db.first_by_name::<Board>("", FOOTER_LIMIT)?;
+    let (boards, boards_total) = db.first::<Board>(FOOTER_LIMIT)?;
     let (loose, loose_total) = db.loose_projects(FOOTER_LIMIT)?;
     Ok(FooterData {
         orgs,
