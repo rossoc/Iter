@@ -1,4 +1,4 @@
-//! The palette's search (`ui/search.rs`): a query parsed and ranked against
+//! The palette search (fed by the web's `search_index.rs`): a query parsed and ranked against
 //! the pages of the app. Pure, no markup, no database.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

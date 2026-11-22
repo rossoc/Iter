@@ -138,22 +138,24 @@ impl TaskQuery {
         })
     }
 
-    /// Tags are read (one query) only when the query asks about them.
-    fn keep(&self, tags_of: TagsOf, items: &[(&Task, &str)]) -> Result<Vec<bool>> {
-        let tags = if self.needs_tags() {
-            let ids: Vec<i64> = items.iter().filter_map(|(t, _)| t.id).collect();
-            tags_of(&ids)?
-        } else {
-            Default::default()
+    /// Keeps the rows whose task and project name match; tags are read (one query) only when the
+    /// query asks about them.
+    fn filter<T>(
+        &self,
+        tags_of: TagsOf,
+        rows: Vec<T>,
+        view: impl Fn(&T) -> (&Task, &str),
+    ) -> Result<Vec<T>> {
+        let tags = match self.needs_tags() {
+            true => tags_of(&rows.iter().filter_map(|r| view(r).0.id).collect::<Vec<_>>())?,
+            false => HashMap::new(),
         };
-        Ok(items
-            .iter()
-            .map(|(task, project)| {
-                let mine = task
-                    .id
-                    .and_then(|id| tags.get(&id))
-                    .map_or(&[][..], Vec::as_slice);
-                self.matches(task, project, mine)
+        Ok(rows
+            .into_iter()
+            .filter(|row| {
+                let (task, project) = view(row);
+                let mine = task.id.and_then(|id| tags.get(&id));
+                self.matches(task, project, mine.map_or(&[], Vec::as_slice))
             })
             .collect())
     }
@@ -164,13 +166,9 @@ impl TaskQuery {
         tasks: Vec<Task>,
         project: &str,
     ) -> Result<Vec<Task>> {
-        let items: Vec<(&Task, &str)> = tasks.iter().map(|t| (t, project)).collect();
-        let keep = self.keep(tags_of, &items)?;
-        Ok(tasks
-            .into_iter()
-            .zip(keep)
-            .filter_map(|(t, keep)| keep.then_some(t))
-            .collect())
+        let rows = tasks.into_iter().map(|t| (project, t)).collect();
+        let kept = self.filter(tags_of, rows, |(p, t)| (t, p))?;
+        Ok(kept.into_iter().map(|(_, t)| t).collect())
     }
 
     pub fn filter_named(
@@ -178,13 +176,7 @@ impl TaskQuery {
         tags_of: TagsOf,
         rows: Vec<(String, Task)>,
     ) -> Result<Vec<(String, Task)>> {
-        let items: Vec<(&Task, &str)> = rows.iter().map(|(p, t)| (t, p.as_str())).collect();
-        let keep = self.keep(tags_of, &items)?;
-        Ok(rows
-            .into_iter()
-            .zip(keep)
-            .filter_map(|(row, keep)| keep.then_some(row))
-            .collect())
+        self.filter(tags_of, rows, |(p, t)| (t, p))
     }
 }
 
