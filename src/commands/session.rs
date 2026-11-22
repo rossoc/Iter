@@ -7,12 +7,10 @@ use crate::commands::Run;
 use crate::commands::ingest;
 use crate::db::Table;
 use crate::error::{IterError, Result};
+use crate::locate::{self, current_task, require_git_repo, task_or_current};
 use crate::models::{Duration, Project, SessionConfig, Task, TaskStatus};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::{Closed, close_open_session, start_session};
-use crate::utils::resolve::{
-    current_task, require_git_repo, resolve_task, resolve_task_or_current,
-};
 use crate::utils::workspace::{self, unwind_session_setup};
 use crate::wiki::ingest_job::Trigger;
 
@@ -45,7 +43,7 @@ fn session_new(
     no_branch: bool,
 ) -> Result<()> {
     let db = &app.db;
-    let (project, mut task) = resolve_task(db, task_ref)?;
+    let (project, mut task) = locate::task(db, &task_ref.parse()?)?;
     let task_id = task.id();
 
     if let Some(existing) = db.find_session_config_by_task(task_id)? {
@@ -205,7 +203,7 @@ fn tmux_name_part(name: &str) -> String {
 
 fn session_start(app: &App, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let (project, task) = resolve_task_or_current(db, task_ref)?;
+    let (project, task) = task_or_current(db, task_ref)?;
     start_session(db, task.id())?;
     println!("started a session for '{}'", task.label(&project));
     Ok(())
@@ -213,7 +211,7 @@ fn session_start(app: &App, task_ref: Option<&str>) -> Result<()> {
 
 fn session_stop(app: &App, task_ref: Option<&str>, message: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let (project, task) = resolve_task_or_current(db, task_ref)?;
+    let (project, task) = task_or_current(db, task_ref)?;
     let what = match close_open_session(db, task.id(), message)? {
         Closed::Discarded => "discarded the session (under a minute) for",
         Closed::Kept | Closed::Nothing => "stopped the session for",

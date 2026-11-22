@@ -5,8 +5,8 @@ use crate::args::HarnessOpts;
 use crate::db::Table;
 use crate::error::AgentError;
 use crate::error::{IterError, Result};
+use crate::locate::{self, project_or_current};
 use crate::models::{Project, Task};
-use crate::utils::resolve::{resolve_project_or_current, resolve_task};
 use crate::wiki::ingest;
 use crate::wiki::ingest_job::{
     Auto, HarnessChoice, JobText, Target, Trigger, auto as wiki_auto, busy, changes, run_agent,
@@ -28,12 +28,12 @@ fn project_of(
     task: Option<&str>,
 ) -> Result<(Project, Option<Task>)> {
     if let Some(reference) = task {
-        let (project, task) = resolve_task(&app.db, reference)?;
+        let (project, task) = locate::task(&app.db, &reference.parse()?)?;
         return Ok((project, Some(task)));
     }
     let project = match project {
         Some(name) => app.db.resolve::<Project>(name)?,
-        None => resolve_project_or_current(&app.db, None)?,
+        None => project_or_current(&app.db, None)?,
     };
     Ok((project, None))
 }

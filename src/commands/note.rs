@@ -6,11 +6,11 @@ use crate::app::App;
 use crate::args::{DocCommand, NoteCommand, NotesScope, TaskScope};
 use crate::commands::Run;
 use crate::error::{IterError, Result};
-use crate::models::{Organization, TaskId, TaskRef};
+use crate::locate::project_or_current;
+use crate::models::{Organization, TaskRef};
 use crate::note_ref::{self, Address, Doc};
 use crate::notes;
 use crate::text::{opens_front, split_front};
-use crate::utils::resolve::resolve_project_or_current;
 use std::io::{IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -19,7 +19,7 @@ fn dir(app: &App, scope: &NotesScope) -> Result<PathBuf> {
     let found = match &scope.org {
         Some(name) => notes::org_dir(&db.resolve::<Organization>(name)?),
         None => {
-            let project = resolve_project_or_current(db, scope.project.as_deref())?;
+            let project = project_or_current(db, scope.project.as_deref())?;
             notes::project_dir(&project, &db.org_of(&project)?)
         }
     };
@@ -109,7 +109,7 @@ fn in_task(app: &App, doc: Doc, scope: &TaskScope, action: &DocCommand) -> Resul
             }
             // `<project>/<task> #<id>`: the id keeps the title unambiguous
             Ok(TaskRef::Label(label)) => {
-                address.task = Some(format!("{} {}", label.title, TaskId(label.id)));
+                address.task = Some(format!("{} #{}", label.title, label.id));
                 address.owners = vec![label.project];
             }
             // an id

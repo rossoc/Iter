@@ -8,13 +8,13 @@ use crate::db::Db;
 use crate::db::Table;
 use crate::editor::edited;
 use crate::error::Result;
+use crate::locate::project_or_current;
 use crate::models::{Board, Named, Organization, Project};
 use crate::reporting::{Header, ProjectInfo, print_report};
 use crate::reporting::{task_reports, total_minutes};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::crud::update;
 use crate::utils::output::list_names;
-use crate::utils::resolve::resolve_project_or_current;
 use crate::utils::workspace::teardown_session_config;
 use crate::{git, scaffold};
 
@@ -173,7 +173,7 @@ fn project_edit(
     no_board: bool,
 ) -> Result<()> {
     let db = &app.db;
-    let stored = resolve_project_or_current(db, name)?;
+    let stored = project_or_current(db, name)?;
     let mut existing = stored.clone();
     // `--organization` moves the project; without it membership is carried through
     if let Some(name) = organization {
@@ -189,7 +189,7 @@ fn project_edit(
 
 fn project_delete(app: &App, mux: &dyn Multiplexer, name: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let project = resolve_project_or_current(db, name)?;
+    let project = project_or_current(db, name)?;
     let project_id = project.id();
 
     let session_configs = db.session_configs_for_project(project_id)?;
@@ -212,7 +212,7 @@ fn project_delete(app: &App, mux: &dyn Multiplexer, name: Option<&str>) -> Resul
 
 fn project_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = &app.db;
-    let project = resolve_project_or_current(db, name)?;
+    let project = project_or_current(db, name)?;
     let project_id = project.id();
     let now = app.now;
     let range = opts.range(now)?;

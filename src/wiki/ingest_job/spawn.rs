@@ -23,7 +23,7 @@ pub fn run_agent(
         ..Invocation::default()
     });
     let env = [(
-        crate::utils::resolve::ENV_PROJECT,
+        crate::locate::ENV_PROJECT,
         crate::models::Table::id(&target.project).to_string(),
     )];
     let ok = exec::run_logged(program, &args, &target.notes_dir, &env, prompt, log)?.success();

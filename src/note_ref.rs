@@ -12,9 +12,9 @@
 use crate::agent::taskdir;
 use crate::db::Db;
 use crate::error::{IterError, Result};
+use crate::locate::{self, current_project, current_task};
 use crate::models::{Organization, Project, Task};
 use crate::notes;
-use crate::utils::resolve::{current_project, current_task, resolve_task};
 use crate::wiki::ontology::{LevelKind, NS, Ontology};
 use chrono::NaiveDate;
 use std::path::PathBuf;
@@ -200,7 +200,7 @@ fn task_of(db: &Db, owners: &[String], task: Option<&str>) -> Result<(Project, T
         return current_task(db);
     };
     let project = match owners {
-        [] if task.bytes().all(|b| b.is_ascii_digit()) => return resolve_task(db, task),
+        [] if task.bytes().all(|b| b.is_ascii_digit()) => return locate::task(db, &task.parse()?),
         [] => current_project(db)?,
         [one] => db.resolve::<Project>(one)?,
         [org, project] => project_in(db, project, Some(org))?,
@@ -208,7 +208,7 @@ fn task_of(db: &Db, owners: &[String], task: Option<&str>) -> Result<(Project, T
     };
     match task.parse::<i64>() {
         Ok(_) => {
-            let (p, t) = resolve_task(db, task)?;
+            let (p, t) = locate::task(db, &task.parse()?)?;
             match p.id == project.id {
                 true => Ok((p, t)),
                 false => Err(IterError::CommandFailed(format!(
@@ -218,7 +218,7 @@ fn task_of(db: &Db, owners: &[String], task: Option<&str>) -> Result<(Project, T
             }
         }
         Err(_) => {
-            let t = crate::utils::resolve::find_task_or_err(db, &project, task)?;
+            let t = locate::task_in(db, &project, task)?;
             Ok((project, t))
         }
     }

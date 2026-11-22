@@ -7,6 +7,7 @@ use crate::config::config;
 use crate::db::Table;
 use crate::error::{IterError, Result};
 use crate::github::GhCli;
+use crate::locate::group_or_current;
 use crate::models::Organization;
 use crate::platform::JsonWebhook;
 use crate::process::run_status;
@@ -16,7 +17,6 @@ use crate::reporting::{project_reports, total_minutes};
 use crate::secret::{self, KeyStore, Keychain, Secret};
 use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
-use crate::utils::resolve::resolve_group_or_current;
 use std::io::IsTerminal;
 
 impl Run for OrganizationCommand {
@@ -68,14 +68,14 @@ impl Run for OrganizationCommand {
 
 /// An explicit organization name, else the one the tmux session's project is in.
 fn organization(app: &App, name: &Option<String>) -> Result<Organization> {
-    resolve_group_or_current(&app.db, name.as_deref())
+    group_or_current(&app.db, name.as_deref())
 }
 
 /// The organization's report for a period: every project worked on, its tasks and the sessions behind them;
 /// projects and tasks without a session in the period are left out.
 fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = &app.db;
-    let organization: Organization = resolve_group_or_current(db, name)?;
+    let organization: Organization = group_or_current(db, name)?;
     let organization_id = organization.id();
     let now = app.now;
     let range = opts.range(now)?;
@@ -105,7 +105,7 @@ fn organization_info(app: &App, name: Option<&str>, opts: &ReportOpts) -> Result
 /// Sets the organization's API key from the first line of stdin (prompting
 /// without echo on a terminal), or removes it. The key is never an argument.
 fn org_key(app: &App, name: Option<&str>, clear: bool) -> Result<()> {
-    let organization = resolve_group_or_current::<Organization>(&app.db, name)?;
+    let organization = group_or_current::<Organization>(&app.db, name)?;
     if clear {
         Keychain.delete(&organization.name)?;
         println!("Cleared the API key of '{}'.", organization.name);
@@ -173,7 +173,7 @@ fn show(prepared: &push::Prepared) {
 
 fn org_push(app: &App, name: Option<&str>, opts: &ReportOpts, flags: PushFlags) -> Result<()> {
     let db = &app.db;
-    let organization: Organization = resolve_group_or_current(db, name)?;
+    let organization: Organization = group_or_current(db, name)?;
     if organization.platform_url.trim().is_empty() {
         return Err(IterError::CommandFailed(format!(
             "organization '{}' has no time platform URL: set platform_url with `iter org edit`",

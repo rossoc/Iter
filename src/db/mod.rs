@@ -3,7 +3,7 @@ use crate::error::{IterError, Result};
 use crate::models::Organization;
 use crate::models::{
     Board, Card, IMPORTANT_TAG, Named, Priority, Project, ProjectGroup, Push, Session,
-    SessionConfig, Tag, Task, TaskLabel, TaskStatus, URGENT_TAG, split_label,
+    SessionConfig, Tag, Task, TaskLabel, TaskStatus, URGENT_TAG,
 };
 use chrono::NaiveDate;
 use rusqlite::types::Value;

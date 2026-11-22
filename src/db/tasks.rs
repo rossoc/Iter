@@ -196,7 +196,7 @@ impl Db {
     }
 
     /// The tasks of a project titled `title` (titles may repeat), by id.
-    pub fn find_tasks(&self, project_id: i64, title: &str) -> Result<Vec<Task>> {
+    pub fn tasks_titled(&self, project_id: i64, title: &str) -> Result<Vec<Task>> {
         self.find_all(
             "WHERE project_id = ?1 AND name = ?2 ORDER BY id",
             params![project_id, title],
@@ -243,29 +243,6 @@ impl Db {
         Ok(names)
     }
 
-    /// What completion offers for a task, in `<project>/<title>` order, optionally narrowed by
-    /// project and/or statuses (empty `statuses` = all): `<project>/<title>` where that names it
-    /// alone, else its bare id (a repeated title, or one that reads like a `#<id>` label, would
-    /// resolve to the wrong task or to none). Two joins: this runs on every TAB.
-    pub fn task_refs(&self, project: Option<&str>, statuses: &[TaskStatus]) -> Result<Vec<String>> {
-        let mut titled: HashMap<(String, String), usize> = HashMap::new();
-        for label in self.task_labels(None, &[])? {
-            *titled.entry((label.project, label.title)).or_default() += 1;
-        }
-        Ok(self
-            .task_labels(project, statuses)?
-            .into_iter()
-            .map(|label| {
-                let alone = titled[&(label.project.clone(), label.title.clone())] == 1
-                    && split_label(&label.title).is_none();
-                match alone {
-                    true => format!("{}/{}", label.project, label.title),
-                    false => label.id.to_string(),
-                }
-            })
-            .collect())
-    }
-
     /// Every task as a [`TaskLabel`], by project, title and id, optionally narrowed by project
     /// and statuses (empty = all): what `iter task list` prints.
     pub fn task_labels(
@@ -273,8 +250,21 @@ impl Db {
         project: Option<&str>,
         statuses: &[TaskStatus],
     ) -> Result<Vec<TaskLabel>> {
+        let counted = self.task_labels_counted(project, statuses)?;
+        Ok(counted.into_iter().map(|(label, _)| label).collect())
+    }
+
+    /// [`task_labels`](Self::task_labels), each with how many tasks of its project share its title
+    /// (counted over all statuses): one query, since completion runs it on every TAB.
+    pub fn task_labels_counted(
+        &self,
+        project: Option<&str>,
+        statuses: &[TaskStatus],
+    ) -> Result<Vec<(TaskLabel, usize)>> {
         let mut sql = String::from(
-            "SELECT p.name, t.name, t.id FROM tasks t JOIN projects p ON p.id = t.project_id",
+            "SELECT p.name, t.name, t.id, (SELECT COUNT(*) FROM tasks s \
+             WHERE s.project_id = t.project_id AND s.name = t.name) \
+             FROM tasks t JOIN projects p ON p.id = t.project_id",
         );
         let mut clauses = Vec::new();
         if project.is_some() {
@@ -296,19 +286,12 @@ impl Db {
         values.extend(statuses.iter().map(|s| Value::Text(s.as_str().to_string())));
 
         self.query_all(&sql, params_from_iter(values), |row| {
-            Ok(TaskLabel {
+            let label = TaskLabel {
                 project: row.get(0)?,
                 title: row.get(1)?,
                 id: row.get(2)?,
-            })
-        })
-    }
-
-    /// The id of every task, sorted: what `task pull/push --task` completes (the project is not
-    /// known to the completer, so a title could name several).
-    pub fn task_names(&self) -> Result<Vec<String>> {
-        self.query_all("SELECT id FROM tasks ORDER BY id", [], |row| {
-            Ok(row.get::<_, i64>(0)?.to_string())
+            };
+            Ok((label, row.get::<_, i64>(3)? as usize))
         })
     }
 }

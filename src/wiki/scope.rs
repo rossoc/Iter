@@ -5,10 +5,10 @@ use super::graph::{Level, Wiki};
 use super::ontology::{LevelKind, Ontology};
 use crate::db::{Db, Table};
 use crate::error::{IterError, Result};
+use crate::locate::{self, current_project, current_task};
 use crate::models::{Organization, Project, Task};
 use crate::notes;
 use crate::text;
-use crate::utils::resolve::{current_project, current_task, resolve_task};
 use std::path::PathBuf;
 
 #[derive(Default, Debug)]
@@ -27,7 +27,7 @@ enum Asked {
 
 fn ask(db: &Db, spec: &Spec) -> Result<Asked> {
     if let Some(reference) = &spec.task {
-        let (project, task) = resolve_task(db, reference)?;
+        let (project, task) = locate::task(db, &reference.parse()?)?;
         let org = db.org_of(&project)?;
         return Ok(Asked::Task(project, task, org));
     }

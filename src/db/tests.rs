@@ -354,17 +354,15 @@ fn task_refs_narrows_by_project_and_status_set() {
     }
 
     assert_eq!(
-        db.task_refs(Some("alpha"), &[]).expect("refs"),
+        crate::completion::offered(&db, Some("alpha"), &[]).expect("refs"),
         vec!["alpha/finished", "alpha/queued", "alpha/wip one",]
     );
     assert_eq!(
-        db.task_refs(None, &[TaskStatus::Queue, TaskStatus::Wip])
-            .expect("refs"),
+        crate::completion::offered(&db, None, &[TaskStatus::Queue, TaskStatus::Wip]).expect("refs"),
         vec!["alpha/queued", "alpha/wip one", "beta/wip two",]
     );
     assert_eq!(
-        db.task_refs(Some("beta"), &[TaskStatus::Queue])
-            .expect("refs"),
+        crate::completion::offered(&db, Some("beta"), &[TaskStatus::Queue]).expect("refs"),
         Vec::<String>::new()
     );
 }
@@ -379,7 +377,7 @@ fn task_refs_pairs_every_task_with_its_project() {
     insert_task(&db, alpha, "another");
 
     assert_eq!(
-        db.task_refs(None, &[]).expect("task refs"),
+        crate::completion::offered(&db, None, &[]).expect("task refs"),
         vec!["alpha/another", "alpha/write docs", "beta/ship it",]
     );
 }
@@ -394,11 +392,11 @@ fn task_refs_can_narrow_to_one_status() {
     db.insert(&queued).expect("task inserts");
 
     assert_eq!(
-        db.task_refs(None, &[TaskStatus::Queue]).expect("task refs"),
+        crate::completion::offered(&db, None, &[TaskStatus::Queue]).expect("task refs"),
         vec!["proj/queued"]
     );
     assert_eq!(
-        db.task_refs(None, &[TaskStatus::Done]).expect("task refs"),
+        crate::completion::offered(&db, None, &[TaskStatus::Done]).expect("task refs"),
         Vec::<String>::new()
     );
 }
@@ -414,7 +412,7 @@ fn task_names_are_the_ids_of_every_task() {
     insert_task(&db, two, "shared");
     insert_task(&db, one, "alone");
 
-    let mut values = db.task_names().expect("task names");
+    let mut values = crate::completion::task_ids(&db).expect("task names");
     values.sort();
     assert_eq!(values, ["1", "2", "3"]);
 }
@@ -435,7 +433,7 @@ fn completion_offers_a_repeated_title_by_its_id() {
         insert_task(&db, project, title);
     }
     assert_eq!(
-        db.task_refs(None, &[]).expect("refs"),
+        crate::completion::offered(&db, None, &[]).expect("refs"),
         ["api/login", "1", "2", "web/logout"]
     );
 }
@@ -447,7 +445,10 @@ fn completion_offers_a_title_that_reads_like_a_label_by_its_id() {
     let web = insert_project(&db, "web");
     insert_task(&db, web, "fix #12");
     insert_task(&db, web, "plain");
-    assert_eq!(db.task_refs(None, &[]).expect("refs"), ["1", "web/plain"]);
+    assert_eq!(
+        crate::completion::offered(&db, None, &[]).expect("refs"),
+        ["1", "web/plain"]
+    );
 }
 
 #[test]
@@ -758,7 +759,7 @@ fn task_round_trips_and_is_found_by_project_and_name() {
     let task_id = insert_task(&db, project_id, "build it");
 
     let found = db
-        .find_tasks(project_id, "build it")
+        .tasks_titled(project_id, "build it")
         .expect("lookup succeeds")
         .pop()
         .expect("the task just inserted exists");
@@ -1579,7 +1580,7 @@ fn task_schedule_round_trips_and_migrates_onto_an_old_tasks_table() {
     task.duration = Some(Duration(90));
     db.insert(&task).expect("insert");
     let found = db
-        .find_tasks(project_id, "scheduled")
+        .tasks_titled(project_id, "scheduled")
         .expect("lookup")
         .pop()
         .expect("exists");

@@ -29,7 +29,6 @@ pub use tag::{IMPORTANT_TAG, Priority, Tag, URGENT_TAG};
 #[cfg(feature = "web")]
 pub use task::parse_start_time;
 pub use task::{Duration, START_TIME_FMT, Task, TaskEdit, TaskStatus, end_text};
-pub(crate) use task_ref::split_label;
 pub use task_ref::{TaskId, TaskLabel, TaskRef};
 pub use traits::{Editable, MarkdownBody};
 pub(crate) use traits::{Named, ProjectGroup, Table, read_wrapped, require_name, require_no_comma};

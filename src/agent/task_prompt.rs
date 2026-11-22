@@ -7,12 +7,12 @@ use crate::app::App;
 use crate::db::Table;
 use crate::error::AgentError;
 use crate::error::Result;
+use crate::locate::task_or_current;
 use crate::models::{Project, Task};
-use crate::utils::resolve::resolve_task_or_current;
 use std::path::Path;
 
 pub fn locate(app: &App, task: Option<&str>) -> Result<(Project, Task, TaskDir)> {
-    let (project, task) = resolve_task_or_current(&app.db, task)?;
+    let (project, task) = task_or_current(&app.db, task)?;
     let dir = taskdir::of(&app.db, &project, &task)?;
     Ok((project, task, dir))
 }

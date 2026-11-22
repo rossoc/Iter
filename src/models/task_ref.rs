@@ -8,7 +8,13 @@ use std::str::FromStr;
 
 /// A task id as written: `#42`, read from `42` or `#42`.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct TaskId(pub i64);
+pub struct TaskId(i64);
+
+impl TaskId {
+    pub fn get(self) -> i64 {
+        self.0
+    }
+}
 
 impl fmt::Display for TaskId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -35,7 +41,7 @@ fn digits(text: &str) -> Option<i64> {
 
 /// The title and id of a `<title> #<id>` text. A trailing `#<digits>` is always the id, also
 /// where a task is titled literally `fix #12`: that one is reached by its own id.
-pub(crate) fn split_label(text: &str) -> Option<(&str, i64)> {
+fn split_label(text: &str) -> Option<(&str, i64)> {
     let (title, id) = text.rsplit_once(" #")?;
     Some((title, digits(id)?))
 }
@@ -46,6 +52,14 @@ pub struct TaskLabel {
     pub id: i64,
     pub project: String,
     pub title: String,
+}
+
+impl TaskLabel {
+    /// Whether the title ends in ` #<digits>`, so that `<project>/<title>` would be read back as
+    /// a label naming another task.
+    pub fn title_reads_as_label(&self) -> bool {
+        split_label(&self.title).is_some()
+    }
 }
 
 impl fmt::Display for TaskLabel {

@@ -12,6 +12,7 @@ use crate::editor::edited;
 use crate::error::{IterError, Result};
 use crate::git;
 use crate::github::{self, GhCli, IssueTracker};
+use crate::locate::{project_or_current, require_git_repo, require_github, task_or_current};
 use crate::models::require_name;
 use crate::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
 use crate::reporting::total_minutes;
@@ -21,9 +22,6 @@ use crate::reporting::{
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::close_open_session;
 use crate::utils::output::print_yaml;
-use crate::utils::resolve::{
-    require_git_repo, require_github, resolve_project_or_current, resolve_task_or_current,
-};
 use crate::utils::workspace::teardown_and_kill;
 use crate::wiki::ingest_job::{self, Trigger};
 
@@ -156,7 +154,7 @@ impl Run for TaskCommand {
 
 fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result<()> {
     let db = &app.db;
-    let project = resolve_project_or_current(db, project_name)?;
+    let project = project_or_current(db, project_name)?;
     let project_id = project.id();
 
     let mut template = Task::template(
@@ -207,7 +205,7 @@ fn chosen_project(db: &Db, current: &Project, typed: &str) -> Result<Project> {
 
 fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let (project, existing) = resolve_task_or_current(db, task_ref)?;
+    let (project, existing) = task_or_current(db, task_ref)?;
     let id = existing.id();
     let tags = db.tags_for_task(id)?.into_iter().map(|t| t.name).collect();
     let template = TaskEdit {
@@ -227,7 +225,7 @@ fn task_edit(app: &App, task_ref: Option<&str>) -> Result<()> {
 
 fn task_delete(app: &App, mux: &dyn Multiplexer, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let (project, task) = resolve_task_or_current(db, task_ref)?;
+    let (project, task) = task_or_current(db, task_ref)?;
     let task_id = task.id();
     let display = task.label(&project).to_string();
     let session_config = db.find_session_config_by_task(task_id)?;
@@ -244,7 +242,7 @@ fn task_delete(app: &App, mux: &dyn Multiplexer, task_ref: Option<&str>) -> Resu
 
 fn task_info(app: &App, task_ref: Option<&str>, opts: &ReportOpts) -> Result<()> {
     let db = &app.db;
-    let (project, task) = resolve_task_or_current(db, task_ref)?;
+    let (project, task) = task_or_current(db, task_ref)?;
     let now = app.now;
     let range = opts.range(now)?;
     let sessions = db.sessions_for_task_in_range(task.id(), range.from, range.to)?;
@@ -276,7 +274,7 @@ pub(crate) fn task_list(
 
 fn task_done(app: &App, mux: &dyn Multiplexer, task_ref: Option<&str>, save: bool) -> Result<()> {
     let db = &app.db;
-    let (project, mut task) = resolve_task_or_current(db, task_ref)?;
+    let (project, mut task) = task_or_current(db, task_ref)?;
     let task_id = task.id();
     let display = task.label(&project).to_string();
     let session_config = db.find_session_config_by_task(task_id)?;
@@ -373,7 +371,7 @@ fn save_to_default_branch(
 
 fn task_weekday(app: &App, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
-    let (project, task) = resolve_task_or_current(db, task_ref)?;
+    let (project, task) = task_or_current(db, task_ref)?;
     let now = app.now;
     let sessions = db.sessions_for_task(task.id())?;
     let report = WeekdayReport {
@@ -467,13 +465,14 @@ mod tests {
         };
         app.db.insert(&done).expect("task inserts");
 
-        let unfinished = app
-            .db
-            .task_refs(None, &[TaskStatus::Queue, TaskStatus::Wip])
-            .expect("refs");
+        let unfinished =
+            crate::completion::offered(&app.db, None, &[TaskStatus::Queue, TaskStatus::Wip])
+                .expect("refs");
         assert_eq!(unfinished, vec!["proj/a task"]);
         assert_eq!(
-            app.db.task_refs(Some("nosuch"), &[]).expect("refs").len(),
+            crate::completion::offered(&app.db, Some("nosuch"), &[])
+                .expect("refs")
+                .len(),
             0
         );
         task_list(&app, Some("proj"), &[]).expect("task list succeeds");

@@ -6,17 +6,17 @@ use crate::args::{HookEvent, InternalCommand};
 use crate::commands::Run;
 use crate::error::Result;
 use crate::github::{GhCli, IssueTracker};
+use crate::locate::{current_task, linked_issue, require_github, task_or_current};
 use crate::models::{Project, SessionConfig, Task};
 use crate::tmux::{Multiplexer, TmuxClient};
 use crate::utils::clock::{
     client_left_tmux_session, close_stale_session, start_for_tmux_session, stop_for_tmux_session,
 };
-use crate::utils::resolve::{current_task, linked_issue, require_github, resolve_task_or_current};
 use std::path::Path;
 
 pub(crate) fn comment_cmd(app: &App, task_ref: Option<&str>, message: &str) -> Result<()> {
     let db = &app.db;
-    let (project, task) = resolve_task_or_current(db, task_ref)?;
+    let (project, task) = task_or_current(db, task_ref)?;
     require_github(&project)?;
     let issue = linked_issue(&project, &task)?;
     GhCli::system().comment(&project.base_path, issue, message)?;

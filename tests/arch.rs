@@ -705,7 +705,6 @@ fn front_is_pure_data_moved_out_of_web() {
 /// Task ids: the id is written and read in `models/task_ref.rs` only; its field is private, so no
 /// caller builds one by hand.
 #[test]
-#[ignore = "isolation: round I3"]
 fn the_task_id_field_is_private_to_the_task_ref_module() {
     let sources = sources();
     let home = file_of(&sources, "models/task_ref.rs").expect("models/task_ref.rs");
@@ -727,7 +726,6 @@ fn the_task_id_field_is_private_to_the_task_ref_module() {
 /// of sketch `architecture` section 5 are gone (`locate::task`/`task_in`, `Db::tasks_titled` and
 /// `Db::task_labels` replace them; completion picks between the labels of one query).
 #[test]
-#[ignore = "isolation: round I3"]
 fn one_task_ref_grammar_and_no_name_keyed_helpers() {
     let sources = sources();
     let by_hand: Vec<String> = sources

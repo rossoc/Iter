@@ -43,6 +43,33 @@ pub(crate) fn organization_completer(current: &std::ffi::OsStr) -> Vec<Completio
     candidates(current, Db::names::<Organization>)
 }
 
+/// What completion offers for each task of `project` (any when `None`) at one of `statuses` (empty = all), in `<project>/<title>` order:
+/// `<project>/<title>` where that names it alone, else its bare id (a repeated title, or one that
+/// reads like a `#<id>` label, would resolve to the wrong task or to none).
+pub(crate) fn offered(
+    db: &Db,
+    project: Option<&str>,
+    statuses: &[TaskStatus],
+) -> Result<Vec<String>> {
+    let labels = db.task_labels_counted(project, statuses)?;
+    Ok(labels
+        .into_iter()
+        .map(
+            |(label, same_title)| match same_title == 1 && !label.title_reads_as_label() {
+                true => format!("{}/{}", label.project, label.title),
+                false => label.id.to_string(),
+            },
+        )
+        .collect())
+}
+
+/// The id of every task: what `task pull/push --task` completes (the project is not known to the
+/// completer, so a title could name several).
+pub(crate) fn task_ids(db: &Db) -> Result<Vec<String>> {
+    let labels = db.task_labels(None, &[])?;
+    Ok(labels.iter().map(|label| label.id.to_string()).collect())
+}
+
 /// Dynamic completer for arguments naming a task as `<project>/<task>`,
 /// offering only tasks at one of `statuses` -- or every task, when it's
 /// empty.
@@ -50,7 +77,7 @@ fn task_completer_at(
     current: &std::ffi::OsStr,
     statuses: &'static [TaskStatus],
 ) -> Vec<CompletionCandidate> {
-    candidates(current, |db| db.task_refs(None, statuses))
+    candidates(current, |db| offered(db, None, statuses))
 }
 
 pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
@@ -60,7 +87,7 @@ pub(crate) fn task_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandida
 /// For `task pull/push --task`, a bare name: completion can't see the project positional, so it
 /// offers every name.
 pub(crate) fn task_name_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    candidates(current, Db::task_names)
+    candidates(current, task_ids)
 }
 
 /// Dynamic completer for `session new`, which is only ever a sensible thing

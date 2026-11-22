@@ -7,8 +7,8 @@ use crate::db::Db;
 use crate::db::Table;
 use crate::error::Result;
 use crate::github::{self, IssueTracker};
+use crate::locate::{github_project, linked_issue, task_in};
 use crate::models::{Project, Task, TaskStatus};
-use crate::utils::resolve::{find_task_or_err, github_project, linked_issue};
 use crate::{git, sync};
 
 /// Sets a task's issue link, status and description in the database and in the copy in hand (a pull plans each issue against the tasks it holds); `None` means the issue says nothing about it.
@@ -39,7 +39,7 @@ fn issues_to_pull(
     let Some(task_name) = task_name else {
         return gh.list(&project.base_path);
     };
-    let task = find_task_or_err(db, project, task_name)?;
+    let task = task_in(db, project, task_name)?;
     let number = linked_issue(project, &task)?;
     Ok(vec![gh.fetch(&project.base_path, number)?])
 }
@@ -215,7 +215,7 @@ pub(crate) fn task_push(
     let project_id = project.id();
 
     let mut tasks = match task_name {
-        Some(name) => vec![find_task_or_err(db, &project, name)?],
+        Some(name) => vec![task_in(db, &project, name)?],
         None => db.tasks_for_project(project_id)?,
     };
 

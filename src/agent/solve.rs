@@ -421,8 +421,8 @@ fn launch(
     });
     let cwd = run.worktree.as_deref().unwrap_or(&project.base_path);
     let env = [
-        (crate::utils::resolve::ENV_TASK, task_id.to_string()),
-        (crate::utils::resolve::ENV_PROJECT, project.id().to_string()),
+        (crate::locate::ENV_TASK, task_id.to_string()),
+        (crate::locate::ENV_PROJECT, project.id().to_string()),
     ];
     let status = exec::run_logged(program, &args, Path::new(cwd), &env, &prompt, log)?;
     Ok(exec::exit_code(status))

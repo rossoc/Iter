@@ -5,11 +5,11 @@ use crate::args::BoardCommand;
 use crate::commands::Run;
 use crate::db::Table;
 use crate::error::Result;
+use crate::locate::group_or_current;
 use crate::models::{Board, Card, Priority, Project, START_TIME_FMT, TaskStatus, end_text};
 use crate::reporting::non_empty;
 use crate::utils::crud::{create, delete_group, update_group};
 use crate::utils::output::list_names;
-use crate::utils::resolve::resolve_group_or_current;
 use std::fmt::Write as _;
 
 impl Run for BoardCommand {
@@ -26,7 +26,7 @@ impl Run for BoardCommand {
 
 /// An explicit board name, else the board of the tmux session's project.
 fn board(app: &App, name: &Option<String>) -> Result<Board> {
-    resolve_group_or_current(&app.db, name.as_deref())
+    group_or_current(&app.db, name.as_deref())
 }
 
 fn board_info(app: &App, board: &Board) -> Result<()> {
