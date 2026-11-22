@@ -1,8 +1,6 @@
 //! The skeleton of every edit and create page: frame, header, form with error box, Name and Description, Save / Cancel.
 
-use crate::prelude::*;
-use crate::forms::edit::DESCRIPTION;
-use crate::forms::edit::NAME;
+use crate::{forms::edit::{DESCRIPTION, NAME}, prelude::*};
 
 fn heading(kind: &str, subject: &str, creating: bool) -> (String, [String; 2]) {
     if creating {

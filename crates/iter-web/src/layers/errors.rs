@@ -1,15 +1,15 @@
 //! Pages for the 400 (id not a number) and 404 (names nothing) refusals; topcoat's own answer is a bare text body. Only GET is rewritten here: the drop script's `fetch` wants the status, and a refused form POST is sent back to its page with an error toast by `flash.rs`.
 
-use crate::prelude::*;
-use topcoat::router::Body;
-use topcoat::router::LayerFuture;
-use topcoat::router::Next;
-use topcoat::router::StatusCode;
-use topcoat::router::content::Html;
-use topcoat::router::error::BadRequestError;
-use topcoat::router::error::NotFoundError;
-use topcoat::router::request::method;
-use topcoat::router::response::IntoResponse;
+use topcoat::{
+    context::Cx,
+    router::{
+        Body, LayerFuture, Next, StatusCode,
+        content::Html,
+        error::{BadRequestError, NotFoundError},
+        request::method,
+        response::IntoResponse,
+    },
+};
 
 fn document(title: &str, message: &str) -> String {
     format!(

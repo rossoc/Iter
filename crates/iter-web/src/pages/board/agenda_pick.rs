@@ -1,9 +1,9 @@
 //! The agenda's side of the pick mode (`pick.rs` is shared): its words and the day-keeping links.
 
-use crate::pages::board::pick::PickLinks;
-use crate::pages::board::pick::PickWords;
-use crate::pages::board::pick::Picked;
-use crate::prelude::*;
+use crate::{
+    pages::board::pick::{PickLinks, PickWords, Picked},
+    prelude::*,
+};
 use chrono::NaiveDate;
 
 const SCHEDULING: PickWords = PickWords {

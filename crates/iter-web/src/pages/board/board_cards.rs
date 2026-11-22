@@ -1,9 +1,11 @@
 //! Maps [`Card`]s and the board's priority colors to `ui::task_card::CardView` (`ui/` takes no models).
 
 use crate::prelude::*;
-use iter_core::db::{Db, Table};
-use iter_core::error::Result;
-use iter_core::models::{Card, TaskStatus, is_hex_color};
+use iter_core::{
+    db::{Db, Table},
+    error::Result,
+    models::{Card, TaskStatus, is_hex_color},
+};
 
 pub const BOARD_EMPTY: &str =
     "No unfinished tasks yet. Add some to the board's projects, and they show up here.";

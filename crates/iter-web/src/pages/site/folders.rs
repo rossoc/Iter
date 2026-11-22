@@ -1,9 +1,10 @@
 //! `POST /folders/pick`: opens the system folder chooser (`folder_picker.rs`) for a path field (`ui/field.rs`).
 
-use crate::assets::json;
-use crate::pages::site::folder_picker::Picked;
-use crate::pages::site::folder_picker::pick;
-use crate::prelude::*;
+use crate::{
+    assets::json,
+    pages::site::folder_picker::{Picked, pick},
+    prelude::*,
+};
 use iter_core::config::expand_home;
 use std::path::{Component, Path, PathBuf};
 

@@ -1,18 +1,20 @@
 //! The project page (`/project/{id}`): route, loading and view, built from shared components.
 
-use crate::load::Parents;
-use crate::load::parents_of;
-use crate::load::tasks_or_count;
 use crate::pages::project::project_wiki;
-use crate::pages::project::project_wiki::WikiTab;
-use crate::pages::project::project_wiki::wiki_tab;
-use crate::pages::site::daily_notes::NotesTab;
-use crate::pages::site::daily_notes::notes_section;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::{Db, Table};
-use iter_core::front::query::TaskQuery;
-use iter_core::models::{Configured, Organization, Project, Task};
+use crate::{
+    load::{Parents, parents_of, tasks_or_count},
+    pages::{
+        project::project_wiki::{WikiTab, wiki_tab},
+        site::daily_notes::{NotesTab, notes_section},
+    },
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    db::{Db, Table},
+    front::query::TaskQuery,
+    models::{Configured, Organization, Project, Task},
+};
 
 /// A project has no Report tab: that value falls to Info.
 pub fn section(tab: Option<&str>) -> Section {

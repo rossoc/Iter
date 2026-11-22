@@ -1,27 +1,27 @@
 //! The organization page (`/org/{id}`): route, loading and view of the tabs; the Report tab is `org_report.rs`.
 
-use crate::assets::Asset;
-use crate::assets::serve;
-use crate::load::tasks_or_count;
-use crate::pages::org::org_report::Report;
-use crate::pages::org::org_report::report_link;
-use crate::pages::org::org_report::report_view;
-use crate::pages::org::org_report::share_dialog as share_dialog_of;
-use crate::pages::org::org_report::tab_url;
-use crate::pages::org::share_dialog::Outcome;
-use crate::pages::org::share_dialog::ShareDialog;
-use crate::pages::org::share_dialog::preview_modal;
-use crate::pages::org::share_dialog::recorded;
-use crate::pages::org::share_dialog::share_modal;
-use crate::pages::site::daily_notes::NotesTab;
-use crate::pages::site::daily_notes::notes_section;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    assets::{Asset, serve},
+    load::tasks_or_count,
+    pages::{
+        org::{
+            org_report::{
+                Report, report_link, report_view, share_dialog as share_dialog_of, tab_url,
+            },
+            share_dialog::{Outcome, ShareDialog, preview_modal, recorded, share_modal},
+        },
+        site::daily_notes::{NotesTab, notes_section},
+    },
+    parts::all::*,
+    prelude::*,
+};
 use chrono::{NaiveDate, NaiveDateTime};
-use iter_core::db::{Db, Table};
-use iter_core::front::query::TaskQuery;
-use iter_core::models::{Configured, Organization, Project, Task};
-use iter_core::reporting::fmt_date;
+use iter_core::{
+    db::{Db, Table},
+    front::query::TaskQuery,
+    models::{Configured, Organization, Project, Task},
+    reporting::fmt_date,
+};
 
 pub(super) fn assets(builder: RouterBuilder) -> RouterBuilder {
     serve(builder, &[("/org.js", &ORG_JS)])

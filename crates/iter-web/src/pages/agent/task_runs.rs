@@ -1,16 +1,17 @@
 //! The agents of a task at the top of its Agent tab: the table, the form that writes a new one, and the page of one that has begun.
 
-use crate::assets::json;
-use crate::layers::errors::refused;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::agent::instruction::{self, Instruction, Layers};
-use iter_core::agent::run::{Harness, RunRecord};
-use iter_core::agent::solve::{self, Launch, Spec};
-use iter_core::agent::taskdir::{self};
-use iter_core::app::App;
-use iter_core::config::config;
-use iter_core::models::{Project, Task};
+use crate::{assets::json, layers::errors::refused, parts::all::*, prelude::*};
+use iter_core::{
+    agent::{
+        instruction::{self, Instruction, Layers},
+        run::{Harness, RunRecord},
+        solve::{self, Launch, Spec},
+        taskdir,
+    },
+    app::App,
+    config::config,
+    models::{Project, Task},
+};
 use serde::Deserialize;
 
 path_param!(n: u32, error = bad_request);

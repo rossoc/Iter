@@ -1,11 +1,14 @@
 //! The home page (`/`): a grid of the organizations with their projects.
 
-use crate::load::Grouped;
-use crate::load::grouped;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::models::{Organization, Project};
+use crate::{
+    load::{Grouped, grouped},
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    db::Table,
+    models::{Organization, Project},
+};
 
 #[page("/")]
 pub(super) async fn home() -> Result<impl View> {

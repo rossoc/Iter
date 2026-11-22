@@ -1,9 +1,7 @@
 //! The heading and section tabs of the board pages; the last tab is Settings.
 
-use crate::prelude::*;
-use crate::parts::all::*;
-use iter_core::db::Table;
-use iter_core::models::Board;
+use crate::{parts::all::*, prelude::*};
+use iter_core::{db::Table, models::Board};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BoardSection {

@@ -2,9 +2,7 @@
 //! a path by hand.
 
 use chrono::NaiveDate;
-use iter_core::front::query::DEFAULT;
-use iter_core::reporting::fmt_date;
-use iter_core::text::percent_encode;
+use iter_core::{front::query::DEFAULT, reporting::fmt_date, text::percent_encode};
 
 pub fn page_url(base: &str, params: &[(&str, Option<&str>)]) -> String {
     let mut url = base.to_string();

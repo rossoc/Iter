@@ -1,8 +1,7 @@
 //! The Details aside of a task: a `Task` and its tags mapped onto the
 //! generic `ui::panel` rows (like `settings_panel.rs` for a `Settings`).
 
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{parts::all::*, prelude::*};
 use iter_core::models::{Tag, Task};
 
 /// Start and Duration are the slot the task is booked for (the edit form

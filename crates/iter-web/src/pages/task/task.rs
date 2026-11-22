@@ -1,22 +1,24 @@
 //! The task page (`/task/{id}`): route, loading and view, built from shared components.
 
-use crate::load::Parents;
-use crate::load::parents_of;
 use crate::pages::agent::task_agent;
-use crate::pages::agent::task_agent::AgentTab;
-use crate::pages::agent::task_agent::agent_tab;
-use crate::pages::agent::task_agent::files_block;
-use crate::pages::agent::task_agent::plan_block;
-use crate::pages::agent::task_compose::compose_modal;
-use crate::pages::task::task_notes::note_modal;
-use crate::pages::task::task_panel::task_panel;
-use crate::pages::task::task_sessions::session_modal;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    load::{Parents, parents_of},
+    pages::{
+        agent::{
+            task_agent::{AgentTab, agent_tab, files_block, plan_block},
+            task_compose::compose_modal,
+        },
+        task::{task_notes::note_modal, task_panel::task_panel, task_sessions::session_modal},
+    },
+    parts::all::*,
+    prelude::*,
+};
 use chrono::NaiveDateTime;
-use iter_core::agent::taskdir;
-use iter_core::db::{Db, Table};
-use iter_core::models::{Session, Tag, Task};
+use iter_core::{
+    agent::taskdir,
+    db::{Db, Table},
+    models::{Session, Tag, Task},
+};
 
 pub struct Loaded {
     pub task: Task,

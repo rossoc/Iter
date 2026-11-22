@@ -1,11 +1,12 @@
 //! `GET /search?q=`: the palette's results as JSON, read from the database and notes folders on each request and ranked by `search.rs`.
 
-use crate::assets::json;
-use crate::prelude::*;
-use iter_core::db::{Db, Table};
-use iter_core::front::search::{Entry, Hit, Kind, search};
-use iter_core::models::{Board, Organization, Project, Task};
-use iter_core::notes;
+use crate::{assets::json, prelude::*};
+use iter_core::{
+    db::{Db, Table},
+    front::search::{Entry, Hit, Kind, search},
+    models::{Board, Organization, Project, Task},
+    notes,
+};
 use std::collections::HashMap;
 
 const LIMIT: usize = 50;

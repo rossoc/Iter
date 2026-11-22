@@ -1,13 +1,14 @@
 //! The agenda's cards and the side lists of tasks that are not on the day.
 
-use crate::pages::board::agenda_pick::links;
-use crate::pages::board::board_cards::BOARD_EMPTY;
-use crate::pages::board::board_cards::CardCtx;
-use crate::prelude::*;
+use crate::{
+    pages::board::{
+        agenda_pick::links,
+        board_cards::{BOARD_EMPTY, CardCtx},
+    },
+    prelude::*,
+};
 use chrono::NaiveDate;
-use iter_core::db::Table;
-use iter_core::front::day::Day;
-use iter_core::models::Card;
+use iter_core::{db::Table, front::day::Day, models::Card};
 
 pub const NOT_SCHEDULED: &str = "not-scheduled";
 

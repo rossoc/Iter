@@ -1,11 +1,14 @@
 //! The project edit form.
 
 use super::{SettingsForm, text};
-use crate::forms::edit::EditForm;
-use crate::forms::edit::name_field;
-use crate::prelude::*;
-use iter_core::error::{IterError, Result};
-use iter_core::models::{Configured, Named, Project};
+use crate::{
+    forms::edit::{EditForm, name_field},
+    prelude::*,
+};
+use iter_core::{
+    error::{IterError, Result},
+    models::{Configured, Named, Project},
+};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

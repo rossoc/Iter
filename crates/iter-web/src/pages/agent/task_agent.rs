@@ -1,19 +1,25 @@
 //! The Agent tab of the task page: the plan, a step opened beside it, and the notes and sketches in the task's folder.
 
-use crate::pages::agent::task_compose::Compose;
-use crate::pages::agent::task_runs::act;
-use crate::pages::agent::task_runs::label_of;
-use crate::pages::agent::task_runs::state_pill;
-use crate::prelude::*;
-use iter_core::agent::instruction::{self, Layers};
-use iter_core::agent::plan::{self, Item, Plan, State};
-use iter_core::agent::run::{Harness, RunRecord};
-use iter_core::agent::taskdir::{self, TaskDir};
-use iter_core::app::App;
-use iter_core::config::config;
-use iter_core::db::Db;
-use iter_core::error::{IterError, Result as Loaded};
-use iter_core::models::{Project, Task};
+use crate::{
+    pages::agent::{
+        task_compose::Compose,
+        task_runs::{act, label_of, state_pill},
+    },
+    prelude::*,
+};
+use iter_core::{
+    agent::{
+        instruction::{self, Layers},
+        plan::{self, Item, Plan, State},
+        run::{Harness, RunRecord},
+        taskdir::{self, TaskDir},
+    },
+    app::App,
+    config::config,
+    db::Db,
+    error::{IterError, Result as Loaded},
+    models::{Project, Task},
+};
 use serde::Deserialize;
 
 path_param!(step: String, error = bad_request);

@@ -1,10 +1,10 @@
 //! The info tab of a board (`/board/{id}/info`): description and projects.
 
-use crate::load::board_of;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::{Db, Table};
-use iter_core::models::{Board, Project};
+use crate::{load::board_of, parts::all::*, prelude::*};
+use iter_core::{
+    db::{Db, Table},
+    models::{Board, Project},
+};
 
 #[page("/board/{id}/info")]
 pub(super) async fn info_page(cx: &Cx) -> Result<impl View> {

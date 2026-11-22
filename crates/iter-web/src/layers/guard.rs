@@ -2,13 +2,13 @@
 //! `Host` must be loopback and a state-changing `Origin` must be this server
 //! (CSRF, DNS rebinding). The threat model is in `doc/web_server.md`.
 
-use crate::prelude::*;
-use topcoat::router::Body;
-use topcoat::router::Next;
-use topcoat::router::error::forbidden;
-use topcoat::router::layer;
-use topcoat::router::request::headers;
-use topcoat::router::request::method;
+use topcoat::{
+    Result,
+    context::Cx,
+    router::{
+        Body, Next, error::forbidden, layer, request::headers, request::method, response::Response,
+    },
+};
 
 fn host_of(value: &str) -> &str {
     // Strip `:port` (there are no bracketed IPv6 hosts we accept).

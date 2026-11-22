@@ -1,26 +1,22 @@
 //! A board's day agenda (`/board/{id}?date=`): the day beside the lists of unscheduled tasks.
 
-use crate::pages::board::agenda_cards::Cards;
-use crate::pages::board::agenda_cards::Fold;
-use crate::pages::board::agenda_cards::NOT_SCHEDULED;
-use crate::pages::board::agenda_cards::side;
-use crate::pages::board::agenda_pick::day_url;
-use crate::pages::board::agenda_pick::links;
-use crate::pages::board::board_cards::CLOCK_FMT;
-use crate::pages::board::board_cards::CardCtx;
-use crate::pages::board::board_page::BoardPage;
-use crate::pages::board::board_page::board_screen;
-use crate::pages::board::board_page::load_board;
-use crate::pages::board::pick::Picked;
-use crate::pages::board::pick::moved_note;
-use crate::pages::board::pick::pick_fields;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    pages::board::{
+        agenda_cards::{Cards, Fold, NOT_SCHEDULED, side},
+        agenda_pick::{day_url, links},
+        board_cards::{CLOCK_FMT, CardCtx},
+        board_page::{BoardPage, board_screen, load_board},
+        pick::{Picked, moved_note, pick_fields},
+    },
+    parts::all::*,
+    prelude::*,
+};
 use chrono::{NaiveDate, NaiveDateTime, Timelike};
-use iter_core::db::Table;
-use iter_core::front::day::{Day, hour_label, hour_target, neighbours, split};
-use iter_core::reporting::fmt_date;
-use iter_core::reporting::parse_day;
+use iter_core::{
+    db::Table,
+    front::day::{Day, hour_label, hour_target, neighbours, split},
+    reporting::{fmt_date, parse_day},
+};
 
 const DAY_TITLE: &str = "day-title";
 

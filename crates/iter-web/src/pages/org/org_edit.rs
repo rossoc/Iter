@@ -1,17 +1,22 @@
 //! The organization edit form (`/org/{id}/edit`): the routes and the view.
 
-use crate::forms::OrgForm;
-use crate::forms::edit::Loaded;
-use crate::forms::edit::load;
-use crate::forms::edit::submit;
-use crate::pages::org::org_report::tab_url;
 use crate::pages::org::platform_pick;
-use crate::pages::org::platform_pick::platform_lists;
-use crate::pages::site::daily_notes::NotesTab;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::models::{Configured, Organization};
+use crate::{
+    forms::{
+        OrgForm,
+        edit::{Loaded, load, submit},
+    },
+    pages::{
+        org::{org_report::tab_url, platform_pick::platform_lists},
+        site::daily_notes::NotesTab,
+    },
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    db::Table,
+    models::{Configured, Organization},
+};
 
 #[page("/org/{id}/edit")]
 pub(super) async fn show(cx: &Cx) -> Result<impl View> {

@@ -1,20 +1,23 @@
 //! Instructions in the browser: the list (`/instructions`) and the page of one (`/instruction/{name}`).
 
-use crate::pages::agent::task_runs::label_of;
-use crate::pages::agent::task_runs::state_pill;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::agent::instruction::{self, Instruction, Layers, Source};
-use iter_core::agent::prompt::PLACEHOLDERS;
-use iter_core::agent::run::Harness;
-use iter_core::agent::run::RunRecord;
-use iter_core::agent::taskdir;
-use iter_core::config::config;
-use iter_core::db::{Db, Table};
-use iter_core::models::{Organization, Project, Task};
+use crate::{
+    pages::agent::task_runs::{label_of, state_pill},
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    agent::{
+        instruction::{self, Instruction, Layers, Source},
+        prompt::PLACEHOLDERS,
+        run::{Harness, RunRecord},
+        taskdir,
+    },
+    config::config,
+    db::{Db, Table},
+    models::{Organization, Project, Task},
+};
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 mod list;
 mod page;

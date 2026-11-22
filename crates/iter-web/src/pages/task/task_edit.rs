@@ -1,18 +1,21 @@
 //! The task edit form (`/task/{id}/edit`), the twin of New task (`task_new.rs`); the controls are in `task_fields`.
 
-use crate::forms::TaskForm;
-use crate::forms::edit::Loaded;
-use crate::forms::edit::load;
-use crate::forms::edit::submit;
-use crate::forms::joined;
-use crate::load::Parents;
-use crate::load::parents_of;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::agent::taskdir;
-use iter_core::db::{Db, Table};
-use iter_core::error::Result as IterResult;
-use iter_core::models::{Project, Task};
+use crate::{
+    forms::{
+        TaskForm,
+        edit::{Loaded, load, submit},
+        joined,
+    },
+    load::{Parents, parents_of},
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    agent::taskdir,
+    db::{Db, Table},
+    error::Result as IterResult,
+    models::{Project, Task},
+};
 
 pub fn values(db: &Db, task: &Task) -> IterResult<TaskForm> {
     Ok(TaskForm::of(task, &joined(&db.tags_for_task(task.id())?)))

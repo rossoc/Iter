@@ -1,14 +1,14 @@
 //! New project: the pop-up over a project list (`?new=project`, `ui/modal.rs`) and its write (`POST /{org|board}/{id}/project/quick`).
 
-use crate::forms::ProjectForm;
-use crate::forms::SettingsForm;
-use crate::forms::edit::create_to;
-use crate::pages::board::board_info::load as load_board;
-use crate::pages::board::board_info::screen as board_screen;
-use crate::pages::org::org::load as load_org;
-use crate::pages::org::org::screen as org_screen;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    forms::{ProjectForm, SettingsForm, edit::create_to},
+    pages::{
+        board::board_info::{load as load_board, screen as board_screen},
+        org::org::{load as load_org, screen as org_screen},
+    },
+    parts::all::*,
+    prelude::*,
+};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

@@ -1,7 +1,6 @@
 //! The inputs of the Settings group shared by the organization and project forms: the write-side twin of `settings_panel.rs`.
 
-use crate::prelude::*;
-use crate::forms::SettingsForm as S;
+use crate::{forms::SettingsForm as S, prelude::*};
 use iter_core::models::Settings;
 
 const BRANCH_TEMPLATE_HINT: &str =

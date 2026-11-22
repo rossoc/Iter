@@ -2,8 +2,10 @@
 
 use crate::prelude::*;
 use chrono::NaiveDateTime;
-use iter_core::db::Table;
-use iter_core::models::{Card, Priority};
+use iter_core::{
+    db::Table,
+    models::{Card, Priority},
+};
 
 pub struct Picked {
     pub id: i64,

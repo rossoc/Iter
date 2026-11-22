@@ -2,8 +2,7 @@
 //! (`ui::project_list`): the one place a project's link is built.
 
 use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::models::Project;
+use iter_core::{db::Table, models::Project};
 
 pub fn tilde(path: &str) -> String {
     match std::env::var("HOME") {

@@ -1,15 +1,19 @@
 //! The project edit form (`/project/{id}/edit`); the page is `edit_page`.
 
-use crate::forms::ProjectForm;
-use crate::forms::edit::Loaded;
-use crate::forms::edit::load;
-use crate::forms::edit::submit;
-use crate::load::org_in;
-use crate::pages::site::daily_notes::NotesTab;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::models::{Configured, Organization, Project};
+use crate::{
+    forms::{
+        ProjectForm,
+        edit::{Loaded, load, submit},
+    },
+    load::org_in,
+    pages::site::daily_notes::NotesTab,
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    db::Table,
+    models::{Configured, Organization, Project},
+};
 
 #[page("/project/{id}/edit")]
 pub(super) async fn show(cx: &Cx) -> Result<impl View> {

@@ -1,12 +1,15 @@
 //! The task form, shared by Edit task and New task.
 
 use super::{names, optional, text};
-use crate::forms::edit::EditForm;
-use crate::forms::edit::name_field;
-use crate::prelude::*;
-use iter_core::db::Db;
-use iter_core::error::{IterError, Result};
-use iter_core::models::{Duration, Project, Tag, Task, TaskStatus, parse_start_time, require_name};
+use crate::{
+    forms::edit::{EditForm, name_field},
+    prelude::*,
+};
+use iter_core::{
+    db::Db,
+    error::{IterError, Result},
+    models::{Duration, Project, Tag, Task, TaskStatus, parse_start_time, require_name},
+};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

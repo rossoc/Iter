@@ -1,8 +1,10 @@
 //! Lookups shared by several pages' `load` functions.
 
 use crate::prelude::*;
-use iter_core::db::{Db, Table};
-use iter_core::models::{Board, Card, Organization, Project, ProjectGroup, Task};
+use iter_core::{
+    db::{Db, Table},
+    models::{Board, Card, Organization, Project, ProjectGroup, Task},
+};
 use std::collections::HashMap;
 
 pub fn org_in<'a>(orgs: &'a [Organization], project: &Project) -> Option<&'a Organization> {

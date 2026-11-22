@@ -1,16 +1,19 @@
 //! The organization's Report tab (`/org/{id}?tab=report`): the period, the report from the function `iter org info` uses, and the view.
 
-use crate::pages::org::share_dialog::Outcome;
-use crate::pages::org::share_dialog::ShareDialog;
-use crate::pages::org::share_dialog::ShareFormat;
-use crate::pages::org::share_dialog::share_outcome;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    pages::org::share_dialog::{Outcome, ShareDialog, ShareFormat, share_outcome},
+    parts::all::*,
+    prelude::*,
+};
 use chrono::{Days, NaiveDate, NaiveDateTime};
-use iter_core::db::Db;
-use iter_core::models::Project;
-use iter_core::reporting::{DateRange, ProjectReport, TaskReport, Total, fmt_date, worklog_text};
-use iter_core::reporting::{parse_day, project_reports, total_minutes};
+use iter_core::{
+    db::Db,
+    models::Project,
+    reporting::{
+        DateRange, ProjectReport, TaskReport, Total, fmt_date, parse_day, project_reports,
+        total_minutes, worklog_text,
+    },
+};
 
 pub struct Report {
     pub range: DateRange,

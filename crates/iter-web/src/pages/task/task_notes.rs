@@ -3,8 +3,7 @@
 use crate::prelude::*;
 use iter_core::agent::taskdir;
 use serde::Deserialize;
-use std::io::Write;
-use std::path::Path;
+use std::{io::Write, path::Path};
 
 #[component]
 pub async fn note_modal(task_id: i64) -> Result<impl View> {

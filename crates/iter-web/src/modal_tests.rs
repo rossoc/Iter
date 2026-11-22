@@ -6,9 +6,7 @@
 //! are a scratch folder, so the user's own are never read or written.
 
 use super::toast_tests::{get, isolated_in};
-use iter_core::config::config;
-use iter_core::db::Db;
-use iter_core::fixtures;
+use iter_core::{config::config, db::Db, fixtures};
 
 /// The page of task 1 with `tab` and `new` in its query, in a scratch database holding it.
 fn modal_page(tab: &str, new: &str) -> String {

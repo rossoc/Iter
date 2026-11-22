@@ -1,13 +1,14 @@
 //! The board edit form (`/board/{id}/edit`); the page is `edit_page`.
 
-use crate::forms::BoardForm;
-use crate::forms::edit::Loaded;
-use crate::forms::edit::load_among;
-use crate::forms::edit::submit;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::models::Board;
+use crate::{
+    forms::{
+        BoardForm,
+        edit::{Loaded, load_among, submit},
+    },
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{db::Table, models::Board};
 
 #[component]
 pub async fn screen(

@@ -1,11 +1,11 @@
 //! The global settings page (`/settings`): the config file's defaults as a form; saving writes the config file.
 
-use crate::forms::SettingsForm;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::config::{Config, NotificationConfig, config_file, replace};
-use iter_core::error::IterError;
-use iter_core::models::{Settings, TaskStatus};
+use crate::{forms::SettingsForm, parts::all::*, prelude::*};
+use iter_core::{
+    config::{Config, NotificationConfig, config_file, replace},
+    error::IterError,
+    models::{Settings, TaskStatus},
+};
 use serde::Deserialize;
 
 const EDITOR: &str = "editor";

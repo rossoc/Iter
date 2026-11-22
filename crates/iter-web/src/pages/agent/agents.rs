@@ -1,16 +1,15 @@
 //! Agent pages: the list (`/agents`) and one agent (`/agent/{id}/{n}`, `id` the task's).
 
-use crate::pages::agent::instructions::Use;
-use crate::pages::agent::instructions::usage;
-use crate::pages::agent::task_compose::Compose;
-use crate::pages::agent::task_compose::compose_form;
-use crate::pages::agent::task_runs::act;
-use crate::pages::agent::task_runs::label_of;
-use crate::pages::agent::task_runs::state_pill;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::agent::run::RunRecord;
-use iter_core::agent::taskdir;
+use crate::{
+    pages::agent::{
+        instructions::{Use, usage},
+        task_compose::{Compose, compose_form},
+        task_runs::{act, label_of, state_pill},
+    },
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::agent::{run::RunRecord, taskdir};
 
 path_param!(n: u32, error = bad_request);
 

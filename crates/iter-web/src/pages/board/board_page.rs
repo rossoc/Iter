@@ -1,13 +1,14 @@
 //! Lookups and screen shared by the agenda and the matrix.
 
-use crate::load::board_of;
-use crate::load::unfinished;
-use crate::pages::board::board_cards::BOARD_EMPTY;
-use crate::pages::board::board_cards::Colors;
-use crate::pages::board::pick::Picked;
-use crate::pages::board::pick::picked_in;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    load::{board_of, unfinished},
+    pages::board::{
+        board_cards::{BOARD_EMPTY, Colors},
+        pick::{Picked, picked_in},
+    },
+    parts::all::*,
+    prelude::*,
+};
 use iter_core::models::{Board, Card};
 
 pub struct BoardPage<D> {

@@ -1,8 +1,7 @@
 //! The inputs of a task, read back by `TaskForm`: shared by the new-task
 //! form and the task edit form (the write-side twin of the task page).
 
-use crate::prelude::*;
-use crate::forms::TaskForm;
+use crate::{forms::TaskForm, prelude::*};
 use iter_core::models::TaskStatus;
 
 /// `(value, label)` per status, in workflow order (a `<select>`'s options).

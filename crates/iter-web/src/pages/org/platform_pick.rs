@@ -1,13 +1,15 @@
 //! Suggestions from the organization's time platform for the project and activity fields (settings form, Share pop-up); a platform that cannot answer gives none.
 
-use crate::assets::Asset;
-use crate::assets::json;
-use crate::assets::serve;
-use crate::prelude::*;
-use iter_core::models::Organization;
-use iter_core::platform::{JsonWebhook, PlatformItem};
-use iter_core::push;
-use iter_core::secret::{self, Keychain};
+use crate::{
+    assets::{Asset, json, serve},
+    prelude::*,
+};
+use iter_core::{
+    models::Organization,
+    platform::{JsonWebhook, PlatformItem},
+    push,
+    secret::{self, Keychain},
+};
 use serde::Deserialize;
 
 const WAIT_SECONDS: u64 = 5;

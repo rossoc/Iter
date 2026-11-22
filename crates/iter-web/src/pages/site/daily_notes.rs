@@ -1,14 +1,17 @@
 //! The daily notes of an organization or project: the Notes tab, a note's page (`/{org,project}/{id}/notes/{date}`) and the today's-note button.
 
-use crate::forms;
-use crate::load::Parents;
-use crate::load::parents_of;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    forms,
+    load::{Parents, parents_of},
+    parts::all::*,
+    prelude::*,
+};
 use chrono::{Datelike, NaiveDate};
-use iter_core::db::Db;
-use iter_core::models::{Organization, Project};
-use iter_core::notes::{self as journal, Note};
+use iter_core::{
+    db::Db,
+    models::{Organization, Project},
+    notes::{self as journal, Note},
+};
 use serde::Deserialize;
 use std::path::PathBuf;
 

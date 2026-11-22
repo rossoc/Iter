@@ -2,18 +2,17 @@
 //! `ShareDialog`, `Outcome`) and the views. The push itself is `org_share.rs`, which renders
 //! the host page; this module imports neither it nor the host.
 
-use crate::forms::text;
 use crate::pages::org::platform_pick;
-use crate::pages::org::platform_pick::platform_lists;
-use crate::prelude::*;
+use crate::{forms::text, pages::org::platform_pick::platform_lists, prelude::*};
 use chrono::NaiveDateTime;
-use iter_core::db::Db;
-use iter_core::error::{IterError, Result as IterResult};
-use iter_core::models::Organization;
-use iter_core::platform::PlatformItem;
-use iter_core::push::{Item, Target};
-use iter_core::reporting::parse_day;
-use iter_core::reporting::{DateRange, fmt_date};
+use iter_core::{
+    db::Db,
+    error::{IterError, Result as IterResult},
+    models::Organization,
+    platform::PlatformItem,
+    push::{Item, Target},
+    reporting::{DateRange, fmt_date, parse_day},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Modality {

@@ -1,10 +1,10 @@
 //! The list of boards (`/boards`).
 
-use crate::load::grouped;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::models::{Board, Project};
+use crate::{load::grouped, parts::all::*, prelude::*};
+use iter_core::{
+    db::Table,
+    models::{Board, Project},
+};
 
 #[page("/boards")]
 pub(super) async fn boards_page() -> Result<impl View> {

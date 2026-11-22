@@ -3,8 +3,8 @@
 //! if `http(s)`, `mailto` or relative. Headings move down two levels under the page's `<h1>`/`<h2>`.
 
 use crate::prelude::*;
-use topcoat::view::Unescaped;
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd, html};
+use topcoat::view::Unescaped;
 
 /// CommonMark plus tables, strikethrough and task lists.
 fn options() -> Options {

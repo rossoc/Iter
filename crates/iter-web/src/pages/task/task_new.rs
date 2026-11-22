@@ -1,16 +1,16 @@
 //! New task: the pop-up over a Tasks tab (`?new=task`, `ui/modal.rs`) and its write, `POST /task/new`.
 
-use crate::forms::TaskForm;
-use crate::forms::edit::create_to;
-use crate::load::project_of;
-use crate::pages::org::org::load as load_org;
-use crate::pages::org::org::screen as org_screen;
-use crate::pages::project::project::load as load_project;
-use crate::pages::project::project::screen as project_screen;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::front::query::DEFAULT;
+use crate::{
+    forms::{TaskForm, edit::create_to},
+    load::project_of,
+    pages::{
+        org::org::{load as load_org, screen as org_screen},
+        project::project::{load as load_project, screen as project_screen},
+    },
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{db::Table, front::query::DEFAULT};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

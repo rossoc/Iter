@@ -5,21 +5,19 @@
 //! the refusal as an error message. A script's `fetch` keeps its status. With
 //! `notifications.enabled: false` nothing here happens.
 
-use crate::prelude::*;
-use iter_core::config::config;
-use iter_core::text::percent_encode;
-use topcoat::router::Body;
-use topcoat::router::HeaderValue;
-use topcoat::router::Next;
-use topcoat::router::StatusCode;
-use topcoat::router::error::BadRequestError;
-use topcoat::router::header::LOCATION;
-use topcoat::router::header::SET_COOKIE;
-use topcoat::router::layer;
-use topcoat::router::request::headers;
-use topcoat::router::request::method;
-use topcoat::router::request::uri;
-use topcoat::router::response::IntoResponse;
+use iter_core::{config::config, text::percent_encode};
+use topcoat::{
+    Result,
+    context::Cx,
+    router::{
+        Body, HeaderValue, Next, StatusCode,
+        error::BadRequestError,
+        header::{LOCATION, SET_COOKIE},
+        layer,
+        request::{headers, method, uri},
+        response::{IntoResponse, Response},
+    },
+};
 
 /// The cookie's name; `toast.js` reads the same.
 pub const COOKIE: &str = "iter_flash";

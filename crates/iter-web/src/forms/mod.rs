@@ -1,7 +1,9 @@
 //! What the edit forms submit, and how it lands on a model.
 
-use iter_core::error::{IterError, Result};
-use iter_core::models::{Named, Settings};
+use iter_core::{
+    error::{IterError, Result},
+    models::{Named, Settings},
+};
 use serde::Deserialize;
 
 mod board;

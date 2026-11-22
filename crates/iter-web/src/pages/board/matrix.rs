@@ -1,22 +1,20 @@
 //! A board's Eisenhower matrix (`/board/{id}/matrix`): four quadrants and the list of unplaced tasks.
 
-use crate::pages::board::board_cards::CardCtx;
-use crate::pages::board::board_page::BoardPage;
-use crate::pages::board::board_page::board_screen;
-use crate::pages::board::board_page::load_board;
-use crate::pages::board::drop::Drop;
-use crate::pages::board::drop::back_or;
-use crate::pages::board::drop::drop_on;
-use crate::pages::board::pick::PickLinks;
-use crate::pages::board::pick::PickWords;
-use crate::pages::board::pick::Picked;
-use crate::pages::board::pick::moved_note;
-use crate::pages::board::pick::pick_fields;
-use crate::parts::all::*;
-use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::front::matrix::{self, Matrix, QUADRANTS, quadrant_index, split};
-use iter_core::models::{Priority, Task};
+use crate::{
+    pages::board::{
+        board_cards::CardCtx,
+        board_page::{BoardPage, board_screen, load_board},
+        drop::{Drop, back_or, drop_on},
+        pick::{PickLinks, PickWords, Picked, moved_note, pick_fields},
+    },
+    parts::all::*,
+    prelude::*,
+};
+use iter_core::{
+    db::Table,
+    front::matrix::{self, Matrix, QUADRANTS, quadrant_index, split},
+    models::{Priority, Task},
+};
 use topcoat::router::content::Json;
 
 const NOT_PLACED: &str = "not-placed";

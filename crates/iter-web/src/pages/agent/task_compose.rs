@@ -1,10 +1,8 @@
 //! The form that writes an agent's run, as a pop-up over the task's Agent tab and as the Settings
 //! tab of a queued run (`agents.rs`). The routes that receive it are `task_runs.rs`.
 
-use crate::pages::agent::task_runs::act;
-use crate::prelude::*;
-use iter_core::agent::run::Harness;
-use iter_core::config::config;
+use crate::{pages::agent::task_runs::act, prelude::*};
+use iter_core::{agent::run::Harness, config::config};
 
 pub struct Compose {
     pub instruction: String,

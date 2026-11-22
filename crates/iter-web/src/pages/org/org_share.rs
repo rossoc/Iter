@@ -1,27 +1,26 @@
 //! Sharing the Report tab's period (`POST /org/{id}/share`): copy it as text, or push it to the
 //! organization's time platform. The pop-up and its data are `share_dialog.rs`.
 
-use crate::pages::org::org::Loaded;
-use crate::pages::org::org::load as load_org;
-use crate::pages::org::org::screen;
-use crate::pages::org::org_report::report_link;
-use crate::pages::org::org_report::share_text;
-use crate::pages::org::share_dialog::Modality;
-use crate::pages::org::share_dialog::Outcome;
-use crate::pages::org::share_dialog::Preview;
-use crate::pages::org::share_dialog::ShareForm;
-use crate::pages::org::share_dialog::ShareFormat;
-use crate::parts::all::*;
-use crate::prelude::*;
+use crate::{
+    pages::org::{
+        org::{Loaded, load as load_org, screen},
+        org_report::{report_link, share_text},
+        share_dialog::{Modality, Outcome, Preview, ShareForm, ShareFormat},
+    },
+    parts::all::*,
+    prelude::*,
+};
 use chrono::NaiveDateTime;
-use iter_core::db::Db;
-use iter_core::error::{IterError, Result as IterResult};
-use iter_core::github::{GhCli, IssueTracker};
-use iter_core::models::Organization;
-use iter_core::platform::{JsonWebhook, TimePlatform};
-use iter_core::push::{self, Target};
-use iter_core::reporting::DateRange;
-use iter_core::secret::{self, Keychain};
+use iter_core::{
+    db::Db,
+    error::{IterError, Result as IterResult},
+    github::{GhCli, IssueTracker},
+    models::Organization,
+    platform::{JsonWebhook, TimePlatform},
+    push::{self, Target},
+    reporting::DateRange,
+    secret::{self, Keychain},
+};
 
 type Connect<'a> = &'a dyn Fn(&Organization) -> IterResult<Box<dyn TimePlatform>>;
 

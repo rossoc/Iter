@@ -2,8 +2,7 @@
 //! entity is a crumb, and where it links.
 
 use crate::prelude::*;
-use iter_core::db::Table;
-use iter_core::models::{Organization, Project};
+use iter_core::{db::Table, models::{Organization, Project}};
 
 fn org_crumb(org: &Organization) -> Crumb {
     Crumb::link(org.name.as_str(), org_url(org.id()))

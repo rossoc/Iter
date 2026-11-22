@@ -7,8 +7,7 @@
 //! `iter.yaml` and database are never read or written.
 
 use crate::router;
-use std::path::Path;
-use std::process::Command;
+use std::{path::Path, process::Command};
 use topcoat::router::{Body, Method, StatusCode, request::Request, to_bytes};
 
 /// Set in the child: the test body runs there.

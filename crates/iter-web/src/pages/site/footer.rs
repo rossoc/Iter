@@ -1,8 +1,10 @@
 //! The footer of every page (`ui/site_footer.rs`); one that cannot be built is left out, never breaking a page.
 
 use crate::prelude::*;
-use iter_core::db::{Db, Table};
-use iter_core::models::{Board, Project};
+use iter_core::{
+    db::{Db, Table},
+    models::{Board, Project},
+};
 
 /// Bounded: the footer is on every page, so what it reads must stay small however large the database.
 pub(crate) const FOOTER_LIMIT: usize = 8;

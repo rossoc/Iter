@@ -1,8 +1,10 @@
 //! The document every page shares (`<html>`, stylesheet, footer) and the script the board pages load.
 
-use crate::assets::{Asset, serve};
-use crate::pages::site::footer::site_footer_for;
-use crate::prelude::*;
+use crate::{
+    assets::{Asset, serve},
+    pages::site::footer::site_footer_for,
+    prelude::*,
+};
 use topcoat::router::{Slot, layout};
 
 static BOARD_JS: Asset = Asset::js(include_str!("board.js"));

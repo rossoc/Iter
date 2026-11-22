@@ -1,12 +1,16 @@
 //! The agenda's POST route (`POST /board/{id}/schedule`); the form and transaction are in `drop.rs`.
 
-use crate::pages::board::agenda_pick::links;
-use crate::pages::board::drop::Drop;
-use crate::pages::board::drop::back_or;
-use crate::pages::board::drop::drop_on;
-use crate::prelude::*;
-use iter_core::models::{Duration, Task, parse_start_time};
-use iter_core::reporting::parse_day;
+use crate::{
+    pages::board::{
+        agenda_pick::links,
+        drop::{Drop, back_or, drop_on},
+    },
+    prelude::*,
+};
+use iter_core::{
+    models::{Duration, Task, parse_start_time},
+    reporting::parse_day,
+};
 use topcoat::router::content::Json;
 
 /// A task with no duration gets an hour, so it has a length on the agenda.

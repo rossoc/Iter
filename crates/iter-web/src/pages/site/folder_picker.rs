@@ -1,7 +1,9 @@
 //! The system's folder picker (`osascript` on macOS, `zenity` elsewhere): a page cannot learn a picked folder's path, but the server runs on the user's machine (loopback only, `guard.rs`).
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 #[derive(Debug, PartialEq)]
 pub enum Picked {

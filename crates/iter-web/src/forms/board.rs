@@ -1,11 +1,12 @@
 //! The board edit form.
 
 use super::{DESCRIPTION, NAME, PROJECTS, Pairs, text};
-use crate::forms::edit::EditForm;
-use crate::prelude::*;
-use iter_core::db::Db;
-use iter_core::error::Result;
-use iter_core::models::{Board, Named};
+use crate::{forms::edit::EditForm, prelude::*};
+use iter_core::{
+    db::Db,
+    error::Result,
+    models::{Board, Named},
+};
 
 pub struct BoardForm {
     pub name: String,

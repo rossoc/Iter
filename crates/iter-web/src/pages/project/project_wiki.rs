@@ -2,10 +2,12 @@
 //! (A task's sketches are on its Notes tab.)
 
 use crate::prelude::*;
-use iter_core::agent::ingest_job::{self, Review};
-use iter_core::db::{Db, Table};
-use iter_core::models::Project;
-use iter_core::wiki::ingest::Mode;
+use iter_core::{
+    agent::ingest_job::{self, Review},
+    db::{Db, Table},
+    models::Project,
+    wiki::ingest::Mode,
+};
 
 path_param!(action: WikiAction, error = bad_request);
 
