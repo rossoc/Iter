@@ -3,8 +3,9 @@
 
 use crate::db::Db;
 use crate::error::{IterError, Result};
-use crate::models::{Project, ProjectGroup, Table, Task, TaskRef};
+use crate::models::{Project, ProjectGroup, SessionConfig, Table, Task, TaskRef};
 use crate::{git, tmux};
+use std::path::{Path, PathBuf};
 
 /// The task's issue number, or the "no linked issue" error.
 pub fn linked_issue(project: &Project, task: &Task) -> Result<i64> {
@@ -88,7 +89,7 @@ pub const ENV_PROJECT: &str = "ITER_PROJECT";
 pub struct Here {
     pub task: Option<String>,
     pub project: Option<String>,
-    pub cwd: Option<std::path::PathBuf>,
+    pub cwd: Option<PathBuf>,
 }
 
 impl Here {
@@ -142,33 +143,42 @@ fn task_of(db: &Db, id: i64) -> Result<(Project, Task)> {
 }
 
 /// The task whose worktree is `dir` or holds it (the deepest, should worktrees nest).
-fn worktree_task(db: &Db, dir: &std::path::Path) -> Result<Option<i64>> {
-    let dir = canonical(dir);
-    let configs = db.list::<crate::models::SessionConfig>()?;
-    Ok(configs
-        .iter()
-        .filter_map(|c| Some((canonical(c.worktree_path.as_deref()?.as_ref()), c.task_id)))
-        .filter(|(path, _)| dir.starts_with(path))
-        .max_by_key(|(path, _)| path.components().count())
-        .map(|(_, task)| task))
+fn worktree_task(db: &Db, dir: &Path) -> Result<Option<i64>> {
+    let configs = db.list::<SessionConfig>()?;
+    Ok(deepest_holding(
+        dir,
+        configs
+            .iter()
+            .filter_map(|c| Some((c.worktree_path.as_deref()?, c.task_id))),
+    ))
 }
 
 /// The project whose folder (`base_path`) is `dir` or holds it, the deepest.
-fn folder_project(db: &Db, dir: &std::path::Path) -> Result<Option<Project>> {
-    let dir = canonical(dir);
-    Ok(db
-        .list::<Project>()?
-        .into_iter()
-        .filter(|p| !p.base_path.trim().is_empty())
-        .map(|p| (canonical(p.base_path.as_ref()), p))
-        .filter(|(path, _)| dir.starts_with(path))
-        .max_by_key(|(path, _)| path.components().count())
-        .map(|(_, p)| p))
+fn folder_project(db: &Db, dir: &Path) -> Result<Option<Project>> {
+    let projects = db.list::<Project>()?;
+    Ok(deepest_holding(
+        dir,
+        projects
+            .into_iter()
+            .filter(|p| !p.base_path.trim().is_empty())
+            .map(|p| (p.base_path.clone(), p)),
+    ))
 }
 
-/// `path` with symlinks resolved (`/tmp` is `/private/tmp` on macOS), or as given if it is gone.
-fn canonical(path: &std::path::Path) -> std::path::PathBuf {
-    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+/// The value whose folder is `dir` or holds it, the deepest folder winning. Paths compare with
+/// symlinks resolved (`/tmp` is `/private/tmp` on macOS), or as given if gone.
+fn deepest_holding<T>(
+    dir: &Path,
+    folders: impl Iterator<Item = (impl AsRef<Path>, T)>,
+) -> Option<T> {
+    let canonical =
+        |path: &Path| std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let dir = canonical(dir);
+    folders
+        .map(|(folder, value)| (canonical(folder.as_ref()), value))
+        .filter(|(folder, _)| dir.starts_with(folder))
+        .max_by_key(|(folder, _)| folder.components().count())
+        .map(|(_, value)| value)
 }
 
 /// The current project: the current task's, else `ITER_PROJECT`, else the project whose folder
@@ -266,10 +276,7 @@ pub fn require_git_repo(project: &Project) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::IterError;
     use crate::fixtures;
-    use crate::models::{SessionConfig, Table};
-    use std::path::PathBuf;
 
     /// Project `web` with `login` (1), `login` (2), `logout` (3); project `api` with `login` (4)
     /// and `2024` (5).
@@ -476,19 +483,14 @@ mod tests {
         let in_folder = here(None, None, Some(p.root.join("app")));
         let found = current_project_at(&p.db, &in_folder, || Some("other".into())).unwrap();
         assert_eq!(found.name, "app");
-        let _ = p.a;
         std::fs::remove_dir_all(&p.root).unwrap();
-    }
-
-    fn by_ref_full(db: &Db, text: &str) -> (Project, Task) {
-        task(db, &text.parse::<TaskRef>().unwrap()).unwrap()
     }
 
     /// R3: a task is shown as `<project>/<title> #<id>`, and what is shown reads back.
     #[test]
     fn a_task_is_shown_with_its_id() {
         let db = world();
-        let (project, task) = by_ref_full(&db, "3");
+        let (project, task) = task(&db, &"3".parse().unwrap()).unwrap();
         assert_eq!(task.label(&project).to_string(), "web/logout #3");
         assert_eq!(by_ref(&db, &task.label(&project).to_string()).unwrap(), 3);
         let unlinked = IterError::NoLinkedIssue(task.label(&project).to_string());

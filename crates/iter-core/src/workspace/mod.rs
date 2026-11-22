@@ -104,8 +104,9 @@ pub fn teardown<'a>(
     session_config.tmux_session_name.as_deref()
 }
 
-/// The on-disk half of teardown, shared with [`unwind`] and [`open`]'s undo (worktree and branch but no row yet). Failures warn and carry on. The branch goes after the worktree, as `git::delete_branch`
-/// requires, and is kept (with a warning) while it has unmerged commits.
+/// The on-disk half of teardown, shared with [`unwind`] and [`open`]'s undo (no row yet). Failures
+/// warn and carry on. The branch goes after the worktree, as `git::delete_branch` requires, and is
+/// kept (with a warning) while it has unmerged commits.
 pub(crate) fn remove_worktree_and_branch(
     project: &Project,
     worktree: Option<&str>,
@@ -159,8 +160,6 @@ pub fn unwind(
 mod tests {
     use super::*;
     use crate::fixtures;
-    use crate::models::Table;
-    use crate::models::TaskStatus;
 
     fn task(id: i64, name: &str) -> Task {
         Task {
@@ -233,27 +232,29 @@ mod tests {
     #[test]
     fn open_makes_the_worktree_the_branch_and_the_row_with_the_id_in_the_slug() {
         let (db, project, tasks) = repo_world("ws-open");
-        let (first, second) = (&tasks[0], &tasks[1]);
-        let one = open(&db, &project, first, None).unwrap();
-        let two = open(&db, &project, second, None).unwrap();
         let slug = |task: &Task| format!("{}-fix-login", task.id());
-        assert_eq!(
-            one.github_branch.as_deref(),
-            Some(format!("feat/{}", slug(first)).as_str())
-        );
-        assert_eq!(
-            two.github_branch.as_deref(),
-            Some(format!("feat/{}", slug(second)).as_str())
-        );
-        let path = one.worktree_path.clone().unwrap();
+        let opened: Vec<_> = tasks
+            .iter()
+            .map(|task| open(&db, &project, task, None).unwrap())
+            .collect();
+        for (task, config) in tasks.iter().zip(&opened) {
+            assert_eq!(
+                config.github_branch.as_deref(),
+                Some(format!("feat/{}", slug(task)).as_str())
+            );
+            assert_eq!(config.tmux_session_name, None);
+        }
+        let path = opened[0].worktree_path.clone().unwrap();
         assert!(
-            path.ends_with(&format!(".iter-worktrees/{}", slug(first))),
+            path.ends_with(&format!(".iter-worktrees/{}", slug(&tasks[0]))),
             "{path}"
         );
-        assert!(std::path::Path::new(&path).is_dir());
-        assert_eq!(one.tmux_session_name, None);
-        let stored = db.find_session_config_by_task(first.id()).unwrap().unwrap();
-        assert_eq!(stored.worktree_path, one.worktree_path);
+        assert!(Path::new(&path).is_dir());
+        let stored = db
+            .find_session_config_by_task(tasks[0].id())
+            .unwrap()
+            .unwrap();
+        assert_eq!(stored.worktree_path, opened[0].worktree_path);
         let _ = std::fs::remove_dir_all(&project.base_path);
     }
 
@@ -264,7 +265,7 @@ mod tests {
         let task = &tasks[0];
         let folder = format!("{}-fix-login", task.id());
         std::fs::create_dir_all(
-            std::path::Path::new(&project.base_path)
+            Path::new(&project.base_path)
                 .join(".iter-worktrees")
                 .join(&folder),
         )
@@ -282,7 +283,7 @@ mod tests {
         let (db, project, _) = repo_world("ws-undo");
         let ghost = task(999, "Ghost");
         assert!(open(&db, &project, &ghost, None).is_err());
-        let worktree = std::path::Path::new(&project.base_path).join(".iter-worktrees/999-ghost");
+        let worktree = Path::new(&project.base_path).join(".iter-worktrees/999-ghost");
         assert!(!worktree.exists(), "{}", worktree.display());
         let branch = std::process::Command::new("git")
             .args(["rev-parse", "--verify", "-q", "feat/999-ghost"])
