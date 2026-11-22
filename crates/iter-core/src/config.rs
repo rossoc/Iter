@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::{OnceLock, RwLock};
 
-/// The config directory's name under the platform's config home, and the
-/// two files `iter` keeps in it.
+/// The config directory's name under the platform's config home, and the two files `iter` keeps
+/// in it.
 const APP_DIR: &str = "iter";
 const CONFIG_FILE: &str = "iter.yaml";
 const DB_FILE: &str = "iter.db";
@@ -393,12 +393,12 @@ mod tests {
         assert_eq!(from_yaml("").editor, DEFAULT_EDITOR);
     }
 
-    /// The `notifications` block as YAML, so these tests compile before the field exists.
+    /// The `notifications` block as YAML.
     fn notifications_of(config: &Config) -> serde_yaml::Value {
         serde_yaml::to_value(config).expect("writes")["notifications"].clone()
     }
 
-    /// R1: toasts are on, for five seconds, when the file says nothing about them.
+    /// Toasts are on, for five seconds, when the file says nothing about them.
     #[test]
     fn notifications_default_to_on_for_five_seconds() {
         for config in [Config::default(), from_yaml(""), from_yaml("editor: vim\n")] {
@@ -408,7 +408,7 @@ mod tests {
         }
     }
 
-    /// R1: a `notifications` block is read, a key it leaves out keeps its default, and a
+    /// A `notifications` block is read, a key it leaves out keeps its default, and a
     /// mistyped key in it is refused like any other.
     #[test]
     fn a_notifications_block_parses_and_reads_back() {
@@ -451,7 +451,7 @@ mod tests {
         );
     }
 
-    /// Round I3 (step 3): `load` returns what it read, `config()` then hands out the same value.
+    /// `load` returns what it read, `config()` then hands out the same value.
     #[test]
     fn load_reads_the_file_once_and_config_returns_it() {
         let name = "load_reads_the_file_once_and_config_returns_it";
@@ -464,7 +464,7 @@ mod tests {
         assert!(std::ptr::eq(loaded, config()));
     }
 
-    /// A bad file is an error value (`InvalidConfig`), where `config()` used to exit the process.
+    /// A bad file is an error value (`InvalidConfig`), never an exit.
     #[test]
     fn load_reports_an_invalid_file_instead_of_exiting() {
         let name = "load_reports_an_invalid_file_instead_of_exiting";

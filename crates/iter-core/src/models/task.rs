@@ -1,3 +1,6 @@
+//! [`Task`] and what it holds: [`TaskStatus`], the schedule ([`Duration`], `start_time`) and
+//! [`TaskEdit`], the editor's view of one.
+
 use chrono::NaiveDateTime;
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
@@ -32,12 +35,7 @@ impl TaskStatus {
     }
 
     pub fn parse(s: &str) -> Option<Self> {
-        match s {
-            "queue" => Some(TaskStatus::Queue),
-            "wip" => Some(TaskStatus::Wip),
-            "done" => Some(TaskStatus::Done),
-            _ => None,
-        }
+        Self::ALL.into_iter().find(|status| status.as_str() == s)
     }
 }
 
@@ -114,7 +112,7 @@ mod datetime_opt {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         match value {
-            Some(dt) => serializer.serialize_str(&dt.format(START_TIME_FMT).to_string()),
+            Some(dt) => serializer.collect_str(&dt.format(START_TIME_FMT)),
             None => serializer.serialize_none(),
         }
     }
@@ -153,14 +151,8 @@ impl Duration {
             return None;
         }
         let (hours, minutes): (i64, i64) = (hours.parse().ok()?, minutes.parse().ok()?);
-        if minutes >= 60 {
-            return None;
-        }
-        // A slot is never longer than a year: a huge `hours` would overflow `Task::end_time`.
-        if hours > MAX_HOURS {
-            return None;
-        }
-        Some(Duration(hours * 60 + minutes))
+        // Capped at a year: a huge `hours` would overflow `Task::end_time`.
+        (minutes < 60 && hours <= MAX_HOURS).then(|| Duration(hours * 60 + minutes))
     }
 }
 
@@ -349,25 +341,30 @@ mod tests {
         assert_eq!((back.start_time, back.duration), (None, None));
     }
 
-    /// Hours too big for the minutes to fit are a parse failure, not an overflow.
+    /// Hours too big for the minutes to fit are a parse failure, not an overflow; a year of hours
+    /// is the longest slot.
     #[test]
     fn a_duration_too_long_to_count_is_rejected() {
-        assert_eq!(Duration::parse("999999999999999999:00"), None);
-        assert_eq!(Duration::parse("1000:30"), Some(Duration(60_030)));
+        for (text, minutes) in [
+            ("999999999999999999:00", None),
+            ("99999999999999:00", None),
+            ("1000:30", Some(60_030)),
+            ("8784:00", Some(8784 * 60)),
+            ("8785:00", None),
+        ] {
+            assert_eq!(Duration::parse(text), minutes.map(Duration), "{text}");
+        }
     }
 
     #[test]
     fn malformed_schedule_values_are_rejected() {
-        assert!(serde_yaml::from_str::<Task>("name: t\nstart_time: tomorrow\n").is_err());
-        assert!(serde_yaml::from_str::<Task>("name: t\nduration: 1:75\n").is_err());
-        assert!(serde_yaml::from_str::<Task>("name: t\nduration: soon\n").is_err());
-    }
-
-    #[test]
-    fn a_huge_duration_is_a_parse_failure_not_a_panic_later() {
-        assert!(Duration::parse("99999999999999:00").is_none());
-        assert!(Duration::parse("8784:00").is_some());
-        assert!(Duration::parse("8785:00").is_none());
+        for front in [
+            "name: t\nstart_time: tomorrow\n",
+            "name: t\nduration: 1:75\n",
+            "name: t\nduration: soon\n",
+        ] {
+            assert!(serde_yaml::from_str::<Task>(front).is_err(), "{front:?}");
+        }
     }
 
     #[test]

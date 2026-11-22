@@ -14,8 +14,8 @@ pub struct App {
 
 impl App {
     /// Loads the config, opens the database it names (made beside the config file when it names
-    /// none) and stamps the run's `now`. A database that will not open is
-    /// [`IterError::OpenDb`], naming its path.
+    /// none) and stamps the run's `now`. A database that will not open is [`IterError::OpenDb`],
+    /// naming its path.
     pub fn open() -> Result<Self> {
         let path = config::load()?.db_path()?;
         let db = Db::open(&path).map_err(|source| IterError::OpenDb {
@@ -31,8 +31,7 @@ impl App {
         App { db, now }
     }
 
-    /// An app over an explicit database — what a test uses to drive
-    /// commands without a config file or an `$XDG_CONFIG_HOME` to arrange.
+    /// An app over an explicit database: what a test uses to drive commands without a config file.
     #[cfg(any(test, feature = "test-support"))]
     pub fn with_db(db: Db) -> Self {
         App::over(db, Local::now().naive_local())
@@ -42,11 +41,10 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::IterError;
     use crate::fixtures::in_scratch_config as isolated;
 
-    /// Round I3 (step 3): opening is a `Result`. With no `db_path` the database is made beside the
-    /// config file and `now` is the instant of the call.
+    /// With no `db_path` the database is made beside the config file and `now` is the instant of
+    /// the call.
     #[test]
     fn open_makes_the_database_beside_the_config_and_stamps_now() {
         if isolated(

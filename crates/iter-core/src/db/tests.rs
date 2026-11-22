@@ -718,7 +718,7 @@ fn a_task_with_a_session_cannot_move_to_another_project() {
         .expect("a session does not stop staying");
 }
 
-/// R1: the target project may already hold a task of that title.
+/// The target project may already hold a task of that title.
 #[test]
 fn a_task_moves_into_a_project_that_has_a_task_of_its_title() {
     let db = db();
@@ -1326,7 +1326,7 @@ fn a_taken_name_is_a_typed_error() {
     insert_task(&db, b, "t");
     let mut same = Task::template(a, String::new(), TaskStatus::Queue);
     same.name = "t".into();
-    // R1: titles repeat; a task is told apart by its id
+    // titles repeat; a task is told apart by its id
     let again = db.insert(&same).expect("an equal title is accepted");
     assert_ne!(again, db.insert(&same).expect("and again"));
 }
@@ -1541,7 +1541,7 @@ fn timestamps_are_stored_as_plain_seconds_text() {
     assert_eq!(end, None);
 }
 
-/// Round I2, R3: a board card is labelled as everywhere else, `<project>/<title> #<id>`, so two
+/// A board card is labelled as everywhere else, `<project>/<title> #<id>`, so two
 /// cards of one title can be told apart.
 #[test]
 fn board_cards_of_one_title_carry_their_ids() {
@@ -1566,8 +1566,8 @@ fn board_cards_of_one_title_carry_their_ids() {
     );
 }
 
-/// Round I2, R3: what `iter task list` prints and completion chooses from: one label per task,
-/// narrowed by project and status, by project then title then id. Replaces `task_refs`.
+/// What `iter task list` prints and completion chooses from: one label per task, narrowed by
+/// project and status, by project then title then id.
 #[test]
 fn task_labels_are_every_task_with_its_id_in_project_and_title_order() {
     let db = db();

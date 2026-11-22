@@ -1,3 +1,6 @@
+//! The SQLite store: [`Db`] opens and migrates the file and runs the generic CRUD that every
+//! [`Table`] gets; the query modules add what is specific to tasks, groups and sessions.
+
 use crate::error::{IterError, Result};
 use crate::models::Organization;
 use crate::models::{
@@ -15,10 +18,8 @@ use std::path::Path;
 
 mod groups;
 mod migrate;
-mod pushes;
 #[cfg(test)]
 mod rebuild_tests;
-mod reporting;
 mod sessions;
 mod tasks;
 #[cfg(test)]
@@ -29,8 +30,14 @@ pub use crate::models::Table;
 /// Names bound per `ids_by_name` query (older SQLite allows 999 variables).
 const NAME_CHUNK: usize = 500;
 
-/// The condition of the unfinished tasks (a task is finished when `done`).
-const NOT_DONE: &str = "status <> 'done'";
+/// ` AND {alias}status <> 'done'` when `unfinished` (a task is finished when `done`), else
+/// nothing; `alias` is the task table's prefix (`"t."` or empty).
+fn and_unfinished(alias: &str, unfinished: bool) -> String {
+    match unfinished {
+        true => format!(" AND {alias}status <> 'done'"),
+        false => String::new(),
+    }
+}
 
 /// A `UNIQUE` violation (by extended result code, not message) on a unique-name table is
 /// [`IterError::NameTaken`]; anything else is a database error.
@@ -281,6 +288,15 @@ impl Db {
     /// The row `id` points at, or the error saying `what` the `of` named is gone.
     pub fn require<T: Table>(&self, id: i64, what: &'static str, of: &'static str) -> Result<T> {
         self.get(id)?.ok_or(IterError::Orphan { what, of })
+    }
+
+    /// How many tasks match `condition` (one `?1`-bound id), unread: tab badges.
+    pub(super) fn count_tasks(&self, condition: &str, id: i64) -> Result<usize> {
+        let n: i64 = self
+            .conn
+            .prepare_cached(&format!("SELECT COUNT(*) FROM tasks WHERE {condition}"))?
+            .query_row(params![id], |row| row.get(0))?;
+        Ok(n as usize)
     }
 
     pub fn list<T: Table>(&self) -> Result<Vec<T>> {

@@ -1,3 +1,6 @@
+//! The stored and edited types: one file per table, the traits that give them their SQL layout and
+//! editor round trip, and the task reference grammar. No SQL runs here; [`crate::db`] does that.
+
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 

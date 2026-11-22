@@ -185,11 +185,7 @@ impl Db {
         let tail = format!(
             "WHERE project_id IN (SELECT id FROM projects WHERE {} = ?1){}",
             G::MEMBER_COLUMN,
-            if unfinished {
-                format!(" AND {NOT_DONE}")
-            } else {
-                String::new()
-            }
+            and_unfinished("", unfinished)
         );
         Ok(self
             .find_all::<Task>(&tail, params![id])?
@@ -200,14 +196,12 @@ impl Db {
 
     /// Task count for group `id` without reading them (badge).
     pub fn count_tasks_in<G: ProjectGroup>(&self, id: i64) -> Result<usize> {
-        let sql = format!(
-            "SELECT COUNT(*) FROM tasks WHERE project_id IN (SELECT id FROM projects WHERE {} = ?1)",
-            G::MEMBER_COLUMN
-        );
-        let n: i64 = self
-            .conn
-            .prepare_cached(&sql)?
-            .query_row(params![id], |row| row.get(0))?;
-        Ok(n as usize)
+        self.count_tasks(
+            &format!(
+                "project_id IN (SELECT id FROM projects WHERE {} = ?1)",
+                G::MEMBER_COLUMN
+            ),
+            id,
+        )
     }
 }

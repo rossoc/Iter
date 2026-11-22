@@ -1,6 +1,8 @@
-use crate::models::Named;
+//! [`Project`]: a base directory of work with its tasks.
+
+use crate::error::{IterError, Result};
 use crate::models::{
-    Configured, Organization, Settings, default_branch_template, default_true, main_branch,
+    Configured, Named, Organization, Settings, default_branch_template, default_true, main_branch,
     require_no_comma,
 };
 use iter_macros::{MarkdownBody, Table};
@@ -78,16 +80,16 @@ impl Project {
 
     /// Beyond a name: no comma ([`require_no_comma`]) and a `base_path`. Callers that write a
     /// project absolutise the path first ([`crate::scaffold::absolutise_base_path`]).
-    fn check(&mut self) -> crate::error::Result<()> {
+    fn check(&mut self) -> Result<()> {
         require_no_comma(Self::KIND, &self.name)?;
         if self.name.contains('/') {
-            return Err(crate::error::IterError::SlashInName {
+            return Err(IterError::SlashInName {
                 kind: Self::KIND,
                 name: self.name.clone(),
             });
         }
         if self.base_path.trim().is_empty() {
-            return Err(crate::error::IterError::EmptyBasePath);
+            return Err(IterError::EmptyBasePath);
         }
         Ok(())
     }

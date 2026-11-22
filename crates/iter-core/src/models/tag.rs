@@ -1,3 +1,5 @@
+//! [`Tag`], the coloured label of a task, and [`Priority`], the two flags the built-in tags carry.
+
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
@@ -169,11 +171,15 @@ mod tests {
 
     #[test]
     fn hex_colors_are_hash_and_six_digits() {
-        assert!(is_hex_color("#facc15"));
-        assert!(is_hex_color("#ABCDEF"));
-        assert!(!is_hex_color("facc15"));
-        assert!(!is_hex_color("#fff"));
-        assert!(!is_hex_color("#gggggg"));
-        assert!(!is_hex_color("#facc15 "));
+        for (text, hex) in [
+            ("#facc15", true),
+            ("#ABCDEF", true),
+            ("facc15", false),
+            ("#fff", false),
+            ("#gggggg", false),
+            ("#facc15 ", false),
+        ] {
+            assert_eq!(is_hex_color(text), hex, "{text:?}");
+        }
     }
 }

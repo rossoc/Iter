@@ -1,3 +1,5 @@
+//! [`Session`]: one stretch of time worked on a task.
+
 use crate::models::Duration;
 use chrono::NaiveDateTime;
 use iter_macros::Table;

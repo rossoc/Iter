@@ -1,4 +1,9 @@
-use crate::models::{Configured, Settings, default_branch_template, default_true, main_branch};
+//! [`Organization`]: a group of projects with the defaults they start from and a time platform.
+
+use crate::error::{IterError, Result};
+use crate::models::{
+    Configured, Project, ProjectGroup, Settings, default_branch_template, default_true, main_branch,
+};
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
@@ -60,9 +65,9 @@ pub struct Organization {
 /// A platform URL is `https`, or `http` to this machine (local platform, test server), and has
 /// no userinfo: the API key goes out as a bearer token with every call, and a prefix check
 /// would accept `http://localhost:1@evil.com` or `http://localhost.evil.com`.
-pub fn check_url(url: &str) -> crate::error::Result<()> {
+pub fn check_url(url: &str) -> Result<()> {
     let bad = |why: &str| {
-        crate::error::IterError::Platform(format!(
+        IterError::Platform(format!(
             "platform_url '{url}' {why} (the API key is sent with every request)"
         ))
     };
@@ -82,7 +87,7 @@ pub fn check_url(url: &str) -> crate::error::Result<()> {
 
 impl Organization {
     /// Beyond a name: a platform URL passes [`check_url`].
-    fn check(&mut self) -> crate::error::Result<()> {
+    fn check(&mut self) -> Result<()> {
         self.platform_url = self.platform_url.trim().to_string();
         match self.platform_url.as_str() {
             "" => Ok(()),
@@ -98,12 +103,12 @@ impl Organization {
     }
 }
 
-impl crate::models::ProjectGroup for Organization {
+impl ProjectGroup for Organization {
     const MEMBER_COLUMN: &'static str = "organization_id";
     const NOT_A_MEMBER: &'static str = "doesn't belong to an organization";
     const DETACHED: &'static str = "without an organization";
 
-    fn group_of(project: &crate::models::Project) -> Option<i64> {
+    fn group_of(project: &Project) -> Option<i64> {
         project.organization_id
     }
 }
@@ -113,35 +118,39 @@ mod tests {
     use super::*;
     use crate::models::Named;
 
-    fn checked(url: &str) -> bool {
-        let mut org = Organization {
-            name: "acme".into(),
-            platform_url: url.into(),
-            ..Default::default()
-        };
-        org.validate().is_ok()
-    }
-
+    /// Every URL the platform field takes (through `validate`) or refuses.
     #[test]
     fn a_platform_url_is_https_or_this_machine() {
-        assert!(checked(""));
-        assert!(checked("https://time.example.com/api"));
-        assert!(checked("http://127.0.0.1:8080"));
-        assert!(checked("http://localhost/api"));
-        assert!(!checked("http://time.example.com"));
-        assert!(!checked("http://localhost.evil.com"));
-        assert!(!checked("ftp://x"));
-        assert!(!checked("http://localhost:1@evil.com"));
-        assert!(!checked("http://localhost@evil.com/"));
-        assert!(!checked("http://127.0.0.1.evil.com"));
-        assert!(!checked("https://user:pw@time.example.com"));
-        assert!(!checked("localhost"));
+        let checked = |url: &str| {
+            let mut org = Organization {
+                name: "acme".into(),
+                platform_url: url.into(),
+                ..Default::default()
+            };
+            org.validate().is_ok()
+        };
+        for (url, accepted) in [
+            ("", true),
+            ("https://time.example.com/api", true),
+            ("http://127.0.0.1:8080", true),
+            ("http://localhost/api", true),
+            ("http://time.example.com", false),
+            ("http://localhost.evil.com", false),
+            ("ftp://x", false),
+            ("http://localhost:1@evil.com", false),
+            ("http://localhost@evil.com/", false),
+            ("http://127.0.0.1.evil.com", false),
+            ("https://user:pw@time.example.com", false),
+            ("localhost", false),
+        ] {
+            assert_eq!(checked(url), accepted, "{url:?}");
+        }
     }
 
-    /// Round I3 (step 2): the URL rule is `models::check_url`, with the cases `platform` pins now.
-    /// Each accepted URL and each refusal (with the part of the message that says why).
+    /// `check_url` alone: each accepted URL and each refusal, with the part of the message that
+    /// says why.
     #[test]
-    fn check_url_lives_in_models_and_refuses_what_would_leak_the_key() {
+    fn check_url_refuses_what_would_leak_the_key() {
         use crate::models::check_url;
         for ok in [
             "https://time.example.com/api",

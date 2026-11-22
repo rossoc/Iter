@@ -322,7 +322,7 @@ fn failing_step(db: &Db) -> Result<()> {
     Err(crate::error::failed("boom"))
 }
 
-/// Round I2: the copy guards the rebuild (step 7). A later step on a database that already ran it
+/// The copy guards the rebuild (the seventh step). A later step on a database that already ran it
 /// has nothing to guard, and must not leave a `.before-v7` file that says otherwise.
 #[test]
 fn a_step_after_the_rebuild_takes_no_copy() {
@@ -389,7 +389,7 @@ fn a_failing_rebuild_keeps_the_old_database_and_foreign_keys_on() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Round I3: the copy is taken right before the rebuild step wherever it sits in the list (the
+/// The copy is taken right before the rebuild step wherever it sits in the list (the
 /// runner finds it by what it is, not by a hand-kept index). A step before it runs first, so the
 /// copy holds the old tasks table at the version just before the rebuild.
 #[test]
@@ -425,7 +425,7 @@ fn open_old(dir: &std::path::Path) -> (PathBuf, Db) {
     (path, Db { conn })
 }
 
-/// Round I4 (step 6): a step takes a copy because it says `copy_first`, not because it is the
+/// A step takes a copy because it says `copy_first`, not because it is the
 /// rebuild. The rebuild without the flag takes none; a no-op step with it takes one named for the
 /// version it brings, and the copy holds the version before.
 #[test]

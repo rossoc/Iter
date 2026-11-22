@@ -1,3 +1,5 @@
+//! [`Push`]: the ledger row of one worklog sent to a time platform.
+
 use chrono::NaiveDateTime;
 use iter_macros::Table;
 

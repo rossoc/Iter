@@ -1,8 +1,11 @@
+//! [`Board`], a calendar of projects, and [`Card`], a task as a board shows it.
+
+use crate::models::{Priority, Project, ProjectGroup, Task};
 use iter_macros::{MarkdownBody, Table};
 use serde::{Deserialize, Serialize};
 
 /// A calendar holding projects: just the set of projects bound to it.
-#[derive(Debug, Clone, Serialize, Deserialize, Table, MarkdownBody)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Table, MarkdownBody)]
 #[table(name = "boards", order_by = "name", kind = "board")]
 pub struct Board {
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -16,20 +19,16 @@ pub struct Board {
 
 impl Board {
     pub fn template() -> Self {
-        Board {
-            id: None,
-            name: String::new(),
-            description: String::new(),
-        }
+        Self::default()
     }
 }
 
-impl crate::models::ProjectGroup for Board {
+impl ProjectGroup for Board {
     const MEMBER_COLUMN: &'static str = "board_id";
     const NOT_A_MEMBER: &'static str = "isn't bound to a board";
     const DETACHED: &'static str = "on no board";
 
-    fn group_of(project: &crate::models::Project) -> Option<i64> {
+    fn group_of(project: &Project) -> Option<i64> {
         project.board_id
     }
 }
@@ -38,6 +37,6 @@ impl crate::models::ProjectGroup for Board {
 #[derive(Debug, Clone)]
 pub struct Card {
     pub label: String,
-    pub task: crate::models::Task,
-    pub priority: crate::models::Priority,
+    pub task: Task,
+    pub priority: Priority,
 }

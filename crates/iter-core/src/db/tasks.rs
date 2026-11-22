@@ -93,11 +93,7 @@ impl Db {
                  JOIN projects p ON p.id = t.project_id
                  WHERE g.name IN (?1, ?2) AND p.{} = ?3{}",
                 G::MEMBER_COLUMN,
-                if unfinished {
-                    format!(" AND t.{NOT_DONE}")
-                } else {
-                    String::new()
-                }
+                and_unfinished("t.", unfinished)
             ),
             params![URGENT_TAG, IMPORTANT_TAG, id],
             |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
@@ -200,11 +196,7 @@ impl Db {
 
     /// Task count of a project, unread (tab badge).
     pub fn count_tasks_for_project(&self, project_id: i64) -> Result<usize> {
-        let n: i64 = self
-            .conn
-            .prepare_cached("SELECT COUNT(*) FROM tasks WHERE project_id = ?1")?
-            .query_row(params![project_id], |row| row.get(0))?;
-        Ok(n as usize)
+        self.count_tasks("project_id = ?1", project_id)
     }
 
     pub fn tasks_for_project(&self, project_id: i64) -> Result<Vec<Task>> {

@@ -1,3 +1,5 @@
+//! [`SessionConfig`]: the tmux session and worktree a task works in.
+
 use iter_macros::Table;
 
 /// The tmux session and git worktree/branch set up for a `wip` task, derived from task and project

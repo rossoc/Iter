@@ -71,8 +71,8 @@ impl Db {
     }
 
     /// Copies a database that held tasks when it was opened to `<db>.before-v7` (the version of the
-    /// title rebuild, the step that asks for it) right before that step, once: an existing copy is kept. The copy is made on a
-    /// second connection (`VACUUM INTO` reads, so it runs beside our write lock) under a temporary
+    /// title rebuild, the step that asks for it) right before that step, once: an existing copy is
+    /// kept. The copy is made on a second connection (`VACUUM INTO` reads, so it runs beside our write lock) under a temporary
     /// name and renamed into place.
     fn keep_a_copy(&self) -> Result<()> {
         let Some(path) = self.conn.path().filter(|p| !p.is_empty()) else {
@@ -102,20 +102,12 @@ impl Db {
         Step::new(Self::baseline),
         Step::new(Self::flags_to_tags),
         Step::new(Self::drop_short_sessions),
-        Step::new(Self::add_notes_path),
-        Step::new(Self::add_platform),
+        // `notes_path`, then the platform columns: both are declared in `add_missing_columns`
+        Step::new(Self::add_missing_columns),
+        Step::new(Self::add_missing_columns),
         Step::new(Self::add_pushes),
         Step::copying(Self::task_titles_repeat),
     ];
-
-    /// `notes_path` on projects and organizations.
-    pub(super) fn add_notes_path(&self) -> Result<()> {
-        self.add_missing_columns()
-    }
-
-    pub(super) fn add_platform(&self) -> Result<()> {
-        self.add_missing_columns()
-    }
 
     pub(super) fn add_pushes(&self) -> Result<()> {
         self.conn.execute_batch(
