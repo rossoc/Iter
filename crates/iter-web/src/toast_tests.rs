@@ -201,6 +201,38 @@ fn post(path: &str, body: &str, mode: &str, referer: Option<&str>) -> Answer {
     send(Method::POST, path, &headers, body)
 }
 
+/// The settings form posted from the settings page, as a tab does.
+fn post_settings(form: &str) -> Answer {
+    post(
+        "/settings",
+        form,
+        "navigate",
+        Some("http://127.0.0.1:3000/settings"),
+    )
+}
+
+/// The inline error box stays in `<main>` and the toast, outside it, carries `message`.
+fn assert_inline_and_toast(page: &Answer, message: &str) {
+    let (start, end) = (page.body.find("<main"), page.body.find("</main>"));
+    let main = &page.body[start.expect("main")..end.expect("main")];
+    assert!(main.contains(message), "the inline error box: {main}");
+    assert!(
+        page.outside_main().contains(message),
+        "the toast carries the message"
+    );
+}
+
+/// The flash of a saved form: cookie attributes right and a message that is no error.
+fn assert_success_flash(saved: &Answer) {
+    assert_eq!(saved.status, StatusCode::SEE_OTHER, "{}", saved.body);
+    let (value, attributes) = saved.flash();
+    assert_flash_cookie_attributes(&attributes);
+    assert!(
+        !value.trim().is_empty() && !value.to_lowercase().contains("error"),
+        "a success message: {value:?}"
+    );
+}
+
 fn assert_flash_cookie_attributes(attributes: &str) {
     for wanted in ["path=/", "samesite=strict", "max-age=60"] {
         assert!(attributes.contains(wanted), "{wanted} in {attributes:?}");
@@ -221,19 +253,7 @@ fn a_saved_form_redirects_with_a_success_flash() {
     if isolated("a_saved_form_redirects_with_a_success_flash", None) {
         return;
     }
-    let answer = post(
-        "/settings",
-        &settings_form(true, "5"),
-        "navigate",
-        Some("http://127.0.0.1:3000/settings"),
-    );
-    assert_eq!(answer.status, StatusCode::SEE_OTHER, "{}", answer.body);
-    let (value, attributes) = answer.flash();
-    assert_flash_cookie_attributes(&attributes);
-    assert!(
-        !value.trim().is_empty() && !value.to_lowercase().contains("error"),
-        "a success message: {value:?}"
-    );
+    assert_success_flash(&post_settings(&settings_form(true, "5")));
 }
 
 /// R4: a POST refused with a 400 from a form goes back (303) to the same-origin page it came
@@ -309,21 +329,11 @@ fn turned_off_there_is_no_cookie_and_no_toast() {
     ) {
         return;
     }
-    let saved = post(
-        "/settings",
-        &settings_form(false, "5"),
-        "navigate",
-        Some("http://127.0.0.1:3000/settings"),
-    );
+    let saved = post_settings(&settings_form(false, "5"));
     assert_eq!(saved.status, StatusCode::SEE_OTHER, "{}", saved.body);
     assert!(saved.cookies().is_empty(), "{:?}", saved.headers);
 
-    let refused = post(
-        "/settings",
-        &settings_form(false, "5").replace("editor=nvim", "editor="),
-        "navigate",
-        Some("http://127.0.0.1:3000/settings"),
-    );
+    let refused = post_settings(&settings_form(false, "5").replace("editor=nvim", "editor="));
     assert_eq!(refused.status, StatusCode::OK);
     assert!(refused.body.contains("Editor cannot be empty."));
     assert!(
@@ -390,23 +400,9 @@ fn a_form_error_also_raises_a_toast() {
     if isolated("a_form_error_also_raises_a_toast", None) {
         return;
     }
-    let refused = post(
-        "/settings",
-        &settings_form(true, "5").replace("editor=nvim", "editor="),
-        "navigate",
-        Some("http://127.0.0.1:3000/settings"),
-    );
+    let refused = post_settings(&settings_form(true, "5").replace("editor=nvim", "editor="));
     assert_eq!(refused.status, StatusCode::OK);
-    let main_start = refused.body.find("<main").expect("main");
-    let main_end = refused.body.find("</main>").expect("main");
-    assert!(
-        refused.body[main_start..main_end].contains("Editor cannot be empty."),
-        "the inline error box stays"
-    );
-    assert!(
-        refused.outside_main().contains("Editor cannot be empty."),
-        "the toast carries the message"
-    );
+    assert_inline_and_toast(&refused, "Editor cannot be empty.");
 }
 
 /// R8: the settings page no longer shows its own "Saved." notice; the toast says it.
@@ -430,19 +426,7 @@ fn the_save_that_turns_toasts_on_shows_one() {
     ) {
         return;
     }
-    let saved = post(
-        "/settings",
-        &settings_form(true, "5"),
-        "navigate",
-        Some("http://127.0.0.1:3000/settings"),
-    );
-    assert_eq!(saved.status, StatusCode::SEE_OTHER, "{}", saved.body);
-    let (value, attributes) = saved.flash();
-    assert_flash_cookie_attributes(&attributes);
-    assert!(
-        !value.trim().is_empty() && !value.to_lowercase().contains("error"),
-        "a success message: {value:?}"
-    );
+    assert_success_flash(&post_settings(&settings_form(true, "5")));
 }
 
 /// R11, the reverse: the save that turns the toasts off sets no cookie, though they were on
@@ -455,12 +439,7 @@ fn the_save_that_turns_toasts_off_sets_no_cookie() {
     ) {
         return;
     }
-    let saved = post(
-        "/settings",
-        &settings_form(false, "5"),
-        "navigate",
-        Some("http://127.0.0.1:3000/settings"),
-    );
+    let saved = post_settings(&settings_form(false, "5"));
     assert_eq!(saved.status, StatusCode::SEE_OTHER, "{}", saved.body);
     assert!(saved.cookies().is_empty(), "{:?}", saved.headers);
 }
@@ -496,16 +475,5 @@ fn a_refused_daily_note_raises_a_toast() {
         Some(&referer),
     );
     assert_eq!(refused.status, StatusCode::OK, "{}", refused.body);
-    let main_start = refused.body.find("<main").expect("main");
-    let main_end = refused.body.find("</main>").expect("main");
-    let wanted = "front matter is not closed";
-    assert!(
-        refused.body[main_start..main_end].contains(wanted),
-        "the inline error box: {}",
-        &refused.body[main_start..main_end]
-    );
-    assert!(
-        refused.outside_main().contains(wanted),
-        "the toast carries the message"
-    );
+    assert_inline_and_toast(&refused, "front matter is not closed");
 }
