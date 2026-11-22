@@ -8,11 +8,19 @@ use crate::error::Result;
 use crate::models::{Board, Organization, Project, Tag, TaskStatus};
 use clap_complete::engine::CompletionCandidate;
 
+/// A value the shell inserts, with the help text it shows beside it.
+type Offer = (String, Option<String>);
+
+/// The names of a table, offered without help text.
+fn plain(names: Result<Vec<String>>) -> Result<Vec<Offer>> {
+    names.map(|names| names.into_iter().map(|name| (name, None)).collect())
+}
+
 /// The candidates out of `names`. Every failure (non-UTF-8 input, unreadable database, empty
 /// table) is no candidates.
 fn candidates(
     current: &std::ffi::OsStr,
-    names: impl FnOnce(&Db) -> Result<Vec<String>>,
+    names: impl FnOnce(&Db) -> Result<Vec<Offer>>,
 ) -> Vec<CompletionCandidate> {
     let Some(current) = current.to_str() else {
         return Vec::new();
@@ -22,42 +30,43 @@ fn candidates(
     };
     names
         .into_iter()
-        .filter(|name| name.starts_with(current))
-        .map(CompletionCandidate::new)
+        .filter(|(value, _)| value.starts_with(current))
+        .map(|(value, help)| CompletionCandidate::new(value).help(help.map(Into::into)))
         .collect()
 }
 
 pub(crate) fn project_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    candidates(current, Db::names::<Project>)
+    candidates(current, |db| plain(db.names::<Project>()))
 }
 
 pub(crate) fn board_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    candidates(current, Db::names::<Board>)
+    candidates(current, |db| plain(db.names::<Board>()))
 }
 
 pub(crate) fn tag_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    candidates(current, Db::names::<Tag>)
+    candidates(current, |db| plain(db.names::<Tag>()))
 }
 
 pub(crate) fn organization_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    candidates(current, Db::names::<Organization>)
+    candidates(current, |db| plain(db.names::<Organization>()))
 }
 
 /// What completion offers for each task of `project` (any when `None`) at one of `statuses` (empty = all), in `<project>/<title>` order:
 /// `<project>/<title>` where that names it alone, else its bare id (a repeated title, or one that
-/// reads like a `#<id>` label, would resolve to the wrong task or to none).
+/// reads like a `#<id>` label, would resolve to the wrong task or to none) with the label
+/// `web/login #42` as help text: an unquoted `#` would start a shell comment, so it is not the value.
 pub(crate) fn offered(
     db: &Db,
     project: Option<&str>,
     statuses: &[TaskStatus],
-) -> Result<Vec<String>> {
+) -> Result<Vec<Offer>> {
     let labels = db.task_labels_counted(project, statuses)?;
     Ok(labels
         .into_iter()
         .map(
             |(label, same_title)| match same_title == 1 && !label.title_reads_as_label() {
-                true => format!("{}/{}", label.project, label.title),
-                false => label.id.to_string(),
+                true => (format!("{}/{}", label.project, label.title), None),
+                false => (label.id.to_string(), Some(label.to_string())),
             },
         )
         .collect())
@@ -65,9 +74,12 @@ pub(crate) fn offered(
 
 /// The id of every task: what `task pull/push --task` completes (the project is not known to the
 /// completer, so a title could name several).
-pub(crate) fn task_ids(db: &Db) -> Result<Vec<String>> {
+pub(crate) fn task_ids(db: &Db) -> Result<Vec<Offer>> {
     let labels = db.task_labels(None, &[])?;
-    Ok(labels.iter().map(|label| label.id.to_string()).collect())
+    Ok(labels
+        .iter()
+        .map(|label| (label.id.to_string(), Some(label.to_string())))
+        .collect())
 }
 
 /// Dynamic completer for arguments naming a task as `<project>/<task>`,
@@ -103,6 +115,18 @@ mod tests {
     use crate::fixtures;
     use crate::models::Task;
 
+    /// The values only, as the shell inserts them.
+    fn offered_values(
+        db: &Db,
+        project: Option<&str>,
+        statuses: &[TaskStatus],
+    ) -> Result<Vec<String>> {
+        Ok(offered(db, project, statuses)?
+            .into_iter()
+            .map(|(value, _)| value)
+            .collect())
+    }
+
     fn insert_project(db: &Db, name: &str) -> i64 {
         db.insert(&fixtures::project(name))
             .expect("project inserts")
@@ -136,15 +160,15 @@ mod tests {
         }
 
         assert_eq!(
-            offered(&db, Some("alpha"), &[]).expect("refs"),
+            offered_values(&db, Some("alpha"), &[]).expect("refs"),
             vec!["alpha/finished", "alpha/queued", "alpha/wip one",]
         );
         assert_eq!(
-            offered(&db, None, &[TaskStatus::Queue, TaskStatus::Wip]).expect("refs"),
+            offered_values(&db, None, &[TaskStatus::Queue, TaskStatus::Wip]).expect("refs"),
             vec!["alpha/queued", "alpha/wip one", "beta/wip two",]
         );
         assert_eq!(
-            offered(&db, Some("beta"), &[TaskStatus::Queue]).expect("refs"),
+            offered_values(&db, Some("beta"), &[TaskStatus::Queue]).expect("refs"),
             Vec::<String>::new()
         );
     }
@@ -159,7 +183,7 @@ mod tests {
         insert_task(&db, alpha, "another");
 
         assert_eq!(
-            offered(&db, None, &[]).expect("task refs"),
+            offered_values(&db, None, &[]).expect("task refs"),
             vec!["alpha/another", "alpha/write docs", "beta/ship it",]
         );
     }
@@ -174,11 +198,11 @@ mod tests {
         db.insert(&queued).expect("task inserts");
 
         assert_eq!(
-            offered(&db, None, &[TaskStatus::Queue]).expect("task refs"),
+            offered_values(&db, None, &[TaskStatus::Queue]).expect("task refs"),
             vec!["proj/queued"]
         );
         assert_eq!(
-            offered(&db, None, &[TaskStatus::Done]).expect("task refs"),
+            offered_values(&db, None, &[TaskStatus::Done]).expect("task refs"),
             Vec::<String>::new()
         );
     }
@@ -194,9 +218,29 @@ mod tests {
         insert_task(&db, two, "shared");
         insert_task(&db, one, "alone");
 
-        let mut values = task_ids(&db).expect("task names");
-        values.sort();
-        assert_eq!(values, ["1", "2", "3"]);
+        let mut offers = task_ids(&db).expect("task names");
+        offers.sort();
+        let ids: Vec<_> = offers.iter().map(|(value, _)| value.as_str()).collect();
+        assert_eq!(ids, ["1", "2", "3"]);
+        assert_eq!(offers[0].1.as_deref(), Some("one/shared #1"));
+    }
+
+    /// An id candidate shows `web/login #42` beside it; a title that names its task alone has none.
+    #[test]
+    fn an_id_candidate_carries_the_label_as_help() {
+        let db = fixtures::db();
+        let web = insert_project(&db, "web");
+        insert_task(&db, web, "login");
+        insert_task(&db, web, "login");
+        insert_task(&db, web, "logout");
+        assert_eq!(
+            offered(&db, None, &[]).expect("refs"),
+            [
+                ("1".to_string(), Some("web/login #1".to_string())),
+                ("2".to_string(), Some("web/login #2".to_string())),
+                ("web/logout".to_string(), None),
+            ]
+        );
     }
 
     /// R3: a task is offered as `<project>/<title>` when that names it alone, and as its bare id
@@ -215,7 +259,7 @@ mod tests {
             insert_task(&db, project, title);
         }
         assert_eq!(
-            offered(&db, None, &[]).expect("refs"),
+            offered_values(&db, None, &[]).expect("refs"),
             ["api/login", "1", "2", "web/logout"]
         );
     }
@@ -227,6 +271,9 @@ mod tests {
         let web = insert_project(&db, "web");
         insert_task(&db, web, "fix #12");
         insert_task(&db, web, "plain");
-        assert_eq!(offered(&db, None, &[]).expect("refs"), ["1", "web/plain"]);
+        assert_eq!(
+            offered_values(&db, None, &[]).expect("refs"),
+            ["1", "web/plain"]
+        );
     }
 }

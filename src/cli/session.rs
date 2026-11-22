@@ -118,7 +118,7 @@ fn session_new(
     if project.tmux {
         tmux.start_tracked_session(&tmux_session_name, &cwd)
             .inspect_err(|_| undo(&config, None))?;
-        println!("session '{tmux_session_name}' started");
+        println!("{}", started_line(&tmux_session_name, adopt));
         config.tmux_session_name = Some(tmux_session_name);
     } else {
         println!(
@@ -152,6 +152,15 @@ fn session_new(
     Ok(())
 }
 
+/// What `session new` says once the tmux session is up; a session started in the workspace an
+/// agent made says so.
+fn started_line(name: &str, adopted: bool) -> String {
+    match adopted {
+        true => format!("session '{name}' started in the workspace made for the agent"),
+        false => format!("session '{name}' started"),
+    }
+}
+
 fn session_start(app: &App, task_ref: Option<&str>) -> Result<()> {
     let db = &app.db;
     let (project, task) = task_or_current(db, task_ref)?;
@@ -183,4 +192,81 @@ fn session_elapse(app: &App) -> Result<()> {
     let now = app.now;
     println!("{}", Duration(session.duration_minutes(now)));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fixtures;
+    use crate::models::{Project, Task};
+    use crate::process::fake::FakeRunner;
+
+    #[test]
+    fn a_session_in_an_agents_workspace_says_so() {
+        assert_eq!(started_line("web/1 x", false), "session 'web/1 x' started");
+        assert_eq!(
+            started_line("web/1 x", true),
+            "session 'web/1 x' started in the workspace made for the agent"
+        );
+    }
+
+    /// `task solve` left a worktree and a row with no tmux name: `session new` keeps both, starts
+    /// the tmux session in the worktree, names it in the row and moves the task out of the queue.
+    #[test]
+    fn session_new_adopts_the_workspace_an_agent_made() {
+        let worktree = fixtures::scratch("session-adopt");
+        std::fs::create_dir_all(&worktree).unwrap();
+        let worktree_path = worktree.display().to_string();
+        let app = App::with_db(fixtures::db());
+        let project = Project {
+            github: true,
+            tmux: true,
+            ..fixtures::project("web")
+        };
+        let project_id = app.db.insert(&project).unwrap();
+        let task_id = fixtures::add_task(&app.db, project_id, "login");
+        let config = SessionConfig {
+            id: None,
+            task_id,
+            tmux_session_name: None,
+            github_branch: Some("feat/1-login".into()),
+            worktree_path: Some(worktree_path.clone()),
+        };
+        app.db.insert(&config).unwrap();
+        let runner = FakeRunner::default();
+        runner.fail("tmux has-session");
+
+        session_new(
+            &app,
+            &TmuxClient::new(&runner, false),
+            "web/login",
+            None,
+            false,
+        )
+        .unwrap();
+
+        let calls = runner.calls();
+        let new_session = format!("tmux new-session -d -s web/{task_id} login -c {worktree_path}");
+        assert!(calls.contains(&new_session), "{calls:?}");
+        assert!(
+            calls.iter().any(|c| c.starts_with("tmux attach-session")),
+            "{calls:?}"
+        );
+        let stored = app
+            .db
+            .find_session_config_by_task(task_id)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            stored.tmux_session_name.as_deref(),
+            Some(format!("web/{task_id} login").as_str())
+        );
+        assert_eq!(
+            stored.worktree_path.as_deref(),
+            Some(worktree_path.as_str())
+        );
+        let task: Task = app.db.get(task_id).unwrap().unwrap();
+        assert_eq!(task.status, TaskStatus::Wip);
+        let _ = std::fs::remove_dir_all(&worktree);
+    }
 }

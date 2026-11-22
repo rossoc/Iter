@@ -468,7 +468,7 @@ mod tests {
         let unfinished =
             crate::cli::complete::offered(&app.db, None, &[TaskStatus::Queue, TaskStatus::Wip])
                 .expect("refs");
-        assert_eq!(unfinished, vec!["proj/a task"]);
+        assert_eq!(unfinished, [("proj/a task".to_string(), None)]);
         assert_eq!(
             crate::cli::complete::offered(&app.db, Some("nosuch"), &[])
                 .expect("refs")
