@@ -62,7 +62,7 @@ pub fn run(args: &Args, app: &App) -> Result<()> {
             None => note::today(app, &NotesScope::default()),
         },
         Command::Session { action } => action.run(app),
-        Command::Comment { task, message } => misc::comment_cmd(app, task.as_deref(), message),
+        Command::Comment { task, message } => misc::comment_cmd(app, task.name(), message),
         Command::T => misc::t_cmd(app),
         // the one command the binary's root runs itself: the web front end is not the CLI's
         #[cfg(feature = "web")]

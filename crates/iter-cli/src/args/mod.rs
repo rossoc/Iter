@@ -69,6 +69,20 @@ impl ReportOpts {
     }
 }
 
+/// A task named on the command line: `<project>/<task>`, else the one of the tmux session you are in.
+#[derive(clap::Args, Debug)]
+pub struct TaskRef {
+    /// `<project>/<task>` (default: the task of the tmux session you're in)
+    #[arg(add = ArgValueCompleter::new(task_completer))]
+    task: Option<String>,
+}
+
+impl TaskRef {
+    pub fn name(&self) -> Option<&str> {
+        self.task.as_deref()
+    }
+}
+
 /// A project/task/session time tracker, with tmux + GitHub integration.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -183,9 +197,8 @@ pub enum Command {
 
     /// Post a message as a comment on a task's linked GitHub issue
     Comment {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
 
         /// The comment body
         #[clap(short = 'm', long = "message")]

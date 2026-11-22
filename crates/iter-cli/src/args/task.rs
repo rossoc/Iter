@@ -19,24 +19,21 @@ pub enum TaskCommand {
 
     /// Edit an existing task in nvim; saving & quitting updates it
     Edit {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
     },
 
     /// Delete a task (and its session-config and sessions)
     Delete {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
     },
 
     /// Name, description, and every session on a day or over an interval
     /// (default: today)
     Info {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
 
         #[clap(flatten)]
         report: ReportOpts,
@@ -54,121 +51,19 @@ pub enum TaskCommand {
 
     /// The plan of a task: its goal, how, and a checklist with the state of
     /// every step. Alone it opens the plan in the editor
-    Plan {
-        /// `<project>/<task>` (default: the task of the tmux session you're in).
-        /// A name with a space needs a backslash: `app/Fix\ it`
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-
-        /// Print the plan and how far along it is
-        #[clap(long, short = 's', conflicts_with_all = ["stdin", "mark"])]
-        show: bool,
-
-        /// Replace the plan with the one on standard input. Steps get their
-        /// ids; a missing Goal or Checklist is a warning, not a refusal
-        #[clap(long, conflicts_with = "mark")]
-        stdin: bool,
-
-        /// Put one step in a state (todo, doing or done): `--mark s3 done`.
-        /// Only its checkbox changes
-        #[clap(long, num_args = 2, value_names = ["STEP", "STATE"])]
-        mark: Vec<String>,
-
-        /// Output format of --show
-        #[clap(long, short = 'f', value_enum, default_value_t = DataFormat::Text)]
-        format: DataFormat,
-    },
+    Plan(PlanArgs),
 
     /// Print the prompt that tells an agent what to do with a task, from
     /// one of the instructions: plan it, work through its plan, fix it...
-    Prompt {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-
-        /// The instruction to follow: `instructions/<name>.md` in the task's
-        /// folder, the project's or organization's notes, or iter's config
-        /// folder (nearest first)
-        #[clap(long, short = 'i')]
-        instruction: String,
-
-        /// Use this template instead of the instruction's file
-        #[clap(long)]
-        template: Option<std::path::PathBuf>,
-
-        /// Leave out what the project's wiki knows about the task
-        #[clap(long)]
-        no_onboarding: bool,
-    },
+    Prompt(PromptArgs),
 
     /// Hand a task to an agent: it works on its own, headless, in the
     /// task's worktree, and leaves a log. Opens the editor first (agent,
     /// model, effort and the description it is given), unless --yes
-    Solve {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-
-        /// The instruction the agent follows: `instructions/<name>.md` in the
-        /// task's folder, the project's or organization's notes, or iter's
-        /// config folder (nearest first)
-        #[clap(long, short = 'i')]
-        instruction: String,
-
-        /// The harness that runs the agent
-        #[clap(long, value_enum)]
-        agent: Option<Harness>,
-
-        #[clap(long)]
-        model: Option<String>,
-
-        /// low, medium or high
-        #[clap(long)]
-        effort: Option<String>,
-
-        /// Skip the editor
-        #[clap(long, short = 'y')]
-        yes: bool,
-
-        /// Stay until the agent has finished instead of leaving it running
-        #[clap(long)]
-        wait: bool,
-
-        /// For a subagent of the session you are in: start nothing, record
-        /// the run and print its prompt. Close it with `iter task runs
-        /// --close <n>` when the subagent is done. `--model` and `--effort`
-        /// record what the subagent is started with (default: inherit)
-        #[clap(long, conflicts_with_all = ["agent", "wait", "extra"])]
-        subagent: bool,
-
-        /// Passed to the harness as they are, after `--`
-        #[clap(last = true)]
-        extra: Vec<String>,
-    },
+    Solve(SolveArgs),
 
     /// The runs of a task, or the log of one
-    Runs {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
-
-        /// Print the log of this run
-        #[clap(long, conflicts_with = "close")]
-        log: Option<u32>,
-
-        /// Close a subagent's run (`solve --subagent`) as `--status`
-        #[clap(long, requires = "status")]
-        close: Option<u32>,
-
-        /// How the closed run ended
-        #[clap(long, value_enum, requires = "close")]
-        status: Option<RunEnd>,
-
-        /// What the subagent reported at the end, kept as the run's log
-        /// (else standard input when it is not a terminal)
-        #[clap(long, short = 'm', requires = "close")]
-        message: Option<String>,
-    },
+    Runs(RunsArgs),
 
     /// What a detached `solve` runs: the harness itself, to the end
     #[clap(hide = true)]
@@ -182,9 +77,8 @@ pub enum TaskCommand {
     /// Mark a task done: closes any open session, tears down its
     /// session-config (tmux session + worktree), and deletes that row
     Done {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
 
         /// Land the work first: merge the project's `default_branch` into
         /// the task's worktree, then the task's branch into
@@ -197,46 +91,17 @@ pub enum TaskCommand {
     /// Bring the project's GitHub issues down as tasks: an issue nothing
     /// tracks becomes a new task, and a tracked one hands its open/closed
     /// state to the task's status
-    Pull {
-        /// Project to pull into (default: the project of the tmux session
-        /// you're in)
-        #[arg(add = ArgValueCompleter::new(project_completer))]
-        project: Option<String>,
-
-        /// Pull only this one task, by name, from the issue it tracks
-        /// (default: every issue in the repo)
-        #[clap(long, add = ArgValueCompleter::new(task_name_completer))]
-        task: Option<String>,
-
-        /// Also overwrite each task's description with its issue's body
-        #[clap(long)]
-        body: bool,
-    },
+    Pull(PullArgs),
 
     /// Send the project's tasks up to GitHub: a task tracking no issue gets
     /// one opened for it, and a tracked issue is closed or reopened to
     /// match its task's status
-    Push {
-        /// Project to push (default: the project of the tmux session you're
-        /// in)
-        #[arg(add = ArgValueCompleter::new(project_completer))]
-        project: Option<String>,
-
-        /// Push only this one task, by name (default: every task in the
-        /// project)
-        #[clap(long, add = ArgValueCompleter::new(task_name_completer))]
-        task: Option<String>,
-
-        /// Also overwrite each issue's body with its task's description
-        #[clap(long)]
-        body: bool,
-    },
+    Push(PushArgs),
 
     /// Average hours per weekday spent on a task
     Weekday {
-        /// `<project>/<task>` (default: the task of the tmux session you're in)
-        #[arg(add = ArgValueCompleter::new(task_completer))]
-        task: Option<String>,
+        #[clap(flatten)]
+        task: TaskRef,
     },
 }
 
@@ -246,4 +111,149 @@ pub enum RunEnd {
     Done,
     Failed,
     Cancelled,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct PlanArgs {
+    /// `<project>/<task>` (default: the task of the tmux session you're in).
+    /// A name with a space needs a backslash: `app/Fix\ it`
+    #[arg(add = ArgValueCompleter::new(task_completer))]
+    pub task: Option<String>,
+
+    /// Print the plan and how far along it is
+    #[clap(long, short = 's', conflicts_with_all = ["stdin", "mark"])]
+    pub show: bool,
+
+    /// Replace the plan with the one on standard input. Steps get their
+    /// ids; a missing Goal or Checklist is a warning, not a refusal
+    #[clap(long, conflicts_with = "mark")]
+    pub stdin: bool,
+
+    /// Put one step in a state (todo, doing or done): `--mark s3 done`.
+    /// Only its checkbox changes
+    #[clap(long, num_args = 2, value_names = ["STEP", "STATE"])]
+    pub mark: Vec<String>,
+
+    /// Output format of --show
+    #[clap(long, short = 'f', value_enum, default_value_t = DataFormat::Text)]
+    pub format: DataFormat,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct PromptArgs {
+    #[clap(flatten)]
+    pub task: TaskRef,
+
+    /// The instruction to follow: `instructions/<name>.md` in the task's
+    /// folder, the project's or organization's notes, or iter's config
+    /// folder (nearest first)
+    #[clap(long, short = 'i')]
+    pub instruction: String,
+
+    /// Use this template instead of the instruction's file
+    #[clap(long)]
+    pub template: Option<std::path::PathBuf>,
+
+    /// Leave out what the project's wiki knows about the task
+    #[clap(long)]
+    pub no_onboarding: bool,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct SolveArgs {
+    #[clap(flatten)]
+    pub task: TaskRef,
+
+    /// The instruction the agent follows: `instructions/<name>.md` in the
+    /// task's folder, the project's or organization's notes, or iter's
+    /// config folder (nearest first)
+    #[clap(long, short = 'i')]
+    pub instruction: String,
+
+    /// The harness that runs the agent
+    #[clap(long, value_enum)]
+    pub agent: Option<Harness>,
+
+    #[clap(long)]
+    pub model: Option<String>,
+
+    /// low, medium or high
+    #[clap(long)]
+    pub effort: Option<String>,
+
+    /// Skip the editor
+    #[clap(long, short = 'y')]
+    pub yes: bool,
+
+    /// Stay until the agent has finished instead of leaving it running
+    #[clap(long)]
+    pub wait: bool,
+
+    /// For a subagent of the session you are in: start nothing, record
+    /// the run and print its prompt. Close it with `iter task runs
+    /// --close <n>` when the subagent is done. `--model` and `--effort`
+    /// record what the subagent is started with (default: inherit)
+    #[clap(long, conflicts_with_all = ["agent", "wait", "extra"])]
+    pub subagent: bool,
+
+    /// Passed to the harness as they are, after `--`
+    #[clap(last = true)]
+    pub extra: Vec<String>,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct RunsArgs {
+    #[clap(flatten)]
+    pub task: TaskRef,
+
+    /// Print the log of this run
+    #[clap(long, conflicts_with = "close")]
+    pub log: Option<u32>,
+
+    /// Close a subagent's run (`solve --subagent`) as `--status`
+    #[clap(long, requires = "status")]
+    pub close: Option<u32>,
+
+    /// How the closed run ended
+    #[clap(long, value_enum, requires = "close")]
+    pub status: Option<RunEnd>,
+
+    /// What the subagent reported at the end, kept as the run's log
+    /// (else standard input when it is not a terminal)
+    #[clap(long, short = 'm', requires = "close")]
+    pub message: Option<String>,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct PullArgs {
+    /// Project to pull into (default: the project of the tmux session
+    /// you're in)
+    #[arg(add = ArgValueCompleter::new(project_completer))]
+    pub project: Option<String>,
+
+    /// Pull only this one task, by name, from the issue it tracks
+    /// (default: every issue in the repo)
+    #[clap(long, add = ArgValueCompleter::new(task_name_completer))]
+    pub task: Option<String>,
+
+    /// Also overwrite each task's description with its issue's body
+    #[clap(long)]
+    pub body: bool,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct PushArgs {
+    /// Project to push (default: the project of the tmux session you're
+    /// in)
+    #[arg(add = ArgValueCompleter::new(project_completer))]
+    pub project: Option<String>,
+
+    /// Push only this one task, by name (default: every task in the
+    /// project)
+    #[clap(long, add = ArgValueCompleter::new(task_name_completer))]
+    pub task: Option<String>,
+
+    /// Also overwrite each issue's body with its task's description
+    #[clap(long)]
+    pub body: bool,
 }

@@ -1,6 +1,6 @@
 //! `iter task solve`, `iter task runs`: handing a task to an agent working on its own in the task's worktree.
 
-use crate::args::RunEnd;
+use crate::args::{RunEnd, RunsArgs, SolveArgs};
 use crate::editor::edit_text;
 use crate::ingest::say_auto;
 use iter_core::agent::ingest_job::Auto;
@@ -29,18 +29,6 @@ impl Observer for Console {
 /// A subagent's model or effort when the session does not say: the session's own.
 const INHERIT: &str = "inherit";
 
-pub struct SolveRequest<'a> {
-    pub task: Option<&'a str>,
-    /// The instruction the agent follows.
-    pub instruction: &'a str,
-    pub agent: Option<Harness>,
-    pub model: Option<&'a str>,
-    pub effort: Option<&'a str>,
-    pub yes: bool,
-    pub wait: bool,
-    pub extra: &'a [String],
-}
-
 /// The buffer: front matter, then the description the agent is given.
 fn render(spec: &Spec, description: &str) -> Result<String> {
     Ok(format!(
@@ -58,20 +46,20 @@ fn parse(buffer: &str) -> Result<(Spec, String)> {
     Ok((spec, body.trim().to_string()))
 }
 
-pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
-    let (project, task, dir) = locate(app, req.task)?;
+pub fn solve(app: &App, req: &SolveArgs) -> Result<()> {
+    let (project, task, dir) = locate(app, req.task.name())?;
     // before the editor: an instruction found nowhere, or interactive, has nothing to start
-    if instruction_for(app, &project, &task, req.instruction)?
+    if instruction_for(app, &project, &task, &req.instruction)?
         .front
         .interactive
     {
-        return Err(AgentError::Interactive(req.instruction.to_string()).into());
+        return Err(AgentError::Interactive(req.instruction.clone()).into());
     }
     let name = task.label(&project).to_string();
     let mut spec = Spec {
         agent: req.agent.unwrap_or_default(),
-        model: req.model.unwrap_or("haiku").to_string(),
-        effort: req.effort.unwrap_or("medium").to_string(),
+        model: req.model.as_deref().unwrap_or("haiku").to_string(),
+        effort: req.effort.as_deref().unwrap_or("medium").to_string(),
     };
     let mut description = task.description.clone();
     if !req.yes {
@@ -86,12 +74,12 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
     let n = start(
         app,
         &name,
-        req.instruction,
+        &req.instruction,
         &spec,
         &description,
         &Launch {
             wait: req.wait,
-            extra: req.extra,
+            extra: &req.extra,
             say: &Console,
         },
     )?;
@@ -110,62 +98,41 @@ pub fn solve(app: &App, req: &SolveRequest) -> Result<()> {
 
 /// `solve --subagent`: records the run, prints the prompt to give the subagent; how to close it
 /// goes to standard error, so the prompt can be taken as it is.
-pub fn subagent(
-    app: &App,
-    task: Option<&str>,
-    instruction: &str,
-    model: Option<&str>,
-    effort: Option<&str>,
-) -> Result<()> {
-    let (project, task, _) = locate(app, task)?;
+pub fn subagent(app: &App, a: &SolveArgs) -> Result<()> {
+    let (project, task, _) = locate(app, a.task.name())?;
     let name = task.label(&project).to_string();
+    let inherit = |setting: &Option<String>| setting.clone().unwrap_or_else(|| INHERIT.to_string());
     let spec = Spec {
         agent: Harness::default(),
-        model: model.unwrap_or(INHERIT).to_string(),
-        effort: effort.unwrap_or(INHERIT).to_string(),
+        model: inherit(&a.model),
+        effort: inherit(&a.effort),
     };
-    let (n, prompt) = open_subagent(app, &name, instruction, &spec, &Console)?;
+    let (n, prompt) = open_subagent(app, &name, &a.instruction, &spec, &Console)?;
     eprintln!(
         "run {n} ({}, {}, effort {}): give the prompt below to a new subagent; when it is done: iter task runs --close {n} --status done -m \"<its report>\"",
-        instruction, spec.model, spec.effort
+        a.instruction, spec.model, spec.effort
     );
-    print!("{}", prompt.trim_end());
-    println!();
+    println!("{}", prompt.trim_end());
     Ok(())
 }
 
-/// `runs --close`: the report is `-m`, else standard input when it is not a terminal, else none.
-pub fn close_run(
-    app: &App,
-    task: Option<&str>,
-    n: u32,
-    end: RunEnd,
-    message: Option<&str>,
-) -> Result<()> {
-    use std::io::{IsTerminal, Read};
-    let (project, task, _) = locate(app, task)?;
-    let report = match message {
-        Some(text) => text.to_string(),
-        None if !std::io::stdin().is_terminal() => {
-            let mut text = String::new();
-            std::io::stdin().read_to_string(&mut text)?;
-            text
+impl From<RunEnd> for Status {
+    fn from(end: RunEnd) -> Self {
+        match end {
+            RunEnd::Done => Status::Done,
+            RunEnd::Failed => Status::Failed,
+            RunEnd::Cancelled => Status::Cancelled,
         }
-        None => String::new(),
-    };
-    let status = match end {
-        RunEnd::Done => Status::Done,
-        RunEnd::Failed => Status::Failed,
-        RunEnd::Cancelled => Status::Cancelled,
-    };
-    close(app, &task.label(&project).to_string(), n, status, &report)?;
-    println!("run {n}: {}", status.label());
-    Ok(())
+    }
 }
 
-pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
-    let (project, task, dir) = locate(app, task)?;
-    if let Some(n) = log {
+/// `iter task runs`: `--close` ends a subagent's run, `--log` prints one, else the runs are listed.
+pub fn runs(app: &App, a: &RunsArgs) -> Result<()> {
+    let (project, task, dir) = locate(app, a.task.name())?;
+    if let Some(n) = a.close {
+        return close_run(app, &task.label(&project).to_string(), n, a);
+    }
+    if let Some(n) = a.log {
         let text = std::fs::read_to_string(dir.run_log_path(n))
             .map_err(|_| AgentError::RunLogMissing(n))?;
         print!("{text}");
@@ -192,6 +159,24 @@ pub fn runs(app: &App, task: Option<&str>, log: Option<u32>) -> Result<()> {
             r.ended.map(|e| format!(" -> {e}")).unwrap_or_default()
         );
     }
+    Ok(())
+}
+
+/// `runs --close`: the report is `-m`, else standard input when it is not a terminal, else none.
+fn close_run(app: &App, name: &str, n: u32, a: &RunsArgs) -> Result<()> {
+    use std::io::{IsTerminal, Read};
+    let report = match &a.message {
+        Some(text) => text.clone(),
+        None if !std::io::stdin().is_terminal() => {
+            let mut text = String::new();
+            std::io::stdin().read_to_string(&mut text)?;
+            text
+        }
+        None => String::new(),
+    };
+    let status = Status::from(a.status.unwrap_or(RunEnd::Done));
+    close(app, name, n, status, &report)?;
+    println!("run {n}: {}", status.label());
     Ok(())
 }
 
