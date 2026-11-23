@@ -16,3 +16,5 @@ serde_yaml.workspace = true
 
 [dev-dependencies]
 iter-core = { workspace = true, features = ["test-support"] }
+# Reading the `/live` event stream frame by frame in `live_tests`.
+futures-core = "0.3"

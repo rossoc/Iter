@@ -12,6 +12,8 @@ mod assets;
 mod cx;
 mod forms;
 mod layers;
+#[cfg(test)]
+mod live_tests;
 mod load;
 #[cfg(test)]
 mod modal_tests;

@@ -1029,6 +1029,7 @@ name = "iter-web"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "futures-core",
  "iter-core",
  "pulldown-cmark",
  "serde",

@@ -13,6 +13,8 @@ pub mod fixtures;
 pub mod front;
 pub mod git;
 pub mod github;
+#[cfg(test)]
+mod live_tests;
 pub mod locate;
 pub mod models;
 pub mod note_ref;
