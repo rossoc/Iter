@@ -19,6 +19,8 @@ mod pages;
 mod parts;
 mod prelude;
 #[cfg(test)]
+mod task_note_tests;
+#[cfg(test)]
 mod toast_tests;
 mod ui;
 mod url;

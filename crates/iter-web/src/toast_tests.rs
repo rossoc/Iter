@@ -183,7 +183,7 @@ pub(super) fn get(path: &str) -> Answer {
 
 /// A POST from a tab on `referer` (`None`: no `Referer`), as a form (`navigate`) or a
 /// script's `fetch` (`cors`).
-fn post(path: &str, body: &str, mode: &str, referer: Option<&str>) -> Answer {
+pub(super) fn post(path: &str, body: &str, mode: &str, referer: Option<&str>) -> Answer {
     let mut headers: Vec<(&str, &str)> = FROM_A_TAB
         .iter()
         .copied()
