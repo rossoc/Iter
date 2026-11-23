@@ -393,6 +393,63 @@ mod tests {
         TmuxClient::new(runner, inside)
     }
 
+    /// R4b of task 302: `session new` opens its other windows in the session (targeted
+    /// exactly), each named, in the worktree, running its command when it has one.
+    #[test]
+    fn a_window_opens_in_the_session_with_its_name_folder_and_command() {
+        let runner = FakeRunner::default();
+        let tmux = client(&runner, false);
+        tmux.new_window("web/1 login", "claude", "/wt", Some("claude"))
+            .unwrap();
+        tmux.new_window("web/1 login", "logs", "/wt", None).unwrap();
+        let calls = runner.calls();
+        assert_eq!(calls.len(), 2, "{calls:?}");
+        for (call, name) in calls.iter().zip(["claude", "logs"]) {
+            assert!(call.starts_with("tmux new-window "), "{call}");
+            for piece in ["-t =web/1 login", &format!("-n {name}"), "-c /wt"] {
+                assert!(call.contains(piece), "{piece} in {call}");
+            }
+        }
+        assert!(
+            calls[0].ends_with(" claude"),
+            "the command last: {}",
+            calls[0]
+        );
+        assert!(!calls[1].contains("claude"), "no command: {}", calls[1]);
+    }
+
+    /// R4c: the prompt goes into a named buffer whole, and is pasted bracketed (`-p`, so a
+    /// newline does not send it), the buffer then deleted (`-d`); nothing presses Enter.
+    #[test]
+    fn a_prompt_is_put_in_a_buffer_and_pasted_bracketed() {
+        let runner = FakeRunner::default();
+        let tmux = client(&runner, false);
+        tmux.set_buffer("iter-302", "line one\nline two").unwrap();
+        tmux.paste_buffer("iter-302", "web/1 login:claude").unwrap();
+        let calls = runner.calls();
+        assert_eq!(calls.len(), 2, "{calls:?}");
+        assert!(calls[0].starts_with("tmux set-buffer "), "{}", calls[0]);
+        assert!(calls[0].contains("-b iter-302"), "{}", calls[0]);
+        assert!(calls[0].ends_with("line one\nline two"), "{}", calls[0]);
+        assert!(calls[1].starts_with("tmux paste-buffer "), "{}", calls[1]);
+        for piece in [" -p", " -d", "-b iter-302", "-t ", "web/1 login:claude"] {
+            assert!(calls[1].contains(piece), "{piece} in {}", calls[1]);
+        }
+        assert!(!calls.iter().any(|c| c.contains("send-keys")), "{calls:?}");
+    }
+
+    /// R4c, the edge: a prompt that starts with `-` (a list, front matter) is the buffer's data,
+    /// not a flag of `set-buffer`.
+    #[test]
+    fn a_prompt_starting_with_a_dash_is_data_not_a_flag() {
+        let runner = FakeRunner::default();
+        client(&runner, false)
+            .set_buffer("iter-302", "- a list item")
+            .unwrap();
+        let calls = runner.calls();
+        assert!(calls[0].ends_with(" -- - a list item"), "{calls:?}");
+    }
+
     /// Every session-targeting command goes through `=name`.
     #[test]
     fn sessions_are_targeted_exactly() {

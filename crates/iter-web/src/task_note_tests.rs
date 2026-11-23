@@ -71,13 +71,20 @@ fn a_task_note_has_its_own_page() {
 /// change it.
 #[test]
 fn a_task_sketch_has_its_own_read_only_page() {
-    if isolated_in(module_path!(), "a_task_sketch_has_its_own_read_only_page", None) {
+    if isolated_in(
+        module_path!(),
+        "a_task_sketch_has_its_own_read_only_page",
+        None,
+    ) {
         return;
     }
     let dir = task_with_files();
     let page = ok("/task/1/sketches/bar");
     assert!(page.contains("Bar sketch"), "{page}");
-    assert!(page.contains("A sketch body line only its page shows."), "{page}");
+    assert!(
+        page.contains("A sketch body line only its page shows."),
+        "{page}"
+    );
     assert!(page.contains(r#"href="/task/1?tab=notes""#), "{page}");
 
     let edit = get("/task/1/sketches/bar?tab=edit");
@@ -194,7 +201,10 @@ fn the_notes_tab_is_a_table_of_links() {
     let page = ok("/task/1?tab=notes");
     assert!(page.contains(r#"href="/task/1/notes/foo""#), "{page}");
     assert!(page.contains(r#"href="/task/1/sketches/bar""#), "{page}");
-    assert!(page.contains(r#"class="cover""#), "a cover link per row: {page}");
+    assert!(
+        page.contains(r#"class="cover""#),
+        "a cover link per row: {page}"
+    );
     assert!(page.contains("Foo idea"), "the note's preview: {page}");
     assert!(page.contains("Bar sketch"), "the sketch's preview: {page}");
     assert!(!page.contains("<details"), "no drop-down: {page}");
@@ -208,7 +218,11 @@ fn the_notes_tab_is_a_table_of_links() {
 /// R1b: the `.files details` rules are gone from the stylesheet.
 #[test]
 fn the_stylesheet_has_no_files_drop_down() {
-    if isolated_in(module_path!(), "the_stylesheet_has_no_files_drop_down", None) {
+    if isolated_in(
+        module_path!(),
+        "the_stylesheet_has_no_files_drop_down",
+        None,
+    ) {
         return;
     }
     let css = get("/style.css").body;

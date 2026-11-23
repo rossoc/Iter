@@ -145,7 +145,9 @@ fn a_notes_file_made_changed_or_removed_changes_it() {
     let mut version = version();
     let note = task.join("notes").join("b.md");
     moves(&mut version, "a new task note", || write(&note, "b"));
-    moves(&mut version, "a changed task note", || write(&note, "b, longer"));
+    moves(&mut version, "a changed task note", || {
+        write(&note, "b, longer")
+    });
     moves(&mut version, "a removed task note", || {
         std::fs::remove_file(&note).expect("removed")
     });
@@ -167,7 +169,9 @@ fn a_notes_file_made_changed_or_removed_changes_it() {
     moves(&mut version, "a project's own folder", || {
         write(&solo.join("2026-01-06.md"), "# Tuesday\n")
     });
-    moves(&mut version, "a project page", || write(&app.join("page.md"), "x"));
+    moves(&mut version, "a project page", || {
+        write(&app.join("page.md"), "x")
+    });
 }
 
 /// Files that are neither `.md` nor `.yaml` (an editor's swap file, a lock) leave it alone, and

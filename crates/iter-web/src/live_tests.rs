@@ -100,9 +100,10 @@ fn live_answers_an_event_stream_with_the_version() {
         "content type {:?}",
         events.content_type
     );
-    let first = events.data.first().unwrap_or_else(|| {
-        panic!("a first event with the version: {:?}", events.raw)
-    });
+    let first = events
+        .data
+        .first()
+        .unwrap_or_else(|| panic!("a first event with the version: {:?}", events.raw));
     assert!(!first.is_empty(), "the version: {:?}", events.raw);
 }
 

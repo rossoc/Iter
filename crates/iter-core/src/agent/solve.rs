@@ -604,8 +604,14 @@ mod tests {
         assert_eq!(dir.read_run(a).unwrap().unwrap().instruction, "test");
         assert_eq!(dir.read_run(b).unwrap().unwrap().model, "opus");
         assert_ne!(told_a, told_b, "each its own prompt");
-        assert_eq!(std::fs::read_to_string(dir.run_prompt_path(a)).unwrap(), told_a);
-        assert_eq!(std::fs::read_to_string(dir.run_prompt_path(b)).unwrap(), told_b);
+        assert_eq!(
+            std::fs::read_to_string(dir.run_prompt_path(a)).unwrap(),
+            told_a
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.run_prompt_path(b)).unwrap(),
+            told_b
+        );
 
         close(&app, name, b, Status::Done, "b's report").unwrap();
         assert!(dir.read_run(a).unwrap().unwrap().is_running());

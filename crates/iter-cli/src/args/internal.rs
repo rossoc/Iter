@@ -70,6 +70,48 @@ mod tests {
         }
     }
 
+    /// R4c of task 302: `session new` starts `iter internal paste <session> <window>
+    /// <instruction>` detached; a session name may start with `-` and has spaces.
+    #[test]
+    fn the_paste_worker_takes_a_session_a_window_and_an_instruction() {
+        for argv in [
+            &[
+                "iter",
+                "internal",
+                "paste",
+                "web/1 login",
+                "claude",
+                "complete",
+            ][..],
+            &[
+                "iter",
+                "internal",
+                "paste",
+                "--",
+                "-web/1 login",
+                "claude",
+                "complete",
+            ],
+        ] {
+            let args = Args::try_parse_from(argv).unwrap_or_else(|e| panic!("{argv:?}: {e}"));
+            let Command::Internal {
+                action:
+                    InternalCommand::Paste {
+                        session,
+                        window,
+                        instruction,
+                    },
+            } = args.command
+            else {
+                panic!("{argv:?}")
+            };
+            assert_eq!(
+                (session.as_str(), window.as_str(), instruction.as_str()),
+                (argv[argv.len() - 3], "claude", "complete")
+            );
+        }
+    }
+
     /// A session named after a project `-web` reached clap as a flag: exit 2, and that task's clock
     /// never started or stopped. Hooks installed before the `--` still pass the bare name.
     #[test]

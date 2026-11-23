@@ -430,6 +430,72 @@ mod tests {
         assert!(parse("notifications:\n  seconds: -1\n").is_err());
     }
 
+    /// The `session.windows` list as YAML.
+    fn windows_of(config: &Config) -> serde_yaml::Value {
+        serde_yaml::to_value(config).expect("writes")["session"]["windows"].clone()
+    }
+
+    /// One window's `(name, command, paste)`; an absent or null key is `None`.
+    fn window(w: &serde_yaml::Value) -> (Option<&str>, Option<&str>, Option<&str>) {
+        (
+            w["name"].as_str(),
+            w["command"].as_str(),
+            w["paste"].as_str(),
+        )
+    }
+
+    /// R4a of task 302: with nothing said, `session new` opens a shell and a window running
+    /// `claude` with the `complete` prompt pasted in.
+    #[test]
+    fn session_windows_default_to_a_shell_and_claude_with_complete() {
+        for config in [Config::default(), from_yaml(""), from_yaml("editor: vim\n")] {
+            let windows = windows_of(&config);
+            let list = windows.as_sequence().expect("a list of windows");
+            assert_eq!(list.len(), 2, "{windows:?}");
+            assert_eq!(window(&list[0]), (Some("shell"), None, None));
+            assert_eq!(
+                window(&list[1]),
+                (Some("claude"), Some("claude"), Some("complete"))
+            );
+        }
+    }
+
+    /// R4a: a `session.windows` block is read in order, a window may leave out `command` and
+    /// `paste`, and the block survives a save.
+    #[test]
+    fn a_session_windows_block_parses_and_reads_back() {
+        let config = parse(
+            "session:\n  windows:\n    - name: edit\n      command: nvim\n    - name: agent\n      command: claude\n      paste: develop\n    - name: logs\n",
+        )
+        .expect("a session block parses");
+        let windows = windows_of(&config);
+        let list = windows.as_sequence().expect("a list");
+        assert_eq!(
+            list.iter().map(window).collect::<Vec<_>>(),
+            [
+                (Some("edit"), Some("nvim"), None),
+                (Some("agent"), Some("claude"), Some("develop")),
+                (Some("logs"), None, None),
+            ]
+        );
+        let text = serde_yaml::to_string(&config).expect("writes");
+        assert_eq!(
+            windows_of(&parse(&text).expect("reads back")),
+            windows,
+            "the block survives a save:\n{text}"
+        );
+    }
+
+    /// R4a: a mistyped key, in a window or in `session`, is refused like any other, and a
+    /// window needs a name.
+    #[test]
+    fn a_mistyped_session_key_is_rejected() {
+        assert!(parse("session:\n  windows:\n    - name: a\n      cmd: claude\n").is_err());
+        assert!(parse("session:\n  window:\n    - name: a\n").is_err());
+        assert!(parse("session:\n  windows:\n    - command: claude\n").is_err());
+        assert!(parse("session:\n  windows: []\n").is_ok());
+    }
+
     #[test]
     fn a_config_written_reads_back_the_same() {
         let mut config = Config {

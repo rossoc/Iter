@@ -210,6 +210,169 @@ mod tests {
         );
     }
 
+    /// R4b of task 302: the first window comes with the session; each other window of
+    /// `session.windows` is opened with `new-window` in the session, named, in the workspace,
+    /// running its command, before the client attaches. The config has no `paste`, so no
+    /// worker is started (a test must not start the test binary as `iter internal paste`).
+    #[test]
+    fn session_new_opens_the_configured_windows() {
+        let yaml = "session:\n  windows:\n    - name: shell\n    - name: claude\n      command: claude\n    - name: edit\n      command: nvim\n";
+        if fixtures::in_scratch_config(
+            module_path!(),
+            "session_new_opens_the_configured_windows",
+            Some(yaml),
+        ) {
+            return;
+        }
+        let app = App::open().expect("the scratch config and database open");
+        let project = Project {
+            tmux: true,
+            github: false,
+            ..fixtures::project("web")
+        };
+        let project_id = app.db.insert(&project).unwrap();
+        let task_id = fixtures::add_task(&app.db, project_id, "login");
+        let runner = FakeRunner::default();
+        runner.fail("tmux has-session");
+
+        session_new(
+            &app,
+            &TmuxClient::new(&runner, false),
+            "web/login",
+            None,
+            false,
+        )
+        .unwrap();
+
+        let calls = runner.calls();
+        let session = format!("web/{task_id} login");
+        let at = |prefix: &str| {
+            calls
+                .iter()
+                .position(|c| c.starts_with(prefix))
+                .unwrap_or_else(|| panic!("{prefix} in {calls:?}"))
+        };
+        let created = at("tmux new-session");
+        let attached = at("tmux attach-session");
+        let windows: Vec<(usize, &String)> = calls
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.starts_with("tmux new-window"))
+            .collect();
+        assert_eq!(windows.len(), 2, "claude and edit, not shell: {calls:?}");
+        for ((i, call), (name, command)) in
+            windows.iter().zip([("claude", "claude"), ("edit", "nvim")])
+        {
+            assert!(
+                created < *i && *i < attached,
+                "between session and attach: {calls:?}"
+            );
+            for piece in [
+                format!("-t ={session}"),
+                format!("-n {name}"),
+                "-c /tmp/web".to_string(),
+            ] {
+                assert!(call.contains(&piece), "{piece} in {call}");
+            }
+            assert!(call.ends_with(&format!(" {command}")), "{call}");
+        }
+        assert!(
+            windows[0].0 < windows[1].0,
+            "in the configured order: {calls:?}"
+        );
+        assert!(!calls.iter().any(|c| c.contains("-n shell")), "{calls:?}");
+        assert!(
+            !calls.iter().any(|c| c.contains("paste-buffer")),
+            "{calls:?}"
+        );
+        let stored = app
+            .db
+            .find_session_config_by_task(task_id)
+            .unwrap()
+            .expect("the row is written");
+        assert_eq!(stored.tmux_session_name.as_deref(), Some(session.as_str()));
+    }
+
+    /// R4c: the paste worker waits until the window runs its command (`claude`, from the
+    /// default `session.windows`), then puts the prompt of `iter task prompt -i complete` in a
+    /// buffer and pastes it bracketed into that window, and never presses Enter.
+    #[test]
+    fn the_paste_worker_pastes_the_prompt_once_claude_runs() {
+        let notes = fixtures::scratch("session-paste");
+        fixtures::install_instructions(&notes);
+        let app = App::with_db(fixtures::db());
+        let project = Project {
+            tmux: true,
+            notes_path: notes.display().to_string(),
+            ..fixtures::project("web")
+        };
+        let project_id = app.db.insert(&project).unwrap();
+        let task_id = app
+            .db
+            .insert(&Task {
+                description: "Paste me, do not send me.".into(),
+                ..fixtures::task(project_id, "login")
+            })
+            .unwrap();
+        let session = format!("web/{task_id} login");
+        app.db
+            .insert(&SessionConfig {
+                id: None,
+                task_id,
+                tmux_session_name: Some(session.clone()),
+                github_branch: None,
+                worktree_path: None,
+            })
+            .unwrap();
+        let wanted = iter_core::agent::task_prompt::prompt_text(
+            &app,
+            Some("web/login"),
+            "complete",
+            None,
+            true,
+        )
+        .unwrap();
+        assert!(wanted.contains("Paste me, do not send me."));
+        let runner = FakeRunner::default();
+        runner.reply("tmux display", "claude\n");
+        runner.reply("tmux list-panes", "claude\n");
+
+        paste(
+            &app,
+            &TmuxClient::new(&runner, false),
+            &session,
+            "claude",
+            "complete",
+        )
+        .unwrap();
+
+        let calls = runner.calls();
+        let at = |prefix: &str| calls.iter().position(|c| c.starts_with(prefix));
+        let set = at("tmux set-buffer").unwrap_or_else(|| panic!("set-buffer: {calls:?}"));
+        let pasted = at("tmux paste-buffer").unwrap_or_else(|| panic!("paste-buffer: {calls:?}"));
+        let asked = at("tmux display")
+            .or_else(|| at("tmux list-panes"))
+            .unwrap_or_else(|| panic!("asked what the pane runs: {calls:?}"));
+        assert!(asked < set && set < pasted, "{calls:?}");
+        assert!(
+            calls[set].ends_with(&wanted),
+            "the whole prompt: {}",
+            calls[set]
+        );
+        assert!(
+            calls[pasted].contains(" -p"),
+            "bracketed: {}",
+            calls[pasted]
+        );
+        assert!(
+            calls[pasted].contains(&format!("{session}:claude")),
+            "into the claude window: {}",
+            calls[pasted]
+        );
+        assert!(!calls.iter().any(|c| c.contains("send-keys")), "{calls:?}");
+        let _ = std::fs::remove_dir_all(&notes);
+    }
+
     /// `task solve` left a worktree and a row with no tmux name: `session new` keeps both, starts
     /// the tmux session in the worktree, names it in the row and moves the task out of the queue.
     #[test]
