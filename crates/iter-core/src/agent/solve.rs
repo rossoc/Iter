@@ -563,10 +563,6 @@ mod tests {
             prompt
         );
 
-        // one at a time, and nothing written down for the refused one
-        let busy = open_subagent(&app, name, "develop", &sonnet, &Quiet).unwrap_err();
-        assert!(busy.to_string().contains("still working"), "{busy}");
-        assert_eq!(dir.runs().len(), 1);
         assert!(close(&app, name, n, Status::Running, "x").is_err());
 
         close(&app, name, n, Status::Done, "R1 tested\n\n").unwrap();
@@ -581,6 +577,80 @@ mod tests {
 
         let (m, _) = open_subagent(&app, name, "check", &sonnet, &Quiet).unwrap();
         assert_eq!(m, n + 1);
+    }
+
+    /// R3 of task 302: several runs work on one task at once. A second (and third) subagent run
+    /// opens while the first is working, each with its own number, record and prompt, all listed;
+    /// closing one leaves the others working.
+    #[test]
+    fn several_subagent_runs_are_open_at_once() {
+        let app = world("parallel");
+        let name = "app/Fix it";
+        let (a, told_a) = open_subagent(&app, name, "test", &spec("sonnet"), &Quiet).unwrap();
+        let (b, told_b) = open_subagent(&app, name, "develop", &spec("opus"), &Quiet)
+            .expect("a second run opens while the first is working");
+        let (c, _) = open_subagent(&app, name, "develop", &spec("haiku"), &Quiet)
+            .expect("and a third, of the same instruction");
+        assert_eq!((b, c), (a + 1, a + 2), "each its own number");
+
+        let (_, _, dir) = locate(&app, Some(name)).unwrap();
+        let listed: Vec<u32> = dir.runs().iter().map(|r| r.n).collect();
+        assert_eq!(listed.len(), 3, "all listed: {listed:?}");
+        for n in [a, b, c] {
+            assert!(listed.contains(&n), "{n} in {listed:?}");
+            let run = dir.read_run(n).unwrap().unwrap();
+            assert!(run.subagent && run.is_running(), "run {n} works");
+        }
+        assert_eq!(dir.read_run(a).unwrap().unwrap().instruction, "test");
+        assert_eq!(dir.read_run(b).unwrap().unwrap().model, "opus");
+        assert_ne!(told_a, told_b, "each its own prompt");
+        assert_eq!(std::fs::read_to_string(dir.run_prompt_path(a)).unwrap(), told_a);
+        assert_eq!(std::fs::read_to_string(dir.run_prompt_path(b)).unwrap(), told_b);
+
+        close(&app, name, b, Status::Done, "b's report").unwrap();
+        assert!(dir.read_run(a).unwrap().unwrap().is_running());
+        assert!(dir.read_run(c).unwrap().unwrap().is_running());
+        close(&app, name, a, Status::Failed, "a's report").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.run_log_path(b)).unwrap(),
+            "b's report\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.run_log_path(a)).unwrap(),
+            "a's report\n"
+        );
+    }
+
+    /// R3: a queued run is made ready (`prepare`, what `begin` does before the harness starts)
+    /// while a subagent run is working, and `start` is not refused for being busy either: here it
+    /// stops at the interactive `complete`, as it would with no run open.
+    #[test]
+    fn a_queued_run_begins_and_start_is_not_refused_while_another_works() {
+        let app = world("parallel-begin");
+        let name = "app/Fix it";
+        let (open, _) = open_subagent(&app, name, "test", &spec("sonnet"), &Quiet).unwrap();
+        let queued = create(&app, name, "plan", &spec("haiku"), "x", None).unwrap();
+        let ready = prepare(&app, name, queued, &Quiet)
+            .unwrap_or_else(|e| panic!("run {queued} is made ready beside run {open}: {e}"));
+        assert_eq!(ready.run.status, Status::Running);
+
+        let e = start(
+            &app,
+            name,
+            "complete",
+            &spec("haiku"),
+            "x",
+            &Launch::detached(),
+        )
+        .unwrap_err();
+        assert!(
+            !e.to_string().contains("still working"),
+            "not refused for the open run: {e}"
+        );
+        assert!(
+            e.to_string().contains("iter task prompt -i complete"),
+            "{e}"
+        );
     }
 
     #[test]

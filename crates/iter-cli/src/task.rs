@@ -361,6 +361,56 @@ mod tests {
         assert_eq!(task.status, TaskStatus::Wip);
     }
 
+    /// R3 of task 302: with several runs working at once, `done` still refuses while any of them
+    /// works, and leaves the task `wip`. The task folder is in a scratch notes folder.
+    #[test]
+    fn done_refuses_while_any_of_several_runs_works() {
+        use iter_core::agent::{
+            run::Harness,
+            solve::{self, Observer, Spec},
+        };
+        struct Silent;
+        impl Observer for Silent {}
+        let app = app();
+        let notes = iter_core::fixtures::scratch("cli-done-parallel");
+        iter_core::fixtures::install_instructions(&notes);
+        let project = Project {
+            tmux: false,
+            auto_branch: false,
+            notes_path: notes.display().to_string(),
+            ..iter_core::fixtures::project("proj")
+        };
+        let project_id = app.db.insert(&project).expect("project inserts");
+        let task_id = app
+            .db
+            .insert(&Task {
+                status: TaskStatus::Wip,
+                ..iter_core::fixtures::task(project_id, "a task")
+            })
+            .expect("task inserts");
+        let spec = Spec {
+            agent: Harness::Claude,
+            model: "haiku".into(),
+            effort: "low".into(),
+        };
+        let name = "proj/a task";
+        let (a, _) = solve::open_subagent(&app, name, "plan", &spec, &Silent).expect("run a");
+        let (b, _) = solve::open_subagent(&app, name, "check", &spec, &Silent)
+            .expect("run b opens beside run a");
+
+        let refused = task_done(&app, &mux(), Some(name), false).expect_err("a and b work");
+        assert!(refused.to_string().contains("still working"), "{refused}");
+        solve::close(&app, name, a, iter_core::agent::run::Status::Done, "").expect("a closes");
+        let refused = task_done(&app, &mux(), Some(name), false).expect_err("b still works");
+        assert!(
+            refused.to_string().contains(&format!("run {b} ")),
+            "{refused}"
+        );
+        let task: Task = app.db.get(task_id).expect("reload").expect("task exists");
+        assert_eq!(task.status, TaskStatus::Wip);
+        let _ = std::fs::remove_dir_all(&notes);
+    }
+
     #[test]
     fn an_unknown_task_ref_is_reported() {
         let app = app();
