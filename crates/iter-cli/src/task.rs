@@ -194,12 +194,7 @@ fn ensure_tags(db: &Db, names: &[String]) -> Result<Vec<i64>> {
 }
 
 /// `iter task edit --tag/--untag`: only the task's tags change, no editor.
-fn task_retag(
-    app: &App,
-    task_ref: Option<&str>,
-    tags: &[String],
-    untags: &[String],
-) -> Result<()> {
+fn task_retag(app: &App, task_ref: Option<&str>, tags: &[String], untags: &[String]) -> Result<()> {
     let db = &app.db;
     let (project, task) = task_or_current(db, task_ref)?;
     let id = task.id();
