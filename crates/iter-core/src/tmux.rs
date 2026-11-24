@@ -52,6 +52,22 @@ pub trait Multiplexer {
     /// `~/.tmux/resurrect`, else `$XDG_DATA_HOME/tmux/resurrect`.
     fn last_resurrect_save(&self) -> Option<NaiveDateTime>;
 
+    /// Opens a window named `name` in `session`, in `cwd`, running `command` (the default shell
+    /// when none).
+    fn new_window(&self, session: &str, name: &str, cwd: &str, command: Option<&str>)
+    -> Result<()>;
+
+    /// Puts `text` in the paste buffer `name`, whole.
+    fn set_buffer(&self, name: &str, text: &str) -> Result<()>;
+
+    /// Pastes the buffer `name` into the pane `target` bracketed (`-p`: the program reads it
+    /// as a paste, so a newline in it does not send it), then deletes the buffer. Nothing is
+    /// pressed after it.
+    fn paste_buffer(&self, name: &str, target: &str) -> Result<()>;
+
+    /// What the pane `target` runs now (`#{pane_current_command}`); none when it cannot be asked.
+    fn pane_command(&self, target: &str) -> Option<String>;
+
     /// Session plus hooks: the part of `session new` that can fail, so its unwind guards this call.
     fn start_tracked_session(&self, name: &str, cwd: &str) -> Result<()> {
         self.create_session(name, cwd)?;
@@ -228,6 +244,45 @@ impl Multiplexer for TmuxClient<'_> {
         let modified = std::fs::metadata(dir.join("last")).ok()?.modified().ok()?;
         Some(DateTime::<Local>::from(modified).naive_local())
     }
+
+    fn new_window(
+        &self,
+        session: &str,
+        name: &str,
+        cwd: &str,
+        command: Option<&str>,
+    ) -> Result<()> {
+        // `=name:` is the session itself, the window going to its next free index
+        let target = format!("{}:", exact(session));
+        let mut args = vec!["new-window", "-t", &target, "-n", name, "-c", cwd];
+        args.extend(command);
+        self.run(&args)
+    }
+
+    fn set_buffer(&self, name: &str, text: &str) -> Result<()> {
+        // `--`: a prompt starting with `-` is data, not a flag
+        self.run(&["set-buffer", "-b", name, "--", text])
+    }
+
+    fn paste_buffer(&self, name: &str, target: &str) -> Result<()> {
+        self.run(&["paste-buffer", "-p", "-d", "-b", name, "-t", target])
+    }
+
+    fn pane_command(&self, target: &str) -> Option<String> {
+        self.output_trimmed(&[
+            "display-message",
+            "-p",
+            "-t",
+            target,
+            "#{pane_current_command}",
+        ])
+    }
+}
+
+/// The pane of window `window` in exactly the session `session`, for [`Multiplexer::paste_buffer`]
+/// and [`Multiplexer::pane_command`].
+pub fn window_target(session: &str, window: &str) -> String {
+    format!("{}:{window}", exact(session))
 }
 
 /// [`Multiplexer::current_session_name`] over the real `tmux`, for `locate::current_task`, which has
