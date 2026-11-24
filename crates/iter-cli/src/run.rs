@@ -61,6 +61,7 @@ pub fn run(args: &Args, app: &App) -> Result<()> {
             Some(action) => action.run(app),
             None => note::today(app, &NotesScope::default(), false),
         },
+        Command::Instruction { action } => action.run(app),
         Command::Session { action } => action.run(app),
         Command::Comment { task, message } => misc::comment_cmd(app, task.name(), message),
         Command::T => misc::t_cmd(app),

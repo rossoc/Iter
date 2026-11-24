@@ -15,6 +15,7 @@ mod entity;
 #[cfg(test)]
 mod help_tests;
 mod ingest;
+mod instruction;
 mod misc;
 mod note;
 mod organization;

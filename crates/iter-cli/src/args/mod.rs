@@ -13,6 +13,7 @@ use iter_core::reporting::Format;
 use iter_core::wiki::retrieve::Depth;
 
 mod board;
+mod instruction;
 mod internal;
 mod note;
 mod organization;
@@ -23,6 +24,7 @@ mod task;
 mod wiki;
 
 pub use board::*;
+pub use instruction::*;
 pub use internal::*;
 pub use note::*;
 pub use organization::*;
@@ -189,6 +191,13 @@ pub enum Command {
     Note {
         #[clap(subcommand)]
         action: Option<NoteCommand>,
+    },
+
+    /// The instructions an agent can be given (`instructions/<name>.md` in
+    /// the task's folder, the notes, or iter's config folder): list, show
+    Instruction {
+        #[clap(subcommand)]
+        action: InstructionCommand,
     },
 
     /// Set up and track a task's session (tmux + git worktree/branch, and
