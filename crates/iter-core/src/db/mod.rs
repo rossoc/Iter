@@ -14,7 +14,7 @@ use rusqlite::{
     params_from_iter,
 };
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 mod groups;
 mod migrate;
@@ -163,6 +163,22 @@ impl Db {
         let db = Db { conn };
         db.migrate()?;
         Ok(db)
+    }
+
+    /// The file this connection is over; none for a database in memory.
+    pub fn path(&self) -> Option<PathBuf> {
+        self.conn
+            .path()
+            .filter(|p| !p.is_empty())
+            .map(PathBuf::from)
+    }
+
+    /// SQLite's `data_version`: it moves when another connection commits, never for this one's
+    /// own writes, so a connection kept open only for it sees every outside change.
+    pub fn data_version(&self) -> Result<i64> {
+        Ok(self
+            .conn
+            .query_row("PRAGMA data_version", [], |row| row.get(0))?)
     }
 
     fn find_one<T: Table>(&self, tail: &str, params: impl Params) -> Result<Option<T>> {

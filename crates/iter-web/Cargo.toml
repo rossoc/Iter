@@ -6,8 +6,11 @@ description = "`iter serve`: a browser UI over the database the CLI uses."
 
 [dependencies]
 iter-core.workspace = true
-topcoat.workspace = true
-tokio.workspace = true
+topcoat = { workspace = true, features = ["sse"] }
+tokio = { workspace = true, features = ["time"] }
+# The `/live` event stream: its type and the stream that checks the version every second.
+futures-core = "0.3"
+futures-util = { version = "0.3", default-features = false }
 pulldown-cmark.workspace = true
 chrono.workspace = true
 serde.workspace = true
@@ -16,5 +19,3 @@ serde_yaml.workspace = true
 
 [dev-dependencies]
 iter-core = { workspace = true, features = ["test-support"] }
-# Reading the `/live` event stream frame by frame in `live_tests`.
-futures-core = "0.3"

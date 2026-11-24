@@ -19,10 +19,13 @@
 // picker; a typed or stepped date goes on Enter or when focus leaves the form, not per
 // keystroke (Chrome reports a change after every digit of a year); a year from
 // 1970 counts. Without script the date is a plain field with a hidden submit button.
+// A swap of the page by ui/live.js (`iter:live`) brings new elements: both parts arm them again.
 (function () {
-  var input = document.getElementById("day-input");
-  var label = document.querySelector(".day-label");
-  if (input && label && input.form) {
+  function arm() {
+    var input = document.getElementById("day-input");
+    var label = document.querySelector(".day-label");
+    if (!input || !label || !input.form || input.dataset.armed) return;
+    input.dataset.armed = "1";
     var form = input.form;
     var typing = false;
     var ready = function (v) { return /^\d{4}-\d\d-\d\d$/.test(v) && +v.slice(0, 4) >= 1970; };
@@ -49,15 +52,24 @@
       else typing = false;
     });
   }
+  arm();
+  document.addEventListener("iter:live", arm);
 })();
 
 (function () {
   var board = document.querySelector("[data-post]");
   if (!board) return;
 
-  board.classList.add("can-drag");
-  Array.prototype.forEach.call(board.querySelectorAll("[data-task]"), function (card) {
-    card.setAttribute("draggable", "true");
+  function arm() {
+    board.classList.add("can-drag");
+    Array.prototype.forEach.call(board.querySelectorAll("[data-task]"), function (card) {
+      card.setAttribute("draggable", "true");
+    });
+  }
+  arm();
+  document.addEventListener("iter:live", function () {
+    board = document.querySelector("[data-post]") || board;
+    arm();
   });
 
   // A live region reads a change, not what was there on load: write the note again once the page is up.

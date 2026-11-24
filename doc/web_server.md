@@ -21,9 +21,20 @@ The layers, outermost first: `blocking::off_the_workers`, `guard::security_heade
 | Agents | `/agents`, `/agent/{id}/{n}`, `POST /task/{id}/runs/{n}[/run|/cancel]` | `pages/agent/agents.rs`, `task_runs.rs` |
 | Boards | `/boards`, `/board/{id}` (agenda), `/board/{id}/matrix`, `/board/{id}/info`, `/board/{id}/edit`, `POST /board/{id}/{schedule,matrix}` | `pages/board/` |
 | Instructions | `/instructions`, `/instruction/{name}` | `pages/agent/instructions/` |
+| Live | `GET /live` (server-sent events), `/live.js` | `pages/site/live.rs`, `ui/live.js` |
 | Misc | `GET /search?q=` (JSON), `POST /folders/pick`, `/style.css`, `/board.js`, `/org.js`, `/platform.js`, `/favicon.ico` | `pages/site/search_index.rs`, `pages/site/folders.rs`, `assets.rs` |
 
 The `{id}` of every route with one must be a number, else a 400 (`path_param` in the page folders). Static files are compiled in and served with an ETag and `Cache-Control: no-cache`: the browser revalidates and gets a bodiless 304.
+
+## Pages that update themselves
+
+A page follows the data without a reload. The server stays the only place a page is rendered; there is no client copy of the database. Three pieces:
+
+- **The version** (`iter_core::live::Version`): one number over everything a page can show. It hashes SQLite's `data_version` (read on a connection the version keeps open only for that, so it moves on every commit from another connection: the CLI, an agent, another request) with the path, size and modification time of every `.md`/`.yaml` file under the organizations' and projects' notes folders and the config folder's `tasks/` (task notes, sketches, runs, plans, daily notes). Folders are found from the rows each time, hidden folders and other files are skipped, so an editor's swap file does not move it.
+- **The stream** (`GET /live`, `pages/site/live.rs`): server-sent events. The first event is the version at once, then one each time it changes; it is checked every second with `spawn_blocking` (the walk and the pragma block), the handler having returned, so no thread is held between checks. Keep-alive comments fill the gaps.
+- **The swap** (`ui/live.js`, loaded by `frame.rs` on every page): every element with `data-live` and an id is a region; `<main id="main">` is one. When the version moves, the script fetches `location.href` again and replaces each region's children with the fresh page's. It does not swap while a pop-up or the search palette is open, a field in a region has focus, or a form in a region has been edited: it raises a "page changed" toast instead, and a later change or a reload brings the page up to date. A hidden tab closes its stream (browsers allow about six connections per server) and reopens it when shown, catching up if the version moved; the palette's preview iframe does not listen. After a swap it fires `iter:live` on `document` for a script that binds to elements in a region.
+
+This is the observer pattern with the server as the subject and the regions as the observers; observing a version and re-rendering the page, rather than mirroring tables on the client, keeps one renderer and needs no per-table change events.
 
 ## Tabs and pop-ups through query parameters
 

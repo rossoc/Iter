@@ -1,10 +1,12 @@
 // The folder button of a path field (field.rs `path_field`). The button is `hidden`
 // until this runs; the path can always be typed. A click asks the server to open the
 // system's folder chooser (POST /folders/pick) and puts the chosen folder in the input.
+// A region swapped in by live.js (`iter:live`) brings fresh buttons, armed the same way.
 (function () {
-  document.querySelectorAll("button[data-path-pick]").forEach(function (button) {
+  function arm(button) {
     var input = document.getElementById(button.dataset.pathPick);
-    if (!input) return;
+    if (!input || button.dataset.armed) return;
+    button.dataset.armed = "1";
     button.hidden = false;
     var busy = false;
     button.addEventListener("click", function () {
@@ -30,5 +32,11 @@
         .catch(function () {})
         .then(function () { busy = false; button.disabled = false; input.focus(); });
     });
-  });
+  }
+
+  function armAll() {
+    document.querySelectorAll("button[data-path-pick]").forEach(arm);
+  }
+  armAll();
+  document.addEventListener("iter:live", armAll);
 })();

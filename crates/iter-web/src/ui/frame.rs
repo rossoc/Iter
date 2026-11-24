@@ -29,6 +29,8 @@ pub(super) fn document_title(parts: &[&str], error: bool) -> String {
 /// form's refusal: it prefixes the title and is raised as a toast too (`toast.rs`).
 /// `current` is the nav `href` that gets `aria-current`. `dialog` is a pop-up
 /// (`modal.rs`): the rest becomes `inert` and `modal.js` is loaded for Esc and the focus trap.
+/// `<main>` is a live region (`data-live`): `live.js` swaps it for a fresh copy of the page when
+/// the data behind it changes (`GET /live`).
 #[component]
 pub async fn frame(
     title: &[&str],
@@ -44,6 +46,7 @@ pub async fn frame(
         <script src="/combobox.js" defer=""></script>
         <script src="/path_pick.js" defer=""></script>
         <script src="/notice.js" defer=""></script>
+        <script src="/live.js" defer=""></script>
         <div class="page">
             <a class="skip" href="#main" if covered { inert="" }>"Skip to content"</a>
             <header class="bar" if covered { inert="" }>
@@ -55,7 +58,7 @@ pub async fn frame(
                 </nav>
                 search_button()
             </header>
-            <main id="main" tabindex="-1" if covered { inert="" }>(child)</main>
+            <main id="main" tabindex="-1" data-live="" if covered { inert="" }>(child)</main>
             palette()
             toasts(error: error)
             if let Some(dialog) = dialog {

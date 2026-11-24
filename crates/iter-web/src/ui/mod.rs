@@ -153,6 +153,7 @@ static SEARCH_JS: Asset = Asset::js(include_str!("search.js"));
 static COMBOBOX_JS: Asset = Asset::js(include_str!("combobox.js"));
 static PATH_PICK_JS: Asset = Asset::js(include_str!("path_pick.js"));
 static TOAST_JS: Asset = Asset::js(include_str!("toast.js"));
+static LIVE_JS: Asset = Asset::js(include_str!("live.js"));
 
 pub fn register(builder: RouterBuilder) -> RouterBuilder {
     serve(
@@ -166,6 +167,7 @@ pub fn register(builder: RouterBuilder) -> RouterBuilder {
             ("/combobox.js", &COMBOBOX_JS),
             ("/path_pick.js", &PATH_PICK_JS),
             ("/toast.js", &TOAST_JS),
+            ("/live.js", &LIVE_JS),
         ],
     )
 }

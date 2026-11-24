@@ -18,7 +18,7 @@ const INTERFACE: [(&str, &str); 2] = [("iter-cli", "cli"), ("iter-web", "web")];
 
 /// The core modules and their rank: a module imports only modules of a lower rank (sketch
 /// `architecture`, section 1). `agent` is the top of what the others may not reach.
-const RANKS: [(&str, u8); 25] = [
+const RANKS: [(&str, u8); 26] = [
     ("error", 0),
     ("text", 1),
     ("files", 1),
@@ -38,6 +38,7 @@ const RANKS: [(&str, u8); 25] = [
     ("front", 4),
     ("platform", 5),
     ("locate", 5),
+    ("live", 5),
     ("workspace", 6),
     ("push", 6),
     ("wiki", 6),

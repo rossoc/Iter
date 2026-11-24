@@ -355,4 +355,8 @@
   } else {
     enhance(document);
   }
+  // a region swapped in by live.js brings fresh fields
+  document.addEventListener("iter:live", function () {
+    enhance(document);
+  });
 })();
