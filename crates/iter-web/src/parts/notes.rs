@@ -40,10 +40,14 @@ impl NotesTab {
     }
 }
 
-fn preview(note: &Note) -> String {
-    const MAX: usize = 140;
-    let line = first_line(&note.body);
-    match line.char_indices().nth(MAX) {
+/// How many characters of a first line a preview shows before its ellipsis.
+pub const PREVIEW_CHARS: usize = 140;
+
+/// The first line with text of `text`, cut to [`PREVIEW_CHARS`] with an ellipsis: a row's
+/// preview here and on a task's Notes tab.
+pub fn preview(text: &str) -> String {
+    let line = first_line(text);
+    match line.char_indices().nth(PREVIEW_CHARS) {
         Some((at, _)) => format!("{}\u{2026}", &line[..at]),
         None => line.to_string(),
     }
@@ -73,7 +77,7 @@ fn months<'a>(base: &str, notes: &'a [Note]) -> Vec<Month<'a>> {
                 day: note.date.format("%a %-d %b").to_string(),
                 iso: iter_core::reporting::fmt_date(note.date),
                 title: own.then_some(note.title.as_str()),
-                preview: preview(note),
+                preview: preview(&note.body),
             });
         }
     }

@@ -27,7 +27,6 @@ path_param!(step: String, error = bad_request);
 
 /// How much of a file is read for its preview: the first line with text is near the top.
 const HEAD_BYTES: u64 = 4 * 1024;
-const PREVIEW_CHARS: usize = 140;
 const FILES: usize = 50;
 
 /// A file of the task folder as a row of the Notes tab: its name and first line; the whole
@@ -50,7 +49,7 @@ fn docs(dir: &std::path::Path) -> Vec<Doc> {
         .into_iter()
         .take(FILES)
         .map(|file| Doc {
-            preview: preview(&head(&file.path)),
+            preview: crate::parts::notes::preview(&head(&file.path)),
             name: file.name,
         })
         .collect()
@@ -66,14 +65,6 @@ fn head(path: &std::path::Path) -> String {
     String::from_utf8_lossy(&bytes)
         .trim_end_matches('\u{FFFD}')
         .to_string()
-}
-
-fn preview(text: &str) -> String {
-    let line = crate::parts::notes::first_line(text);
-    match line.char_indices().nth(PREVIEW_CHARS) {
-        Some((at, _)) => format!("{}\u{2026}", &line[..at]),
-        None => line.to_string(),
-    }
 }
 
 #[derive(Default)]
@@ -594,6 +585,7 @@ pub async fn roster_block(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parts::notes::PREVIEW_CHARS;
     use iter_core::fixtures;
 
     const PLAN: &str =

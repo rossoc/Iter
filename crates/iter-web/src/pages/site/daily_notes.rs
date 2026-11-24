@@ -23,11 +23,11 @@ pub(crate) struct NoteQuery {
 }
 
 #[derive(Deserialize)]
-pub struct NoteForm {
-    text: String,
+pub(crate) struct NoteForm {
+    pub(crate) text: String,
 }
 
-const TEXT: &str = "text";
+pub(crate) const TEXT: &str = "text";
 
 pub(crate) struct NotePage {
     owner: String,
@@ -214,6 +214,21 @@ fn note_tabs(base: &str, day: NaiveDate, current: NoteTab) -> Vec<Tab> {
     )
 }
 
+/// A note's Edit tab: its whole text in one field, posted to `here`, where Cancel goes back to.
+/// A task note's page (`pages/task/task_note.rs`) has the same.
+#[component]
+pub(crate) async fn note_editor(
+    here: &str,
+    error: Option<&FormError>,
+    text: &str,
+) -> Result<impl View> {
+    Ok(view! {
+        form_shell(action: here, error: error, cancel: here,
+            textarea(name: TEXT, label: "Note", value: text, hide_label: true)
+        )
+    })
+}
+
 #[component]
 async fn note_screen(page: &NotePage) -> Result<impl View> {
     let NotePage {
@@ -240,9 +255,7 @@ async fn note_screen(page: &NotePage) -> Result<impl View> {
             tabs(label: "Note sections", items: &items)
             <p class="note-date"><time datetime=(iso.as_str())>(when.as_str())</time></p>
             if *tab == NoteTab::Edit {
-                form_shell(action: here.as_str(), error: error.as_ref(), cancel: here.as_str(),
-                    textarea(name: TEXT, label: "Note", value: text.as_str(), hide_label: true)
-                )
+                note_editor(here: here.as_str(), error: error.as_ref(), text: text.as_str())
             } else {
                 if note.body.is_empty() {
                     empty_line("Nothing written on this day.")

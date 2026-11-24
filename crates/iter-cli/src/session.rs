@@ -10,7 +10,7 @@ use iter_core::config::WindowConfig;
 use iter_core::db::Table;
 use iter_core::error::{IterError, Result};
 use iter_core::locate::{self, current_task, require_git_repo, task_or_current};
-use iter_core::models::{Duration, Project, SessionConfig, Task, TaskStatus};
+use iter_core::models::{Duration, SessionConfig, TaskStatus};
 use iter_core::tmux::{Multiplexer, TmuxClient};
 use iter_core::workspace;
 use iter_core::workspace::clock::{Closed, close_open_session, start_session};
@@ -250,16 +250,12 @@ pub fn paste(
             kind: "session",
             name: session.to_string(),
         })?;
-    let task: Task = db.get(config.task_id)?.ok_or_else(|| IterError::NotFound {
-        kind: "task",
-        name: config.task_id.to_string(),
-    })?;
-    let project: Project = db
-        .get(task.project_id)?
-        .ok_or_else(|| IterError::NotFound {
-            kind: "project",
-            name: task.project_id.to_string(),
-        })?;
+    let (project, task) =
+        db.task_with_project(config.task_id)?
+            .ok_or_else(|| IterError::NotFound {
+                kind: "task",
+                name: config.task_id.to_string(),
+            })?;
     let label = task.label(&project).to_string();
     let text =
         iter_core::agent::task_prompt::prompt_text(app, Some(&label), instruction, None, true)?;
@@ -334,6 +330,7 @@ fn session_elapse(app: &App) -> Result<()> {
 mod tests {
     use super::*;
     use iter_core::fixtures;
+    use iter_core::models::{Project, Task};
     use iter_core::process::fake::FakeRunner;
 
     thread_local! {

@@ -3,24 +3,12 @@
 //! a sketch is the agents' and read-only. Only a name among the folder's own files
 //! (`TaskDir::files`) opens: anything else, `..` and `/` included, is a 404.
 
-use crate::{load::Parents, parts::all::*, prelude::*};
+use crate::pages::site::daily_notes::{NoteForm, NoteQuery, TEXT, note_editor};
+use crate::{parts::all::*, prelude::*};
 use iter_core::agent::taskdir::{self, TaskDir};
-use serde::Deserialize;
 use std::path::PathBuf;
 
 path_param!(name: String, error = bad_request);
-
-#[query_params(error = bad_request)]
-pub(crate) struct NoteQuery {
-    pub tab: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct NoteForm {
-    text: String,
-}
-
-const TEXT: &str = "text";
 
 pub(crate) struct FilePage {
     task_id: i64,
@@ -55,7 +43,7 @@ fn open(cx: &Cx, kind: TaskFile) -> Result<(FilePage, PathBuf)> {
     let (task, project) = crate::load::task_with_project(&db, id)?;
     let dir = taskdir::of(&db, &project, &task).ok().ok_or_not_found()?;
     let path = find(&dir, kind, &name).ok_or_not_found()?;
-    let Parents { org, .. } = crate::load::parents_of(&db, task.project_id)?;
+    let org = db.org_of(&project)?;
     let mut crumbs = trail(&org, Some(&project), Crumb::link("Task", task_url(id)));
     crumbs.push(Crumb::link("Notes", notes_tab_url(&task_url(id))));
     crumbs.push(Crumb::here(name.clone()));
@@ -102,7 +90,7 @@ pub(super) async fn note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<imp
         .open(&path)
         .and_then(|mut file| std::io::Write::write_all(&mut file, text.as_bytes()));
     match written {
-        Ok(()) => Err(see_other(task_note_url(page.task_id, &page.name)).into()),
+        Ok(()) => Err(see_other(task_file_url(page.task_id, page.kind, &page.name)).into()),
         Err(e) => {
             page.error = Some(FormError::new(&e.into(), Some(TEXT)));
             page.tab = NoteTab::Edit;
@@ -153,9 +141,7 @@ async fn file_screen(page: &FilePage) -> Result<impl View> {
                 tabs(label: "Note sections", items: &items)
             }
             if *tab == NoteTab::Edit {
-                form_shell(action: here.as_str(), error: error.as_ref(), cancel: here.as_str(),
-                    textarea(name: TEXT, label: "Note", value: text.as_str(), hide_label: true)
-                )
+                note_editor(here: here.as_str(), error: error.as_ref(), text: text.as_str())
             } else if text.trim().is_empty() {
                 empty_line("Nothing written yet.")
             } else {

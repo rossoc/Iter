@@ -86,16 +86,8 @@ struct Seen {
     modified: Option<std::time::SystemTime>,
 }
 
-fn watched(path: &Path) -> bool {
-    let hidden = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .is_none_or(|n| n.starts_with('.'));
-    let ext = path.extension().and_then(|x| x.to_str());
-    !hidden && matches!(ext, Some("md" | "yaml" | "yml"))
-}
-
-/// The watched files under `dir`, hidden folders (`.git`, `.obsidian`) and links skipped.
+/// The `.md` and `.yaml` files under `dir`, hidden files and folders (`.git`, `.obsidian`) and
+/// links skipped.
 fn walk(dir: &Path, depth: usize, out: &mut Vec<Seen>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
@@ -104,14 +96,17 @@ fn walk(dir: &Path, depth: usize, out: &mut Vec<Seen>) {
         let Ok(kind) = entry.file_type() else {
             continue;
         };
+        if entry.file_name().to_string_lossy().starts_with('.') {
+            continue;
+        }
         let path = entry.path();
+        let ext = path.extension().and_then(|x| x.to_str());
         if kind.is_dir() {
-            let hidden = entry.file_name().to_string_lossy().starts_with('.');
-            if depth > 0 && !hidden {
+            if depth > 0 {
                 walk(&path, depth - 1, out);
             }
         } else if kind.is_file()
-            && watched(&path)
+            && matches!(ext, Some("md" | "yaml" | "yml"))
             && let Ok(meta) = entry.metadata()
         {
             out.push(Seen {

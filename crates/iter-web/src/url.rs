@@ -210,10 +210,6 @@ pub fn task_file_url(id: i64, kind: TaskFile, name: &str) -> String {
     format!("{}/{}/{}", task_url(id), kind.folder(), encode(name))
 }
 
-pub fn task_note_url(id: i64, name: &str) -> String {
-    task_file_url(id, TaskFile::Note, name)
-}
-
 /// The tab of a task note's page; the Info tab is the bare URL.
 pub fn task_file_tab_url(id: i64, kind: TaskFile, name: &str, tab: NoteTab) -> String {
     let tab = (tab != NoteTab::Info).then(|| tab.as_str());
