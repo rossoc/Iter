@@ -163,15 +163,18 @@ fn session_new(
     Ok(())
 }
 
-/// Opens the windows of `session.windows` after the first (the session came with that one, a
-/// shell in `cwd`), each named, in `cwd`, running its command, and starts a paste worker for
+/// Gives the window the session came with (a shell in `cwd`) the first entry's name and command,
+/// opens the others, each named, in `cwd`, running its command, and starts a paste worker for
 /// each window with `paste`. The session is already set up, so a window that will not open is
 /// a warning, not a failure.
 fn open_windows(tmux: &dyn Multiplexer, session: &str, cwd: &str, windows: &[WindowConfig]) {
     for (i, window) in windows.iter().enumerate() {
-        if i > 0
-            && let Err(e) = tmux.new_window(session, &window.name, cwd, window.command.as_deref())
-        {
+        let command = window.command.as_deref();
+        let opened = match i {
+            0 => tmux.shape_first_window(session, &window.name, command),
+            _ => tmux.new_window(session, &window.name, cwd, command),
+        };
+        if let Err(e) = opened {
             eprintln!("warning: couldn't open the window '{}': {e}", window.name);
             continue;
         }
@@ -445,13 +448,33 @@ mod tests {
         );
         assert_eq!(
             runner.calls(),
-            ["tmux new-window -t =web/1 login: -n claude -c /wt claude"]
+            [
+                "tmux rename-window -t =web/1 login: shell",
+                "tmux new-window -t =web/1 login: -n claude -c /wt claude",
+            ]
         );
         let started = PASTERS.with(|p| p.borrow().clone());
         assert_eq!(
             started,
             [["web/1 login", "claude", "complete"].map(String::from)]
         );
+        // a first window with a command runs it in place of the shell
+        let runner = FakeRunner::default();
+        PASTERS.with(|p| p.borrow_mut().clear());
+        let only = [WindowConfig {
+            name: "claude".into(),
+            command: Some("claude".into()),
+            paste: Some("complete".into()),
+        }];
+        open_windows(&TmuxClient::new(&runner, false), "s", "/wt", &only);
+        assert_eq!(
+            runner.calls(),
+            [
+                "tmux rename-window -t =s: claude",
+                "tmux respawn-pane -k -t =s: claude",
+            ]
+        );
+        assert_eq!(PASTERS.with(|p| p.borrow().len()), 1);
     }
 
     /// The pane is ready once it runs something other than its shell.

@@ -57,6 +57,10 @@ pub trait Multiplexer {
     fn new_window(&self, session: &str, name: &str, cwd: &str, command: Option<&str>)
     -> Result<()>;
 
+    /// Names the window the session came with `name` and, given a `command`, runs it there in
+    /// place of the shell.
+    fn shape_first_window(&self, session: &str, name: &str, command: Option<&str>) -> Result<()>;
+
     /// Puts `text` in the paste buffer `name`, whole.
     fn set_buffer(&self, name: &str, text: &str) -> Result<()>;
 
@@ -257,6 +261,16 @@ impl Multiplexer for TmuxClient<'_> {
         let mut args = vec!["new-window", "-t", &target, "-n", name, "-c", cwd];
         args.extend(command);
         self.run(&args)
+    }
+
+    fn shape_first_window(&self, session: &str, name: &str, command: Option<&str>) -> Result<()> {
+        let target = format!("{}:", exact(session));
+        self.run(&["rename-window", "-t", &target, name])?;
+        match command {
+            // `-k`: the shell the session started is replaced by the command
+            Some(command) => self.run(&["respawn-pane", "-k", "-t", &target, command]),
+            None => Ok(()),
+        }
     }
 
     fn set_buffer(&self, name: &str, text: &str) -> Result<()> {

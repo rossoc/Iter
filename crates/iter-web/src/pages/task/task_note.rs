@@ -43,6 +43,8 @@ fn find(dir: &TaskDir, kind: TaskFile, name: &str) -> Option<PathBuf> {
         .into_iter()
         .find(|f| f.name == name)
         .map(|f| f.path)
+        // a link in the folder could lead outside it: only a plain file is opened
+        .filter(|path| std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_file()))
 }
 
 /// The task of the request's `{id}` and the path of its file `{name}`; either missing is a 404.
@@ -93,7 +95,13 @@ pub(super) async fn sketch(cx: &Cx) -> Result<impl View> {
 pub(super) async fn note_save(cx: &Cx, Form(form): Form<NoteForm>) -> Result<impl View> {
     let (mut page, path) = open(cx, TaskFile::Note)?;
     let text = crate::forms::text(&form.text);
-    match std::fs::write(&path, &text) {
+    // no `create`: a note removed since it was found is not made again
+    let written = std::fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .and_then(|mut file| std::io::Write::write_all(&mut file, text.as_bytes()));
+    match written {
         Ok(()) => Err(see_other(task_note_url(page.task_id, &page.name)).into()),
         Err(e) => {
             page.error = Some(FormError::new(&e.into(), Some(TEXT)));

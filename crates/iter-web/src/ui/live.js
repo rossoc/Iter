@@ -40,14 +40,18 @@
     // a pop-up (modal.rs) is in the page only while open; the search palette is always
     // there, hidden, and marks the document while open
     var palette = document.documentElement.classList.contains("palette-open");
-    if (palette || document.querySelector(".modal-box[role=dialog], dialog[open]")) {
+    if (palette || document.querySelector(".modal-box[role=dialog], dialog[open], [role=listbox]:not([hidden]):not(.palette-list)")) {
       return "a pop-up is open";
     }
     if (document.querySelector(".dragging")) return "a card is being dragged";
     var here = regions(document);
     var focus = document.activeElement;
     for (var i = 0; i < here.length; i++) {
-      if (typing(focus) && here[i].contains(focus)) return "a field has focus";
+      // any focused element (a field, or a link or button a keyboard user is on) would be
+      // lost: the swap waits; the region itself (the skip link's target) does not count
+      if (focus && focus !== here[i] && here[i].contains(focus)) {
+        return typing(focus) ? "a field has focus" : "something in the page has focus";
+      }
       if (here[i].querySelector("form[data-edited]")) return "a form was edited";
     }
     return null;
