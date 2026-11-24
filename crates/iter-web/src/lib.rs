@@ -8,6 +8,8 @@
 // `Send` check on the resulting future needs more than the default depth of 128.
 #![recursion_limit = "256"]
 
+#[cfg(test)]
+mod a11y_tests;
 mod assets;
 mod cx;
 mod forms;
