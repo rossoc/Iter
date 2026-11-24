@@ -106,6 +106,13 @@ pub fn edit_text(initial: &str) -> Result<Option<String>> {
     })
 }
 
+/// Opens the file at `path` in the configured editor, as it is: the editor writes it.
+pub fn open_file(path: &std::path::Path) -> Result<()> {
+    let path = path.display().to_string();
+    process::run_status(&config().editor, None, &[&path])?;
+    Ok(())
+}
+
 /// Opens `template` and hands the result to `save`, which writes and returns the line to print.
 /// The no-change message is shared (`noun`/`verb`: "no changes -- project not updated").
 pub fn edited<T: Serialize + DeserializeOwned + MarkdownBody>(

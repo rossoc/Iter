@@ -59,7 +59,7 @@ pub fn run(args: &Args, app: &App) -> Result<()> {
         Command::Wiki { action } => action.run(app),
         Command::Note { action } => match action {
             Some(action) => action.run(app),
-            None => note::today(app, &NotesScope::default()),
+            None => note::today(app, &NotesScope::default(), false),
         },
         Command::Session { action } => action.run(app),
         Command::Comment { task, message } => misc::comment_cmd(app, task.name(), message),

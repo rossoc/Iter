@@ -25,10 +25,15 @@ pub struct TaskScope {
 
 #[derive(clap::Subcommand, Debug)]
 pub enum NoteCommand {
-    /// Make today's note if it is not there and print its path (also `iter note` alone)
+    /// Make today's note if it is not there and open it in the editor; through a pipe or inside
+    /// a task (`ITER_TASK`), print its path instead (also `iter note` alone)
     Today {
         #[clap(flatten)]
         scope: NotesScope,
+
+        /// Print the path, never open the editor
+        #[clap(long)]
+        print: bool,
     },
 
     /// List the daily notes, latest first

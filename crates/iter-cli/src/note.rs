@@ -35,16 +35,41 @@ fn day(text: &str) -> Result<chrono::NaiveDate> {
         .ok_or_else(|| IterError::CommandFailed(format!("`{text}` is not a day (YYYY-MM-DD)")))
 }
 
-/// `iter note today` (and `iter note` alone): makes today's note if it is not there, prints its path.
-pub(crate) fn today(app: &App, scope: &NotesScope) -> Result<()> {
+/// Whether `iter note` opens the editor: only for a person at a terminal, standard input and
+/// output both terminals and no `ITER_TASK` (set in an agent's session and in a run). A pipe or an
+/// agent gets the path printed.
+pub(crate) fn opens_editor(stdin_tty: bool, stdout_tty: bool, iter_task: Option<&str>) -> bool {
+    stdin_tty && stdout_tty && iter_task.is_none()
+}
+
+/// Today's note, made if it is not there.
+fn today_note(app: &App, scope: &NotesScope) -> Result<PathBuf> {
     let today = app.now.date();
     let dir = dir(app, scope)?;
     notes::create(&dir, today)?;
-    println!(
-        "{}",
-        dir.join(format!("{}.md", today.format("%Y-%m-%d")))
-            .display()
+    Ok(dir.join(format!("{}.md", today.format("%Y-%m-%d"))))
+}
+
+/// Makes today's note if it is not there and opens it in the configured editor; returns its path.
+pub(crate) fn open_today(app: &App, scope: &NotesScope) -> Result<PathBuf> {
+    let note = today_note(app, scope)?;
+    crate::editor::open_file(&note)?;
+    Ok(note)
+}
+
+/// `iter note today` (and `iter note` alone): today's note, made if it is not there, opened in the
+/// editor for a person at a terminal (`opens_editor`), else (or with `--print`) its path printed.
+pub(crate) fn today(app: &App, scope: &NotesScope, print: bool) -> Result<()> {
+    let task = std::env::var("ITER_TASK").ok().filter(|t| !t.is_empty());
+    let at_terminal = opens_editor(
+        std::io::stdin().is_terminal(),
+        std::io::stdout().is_terminal(),
+        task.as_deref(),
     );
+    if !print && at_terminal {
+        return open_today(app, scope).map(|_| ());
+    }
+    println!("{}", today_note(app, scope)?.display());
     Ok(())
 }
 
@@ -52,7 +77,7 @@ impl Run for NoteCommand {
     fn run(&self, app: &App) -> Result<()> {
         let today = app.now.date();
         match self {
-            Self::Today { scope } => self::today(app, scope),
+            Self::Today { scope, print } => self::today(app, scope, *print),
             Self::List { scope } => {
                 for note in notes::list(&dir(app, scope)?) {
                     println!("{}  {}", note.date.format("%Y-%m-%d"), note.title);
