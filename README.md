@@ -564,6 +564,11 @@ its log. So `iter task runs` and the task's Agent tab show every step. A
 subagent's run has no process for iter to watch, so it is never shown
 `lost`; one a session left open is closed with `--close` or Stop.
 
+Several runs can work on one task at once, so a task can be solved in
+parallel: each gets its own number, prompt and log, and those that change code
+share the task's worktree, so give each its own files and its own sketch names.
+`iter task done` still waits until none of them is working.
+
 When the result is in, Claude asks what next: another round, edit the
 result, commit only, or conclude. Concluding commits the work, merges the
 main branch into the task branch (fixing what differs), merges the task

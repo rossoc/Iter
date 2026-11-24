@@ -253,8 +253,6 @@ pub enum AgentError {
     RunNotFound(u32),
     #[error("the run vanished")]
     RunVanished(u32),
-    #[error("run {run} is still working on '{task}': wait for it, or stop it first")]
-    RunBusy { run: u32, task: String },
     #[error("run {run} is {status}, not queued")]
     RunNotQueued { run: u32, status: String },
     #[error("run {run} is {status}: nothing to stop")]
@@ -443,14 +441,6 @@ mod tests {
     /// Messages are shown verbatim by the CLI and the pages.
     #[test]
     fn messages_read_as_they_always_have() {
-        let busy = AgentError::RunBusy {
-            run: 3,
-            task: "web/login".into(),
-        };
-        assert_eq!(
-            busy.to_string(),
-            "run 3 is still working on 'web/login': wait for it, or stop it first"
-        );
         assert_eq!(AgentError::RunNotFound(9).to_string(), "no such run");
         assert_eq!(
             AgentError::WikiBusy.to_string(),

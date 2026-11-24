@@ -78,7 +78,7 @@ fn now() -> String {
     now_as("%Y-%m-%d %H:%M:%S")
 }
 
-/// Starts a run of the instruction `instruction` on `name` (`create` then `begin`), detached unless `wait`; returns its number. One run at a time per task.
+/// Starts a run of the instruction `instruction` on `name` (`create` then `begin`), detached unless `wait`; returns its number. Several runs of one task may work at once, in the task's one worktree: each has its own number, prompt and log.
 pub fn start(
     app: &App,
     name: &str,
@@ -87,8 +87,6 @@ pub fn start(
     description: &str,
     launch: &Launch,
 ) -> Result<u32> {
-    let (_, _, dir) = locate(app, Some(name))?;
-    not_busy(&dir, name)?;
     let n = create(app, name, instruction, spec, description, None)?;
     begin(app, name, n, launch)?;
     Ok(n)
@@ -200,24 +198,11 @@ fn fail(dir: &TaskDir, mut run: RunRecord, e: IterError) -> IterError {
     e
 }
 
-/// Refuses while another run of the task is working.
-fn not_busy(dir: &TaskDir, name: &str) -> Result<()> {
-    match dir.runs().iter().find(|r| r.is_running()) {
-        Some(r) => Err(AgentError::RunBusy {
-            run: r.n,
-            task: name.to_string(),
-        }
-        .into()),
-        None => Ok(()),
-    }
-}
-
 /// What every run does before its agent starts: makes the workspace if the instruction asks for it
 /// (before the prompt is final, so it names the right directory), marks the task in progress,
 /// may trigger an ingest, then `running`. The record is not written; a failure is recorded.
 fn prepare(app: &App, name: &str, n: u32, say: &dyn Observer) -> Result<Ready> {
     let (project, mut task, dir) = locate(app, Some(name))?;
-    not_busy(&dir, name)?;
     let mut run = dir.run(n)?;
     if !run.is_queued() {
         return Err(AgentError::RunNotQueued {
@@ -310,8 +295,7 @@ pub fn open_subagent(
     spec: &Spec,
     say: &dyn Observer,
 ) -> Result<(u32, String)> {
-    let (_, task, dir) = locate(app, Some(name))?;
-    not_busy(&dir, name)?;
+    let (_, task, _) = locate(app, Some(name))?;
     let n = create(app, name, instruction, spec, &task.description, None)?;
     let Ready { dir, mut run, .. } = prepare(app, name, n, say)?;
     run.subagent = true;
