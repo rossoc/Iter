@@ -21,7 +21,7 @@ pub async fn unplaced_list(
         <section class="labelled" if !alone { aria-labelledby=(id) }>
             if collapsible {
                 <details class="collapsible" open="">
-                    <summary><h2 id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</h2></summary>
+                    <summary><span id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</span></summary>
                     drop_zone(target: target, class: "drop-list",
                         if count == 0 {
                             empty_line((empty))

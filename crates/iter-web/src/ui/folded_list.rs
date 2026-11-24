@@ -14,7 +14,7 @@ pub async fn folded_list(
     Ok(view! {
         <section class="labelled" aria-labelledby=(id)>
             <details class="collapsible" if open { open="" }>
-                <summary><h2 id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</h2></summary>
+                <summary><span id=(id) class="label">(title) count_badge(n: count, noun: "tasks")</span></summary>
                 <div class="folded-body">(child)</div>
             </details>
         </section>
