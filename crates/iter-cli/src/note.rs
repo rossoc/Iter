@@ -388,4 +388,83 @@ mod tests {
         assert_eq!(summary("# Root cause\n\ntext"), "Root cause");
         assert_eq!(summary("plain"), "");
     }
+
+    /// R1 of task 303: `iter note` opens the editor only for a person at a terminal: standard
+    /// input and output both terminals, and no `ITER_TASK` (an agent's session, or a run, sets
+    /// it). Anything else (a pipe, an agent) gets the path printed, as before.
+    #[test]
+    fn the_editor_opens_only_at_a_terminal_outside_a_task() {
+        let cases = [
+            // (stdin, stdout, ITER_TASK) -> opens
+            ((true, true, None), true),
+            ((true, true, Some("7")), false),
+            ((false, true, None), false),
+            ((true, false, None), false),
+            ((false, false, None), false),
+            ((false, false, Some("7")), false),
+            ((false, true, Some("app/Fix it")), false),
+            ((true, false, Some("app/Fix it")), false),
+        ];
+        for ((stdin, stdout, task), want) in cases {
+            assert_eq!(
+                opens_editor(stdin, stdout, task),
+                want,
+                "stdin tty {stdin}, stdout tty {stdout}, ITER_TASK {task:?}"
+            );
+        }
+    }
+
+    /// R1 of task 303: opening today's note makes it first when it is missing, then runs the
+    /// configured editor (`editor:` in iter.yaml, here a script that writes down its arguments)
+    /// on its path. Runs in a scratch config folder: the user's config and database are not read.
+    #[test]
+    fn opening_today_runs_the_editor_on_the_note_it_made() {
+        let name = "opening_today_runs_the_editor_on_the_note_it_made";
+        // the editor: a script that writes its arguments to `<script>.args`
+        let bin = iter_core::fixtures::scratch("note-editor-script");
+        std::fs::create_dir_all(&bin).expect("a folder for the script");
+        let script = bin.join("editor.sh");
+        std::fs::write(&script, "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$0.args\"\n")
+            .expect("the script");
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755))
+                .expect("executable");
+        }
+        let yaml = format!("editor: {}\n", script.display());
+        if iter_core::fixtures::in_scratch_config(module_path!(), name, Some(&yaml)) {
+            let _ = std::fs::remove_dir_all(&bin);
+            return;
+        }
+        // in the child: the script named by the config is the parent's
+        let app = App::open().expect("the scratch app opens");
+        let editor = iter_core::config::config().editor.clone();
+        let home = PathBuf::from(std::env::var_os("HOME").expect("a scratch home"));
+        let notes = home.join("notes");
+        app.db
+            .insert(&iter_core::models::Project {
+                notes_path: notes.display().to_string(),
+                ..iter_core::fixtures::project("app")
+            })
+            .expect("project inserts");
+        let note = notes.join(format!("{}.md", app.now.date().format("%Y-%m-%d")));
+        assert!(!note.exists(), "no note yet");
+        let scope = NotesScope {
+            project: Some("app".into()),
+            org: None,
+        };
+        let _ = open_today(&app, &scope).expect("today's note opens");
+        assert!(note.is_file(), "today's note is made: {}", note.display());
+        let args = std::fs::read_to_string(format!("{editor}.args"))
+            .expect("the editor ran and wrote down its arguments");
+        assert_eq!(
+            args.lines().collect::<Vec<_>>(),
+            [note.display().to_string()],
+            "the editor gets the note's path, and only that"
+        );
+        // a note that is there is opened as it is, not made again
+        std::fs::write(&note, "kept\n").expect("written");
+        let _ = open_today(&app, &scope).expect("opens again");
+        assert_eq!(std::fs::read_to_string(&note).unwrap(), "kept\n");
+    }
 }

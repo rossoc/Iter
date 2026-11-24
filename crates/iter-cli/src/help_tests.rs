@@ -51,6 +51,61 @@ fn the_help_of_every_subcommand_is_unchanged() {
     }
 }
 
+/// The help of `===== {command}` in the snapshot: from its header to the next one.
+fn section<'a>(snapshot: &'a str, command: &str) -> &'a str {
+    let header = format!("===== {command}\n");
+    let at = snapshot
+        .find(&header)
+        .unwrap_or_else(|| panic!("the snapshot has no `{command}`"))
+        + header.len();
+    let rest = &snapshot[at..];
+    &rest[..rest.find("===== ").unwrap_or(rest.len())]
+}
+
+/// R6 of task 303: the snapshot is regenerated with the new commands and flags (R1, R2, R3,
+/// R8), and the README tells a person about them. Fails today: none of them exists.
+#[test]
+fn the_snapshot_and_the_readme_have_the_commands_of_task_303() {
+    let snapshot = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/help_snapshot.txt"
+    ))
+    .expect("crates/iter-cli/src/help_snapshot.txt");
+    let wanted: [(&str, &[&str]); 5] = [
+        ("iter note today", &["--print"]),
+        (
+            "iter task new",
+            &["--name", "--description", "--tag", "--status"],
+        ),
+        ("iter task edit", &["--tag", "--untag"]),
+        ("iter instruction list", &[]),
+        ("iter instruction show", &[]),
+    ];
+    for (command, flags) in wanted {
+        let help = section(&snapshot, command);
+        for flag in flags {
+            assert!(
+                help.contains(flag),
+                "`{command}` --help has no {flag}:\n{help}"
+            );
+        }
+    }
+    let readme = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../README.md"))
+        .expect("README.md");
+    for words in [
+        "--print",
+        "--name",
+        "--untag",
+        "iter instruction list",
+        "iter instruction show",
+    ] {
+        assert!(
+            readme.contains(words),
+            "the README does not mention `{words}`"
+        );
+    }
+}
+
 /// Every subcommand has help to pin: a leaf the walk missed would pass the snapshot unseen.
 #[test]
 fn the_snapshot_covers_the_commands_a_person_runs() {
