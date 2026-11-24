@@ -13,6 +13,8 @@ mod cx;
 mod forms;
 mod layers;
 #[cfg(test)]
+mod live_js_tests;
+#[cfg(test)]
 mod live_tests;
 mod load;
 #[cfg(test)]

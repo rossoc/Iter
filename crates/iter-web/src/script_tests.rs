@@ -67,7 +67,8 @@ fn element_bindings(text: &str) -> Vec<String> {
 
 /// Whether the script handles `iter:live` with a listener.
 fn rearms_on_live(text: &str) -> bool {
-    text.contains(r#"addEventListener("iter:live""#) || text.contains("addEventListener('iter:live'")
+    text.contains(r#"addEventListener("iter:live""#)
+        || text.contains("addEventListener('iter:live'")
 }
 
 /// Whether the script marks what it armed, so arming again on `iter:live` skips it: a
@@ -114,7 +115,11 @@ const OUTSIDE: [(&str, &str); 4] = [
 #[test]
 fn every_page_script_that_binds_elements_rearms_on_live() {
     let all = scripts();
-    for wanted in ["pages/org/org.js", "pages/org/platform.js", "ui/combobox.js"] {
+    for wanted in [
+        "pages/org/org.js",
+        "pages/org/platform.js",
+        "ui/combobox.js",
+    ] {
         assert!(
             all.iter().any(|(name, _)| name == wanted),
             "{wanted} is found among {:?}",
@@ -173,7 +178,11 @@ fn the_scripts_left_out_bind_only_outside_the_live_regions() {
             "{name} ({why}) still exists"
         );
     }
-    let live = &all.iter().find(|(n, _)| n == "ui/live.js").expect("live.js").1;
+    let live = &all
+        .iter()
+        .find(|(n, _)| n == "ui/live.js")
+        .expect("live.js")
+        .1;
     assert!(
         live.contains("modal-box"),
         "live.js holds the swap while a pop-up is open"
