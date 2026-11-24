@@ -3,7 +3,7 @@
 use super::*;
 use std::fmt::Write as _;
 
-/// On `task done`: appends the task's notes to the project's note of today under `## Task: <name>`, one `###` per file.
+/// On `task done`: appends the task's notes to the project's note of today under `## Task: <name> #<id>`, one `###` per file.
 /// Returns how many files went in; none if there was nothing to add or the section exists.
 pub fn bridge_task_notes(app: &App, project: &Project, task: &Task) -> Result<usize> {
     let dir = crate::agent::taskdir::of(&app.db, project, task)?;
@@ -24,7 +24,8 @@ pub fn bridge_task_notes(app: &App, project: &Project, task: &Task) -> Result<us
     let org = app.db.org_of(project)?;
     let notes_dir = crate::notes::project_dir(project, &org).ok_or(AgentError::NoNotesFolder)?;
     let today = chrono::Local::now().date_naive();
-    let added =
-        crate::notes::append_section(&notes_dir, today, &format!("Task: {}", task.name), &body)?;
+    // the id keeps two tasks of the same name, done the same day, in two sections
+    let heading = format!("Task: {} #{}", task.name, task.id());
+    let added = crate::notes::append_section(&notes_dir, today, &heading, &body)?;
     Ok(if added { count } else { 0 })
 }
