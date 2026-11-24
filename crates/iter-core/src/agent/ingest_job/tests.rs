@@ -31,9 +31,67 @@ fn a_finished_tasks_notes_go_into_todays_note_once() {
     let today = chrono::Local::now().date_naive();
     let text =
         std::fs::read_to_string(notes.join(format!("{}.md", today.format("%Y-%m-%d")))).unwrap();
-    assert!(text.contains("## Task: Fix it\n\n### thought\n\nMaybe per route."));
+    // the heading may carry the task's id after the name (R7 of task 303)
+    let heading = text
+        .lines()
+        .find(|l| l.starts_with("## Task: Fix it"))
+        .unwrap_or_else(|| panic!("no section of the task: {text}"));
+    assert!(
+        text.contains(&format!("{heading}\n\n### thought\n\nMaybe per route.")),
+        "{text}"
+    );
     assert!(!text.contains("empty"));
     assert_eq!(bridge_task_notes(&app, &project, &task).unwrap(), 0);
+}
+
+/// R7 of task 303 (#242): two tasks of a project with the same name, both done on the same day,
+/// each keep their own section in today's note. Today the second is skipped, because the
+/// heading (`## Task: <name>`) is already there. Bridging either again still adds nothing.
+#[test]
+fn two_same_name_tasks_done_on_one_day_keep_both_sections() {
+    let (app, project, first, notes) = world("bridge-twins");
+    let second_id = app
+        .db
+        .insert(&Task {
+            status: TaskStatus::Done,
+            ..fixtures::task(project.id(), "Fix it")
+        })
+        .unwrap();
+    let second = app.db.get::<Task>(second_id).unwrap().unwrap();
+    for (task, words) in [(&first, "Retry per route."), (&second, "Cache the token.")] {
+        let dir = crate::agent::taskdir::of(&app.db, &project, task).unwrap();
+        dir.ensure().unwrap();
+        std::fs::write(dir.notes_dir().join("thought.md"), format!("{words}\n")).unwrap();
+    }
+    assert_eq!(bridge_task_notes(&app, &project, &first).unwrap(), 1);
+    assert_eq!(
+        bridge_task_notes(&app, &project, &second).unwrap(),
+        1,
+        "the second task's notes were skipped"
+    );
+    let today = chrono::Local::now().date_naive();
+    let text =
+        std::fs::read_to_string(notes.join(format!("{}.md", today.format("%Y-%m-%d")))).unwrap();
+    assert!(
+        text.contains("Retry per route.") && text.contains("Cache the token."),
+        "{text}"
+    );
+    let headings: Vec<&str> = text
+        .lines()
+        .filter(|l| l.starts_with("## Task: Fix it"))
+        .collect();
+    assert_eq!(headings.len(), 2, "{text}");
+    assert_ne!(headings[0], headings[1], "{text}");
+    for id in [first.id(), second_id] {
+        assert!(
+            headings.iter().any(|h| h.contains(&id.to_string())),
+            "no heading names task {id}: {headings:?}"
+        );
+    }
+    // still once each
+    assert_eq!(bridge_task_notes(&app, &project, &first).unwrap(), 0);
+    assert_eq!(bridge_task_notes(&app, &project, &second).unwrap(), 0);
+    let _ = std::fs::remove_dir_all(&notes);
 }
 
 #[test]

@@ -264,4 +264,57 @@ mod tests {
         assert!(text.contains("2026-10-27") && text.contains("RULES"));
         assert!(!text.contains("{{"), "{text}");
     }
+
+    /// R5 of task 303: the user writes one note a day and leaves the sorting to the ingest. A
+    /// Sort step in the Workflow sends each idea of a daily note where it belongs: a speculation
+    /// to an Idea with `confidence: low`, grounded knowledge to a Concept, a bug or new work to a
+    /// task made with `iter task new` (tagged `bug` or `idea`), after looking for a duplicate
+    /// with `iter task list`. The report names the tasks it made, and the Rules allow both
+    /// commands.
+    #[test]
+    fn the_ingest_sorts_a_daily_notes_ideas_into_pages_and_tasks() {
+        let text = ingest_prompt(&job(), &new_note(), None);
+        let workflow = &text[text.find("## Workflow").expect("a Workflow")..];
+        let workflow = &workflow[..workflow.find("## Rules").expect("Rules after the Workflow")];
+        assert!(workflow.contains("**Sort"), "no Sort step: {workflow}");
+        let sort = &workflow[workflow.find("**Sort").unwrap()..];
+        for needle in [
+            "confidence: low",
+            "Concept",
+            "iter task new",
+            "--tag bug",
+            "--tag idea",
+            "iter task list",
+        ] {
+            assert!(
+                sort.contains(needle),
+                "{needle} missing from the Sort step: {sort}"
+            );
+        }
+        // the duplicate check names the project, so it lists only this project's tasks
+        assert!(sort.contains("iter task list --project"), "{sort}");
+        // the task is created in this project
+        assert!(sort.contains("iter task new app"), "{sort}");
+        // the report lists the tasks it created
+        let report = &workflow[workflow.find("**Report").expect("a Report step")..];
+        assert!(report.contains("task"), "{report}");
+        // the Rules let it run both commands
+        let rules = &text[text.find("## Rules").unwrap()..];
+        assert!(
+            rules.contains("iter task new") && rules.contains("iter task list"),
+            "{rules}"
+        );
+        assert!(!text.contains("{{"), "{text}");
+    }
+
+    /// R5 of task 303: the shipped ingest instruction says it makes tasks too.
+    #[test]
+    fn the_ingest_instructions_description_says_it_makes_tasks() {
+        let text = crate::fixtures::shipped("ingest");
+        let description = text
+            .lines()
+            .find_map(|l| l.strip_prefix("description:"))
+            .expect("front matter has a description");
+        assert!(description.contains("and tasks"), "{description}");
+    }
 }

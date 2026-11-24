@@ -592,4 +592,25 @@ mod tests {
         }
         assert!(std::panic::catch_unwind(config).is_err());
     }
+
+    /// R4 of task 303: an agent may create tasks (the ingest sorts bugs and new work into tasks)
+    /// and list them (to look for duplicates first), with nothing to approve.
+    #[test]
+    fn the_default_allowlist_lets_an_agent_create_and_list_tasks() {
+        let allowed = AgentConfig::default().allowed_tools;
+        for tool in ["Bash(iter task new *)", "Bash(iter task list *)"] {
+            assert!(allowed.iter().any(|t| t == tool), "{tool}: {allowed:?}");
+        }
+        // and a config that says nothing about the agent keeps them
+        let config = from_yaml("pause_gap_minutes: 42\n");
+        assert!(
+            config
+                .agent
+                .allowed_tools
+                .iter()
+                .any(|t| t == "Bash(iter task new *)"),
+            "{:?}",
+            config.agent.allowed_tools
+        );
+    }
 }

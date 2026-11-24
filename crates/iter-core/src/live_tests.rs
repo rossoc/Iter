@@ -174,6 +174,31 @@ fn a_notes_file_made_changed_or_removed_changes_it() {
     });
 }
 
+/// R9 of task 303 (#244): the page of a running agent follows its log, so a run's log
+/// (`runs/<n>.log`) that is made or grows moves the version, and a log nobody writes to leaves it.
+/// Fails today: only `.md` and `.yaml` files are watched.
+#[test]
+fn a_runs_log_made_or_grown_changes_it() {
+    if isolated(module_path!(), "a_runs_log_made_or_grown_changes_it", None) {
+        return;
+    }
+    let World { app, .. } = world();
+    let runs = app.join("tasks").join("1").join("runs");
+    let log = runs.join("1.log");
+    let mut version = version();
+    moves(&mut version, "a new run log", || write(&log, "started\n"));
+    moves(&mut version, "a run log that grows", || {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&log)
+            .expect("the log opens");
+        file.write_all(b"a line the agent printed\n")
+            .expect("appended");
+    });
+    holds(&mut version, "nothing written to the log", || {});
+}
+
 /// Files that are neither `.md` nor `.yaml` (an editor's swap file, a lock) leave it alone, and
 /// so does a file outside every notes folder.
 #[test]
