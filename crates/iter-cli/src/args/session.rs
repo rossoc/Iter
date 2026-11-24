@@ -7,6 +7,8 @@ pub enum SessionCommand {
     /// Set up a session for a task: creates a git worktree/branch (unless
     /// the project has no github or auto_branch is off) and, if the
     /// project has tmux enabled, a tmux session named `<project>/<task>`
+    /// with the windows of `session.windows` in iter.yaml (by default a
+    /// shell, and `claude` with the `complete` prompt pasted in, unsent)
     New {
         /// `<project>/<task>` (completion offers only `queue` tasks)
         #[arg(add = ArgValueCompleter::new(queued_task_completer))]

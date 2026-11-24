@@ -1808,7 +1808,7 @@ Set up and track a task's session (tmux + git worktree/branch, and time spent)
 Usage: iter session <COMMAND>
 
 Commands:
-  new     Set up a session for a task: creates a git worktree/branch (unless the project has no github or auto_branch is off) and, if the project has tmux enabled, a tmux session named `<project>/<task>`
+  new     Set up a session for a task: creates a git worktree/branch (unless the project has no github or auto_branch is off) and, if the project has tmux enabled, a tmux session named `<project>/<task>` with the windows of `session.windows` in iter.yaml (by default a shell, and `claude` with the `complete` prompt pasted in, unsent)
   start   Manually start a session for a task (for tmux-less projects, or when the tmux hooks aren't in play)
   stop    Manually end the open session for a task
   elapse  Time spent so far on the currently open session of the task of the tmux session you're in
@@ -1818,7 +1818,7 @@ Options:
   -h, --help
           Print help
 ===== iter session new
-Set up a session for a task: creates a git worktree/branch (unless the project has no github or auto_branch is off) and, if the project has tmux enabled, a tmux session named `<project>/<task>`
+Set up a session for a task: creates a git worktree/branch (unless the project has no github or auto_branch is off) and, if the project has tmux enabled, a tmux session named `<project>/<task>` with the windows of `session.windows` in iter.yaml (by default a shell, and `claude` with the `complete` prompt pasted in, unsent)
 
 Usage: iter session new [OPTIONS] <TASK>
 
@@ -1902,6 +1902,7 @@ Commands:
   hook         Called by a tmux hook; see `tmux::HOOKS` for which format variable fills which argument
   kill-server  Stops the clock of every task with a tmux session, then kills the tmux server -- tmux has no hook of its own for the server exiting
   restore      Re-links iter's sessions to a freshly started tmux server: recreates the tmux sessions it lacks, installs the hooks, closes the clocks the previous server left open and starts those of attached sessions. Meant for tmux-resurrect's `@resurrect-hook-post-restore-all`
+  paste        Started detached by `session new` for a window with `paste` in `session.windows`: waits until the window's program runs, then pastes the prompt of `instruction` into it, without pressing Enter
   help         Print this message or the help of the given subcommand(s)
 
 Options:
@@ -1964,3 +1965,16 @@ Usage: iter internal restore
 Options:
   -h, --help
           Print help
+===== iter internal paste
+Started detached by `session new` for a window with `paste` in `session.windows`: waits until the window's program runs, then pastes the prompt of `instruction` into it, without pressing Enter
+
+Usage: iter internal paste <SESSION> <WINDOW> <INSTRUCTION>
+
+Arguments:
+  <SESSION>
+
+
+  <WINDOW>
+
+
+  <INSTRUCTION>

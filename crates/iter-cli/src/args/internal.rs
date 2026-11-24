@@ -1,4 +1,4 @@
-//! Internal subcommands: tmux hooks and the events they report.
+//! Internal subcommands: tmux hooks and the events they report, and the session's paste worker.
 
 #[derive(clap::Subcommand, Debug)]
 pub enum InternalCommand {
@@ -18,6 +18,19 @@ pub enum InternalCommand {
     /// previous server left open and starts those of attached sessions.
     /// Meant for tmux-resurrect's `@resurrect-hook-post-restore-all`
     Restore,
+
+    /// Started detached by `session new` for a window with `paste` in
+    /// `session.windows`: waits until the window's program runs, then pastes
+    /// the prompt of `instruction` into it, without pressing Enter
+    #[clap(disable_help_flag = true)]
+    Paste {
+        #[clap(allow_hyphen_values = true)]
+        session: String,
+        #[clap(allow_hyphen_values = true)]
+        window: String,
+        #[clap(allow_hyphen_values = true)]
+        instruction: String,
+    },
 }
 
 /// The tmux events `iter` tracks time on, each with exactly the arguments

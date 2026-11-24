@@ -97,6 +97,47 @@ impl Default for NotificationConfig {
     }
 }
 
+/// One window `iter session new` opens: its name, the command it runs (the shell when none),
+/// and the instruction whose prompt (`iter task prompt -i <paste>`) is pasted into it once the
+/// command runs, unsent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WindowConfig {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paste: Option<String>,
+}
+
+/// What `iter session new` opens: its windows, in order; the first is the one the session
+/// starts with.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct SessionConfig {
+    pub windows: Vec<WindowConfig>,
+}
+
+impl Default for SessionConfig {
+    /// A shell, and `claude` with the `complete` prompt waiting in it.
+    fn default() -> Self {
+        SessionConfig {
+            windows: vec![
+                WindowConfig {
+                    name: "shell".into(),
+                    command: None,
+                    paste: None,
+                },
+                WindowConfig {
+                    name: "claude".into(),
+                    command: Some("claude".into()),
+                    paste: Some("complete".into()),
+                },
+            ],
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
@@ -114,6 +155,7 @@ pub struct Config {
     pub task: TaskDefaults,
     pub agent: AgentConfig,
     pub notifications: NotificationConfig,
+    pub session: SessionConfig,
 }
 
 impl Default for Config {
@@ -126,6 +168,7 @@ impl Default for Config {
             task: TaskDefaults::default(),
             agent: AgentConfig::default(),
             notifications: NotificationConfig::default(),
+            session: SessionConfig::default(),
         }
     }
 }

@@ -447,6 +447,12 @@ every task created before the field existed) falls back to the project's
    (idempotent, installed once) -- `client-session-changed`,
    `client-detached`, `session-closed` -- and attaches you to it (switching
    the current client, if you're already inside tmux).
+   The session gets the windows of `session.windows` in the config file: by
+   default a shell, and a window `claude` running `claude`, into which the
+   prompt of `iter task prompt -i complete` is pasted, unsent, once Claude
+   has started. The paste is done by a detached `iter internal paste`, so
+   attaching doesn't wait for it; it gives up after 15 seconds if the
+   window's program never starts.
 
 Entering that tmux session starts a session for the task, and leaving it
 ends one. `client-session-changed` covers both halves of the common case:
@@ -540,8 +546,10 @@ merge into a bystander branch as happily as into the right one.
 
 ## Letting Claude lead a task
 
-Inside a task's session (`iter session new myproj/mytask` puts you in its
-worktree), start `claude` and say:
+`iter session new myproj/mytask` puts you in the task's worktree with a
+`claude` window whose input already holds the `complete` prompt: read it,
+edit it if you like, and send it. (With other `session.windows`, start
+`claude` yourself and say:)
 
 ```
 run `iter task prompt -i complete` and do it
@@ -728,6 +736,18 @@ project:
 # What `iter task new` starts a task at: queue, wip, or done.
 task:
   status: queue
+
+# The windows `iter session new` opens, in order, all in the task's worktree.
+# The first comes with the session; `command` is what a window runs (the
+# shell when left out); `paste` names an instruction whose prompt
+# (`iter task prompt -i <paste>`) is pasted into the window once its program
+# runs -- as a paste, so it waits there unsent for you to edit or send.
+session:
+  windows:
+    - name: shell
+    - name: claude
+      command: claude
+      paste: complete
 ```
 
 These are starting points, not rules: they're written into the editor buffer

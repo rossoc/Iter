@@ -6,10 +6,11 @@ use crate::args::SessionCommand;
 use crate::ingest;
 use iter_core::agent::ingest_job::Trigger;
 use iter_core::app::App;
+use iter_core::config::WindowConfig;
 use iter_core::db::Table;
 use iter_core::error::{IterError, Result};
 use iter_core::locate::{self, current_task, require_git_repo, task_or_current};
-use iter_core::models::{Duration, SessionConfig, TaskStatus};
+use iter_core::models::{Duration, Project, SessionConfig, Task, TaskStatus};
 use iter_core::tmux::{Multiplexer, TmuxClient};
 use iter_core::workspace;
 use iter_core::workspace::clock::{Closed, close_open_session, start_session};
@@ -141,6 +142,16 @@ fn session_new(
         }
     }
 
+    // the other windows once the row is written: the paste worker finds the task by the tmux name
+    if let Some(name) = &config.tmux_session_name {
+        open_windows(
+            tmux,
+            name,
+            &cwd,
+            &iter_core::config::config().session.windows,
+        );
+    }
+
     // attach last, once every row is written: the `client-attached` hook looks the session-config up by tmux name
     if let Some(name) = &config.tmux_session_name
         && let Err(e) = tmux.attach_session(name)
@@ -150,6 +161,128 @@ fn session_new(
     }
 
     Ok(())
+}
+
+/// Opens the windows of `session.windows` after the first (the session came with that one, a
+/// shell in `cwd`), each named, in `cwd`, running its command, and starts a paste worker for
+/// each window with `paste`. The session is already set up, so a window that will not open is
+/// a warning, not a failure.
+fn open_windows(tmux: &dyn Multiplexer, session: &str, cwd: &str, windows: &[WindowConfig]) {
+    for (i, window) in windows.iter().enumerate() {
+        if i > 0
+            && let Err(e) = tmux.new_window(session, &window.name, cwd, window.command.as_deref())
+        {
+            eprintln!("warning: couldn't open the window '{}': {e}", window.name);
+            continue;
+        }
+        if let Some(instruction) = &window.paste
+            && let Err(e) = spawn_paster(session, &window.name, instruction)
+        {
+            eprintln!(
+                "warning: couldn't paste the '{instruction}' prompt into '{}': {e}",
+                window.name
+            );
+        }
+    }
+}
+
+/// Starts `iter internal paste` detached, so attaching does not wait for the program to start.
+#[cfg(not(test))]
+fn spawn_paster(session: &str, window: &str, instruction: &str) -> Result<()> {
+    let mut command = std::process::Command::new(iter_core::process::host()?);
+    command.args(["internal", "paste", "--", session, window, instruction]);
+    iter_core::agent::exec::spawn_detached(&mut command).map(drop)
+}
+
+/// In a test the host is the test binary, which must not be started as `iter internal paste`:
+/// the worker is recorded instead.
+#[cfg(test)]
+fn spawn_paster(session: &str, window: &str, instruction: &str) -> Result<()> {
+    tests::PASTERS.with(|p| {
+        p.borrow_mut()
+            .push([session, window, instruction].map(String::from))
+    });
+    Ok(())
+}
+
+/// How long the paste worker waits for the window's program before giving up.
+const PASTE_WAIT: std::time::Duration = std::time::Duration::from_secs(15);
+/// How often it asks what the pane runs.
+const PASTE_POLL: std::time::Duration = std::time::Duration::from_millis(250);
+/// How long a program that just started is given to draw its input box.
+const PASTE_SETTLE: std::time::Duration = if cfg!(test) {
+    std::time::Duration::ZERO
+} else {
+    std::time::Duration::from_millis(1500)
+};
+
+/// What a pane runs while its program has not started yet (or has exited).
+const SHELLS: [&str; 10] = [
+    "sh", "bash", "zsh", "fish", "dash", "ksh", "tcsh", "csh", "nu", "login",
+];
+
+/// Whether the pane runs a program other than its shell (Claude Code may show as `claude`,
+/// `node` or its version number, so the shell is what is recognised).
+fn program_runs(current: Option<&str>) -> bool {
+    current
+        .map(|c| c.trim().trim_start_matches('-'))
+        .is_some_and(|c| !c.is_empty() && !SHELLS.contains(&c))
+}
+
+/// `iter internal paste`: once window `window` of `session` runs its program (a window with no
+/// command is pasted into at once), puts the prompt of `instruction` for the session's task
+/// (what `iter task prompt -i <instruction>` prints) in a buffer and pastes it bracketed into
+/// the window, so the program shows it as typed text, unsent. Nothing presses Enter.
+pub fn paste(
+    app: &App,
+    tmux: &dyn Multiplexer,
+    session: &str,
+    window: &str,
+    instruction: &str,
+) -> Result<()> {
+    let db = &app.db;
+    let config = db
+        .find_session_config_by_tmux_name(session)?
+        .ok_or_else(|| IterError::NotFound {
+            kind: "session",
+            name: session.to_string(),
+        })?;
+    let task: Task = db.get(config.task_id)?.ok_or_else(|| IterError::NotFound {
+        kind: "task",
+        name: config.task_id.to_string(),
+    })?;
+    let project: Project = db
+        .get(task.project_id)?
+        .ok_or_else(|| IterError::NotFound {
+            kind: "project",
+            name: task.project_id.to_string(),
+        })?;
+    let label = task.label(&project).to_string();
+    let text =
+        iter_core::agent::task_prompt::prompt_text(app, Some(&label), instruction, None, true)?;
+
+    let target = iter_core::tmux::window_target(session, window);
+    let has_command = iter_core::config::config()
+        .session
+        .windows
+        .iter()
+        .find(|w| w.name == window)
+        .is_none_or(|w| w.command.is_some());
+    if has_command {
+        let deadline = std::time::Instant::now() + PASTE_WAIT;
+        while !program_runs(tmux.pane_command(&target).as_deref()) {
+            if std::time::Instant::now() >= deadline {
+                return Err(IterError::CommandFailed(format!(
+                    "the program of '{target}' did not start: the '{instruction}' prompt was not pasted"
+                )));
+            }
+            std::thread::sleep(PASTE_POLL);
+        }
+        std::thread::sleep(PASTE_SETTLE);
+    }
+    let buffer = format!("iter-paste-{}", task.id());
+    tmux.set_buffer(&buffer, &text)?;
+    tmux.paste_buffer(&buffer, &target)
 }
 
 /// What `session new` says once the tmux session is up; a session started in the workspace an
@@ -198,8 +331,13 @@ fn session_elapse(app: &App) -> Result<()> {
 mod tests {
     use super::*;
     use iter_core::fixtures;
-    use iter_core::models::{Project, Task};
     use iter_core::process::fake::FakeRunner;
+
+    thread_local! {
+        /// The paste workers `session new` would have started: `[session, window, instruction]`.
+        pub(super) static PASTERS: std::cell::RefCell<Vec<[String; 3]>> =
+            const { std::cell::RefCell::new(Vec::new()) };
+    }
 
     #[test]
     fn a_session_in_an_agents_workspace_says_so() {
@@ -291,6 +429,45 @@ mod tests {
             .unwrap()
             .expect("the row is written");
         assert_eq!(stored.tmux_session_name.as_deref(), Some(session.as_str()));
+    }
+
+    /// R4b/R4c with the default windows: the shell comes with the session, `claude` is opened
+    /// running `claude`, and one paste worker is started for it with `complete`.
+    #[test]
+    fn the_default_windows_open_claude_and_start_its_paste_worker() {
+        let runner = FakeRunner::default();
+        PASTERS.with(|p| p.borrow_mut().clear());
+        open_windows(
+            &TmuxClient::new(&runner, false),
+            "web/1 login",
+            "/wt",
+            &iter_core::config::SessionConfig::default().windows,
+        );
+        assert_eq!(
+            runner.calls(),
+            ["tmux new-window -t =web/1 login: -n claude -c /wt claude"]
+        );
+        let started = PASTERS.with(|p| p.borrow().clone());
+        assert_eq!(
+            started,
+            [["web/1 login", "claude", "complete"].map(String::from)]
+        );
+    }
+
+    /// The pane is ready once it runs something other than its shell.
+    #[test]
+    fn a_program_runs_when_the_pane_is_no_longer_its_shell() {
+        for (current, runs) in [
+            (None, false),
+            (Some(""), false),
+            (Some("zsh"), false),
+            (Some("-bash"), false),
+            (Some("claude"), true),
+            (Some("node"), true),
+            (Some("2.1.3"), true),
+        ] {
+            assert_eq!(program_runs(current), runs, "{current:?}");
+        }
     }
 
     /// R4c: the paste worker waits until the window runs its command (`claude`, from the

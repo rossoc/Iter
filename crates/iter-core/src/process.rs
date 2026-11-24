@@ -181,7 +181,9 @@ pub mod fake {
         }
         fn record(&self, tool: &str, dir: Option<&str>, args: &[&str]) -> (String, bool) {
             let line = format!("{tool} {}", args.join(" "));
-            let line = line.trim_end().to_string();
+            // the space an empty last argument leaves goes; a newline ending an argument (a
+            // pasted prompt) is the argument's own and stays
+            let line = line.trim_end_matches(' ').to_string();
             let ok = !self.failing.borrow().iter().any(|p| line.starts_with(p));
             let shown = match dir {
                 Some(dir) => format!("[{dir}] {line}"),

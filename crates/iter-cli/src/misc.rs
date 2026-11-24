@@ -129,6 +129,11 @@ impl Run for InternalCommand {
             Self::Hook { event } => hook_cmd(app, &TmuxClient::system(), event),
             Self::KillServer => kill_server_cmd(app, &TmuxClient::system()),
             Self::Restore => restore_cmd(app, &TmuxClient::system()),
+            Self::Paste {
+                session,
+                window,
+                instruction,
+            } => crate::session::paste(app, &TmuxClient::system(), session, window, instruction),
         }
     }
 }
