@@ -21,6 +21,8 @@ mod pages;
 mod parts;
 mod prelude;
 #[cfg(test)]
+mod script_tests;
+#[cfg(test)]
 mod task_note_tests;
 #[cfg(test)]
 mod toast_tests;
