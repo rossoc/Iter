@@ -25,14 +25,16 @@ use serde::Deserialize;
 
 path_param!(step: String, error = bad_request);
 
-const FILE_BYTES: usize = 64 * 1024;
+/// How much of a file is read for its preview: the first line with text is near the top.
+const HEAD_BYTES: u64 = 4 * 1024;
+const PREVIEW_CHARS: usize = 140;
 const FILES: usize = 50;
 
-/// A file of the task folder, cut to `FILE_BYTES`.
+/// A file of the task folder as a row of the Notes tab: its name and first line; the whole
+/// text is on the file's own page.
 pub struct Doc {
     pub name: String,
-    pub text: String,
-    pub cut: bool,
+    pub preview: String,
 }
 
 pub struct AgentTab {
@@ -47,20 +49,31 @@ fn docs(dir: &std::path::Path) -> Vec<Doc> {
     TaskDir::files(dir)
         .into_iter()
         .take(FILES)
-        .map(|file| {
-            let text = std::fs::read_to_string(&file.path).unwrap_or_default();
-            let cut = text.len() > FILE_BYTES;
-            let end = (0..=FILE_BYTES.min(text.len()))
-                .rev()
-                .find(|&i| text.is_char_boundary(i))
-                .unwrap_or(0);
-            Doc {
-                name: file.name,
-                text: text[..end].to_string(),
-                cut,
-            }
+        .map(|file| Doc {
+            preview: preview(&head(&file.path)),
+            name: file.name,
         })
         .collect()
+}
+
+/// The first `HEAD_BYTES` of the file, a character cut in two at the end dropped.
+fn head(path: &std::path::Path) -> String {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    if let Ok(file) = std::fs::File::open(path) {
+        let _ = file.take(HEAD_BYTES).read_to_end(&mut bytes);
+    }
+    String::from_utf8_lossy(&bytes)
+        .trim_end_matches('\u{FFFD}')
+        .to_string()
+}
+
+fn preview(text: &str) -> String {
+    let line = crate::parts::notes::first_line(text);
+    match line.char_indices().nth(PREVIEW_CHARS) {
+        Some((at, _)) => format!("{}\u{2026}", &line[..at]),
+        None => line.to_string(),
+    }
 }
 
 #[derive(Default)]
@@ -220,28 +233,29 @@ pub async fn plan_block(task_id: i64, plan: Option<&Plan>) -> Result<impl View> 
     })
 }
 
+/// The task's notes or sketches as a table like the daily notes': a row per file, its name
+/// linking to the file's own page and its first line beside it.
 #[component]
 pub(crate) async fn files_block(
+    task_id: i64,
+    kind: TaskFile,
     label: &str,
     noun: &str,
     docs: &[Doc],
     #[default] add: Option<AddRow<'_>>,
 ) -> Result<impl View> {
     let empty = format!("No {noun} yet.");
-    let columns = [label];
+    let columns = [label, "Preview"];
     Ok(view! {
-        data_table(caption: label, columns: &columns, class: "files", headed: false, add: add,
+        data_table(caption: label, columns: &columns, class: "notes files", headed: false, add: add,
             empty: docs.is_empty().then_some(empty.as_str()),
             for doc in docs.iter() {
                 table_row(
-                    cell(
-                        <details>
-                            <summary>(doc.name.as_str())</summary>
-                            prose_text(text: &doc.text)
-                            if doc.cut {
-                                <p class="empty-line">"The rest of the file is not shown."</p>
-                            }
-                        </details>
+                    cell(class: "note-day",
+                        <a class="cover" href=(task_file_url(task_id, kind, &doc.name))>(doc.name.as_str())</a>
+                    )
+                    cell(class: "note-text",
+                        <span class="note-preview">(doc.preview.as_str())</span>
                     )
                 )
             }
@@ -607,7 +621,11 @@ mod tests {
         let dir = taskdir::of(db, &project, &task).unwrap();
         dir.write_plan(PLAN).unwrap();
         std::fs::write(dir.notes_dir().join("idea.md"), "# An idea").unwrap();
-        std::fs::write(dir.sketches_dir().join("a.md"), "x".repeat(FILE_BYTES + 10)).unwrap();
+        std::fs::write(
+            dir.sketches_dir().join("a.md"),
+            "x".repeat(PREVIEW_CHARS + 10),
+        )
+        .unwrap();
         let open = Open {
             step: Some("s2"),
             ..Open::default()
@@ -617,9 +635,12 @@ mod tests {
         assert_eq!(tab.step.as_deref(), Some("s2"));
         let kept = files(db, &project, &task);
         assert_eq!(kept.notes[0].name, "idea");
-        assert!(!kept.notes[0].cut);
-        // a long file is cut, on a character boundary
-        assert!(kept.sketches[0].cut && kept.sketches[0].text.len() == FILE_BYTES);
+        assert_eq!(kept.notes[0].preview, "An idea");
+        // a long first line is cut, with an ellipsis
+        assert_eq!(
+            kept.sketches[0].preview,
+            format!("{}\u{2026}", "x".repeat(PREVIEW_CHARS))
+        );
     }
 
     #[test]
@@ -637,14 +658,15 @@ mod tests {
     }
 
     #[test]
-    fn a_long_file_is_cut_on_a_character_boundary() {
+    fn only_the_head_of_a_long_file_is_read_cut_on_a_character_boundary() {
         let dir = fixtures::scratch("webagent-cut");
         std::fs::create_dir_all(&dir).unwrap();
-        // two-byte characters, so the byte limit falls inside one
-        std::fs::write(dir.join("long.md"), "é".repeat(FILE_BYTES)).unwrap();
-        let d = docs(&dir);
-        assert!(d[0].cut);
-        assert!(d[0].text.len() <= FILE_BYTES && d[0].text.chars().all(|c| c == 'é'));
+        // two-byte characters on one long line, so the byte limit falls inside one
+        std::fs::write(dir.join("long.md"), format!("x{}", "é".repeat(4096))).unwrap();
+        let text = head(&dir.join("long.md"));
+        assert!(text.len() <= HEAD_BYTES as usize);
+        assert!(text[1..].chars().all(|c| c == 'é'), "no broken character");
+        assert!(docs(&dir)[0].preview.ends_with('\u{2026}'));
     }
 
     #[test]

@@ -17,7 +17,7 @@ The layers, outermost first: `blocking::off_the_workers`, `guard::security_heade
 | Home, settings | `/`, `/settings` | `pages/site/home.rs`, `settings.rs` |
 | Organization | `/org/{id}` (tabs), `/org/{id}/edit`, `/org/{id}/share` (POST), `/org/{id}/notes/{date}`, `/org/{id}/platform-activities` (POST, JSON) | `pages/org/`, `pages/site/daily_notes.rs` |
 | Project | `/project/{id}` (tabs), `/project/{id}/edit`, `/project/{id}/task/new`, `/project/{id}/notes/{date}` | `pages/project/`, `pages/site/daily_notes.rs` |
-| Task | `/task/{id}` (tabs), `/task/{id}/edit`, `POST /task/new`, `/task/{id}/{notes,sessions,runs,plan/{step},wiki/{action}}` (POST), `/task/{id}/prompt` (JSON) | `pages/task/` |
+| Task | `/task/{id}` (tabs), `/task/{id}/edit`, `POST /task/new`, `/task/{id}/{notes,sessions,runs,plan/{step},wiki/{action}}` (POST), `/task/{id}/notes/{name}` (GET, POST saves), `/task/{id}/sketches/{name}`, `/task/{id}/prompt` (JSON) | `pages/task/` |
 | Agents | `/agents`, `/agent/{id}/{n}`, `POST /task/{id}/runs/{n}[/run|/cancel]` | `pages/agent/agents.rs`, `task_runs.rs` |
 | Boards | `/boards`, `/board/{id}` (agenda), `/board/{id}/matrix`, `/board/{id}/info`, `/board/{id}/edit`, `POST /board/{id}/{schedule,matrix}` | `pages/board/` |
 | Instructions | `/instructions`, `/instruction/{name}` | `pages/agent/instructions/` |

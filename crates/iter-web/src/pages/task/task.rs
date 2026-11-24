@@ -166,8 +166,8 @@ pub async fn screen(
             } else if let (TaskSection::Agent, Some(agent)) = (section, agent) {
                 agent_tab(task_id: task.id(), agent: agent)
             } else if let (TaskSection::Notes, Some(files)) = (section, files) {
-                files_block(label: "Notes", noun: "notes", docs: &files.notes, add: Some(AddRow::link(&new_note, "New note\u{2026}")))
-                files_block(label: "Sketches", noun: "sketches", docs: &files.sketches)
+                files_block(task_id: task.id(), kind: TaskFile::Note, label: "Notes", noun: "notes", docs: &files.notes, add: Some(AddRow::link(&new_note, "New note\u{2026}")))
+                files_block(task_id: task.id(), kind: TaskFile::Sketch, label: "Sketches", noun: "sketches", docs: &files.sketches)
             } else {
                 task_info(task: task, tags: tags, plan: plan)
             }

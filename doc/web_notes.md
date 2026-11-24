@@ -25,5 +25,11 @@ The day is the file name's (a `date:` in the file is ignored); other keys are ig
 - **Note** (`/{org,project}/{id}/notes/{date}`): crumbs `Organization / Project / Notes / 29 October 2026`, the date written out (the year is on the page), the body as markdown (`ui::prose`), previous/next (`ui::notes::note_nav`). No such day is a 404.
 - **Today**: `POST .../notes/today` creates the folder and the day's file (front matter only) if need be and redirects to it. An existing note is never touched. Notes are written in the user's own editor; there is no edit form.
 
+## A task's notes and sketches
+A task's folder (`TaskDir`) has `notes/` (written by hand) and `sketches/` (written by the agents). They are not daily notes, but they open the same way:
+- **List** (the task's `?tab=notes`): `task_agent::files_block`, a table per folder like the daily notes', each row the file's name (an `a.cover` link to its page) and its first line. Only the head of each file is read for the preview; nothing is folded open in place.
+- **Page** (`/task/{id}/notes/{name}`, `/task/{id}/sketches/{name}`, `pages/task/task_note.rs`): crumbs `Organization / Project / Task / Notes / name`, the text as markdown. A note has an Edit tab whose form posts back to the same URL (`POST /task/{id}/notes/{name}` saves, CRLF made LF, and redirects to the note); a sketch is read-only and has no tabs.
+- The only way from a URL to a file is a name among `TaskDir::files` of that folder (the stems of its visible `.md` files): anything else, `..`, `/`, `plan`, a hidden or non-markdown file, is a 404. The save never creates a note; `POST /task/{id}/notes` does (the New note pop-up).
+
 ## Tests
-`notes.rs` (parsing, listing, creating, folders), `sections.rs` (the tab).
+`notes.rs` (parsing, listing, creating, folders), `sections.rs` (the tab), `task_note_tests.rs` (a task's note and sketch pages, the 404s, the Notes tab as links).

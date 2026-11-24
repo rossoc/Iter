@@ -189,6 +189,41 @@ pub fn plan_step_url(id: i64, step: &str) -> String {
     format!("{}/plan/{}", task_url(id), encode(step))
 }
 
+/// Which folder of a task a file is in: notes are written by hand and edited here, sketches are the agents' and read-only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskFile {
+    Note,
+    Sketch,
+}
+
+impl TaskFile {
+    pub fn folder(self) -> &'static str {
+        match self {
+            TaskFile::Note => "notes",
+            TaskFile::Sketch => "sketches",
+        }
+    }
+}
+
+/// The page of a task's note or sketch (`/task/{id}/notes/{name}`).
+pub fn task_file_url(id: i64, kind: TaskFile, name: &str) -> String {
+    format!("{}/{}/{}", task_url(id), kind.folder(), encode(name))
+}
+
+pub fn task_note_url(id: i64, name: &str) -> String {
+    task_file_url(id, TaskFile::Note, name)
+}
+
+pub fn task_sketch_url(id: i64, name: &str) -> String {
+    task_file_url(id, TaskFile::Sketch, name)
+}
+
+/// The tab of a task note's page; the Info tab is the bare URL.
+pub fn task_file_tab_url(id: i64, kind: TaskFile, name: &str, tab: NoteTab) -> String {
+    let tab = (tab != NoteTab::Info).then(|| tab.as_str());
+    page_url(&task_file_url(id, kind, name), &[("tab", tab)])
+}
+
 pub fn runs_url(id: i64) -> String {
     format!("{}/runs", task_url(id))
 }

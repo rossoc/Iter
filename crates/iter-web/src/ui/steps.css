@@ -7,9 +7,6 @@
 .step-panel .step-tag{margin-left:8px}
 .step-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .step-close{display:inline-block;margin-top:14px;color:var(--muted);font-size:.875rem;text-decoration:underline}
-.files details{border-bottom:1px dashed var(--line);padding:8px 0}
-.files summary{cursor:pointer;color:var(--fg)}
-.files details[open] summary{margin-bottom:8px}
 .run-state{display:inline-flex;align-items:center;gap:6px;padding:0 8px;border:1px solid var(--line-2);border-radius:var(--r-pill);font-size:.75rem}
 .run-state.running{color:var(--accent)}
 .run-state.done{color:var(--ok)}
