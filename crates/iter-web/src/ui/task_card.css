@@ -15,12 +15,10 @@
   text-underline-offset:.2em;transition:color var(--fast) var(--ease-out),text-decoration-color var(--fast) var(--ease-out)}
 .tcard-act:hover{color:var(--accent);text-decoration-color:currentColor}
 @media (pointer:coarse){.tcard-act{padding-block:12px}}
-/* on a big screen with a mouse the link stays faint until pointer or keyboard reach the card
-   (never invisible: a link no one sees is not found by sight); small screens and touch show it */
-@media (hover:hover) and (pointer:fine) and (min-width:901px){
-  .tcard-act{opacity:.7}
-  .tcard:hover .tcard-act,.tcard:focus-within .tcard-act,.tcard-act:focus-visible{opacity:1}
-}
+/* the link is always shown at full opacity (a link no one sees is not found by sight, and any
+   fading takes --muted on --bg-2 under 4.5:1); only its underline is faint until the card is
+   reached by pointer or keyboard */
+.tcard:hover .tcard-act,.tcard:focus-within .tcard-act{text-decoration-color:currentColor}
 /* the card takes focus (tabindex -1) when a link lands on it (#card-7): not a control, its links carry their own ring */
 .tcard:focus{outline:none}
 .can-drag .tcard{cursor:grab}

@@ -349,6 +349,32 @@ fn task_new_with_an_empty_name_writes_nothing() {
     assert!(!home.root.join("editor.ran").exists());
 }
 
+/// R2 (from the review): a tag is checked as `iter tag new` checks one, so a comma (which the web
+/// forms read as a separator) is refused, and the refusal writes nothing: neither the task nor
+/// the good tag given before it.
+#[test]
+fn task_new_with_a_bad_tag_writes_nothing() {
+    let home = home_with_editor("task-new-bad-tag");
+    let before = home.db().list::<Task>().expect("tasks").len();
+    let out = home.run(&[
+        "task", "new", "app", "--name", "Comma", "--tag", "fine", "--tag", "a,b",
+    ]);
+    assert_eq!(out.status.code(), Some(1), "{}", text(&out.stderr));
+    assert_eq!(home.db().list::<Task>().expect("tasks").len(), before);
+    assert!(home.tag_names().is_empty(), "{:?}", home.tag_names());
+    let out = home.run(&[
+        "task",
+        "edit",
+        "app/Fix it",
+        "--tag",
+        "fine",
+        "--tag",
+        "a,b",
+    ]);
+    assert_eq!(out.status.code(), Some(1), "{}", text(&out.stderr));
+    assert!(home.tag_names().is_empty(), "{:?}", home.tag_names());
+}
+
 /// R2: without `--name`, `iter task new` opens the editor as before (here one that saves
 /// nothing, so no task is made). Passes today; it guards the change.
 #[test]

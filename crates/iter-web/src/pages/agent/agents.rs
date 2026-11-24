@@ -182,7 +182,11 @@ async fn output_part(a: &Loaded, raw: bool) -> Result<impl View> {
         page_url(&base, &[("tab", Some("output")), ("raw", Some("1"))])
     };
     Ok(view! {
-        // the page follows a running agent's log on its own (the live version moves with it)
+        // the page follows a running agent's log on its own: the marker tells live.js to refresh
+        // when the logs' part of the live version moves (other pages ignore it)
+        if a.run.is_running() {
+            <span hidden="" data-follows-log=""></span>
+        }
         if let Some(why) = a.run.lost_reason() {
             <p class="empty-line">"Lost. " (why)</p>
         }

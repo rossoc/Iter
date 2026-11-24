@@ -40,16 +40,46 @@ impl Version {
 
     /// The version now: equal numbers mean nothing watched has changed in between.
     pub fn current(&self) -> u64 {
+        let parts = self.parts();
         let mut hasher = DefaultHasher::new();
+        parts.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// The version in two parts: what every page may show (the database, the notes), and the run
+    /// logs, which only a page following a running agent shows. A log grows with every line an
+    /// agent prints, so the pages that do not show one leave its part alone.
+    pub fn parts(&self) -> Parts {
+        let (mut pages, mut logs) = (DefaultHasher::new(), DefaultHasher::new());
         // an error reads as a version of its own, so a database that comes back moves it
-        self.db.data_version().ok().hash(&mut hasher);
+        self.db.data_version().ok().hash(&mut pages);
         for root in roots(&self.db) {
             let mut files = Vec::new();
             walk(&root, DEPTH, &mut files);
             files.sort();
-            files.hash(&mut hasher);
+            let (log, other): (Vec<&Seen>, Vec<&Seen>) =
+                files.iter().partition(|f| is_run_log(&f.path));
+            other.hash(&mut pages);
+            log.hash(&mut logs);
         }
-        hasher.finish()
+        Parts {
+            pages: pages.finish(),
+            logs: logs.finish(),
+        }
+    }
+}
+
+/// [`Version::parts`]: equal parts mean nothing of that kind changed in between.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct Parts {
+    pub pages: u64,
+    pub logs: u64,
+}
+
+impl std::fmt::Display for Parts {
+    /// `<pages>.<logs>`: what `GET /live` sends and `live.js` splits.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.pages, self.logs)
     }
 }
 

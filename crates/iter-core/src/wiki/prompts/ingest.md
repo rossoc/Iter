@@ -23,9 +23,9 @@ exist, or into a new page when none says it.
    - grounded knowledge (how something works, a decision and its reason): a
      Concept page, or the Idea it confirms;
    - a bug: a task. First look for one that already covers it with
-     `iter task list --project {{project}}`; when there is none,
-     `iter task new {{project}} --name "<what is wrong>" --description "<what
-     the note says>" --tag bug`;
+     `iter task list --project {{project.arg}}`; when there is none, make it
+     with `--name` (what is wrong) and `--description` (what the note says):
+     `iter task new {{project.arg}} --name "<name>" --description "<text>" --tag bug`;
    - new work to do (a feature, a change): the same, with `--tag idea`.
 
    Most ideas go to one place; a bug or new work that also teaches something
@@ -62,9 +62,9 @@ exist, or into a new page when none says it.
 - No orphan pages: every page you create is linked from at least one other page.
 - Read only through `iter note read <address>`, `iter note sketch list|read --task`,
   `iter note task list|read --task`, `iter wiki find|show|neighbors|check
-  {{scope}}`, `iter task list --project {{project}}`, and `git show --stat <sha>`
+  {{scope}}`, `iter task list --project {{project.arg}}`, and `git show --stat <sha>`
   for a commit. Write only with `iter note <class> new`, and make tasks only with
-  `iter task new {{project}}`.
+  `iter task new {{project.arg}}`.
 - No git otherwise: do not commit. The user reviews your changes with
   `iter wiki pending`.
 

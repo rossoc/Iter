@@ -83,6 +83,8 @@ pub struct Job<'a> {
 fn fill(template: &str, job: &Job, extra: &[(&str, String)]) -> String {
     let own = [
         ("project", job.project.to_string()),
+        // the project as one shell word, for the commands the prompt gives (`iter task new`)
+        ("project.arg", crate::process::shell_word(job.project)),
         ("notes.dir", job.notes_dir.display().to_string()),
         ("wiki.dir", job.notes_dir.join("wiki").display().to_string()),
         ("now", job.now.to_string()),

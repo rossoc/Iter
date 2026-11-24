@@ -155,8 +155,8 @@ impl Db {
         self.atomically(|| self.replace_task_tags(task_id, tag_ids))
     }
 
-    /// [`Self::set_task_tags`] for a caller with a transaction open.
-    pub(super) fn replace_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
+    /// [`Self::set_task_tags`] for a caller with a transaction open ([`Db::atomically`]).
+    pub fn replace_task_tags(&self, task_id: i64, tag_ids: &[i64]) -> Result<()> {
         self.conn
             .execute("DELETE FROM task_tags WHERE task_id = ?1", params![task_id])?;
         let mut insert = self

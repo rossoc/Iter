@@ -15,7 +15,7 @@ use iter_core::error::{IterError, Result};
 use iter_core::git;
 use iter_core::github::{self, GhCli, IssueTracker};
 use iter_core::locate::{project_or_current, require_git_repo, require_github, task_or_current};
-use iter_core::models::require_name;
+use iter_core::models::{Named, require_name};
 use iter_core::models::{Project, SessionConfig, Tag, Task, TaskEdit, TaskStatus};
 use iter_core::reporting::{TaskInfo, WeekdayReport, print_report, session_rows, weekday_averages};
 use iter_core::tmux::{Multiplexer, TmuxClient};
@@ -152,9 +152,13 @@ fn task_named(
     );
     task.name = name.trim().to_string();
     task.description = description.trim_end().to_string();
-    let tag_ids = ensure_tags(db, tags)?;
-    let id = db.insert(&task)?;
-    db.set_task_tags(id, &tag_ids)?;
+    // one transaction: a task or tag that fails leaves no tag made for it
+    let id = db.atomically(|| {
+        let tag_ids = ensure_tags(db, tags)?;
+        let id = db.insert(&task)?;
+        db.replace_task_tags(id, &tag_ids)?;
+        Ok(id)
+    })?;
     task.id = Some(id);
     println!("created task '{}'", task.label(&project));
     Ok(())
@@ -171,20 +175,24 @@ fn piped_text() -> Result<String> {
     Ok(text)
 }
 
-/// The ids of the tags named `names`, making each one that does not exist. Every name is checked
-/// before any tag is made.
+/// The ids of the tags named `names`, making each one that does not exist, checked as `iter tag
+/// new` checks one (a name, no comma). Every name is checked before any tag is made; call it
+/// inside [`Db::atomically`].
 fn ensure_tags(db: &Db, names: &[String]) -> Result<Vec<i64>> {
+    let mut wanted = Vec::with_capacity(names.len());
     for name in names {
-        require_name("tag", name)?;
+        let mut tag = Tag {
+            name: name.trim().to_string(),
+            ..Tag::template()
+        };
+        tag.validate()?;
+        wanted.push(tag);
     }
-    let mut ids = Vec::with_capacity(names.len());
-    for name in names.iter().map(|n| n.trim()) {
-        let id = match db.find_by_name::<Tag>(name)? {
-            Some(tag) => tag.id(),
-            None => db.insert(&Tag {
-                name: name.to_string(),
-                ..Tag::template()
-            })?,
+    let mut ids = Vec::with_capacity(wanted.len());
+    for tag in wanted {
+        let id = match db.find_by_name::<Tag>(&tag.name)? {
+            Some(found) => found.id(),
+            None => db.insert(&tag)?,
         };
         if !ids.contains(&id) {
             ids.push(id);
@@ -198,20 +206,22 @@ fn task_retag(app: &App, task_ref: Option<&str>, tags: &[String], untags: &[Stri
     let db = &app.db;
     let (project, task) = task_or_current(db, task_ref)?;
     let id = task.id();
-    let added = ensure_tags(db, tags)?;
     let untags: Vec<&str> = untags.iter().map(|n| n.trim()).collect();
-    let mut ids: Vec<i64> = db
-        .tags_for_task(id)?
-        .into_iter()
-        .filter(|t| !untags.contains(&t.name.as_str()))
-        .map(|t| t.id())
-        .collect();
-    for tag in added {
-        if !ids.contains(&tag) {
-            ids.push(tag);
+    db.atomically(|| {
+        let added = ensure_tags(db, tags)?;
+        let mut ids: Vec<i64> = db
+            .tags_for_task(id)?
+            .into_iter()
+            .filter(|t| !untags.contains(&t.name.as_str()))
+            .map(|t| t.id())
+            .collect();
+        for tag in added {
+            if !ids.contains(&tag) {
+                ids.push(tag);
+            }
         }
-    }
-    db.set_task_tags(id, &ids)?;
+        db.replace_task_tags(id, &ids)
+    })?;
     println!("updated task '{}'", task.label(&project));
     Ok(())
 }

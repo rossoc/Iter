@@ -183,10 +183,15 @@
     reopen = null;
     var here = new EventSource("/live");
     source = here;
+    // the version is `<pages>.<logs>`: the second part moves with the run logs, which only a page
+    // marked data-follows-log shows, so every other page ignores it
     here.onmessage = function (e) {
       backoff = 1000;
-      var version = e.data;
-      if (known !== null && version !== known) refresh();
+      var version = String(e.data);
+      if (known !== null && version !== known) {
+        var was = known.split("."), now = version.split(".");
+        if (was[0] !== now[0] || document.querySelector("[data-follows-log]")) refresh();
+      }
       known = version;
     };
     // a stream the browser is reconnecting (CONNECTING) is left to it; a closed one is opened
