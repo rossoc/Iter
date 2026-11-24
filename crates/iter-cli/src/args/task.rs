@@ -5,7 +5,8 @@ use super::*;
 #[derive(clap::Subcommand, Debug)]
 pub enum TaskCommand {
     /// Open a new task in nvim (optionally pre-filled from a GitHub issue);
-    /// saving & quitting creates it
+    /// saving & quitting creates it. With --name it is made at once, no
+    /// editor, and its label printed
     New {
         /// Project the task belongs to (default: the project of the tmux
         /// session you're in)
@@ -13,14 +14,40 @@ pub enum TaskCommand {
         project: Option<String>,
 
         /// Pre-fill name/description/github_issue from this issue number
-        #[clap(long)]
+        #[clap(long, conflicts_with = "name")]
         issue: Option<i64>,
+
+        /// Make the task with this name, without the editor
+        #[clap(long)]
+        name: Option<String>,
+
+        /// With --name: the description (else standard input when it is
+        /// not a terminal)
+        #[clap(long, short = 'd', requires = "name")]
+        description: Option<String>,
+
+        /// With --name: a tag, made if it does not exist (repeatable)
+        #[clap(long = "tag", requires = "name")]
+        tags: Vec<String>,
+
+        /// With --name: queue or wip (default: the configured status)
+        #[clap(long, requires = "name", value_parser = ["queue", "wip"])]
+        status: Option<String>,
     },
 
-    /// Edit an existing task in nvim; saving & quitting updates it
+    /// Edit an existing task in nvim; saving & quitting updates it. With
+    /// --tag or --untag only its tags change, without the editor
     Edit {
         #[clap(flatten)]
         task: TaskRef,
+
+        /// Add a tag, made if it does not exist (repeatable)
+        #[clap(long = "tag")]
+        tags: Vec<String>,
+
+        /// Take a tag off; the tag itself stays (repeatable)
+        #[clap(long = "untag")]
+        untags: Vec<String>,
     },
 
     /// Delete a task (and its session-config and sessions)

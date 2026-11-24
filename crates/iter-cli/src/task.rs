@@ -26,8 +26,26 @@ use iter_core::workspace::teardown_and_kill;
 impl Run for TaskCommand {
     fn run(&self, app: &App) -> Result<()> {
         match self {
-            Self::New { project, issue } => task_new(app, project.as_deref(), *issue),
-            Self::Edit { task } => task_edit(app, task.name()),
+            Self::New {
+                project,
+                name: Some(name),
+                description,
+                tags,
+                status,
+                ..
+            } => task_named(
+                app,
+                project.as_deref(),
+                name,
+                description.as_deref(),
+                tags,
+                status.as_deref(),
+            ),
+            Self::New { project, issue, .. } => task_new(app, project.as_deref(), *issue),
+            Self::Edit { task, tags, untags } if !tags.is_empty() || !untags.is_empty() => {
+                task_retag(app, task.name(), tags, untags)
+            }
+            Self::Edit { task, .. } => task_edit(app, task.name()),
             Self::Delete { task } => task_delete(app, &TmuxClient::system(), task.name()),
             Self::Info { task, report } => task_info(app, task.name(), report),
             Self::List { project, status } => {
@@ -103,6 +121,104 @@ fn task_new(app: &App, project_name: Option<&str>, issue: Option<i64>) -> Result
         db.set_task_tags(id, &tag_ids)?;
         Ok(format!("created task '{}'", edit.task.label(&project)))
     })
+}
+
+/// `iter task new --name`: the task made at once, no editor (an agent's way, or a script's). The
+/// description is `--description`, else standard input when something is piped. Tags that do not
+/// exist are made, after the name is checked, so a refused task leaves no tag behind.
+fn task_named(
+    app: &App,
+    project_name: Option<&str>,
+    name: &str,
+    description: Option<&str>,
+    tags: &[String],
+    status: Option<&str>,
+) -> Result<()> {
+    let db = &app.db;
+    require_name("task", name)?;
+    let project = project_or_current(db, project_name)?;
+    let description = match description {
+        Some(d) => d.to_string(),
+        None => piped_text()?,
+    };
+    let status = match status {
+        Some(s) => TaskStatus::parse(s).ok_or_else(|| IterError::InvalidStatus(s.to_string()))?,
+        None => config().task.status,
+    };
+    let mut task = Task::template(
+        project.id(),
+        git::branch_prefix(&project.branch_template),
+        status,
+    );
+    task.name = name.trim().to_string();
+    task.description = description.trim_end().to_string();
+    let tag_ids = ensure_tags(db, tags)?;
+    let id = db.insert(&task)?;
+    db.set_task_tags(id, &tag_ids)?;
+    task.id = Some(id);
+    println!("created task '{}'", task.label(&project));
+    Ok(())
+}
+
+/// Standard input when it is not a terminal (an agent's or a pipe's), else nothing.
+fn piped_text() -> Result<String> {
+    use std::io::{IsTerminal, Read};
+    let mut stdin = std::io::stdin();
+    let mut text = String::new();
+    if !stdin.is_terminal() {
+        stdin.read_to_string(&mut text)?;
+    }
+    Ok(text)
+}
+
+/// The ids of the tags named `names`, making each one that does not exist. Every name is checked
+/// before any tag is made.
+fn ensure_tags(db: &Db, names: &[String]) -> Result<Vec<i64>> {
+    for name in names {
+        require_name("tag", name)?;
+    }
+    let mut ids = Vec::with_capacity(names.len());
+    for name in names.iter().map(|n| n.trim()) {
+        let id = match db.find_by_name::<Tag>(name)? {
+            Some(tag) => tag.id(),
+            None => db.insert(&Tag {
+                name: name.to_string(),
+                ..Tag::template()
+            })?,
+        };
+        if !ids.contains(&id) {
+            ids.push(id);
+        }
+    }
+    Ok(ids)
+}
+
+/// `iter task edit --tag/--untag`: only the task's tags change, no editor.
+fn task_retag(
+    app: &App,
+    task_ref: Option<&str>,
+    tags: &[String],
+    untags: &[String],
+) -> Result<()> {
+    let db = &app.db;
+    let (project, task) = task_or_current(db, task_ref)?;
+    let id = task.id();
+    let added = ensure_tags(db, tags)?;
+    let untags: Vec<&str> = untags.iter().map(|n| n.trim()).collect();
+    let mut ids: Vec<i64> = db
+        .tags_for_task(id)?
+        .into_iter()
+        .filter(|t| !untags.contains(&t.name.as_str()))
+        .map(|t| t.id())
+        .collect();
+    for tag in added {
+        if !ids.contains(&tag) {
+            ids.push(tag);
+        }
+    }
+    db.set_task_tags(id, &ids)?;
+    println!("updated task '{}'", task.label(&project));
+    Ok(())
 }
 
 /// Validates an edited task and resolves its tags before anything is written, so an unknown tag leaves the task untouched.
