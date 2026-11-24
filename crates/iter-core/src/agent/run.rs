@@ -249,13 +249,27 @@ impl RunRecord {
     /// The status to show: `lost` for a running run whose process is gone, or one that never got a process after a minute.
     /// A subagent's run has no process to watch: it is running until closed.
     pub fn shown_status(&self) -> &'static str {
+        match self.lost_reason() {
+            Some(_) => "lost",
+            None => self.status.label(),
+        }
+    }
+
+    /// Why a run shows as `lost`: none for any other run.
+    pub fn lost_reason(&self) -> Option<&'static str> {
         if self.subagent {
-            return self.status.label();
+            return None;
         }
         match (self.status, self.pid) {
-            (Status::Running, Some(pid)) if !alive(pid) => "lost",
-            (Status::Running, None) if self.age_seconds() > 60 => "lost",
-            (status, _) => status.label(),
+            (Status::Running, Some(pid)) if !alive(pid) => Some(
+                "Its process is gone, and it never wrote how the run ended: \
+                 it was killed, or the machine stopped.",
+            ),
+            (Status::Running, None) if self.age_seconds() > 60 => Some(
+                "It never got a process: more than a minute after it was started, no pid was \
+                 recorded, so the harness did not start.",
+            ),
+            _ => None,
         }
     }
 

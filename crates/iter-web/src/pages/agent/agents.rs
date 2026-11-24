@@ -176,13 +176,16 @@ async fn prompt_part(a: &Loaded) -> Result<impl View> {
 #[component]
 async fn output_part(a: &Loaded, raw: bool) -> Result<impl View> {
     let base = agent_url(a.task_id, a.run.n);
-    let running = a.run.is_running();
     let other = if raw {
         page_url(&base, &[("tab", Some("output"))])
     } else {
         page_url(&base, &[("tab", Some("output")), ("raw", Some("1"))])
     };
     Ok(view! {
+        // the page follows a running agent's log on its own (the live version moves with it)
+        if let Some(why) = a.run.lost_reason() {
+            <p class="empty-line">"Lost. " (why)</p>
+        }
         if a.log.is_empty() {
             empty_line("Nothing printed yet.")
         } else {
@@ -198,9 +201,6 @@ async fn output_part(a: &Loaded, raw: bool) -> Result<impl View> {
         <p class="output-links">
             if !a.log.is_empty() {
                 <a class="u" href=(other.as_str())>(if raw { "Show formatted" } else { "Show raw" })</a>
-            }
-            if running {
-                <a class="u" href=(page_url(&base, &[("tab", Some("output"))]))>"Refresh"</a>
             }
         </p>
     })

@@ -1,7 +1,7 @@
 //! The live version: one number that moves when what the pages show may have changed, so the web
 //! app can update itself (`GET /live`). It moves when iter.db gets a commit from another
 //! connection (SQLite's `data_version`, read on a connection kept open only for that) and when a
-//! `.md` or `.yaml` file is made, changed or removed under an organization's or project's notes
+//! `.md` or `.yaml` file, or a run's log, is made, changed or removed under an organization's or project's notes
 //! folder or the config folder's `tasks/` (a task's notes, sketches, runs and plan). Anything
 //! else leaves it alone. Asking costs a pragma, two small selects and a walk of those folders.
 
@@ -86,7 +86,17 @@ struct Seen {
     modified: Option<std::time::SystemTime>,
 }
 
-/// The `.md` and `.yaml` files under `dir`, hidden files and folders (`.git`, `.obsidian`) and
+/// A run's log (`runs/<n>.log`): a running agent's page follows it. It moves the version only as
+/// often as `/live` is asked, since only its size and time are compared.
+fn is_run_log(path: &Path) -> bool {
+    path.extension().is_some_and(|x| x == "log")
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|dir| dir == "runs")
+}
+
+/// The `.md` and `.yaml` files, and the run logs, under `dir`, hidden files and folders (`.git`, `.obsidian`) and
 /// links skipped.
 fn walk(dir: &Path, depth: usize, out: &mut Vec<Seen>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -106,7 +116,7 @@ fn walk(dir: &Path, depth: usize, out: &mut Vec<Seen>) {
                 walk(&path, depth - 1, out);
             }
         } else if kind.is_file()
-            && matches!(ext, Some("md" | "yaml" | "yml"))
+            && (matches!(ext, Some("md" | "yaml" | "yml")) || is_run_log(&path))
             && let Ok(meta) = entry.metadata()
         {
             out.push(Seen {
