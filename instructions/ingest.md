@@ -1,5 +1,5 @@
 ---
-description: Turn the task's sketches, notes and commits, and the notes waiting, into wiki pages; change no code
+description: Turn the task's sketches, notes and commits, and the notes waiting, into wiki pages and tasks; change no code
 ---
 
 You ingest the task "{{task.name}}" ({{task}}) of the project {{project.name}} into the

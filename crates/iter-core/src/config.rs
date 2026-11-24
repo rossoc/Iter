@@ -55,6 +55,9 @@ impl Default for AgentConfig {
                 // what the prompts tell an agent to run: its plan, the wiki, the notes
                 "Bash(iter task plan *)",
                 "Bash(iter task prompt *)",
+                // and to file a bug or new work it finds (the ingest's Sort step)
+                "Bash(iter task new *)",
+                "Bash(iter task list *)",
                 "Bash(iter wiki find *)",
                 "Bash(iter wiki grep *)",
                 "Bash(iter wiki show *)",
