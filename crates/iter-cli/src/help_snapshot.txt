@@ -14,6 +14,7 @@ Commands:
   task          Manage tasks; with no subcommand, lists every unfinished (queue or wip) task
   wiki          Read the wiki built from the notes: find the pages worth loading, follow their relations, query the graph, keep it consistent
   note          Notes: today's daily note (alone), daily notes, a task's notes and sketches, wiki pages
+  instruction   The instructions an agent can be given (`instructions/<name>.md` in the task's folder, the notes, or iter's config folder): list, show
   session       Set up and track a task's session (tmux + git worktree/branch, and time spent)
   comment       Post a message as a comment on a task's linked GitHub issue
   t             Print `<project>/<task>` for the tmux session you're currently in
@@ -463,8 +464,8 @@ Manage tasks; with no subcommand, lists every unfinished (queue or wip) task
 Usage: iter task [COMMAND]
 
 Commands:
-  new      Open a new task in nvim (optionally pre-filled from a GitHub issue); saving & quitting creates it
-  edit     Edit an existing task in nvim; saving & quitting updates it
+  new      Open a new task in nvim (optionally pre-filled from a GitHub issue); saving & quitting creates it. With --name it is made at once, no editor, and its label printed
+  edit     Edit an existing task in nvim; saving & quitting updates it. With --tag or --untag only its tags change, without the editor
   delete   Delete a task (and its session-config and sessions)
   info     Name, description, and every session on a day or over an interval (default: today)
   list     List tasks, optionally filtered by project and/or status
@@ -482,7 +483,7 @@ Options:
   -h, --help
           Print help
 ===== iter task new
-Open a new task in nvim (optionally pre-filled from a GitHub issue); saving & quitting creates it
+Open a new task in nvim (optionally pre-filled from a GitHub issue); saving & quitting creates it. With --name it is made at once, no editor, and its label printed
 
 Usage: iter task new [OPTIONS] [PROJECT]
 
@@ -494,18 +495,38 @@ Options:
       --issue <ISSUE>
           Pre-fill name/description/github_issue from this issue number
 
+      --name <NAME>
+          Make the task with this name, without the editor
+
+  -d, --description <DESCRIPTION>
+          With --name: the description (else standard input when it is not a terminal)
+
+      --tag <TAGS>
+          With --name: a tag, made if it does not exist (repeatable)
+
+      --status <STATUS>
+          With --name: queue or wip (default: the configured status)
+
+          [possible values: queue, wip]
+
   -h, --help
           Print help
 ===== iter task edit
-Edit an existing task in nvim; saving & quitting updates it
+Edit an existing task in nvim; saving & quitting updates it. With --tag or --untag only its tags change, without the editor
 
-Usage: iter task edit [TASK]
+Usage: iter task edit [OPTIONS] [TASK]
 
 Arguments:
   [TASK]
           `<project>/<task>` (default: the task of the tmux session you're in)
 
 Options:
+      --tag <TAGS>
+          Add a tag, made if it does not exist (repeatable)
+
+      --untag <UNTAGS>
+          Take a tag off; the tag itself stays (repeatable)
+
   -h, --help
           Print help
 ===== iter task delete
@@ -1206,7 +1227,7 @@ Notes: today's daily note (alone), daily notes, a task's notes and sketches, wik
 Usage: iter note [COMMAND]
 
 Commands:
-  today      Make today's note if it is not there and print its path (also `iter note` alone)
+  today      Make today's note if it is not there and open it in the editor; through a pipe or inside a task (`ITER_TASK`), print its path instead (also `iter note` alone)
   list       List the daily notes, latest first
   show       Print a daily note (default: today's)
   sketch     The agent's sketches of a task (`tasks/<id>/sketches/`): its working memory
@@ -1223,7 +1244,7 @@ Options:
   -h, --help
           Print help
 ===== iter note today
-Make today's note if it is not there and print its path (also `iter note` alone)
+Make today's note if it is not there and open it in the editor; through a pipe or inside a task (`ITER_TASK`), print its path instead (also `iter note` alone)
 
 Usage: iter note today [OPTIONS]
 
@@ -1233,6 +1254,9 @@ Options:
 
   -o, --org <ORG>
 
+
+      --print
+          Print the path, never open the editor
 
   -h, --help
           Print help
@@ -1802,6 +1826,45 @@ Addresses (what is left out comes from where you are):
   [org/][project/]wiki/<class>/<name>        a wiki page (org/wiki/... for the organization's)
   [org/][project/]tasks/<task>/sketch/<name> a task's sketch (note/<name>: its notes)
   sketch/<name>, note/<name>                 the current task's
+===== iter instruction
+The instructions an agent can be given (`instructions/<name>.md` in the task's folder, the notes, or iter's config folder): list, show
+
+Usage: iter instruction <COMMAND>
+
+Commands:
+  list  The instructions there are for a task (default: the current one; else the current project's, else iter's config folder's), one per line: name, where it comes from (task, project, org or config), description
+  show  Print an instruction: the nearest file of that name
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+===== iter instruction list
+The instructions there are for a task (default: the current one; else the current project's, else iter's config folder's), one per line: name, where it comes from (task, project, org or config), description
+
+Usage: iter instruction list [OPTIONS]
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` whose instructions to list
+
+  -h, --help
+          Print help
+===== iter instruction show
+Print an instruction: the nearest file of that name
+
+Usage: iter instruction show [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+
+
+Options:
+  -t, --task <TASK>
+          `<project>/<task>` whose instructions to look in
+
+  -h, --help
+          Print help
 ===== iter session
 Set up and track a task's session (tmux + git worktree/branch, and time spent)
 

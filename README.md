@@ -69,7 +69,11 @@ iter org info acme --from 2026-09-01    # an interval (up to today) instead of a
 iter task new [myproj] [--issue 42]   # opens a blank (or issue-prefilled) task in nvim
                                     # front matter also takes urgency/importance (true|false),
                                     # start_time (yyyy-mm-dd hh:mm) and duration (hh:mm)
+iter task new myproj --name "Retry per route" [--description "..."] [--tag bug]... [--status wip]
+                                    # no editor: made at once, its label printed (a piped stdin
+                                    # is the description); a tag that does not exist is made
 iter task edit myproj/mytask
+iter task edit myproj/mytask --tag bug --untag idea   # only the tags change, no editor
 iter task delete myproj/mytask
 iter task info myproj/mytask [--date d]
 iter task list [--project myproj] [--status wip]
@@ -83,6 +87,13 @@ iter task push myproj --task mytask --body   # ...just that task, description in
 iter task prompt [myproj/mytask] -i complete  # the orchestrator prompt (see "Letting Claude lead a task")
 iter task solve -i test --subagent  # record a subagent's run, print its prompt
 iter task runs --close 3 --status done -m "report"   # ...and close it
+
+# notes: one a day; the ingest sorts its ideas into wiki pages and tasks
+iter note                           # opens today's note (made if missing) in the editor
+iter note today --print             # prints its path instead (as it does through a pipe or
+                                    # inside a task, where ITER_TASK is set)
+iter wiki ingest                    # folds the notes into the wiki; a bug or new work becomes a
+                                    # task (iter task new ... --tag bug|idea)
 
 # sessions (tmux + git worktree/branch, and time tracking)
 iter session new myproj/mytask [-b custom-branch] [--no-branch]
@@ -615,7 +626,13 @@ iter task solve myproj/mytask -i review --yes
 
 The lookup is nearest first: the task's folder, the project's notes, the
 organization's notes, then iter's config folder. A name found in none of
-them is an error naming `~/.config/iter/instructions/<name>.md`.
+them is an error naming `~/.config/iter/instructions/<name>.md`. To see
+which ones a task gets, and from where:
+
+```sh
+iter instruction list [--task myproj/mytask]   # name, origin (task, project, org, config), description
+iter instruction show review                   # the nearest file of that name
+```
 
 Two front-matter keys of iter's own say how a run is set up (both default to
 false):
