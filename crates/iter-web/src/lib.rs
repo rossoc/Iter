@@ -12,6 +12,8 @@
 mod a11y_tests;
 mod assets;
 mod cx;
+#[cfg(test)]
+mod focus_border_tests;
 mod forms;
 mod layers;
 #[cfg(test)]
