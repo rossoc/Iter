@@ -103,12 +103,26 @@ fn a_focused_control_draws_its_line_on_its_border() {
 fn the_folder_picker_bar_draws_its_line_on_its_border() {
     let bar = rule("ui/field.css", ".field-row:has(.path-pick):focus-within");
     assert_line_on_the_border(".field-row:has(.path-pick):focus-within", &bar);
-    let inner = rule("ui/field.css", ".field-row:has(.path-pick) .control:focus");
-    assert_eq!(
-        value(&inner, "outline"),
-        Some("0"),
-        "the input inside the bar draws its own line too: {inner}"
+    // the reset may be its own rule or share an `:is(.control,.path-pick)` list with R4's
+    let inner: Vec<String> = rules(&source("ui/field.css"))
+        .into_iter()
+        .filter(|(list, _)| {
+            selectors(list)
+                .iter()
+                .any(|s| is_bar_child_focus(s, ".control") && s.ends_with(":focus"))
+        })
+        .map(|(_, d)| d)
+        .collect();
+    assert!(
+        !inner.is_empty(),
+        "ui/field.css: no rule resets the input's own focus outline inside the bar"
     );
+    for d in &inner {
+        assert!(
+            matches!(value(d, "outline"), Some("0" | "none")),
+            "the input inside the bar draws its own line too: {d}"
+        );
+    }
 }
 
 /// R3: no focus rule of the form controls puts a line outside the control (a positive
@@ -151,4 +165,97 @@ fn no_focus_rule_draws_a_ring_outside_a_control() {
     assert!(px("1px") > 0.0);
     assert!(px("-2px") < 0.0);
     assert_eq!(px("0"), 0.0);
+}
+
+/// The selectors of a selector list, split at its top-level commas (those inside `:is(...)`,
+/// `:has(...)` and the like stay put).
+fn selectors(list: &str) -> Vec<String> {
+    let (mut out, mut depth, mut start) = (Vec::new(), 0usize, 0);
+    for (i, c) in list.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                out.push(list[start..i].trim().to_string());
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    out.push(list[start..].trim().to_string());
+    out
+}
+
+/// Whether `selector` picks the Pick button inside the folder-picker bar while it has focus:
+/// `.field-row:has(.path-pick) <compound>` where the compound names `.path-pick` (on its own or
+/// in an `:is(...)`/`:where(...)` list) and carries `:focus` or `:focus-visible`.
+fn is_bar_button_focus(selector: &str) -> bool {
+    is_bar_child_focus(selector, ".path-pick")
+}
+
+/// Whether `selector` picks a child of the folder-picker bar with class `class` while it has
+/// focus (see [`is_bar_button_focus`]).
+fn is_bar_child_focus(selector: &str, class: &str) -> bool {
+    let Some(inner) = selector.strip_prefix(".field-row:has(.path-pick) ") else {
+        return false;
+    };
+    let inner = inner.trim();
+    !inner.contains(' ')
+        && inner.contains(class)
+        && (inner.ends_with(":focus") || inner.ends_with(":focus-visible"))
+}
+
+/// R4: inside the folder-picker bar the Pick button draws no line of its own when it has focus:
+/// the global `:focus-visible` (base.css, `outline-offset:2px`) would put a ring outside the bar
+/// next to the bar's own line. field.css resets it (`outline:0`/`none`) with a selector that out-
+/// ranks base.css's bare `:focus-visible`. Fails today: only the bar's `.control:focus` is reset.
+#[test]
+fn the_folder_picker_button_draws_no_line_of_its_own() {
+    // the ring it would draw otherwise: base.css's global focus cue sits outside the element
+    let global = rule("base.css", ":focus-visible");
+    assert!(
+        value(&global, "outline-offset").is_some_and(|o| px(o) > 0.0),
+        "base.css `:focus-visible` no longer draws outside the element: {global}"
+    );
+
+    let resets: Vec<(String, String)> = rules(&source("ui/field.css"))
+        .into_iter()
+        .filter(|(list, _)| selectors(list).iter().any(|s| is_bar_button_focus(s)))
+        .collect();
+    assert!(
+        !resets.is_empty(),
+        "ui/field.css: no rule resets the Pick button's focus outline inside the bar \
+         (`.field-row:has(.path-pick) .path-pick:focus-visible` or the like)"
+    );
+    for (selector, declarations) in &resets {
+        let outline = value(declarations, "outline");
+        assert!(
+            matches!(outline, Some("0" | "none")),
+            "ui/field.css: `{selector}` leaves the Pick button its own line: {declarations}"
+        );
+    }
+    // the bar keeps its own line, so the button still shows focus
+    let bar = rule("ui/field.css", ".field-row:has(.path-pick):focus-within");
+    assert_line_on_the_border(".field-row:has(.path-pick):focus-within", &bar);
+
+    // the matcher finds the forms the plan allows and not the bar or the input
+    assert!(is_bar_button_focus(
+        ".field-row:has(.path-pick) .path-pick:focus-visible"
+    ));
+    assert!(is_bar_button_focus(
+        ".field-row:has(.path-pick) :is(.control,.path-pick):focus"
+    ));
+    assert!(!is_bar_button_focus(
+        ".field-row:has(.path-pick) .control:focus"
+    ));
+    assert!(!is_bar_button_focus(
+        ".field-row:has(.path-pick):focus-within"
+    ));
+    assert!(!is_bar_button_focus(
+        ".field-row:has(.path-pick) .path-pick:hover"
+    ));
+    assert_eq!(
+        selectors(".a:is(.b,.c):focus,.d"),
+        [".a:is(.b,.c):focus", ".d"]
+    );
 }
