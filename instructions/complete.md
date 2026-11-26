@@ -38,30 +38,26 @@ you decide. You are in an interactive session: the user is there.
 
 ## What to do
 
-1. **Read.** The task above, `iter task info`, the user's notes on it (`iter note task
-   list`, `iter note task read <name>`) and the wiki pages named above that matter
-   (`iter wiki show <id>`), then the code enough to know what is hard. If the task can
-   be read in two ways, ask the user; otherwise do not.
+1. **Read.** The task above, and the wiki pages named above that matter
+   (`iter wiki show <id>`), and then the code enough to know what is hard.
+   If the task can be read in two ways, ask the user; otherwise do not.
+   If you spot some bug or inconsistencies, report them to the user.
 2. **Plan.** Write the sketch `plan` (`iter note sketch new plan -m "..."`; `--replace`
    when you revise it) with three sections:
    - `## Requirements`: numbered (R1, R2, ...), each one testable.
    - `## Tests`: for each requirement, the test that shows it, and why it fails today.
    - `## Implementation`: what changes where (files, functions), the approach, the risks.
    Then save a short checklist with `iter task plan {{task.id}} --stdin` (`## Goal`,
-   `## How`, `## Checklist` with `### test`, `### develop`, `### check` steps; mark the
-   checking steps `(verify)`), so the user sees progress.
+   `## How`, `## Checklist` with `### test`, `### develop`, `### check` steps.
 3. **Round** (at most 3):
-   1. Test first: `iter task solve -i test --subagent`. The tests are written before the
-      code, so they should fail, for the reason the plan gives.
-   2. Then `iter task solve -i develop --subagent`: make the tests pass.
-   3. Then `iter task solve -i check --subagent`: a new subagent every round, so the
-      review is independent. Do not tell it what the others did.
+   1. Test first: `iter task solve -i test --subagent`.
+   2. Then `iter task solve -i develop --subagent`.
+   3. Then `iter task solve -i check --subagent`: an independent reviewer every round.
    4. Read the sketches `test`, `develop` and `check`, and the diff. Add the round to the
       sketch `rounds` (`iter note sketch new rounds --append -m "..."`): the runs, the
       verdict per requirement, your decision and why.
    5. Every requirement met and the check passes: go to 4. Otherwise revise the sketch
-      `plan` if it was wrong and start another round on what is missing. After the third
-      round, stop anyway.
+      `plan` if it was wrong and start another round on what is missing.
 4. **Result.** Write the sketch `result` (`iter note sketch new result -m "..."`;
    `--replace` if it exists): each requirement and whether it is met, the tests run and
    what they printed, what is left open, and a section `## Commits` listing the task's
